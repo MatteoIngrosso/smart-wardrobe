@@ -151,12 +151,37 @@ function tx(store, mode, fn) {
     t.onerror = () => reject(t.error);
   });
 }
-const store = {
+const raw = {
   all: (s) => tx(s, "readonly", (o) => o.getAll()),
   put: (s, v, k) => tx(s, "readwrite", (o) => o.put(v, k)),
   del: (s, k) => tx(s, "readwrite", (o) => o.delete(k)),
   get: (s, k) => tx(s, "readonly", (o) => o.get(k)),
   clear: (s) => tx(s, "readwrite", (o) => o.clear()),
+};
+// Same as `raw`, but changes to shared records (pieces, wear log, wishlist) are
+// also queued for the other devices (see Sync below).
+const store = {
+  all: raw.all,
+  get: raw.get,
+  async put(s, v, k) {
+    if (s === "log" && v.id == null) v.id = uid();
+    const r = await raw.put(s, v, k);
+    await syncTouch(syncKey(s, k ?? v.id));
+    return r;
+  },
+  async del(s, k) {
+    if (s === "items") await syncTomb(await raw.get(s, k));
+    await raw.del(s, k);
+    await syncTouch(syncKey(s, k));
+  },
+  async clear(s) {
+    const gone = await raw.all(s);
+    await raw.clear(s);
+    for (const v of gone) {
+      if (s === "items") await syncTomb(v);
+      await syncTouch(syncKey(s, v.id));
+    }
+  },
 };
 
 const state = {
@@ -185,10 +210,313 @@ async function loadAll() {
   Object.assign(state.settings, (await store.get("kv", "settings")) || {});
   state.wishlist = (await store.get("kv", "wishlist")) || [];
   state.usage = (await store.get("kv", "usage")) || state.usage;
+  Object.assign(sync, (await raw.get("kv", SYNC_STATE)) || {});
+  sync.dirty = new Set(sync.dirty);
   for (const it of state.items) if (!it.styles) { it.styles = guessStyles(it); it.formality = formalityOf(it.styles); }
 }
 const saveSettings = () => store.put("kv", state.settings, "settings");
 const saveWishlist = () => store.put("kv", state.wishlist, "wishlist");
+
+/* ======================================================================
+   Sync: one shared wardrobe for every device (server.py)
+   Each device keeps its full copy in IndexedDB, so it works offline. When the
+   app is opened through server.py, changes go to the computer running it and
+   come back to the other devices through a long-poll, within a second or two.
+   - pieces, the wear log and the wishlist are shared; settings and keys are not
+   - the newest change to a record wins
+   - photos are uploaded once, keyed by a hash of their bytes
+   With no server (plain http.server, a static host, the Claude preview) the app
+   works exactly as before, on this device only.
+   ====================================================================== */
+const sync = {
+  status: "connecting", // connecting | on | offline (retrying) | off (no sync server)
+  joined: false, // this device has merged its data with the server once
+  rev: 0, // last server revision applied here
+  meta: {}, // "items/<id>" → updatedAt of the copy on this device
+  dirty: new Set(), // keys changed here and not sent yet
+  tombs: {}, // deleted sample pieces → their seedKey, so other devices don't re-add them
+  lastAt: null,
+  poll: null,
+  pendingRender: false,
+};
+const SYNC_STATE = "sync";
+function syncKey(s, k) {
+  if (s === "items" || s === "log") return `${s}/${k}`;
+  return s === "kv" && k === "wishlist" ? "kv/wishlist" : null;
+}
+const splitKey = (key) => { const i = key.indexOf("/"); return [key.slice(0, i), key.slice(i + 1)]; };
+const saveSyncState = () => raw.put("kv", { joined: sync.joined, rev: sync.rev, meta: sync.meta, dirty: [...sync.dirty], tombs: sync.tombs }, SYNC_STATE);
+
+async function syncTouch(key, push = true) {
+  if (!key) return;
+  // Always newer than the copy we have, even if this device's clock is behind.
+  const prev = Date.parse(sync.meta[key] || 0) || 0;
+  sync.meta[key] = new Date(Math.max(Date.now(), prev + 1)).toISOString();
+  sync.dirty.add(key);
+  await saveSyncState();
+  if (push) schedulePush();
+}
+async function syncTomb(item) {
+  if (item?.seedKey) sync.tombs[`items/${item.id}`] = item.seedKey;
+}
+
+async function api(path, opts = {}) {
+  const r = await fetch(`api/${path}`, { cache: "no-store", ...opts });
+  if (!r.ok) throw Object.assign(new Error(`Sync server answered ${r.status}`), { status: r.status });
+  return r.json();
+}
+
+// Photos travel as {$blob: key}. The key is a 64-bit hash of the bytes plus the size,
+// so the same photo is uploaded once however many devices or edits it goes through.
+const blobKeys = new WeakMap();
+const blobCache = new Map();
+const uploaded = new Set();
+function hashBytes(bytes) {
+  let h1 = 0xdeadbeef, h2 = 0x41c6ce57;
+  for (let i = 0; i < bytes.length; i++) {
+    h1 = Math.imul(h1 ^ bytes[i], 2654435761);
+    h2 = Math.imul(h2 ^ bytes[i], 1597334677);
+  }
+  h1 = Math.imul(h1 ^ (h1 >>> 16), 2246822507) ^ Math.imul(h2 ^ (h2 >>> 13), 3266489909);
+  h2 = Math.imul(h2 ^ (h2 >>> 16), 2246822507) ^ Math.imul(h1 ^ (h1 >>> 13), 3266489909);
+  return (h2 >>> 0).toString(16).padStart(8, "0") + (h1 >>> 0).toString(16).padStart(8, "0");
+}
+async function blobKey(blob) {
+  if (!blobKeys.has(blob)) {
+    const bytes = new Uint8Array(await blob.arrayBuffer());
+    const sig = String.fromCharCode(...bytes.subarray(0, 12));
+    // Some photos are stored without a type, so look at the file's first bytes.
+    const ext = { "image/webp": "webp", "image/png": "png", "image/jpeg": "jpg" }[blob.type] ||
+      (sig.startsWith("RIFF") && sig.endsWith("WEBP") ? "webp" : sig.startsWith("\x89PNG") ? "png" : sig.startsWith("\xff\xd8") ? "jpg" : "bin");
+    blobKeys.set(blob, `${hashBytes(bytes)}-${blob.size.toString(36)}.${ext}`);
+  }
+  return blobKeys.get(blob);
+}
+async function walkBlobs(v, fn) {
+  if (v instanceof Blob || v?.$blob) return fn(v);
+  if (Array.isArray(v)) { const out = []; for (const x of v) out.push(await walkBlobs(x, fn)); return out; }
+  if (v && typeof v === "object" && v.constructor === Object) {
+    const out = {};
+    for (const [k, x] of Object.entries(v)) out[k] = await walkBlobs(x, fn);
+    return out;
+  }
+  return v;
+}
+// Replace the photos in `values` with {$blob} refs, uploading the ones the server lacks.
+async function packBlobs(values) {
+  const fresh = new Map();
+  await walkBlobs(values, async (b) => {
+    if (b instanceof Blob) { const key = await blobKey(b); if (!uploaded.has(key)) fresh.set(key, b); }
+  });
+  if (fresh.size) {
+    const { missing } = await api("missing", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ keys: [...fresh.keys()] }) });
+    for (const key of missing) {
+      const b = fresh.get(key);
+      const r = await fetch(`api/blob/${key}`, { method: "PUT", body: b, headers: { "Content-Type": b.type || "application/octet-stream" } });
+      if (!r.ok) throw new Error(`Photo upload failed (${r.status})`);
+    }
+    for (const key of fresh.keys()) uploaded.add(key);
+  }
+  return walkBlobs(values, async (b) => (b instanceof Blob ? { $blob: await blobKey(b) } : b));
+}
+const unpackBlobs = (v) => walkBlobs(v, async (ref) => {
+  if (!ref?.$blob) return ref;
+  if (!blobCache.has(ref.$blob)) {
+    const r = await fetch(`api/blob/${ref.$blob}`);
+    if (!r.ok) throw new Error(`Photo download failed (${r.status})`);
+    const b = await r.blob();
+    blobKeys.set(b, ref.$blob);
+    uploaded.add(ref.$blob);
+    blobCache.set(ref.$blob, b);
+  }
+  return blobCache.get(ref.$blob);
+});
+
+let pushTimer, pushing = false;
+function schedulePush(ms = 300) {
+  clearTimeout(pushTimer);
+  pushTimer = setTimeout(pushNow, ms);
+}
+async function pushNow() {
+  if (sync.status !== "on" || pushing || !sync.dirty.size) return;
+  pushing = true;
+  let again = 0;
+  try {
+    const records = [];
+    for (const key of [...sync.dirty].slice(0, 20)) {
+      const [col, id] = splitKey(key);
+      const v = await raw.get(col, id);
+      const updatedAt = sync.meta[key];
+      records.push(v === undefined
+        ? { col, id, updatedAt, deleted: true, data: sync.tombs[key] ? { seedKey: sync.tombs[key] } : null }
+        : { col, id, updatedAt, data: v });
+    }
+    const packed = await packBlobs(records.map((r) => r.data));
+    records.forEach((r, k) => (r.data = packed[k]));
+    const res = await api("records", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ records }) });
+    // Photos the server lost (its data folder was reset): upload them again next round.
+    const missing = res.missing || [];
+    for (const k of missing) uploaded.delete(k);
+    const retry = new Set(records.filter((r) => missing.some((k) => JSON.stringify(r.data).includes(k))).map((r) => `${r.col}/${r.id}`));
+    // Sent. If the server already had something newer, it comes back with the next pull.
+    for (const r of records) {
+      const key = `${r.col}/${r.id}`;
+      if (sync.meta[key] === r.updatedAt && !retry.has(key)) { sync.dirty.delete(key); delete sync.tombs[key]; }
+    }
+    await saveSyncState();
+    sync.lastAt = new Date();
+    again = sync.dirty.size ? 0 : -1;
+  } catch {
+    again = 5000;
+  } finally {
+    pushing = false;
+    if (again >= 0) schedulePush(again);
+  }
+}
+
+// Apply records from the server to this device. Returns true if anything changed.
+async function applyRecords(records) {
+  let changed = false, newSet = false;
+  for (const rec of records) {
+    const key = `${rec.col}/${rec.id}`;
+    if ((sync.meta[key] || "") >= rec.updatedAt) continue; // our own change, or older
+    if (rec.col === "items") {
+      const at = state.items.findIndex((i) => i.id === rec.id);
+      if (rec.deleted) {
+        await raw.del("items", rec.id);
+        if (at >= 0) { state.items.splice(at, 1); newSet = true; }
+      } else {
+        const it = await unpackBlobs(rec.data);
+        await raw.put("items", it);
+        if (at >= 0) state.items[at] = it; else { state.items.push(it); newSet = true; }
+      }
+    } else if (rec.col === "log") {
+      const at = state.log.findIndex((l) => l.id === rec.id);
+      if (rec.deleted) { await raw.del("log", rec.id); if (at >= 0) state.log.splice(at, 1); }
+      else { await raw.put("log", rec.data); if (at >= 0) state.log[at] = rec.data; else state.log.push(rec.data); }
+    } else if (key === "kv/wishlist") {
+      state.wishlist = rec.deleted ? [] : rec.data || [];
+      await raw.put("kv", state.wishlist, "wishlist");
+    } else continue;
+    sync.meta[key] = rec.updatedAt;
+    sync.dirty.delete(key);
+    changed = true;
+  }
+  if (newSet) state.outfits = [];
+  return changed;
+}
+
+// The first time a device meets the server: keep the server's copy of anything both
+// have, send what only this device has, and drop sample pieces another device
+// already shared (every device loads its own copy of the samples).
+async function joinServer() {
+  uploaded.clear();
+  for (const l of state.log) {
+    if (typeof l.id !== "number") continue; // older versions numbered log entries per device
+    await raw.del("log", l.id);
+    l.id = uid();
+    await raw.put("log", l);
+  }
+  const { rev, records } = await api("changes?since=0");
+  const onServer = new Map(records.map((r) => [`${r.col}/${r.id}`, r]));
+  const seedOwner = new Map();
+  for (const r of records) if (r.col === "items" && r.data?.seedKey) seedOwner.set(r.data.seedKey, r.deleted ? null : r.id);
+  sync.meta = {};
+  sync.dirty = new Set();
+  for (const it of [...state.items]) {
+    if (onServer.has(`items/${it.id}`)) continue;
+    if (it.seedKey && seedOwner.has(it.seedKey)) {
+      const to = seedOwner.get(it.seedKey);
+      await raw.del("items", it.id);
+      state.items = state.items.filter((i) => i !== it);
+      for (const l of state.log) {
+        if (!l.itemIds?.includes(it.id)) continue;
+        l.itemIds = l.itemIds.map((i) => (i === it.id ? to : i)).filter(Boolean);
+        await raw.put("log", l);
+      }
+      continue;
+    }
+    await syncTouch(`items/${it.id}`, false);
+  }
+  for (const l of state.log) if (!onServer.has(`log/${l.id}`)) await syncTouch(`log/${l.id}`, false);
+  const sw = onServer.get("kv/wishlist");
+  const theirs = sw && !sw.deleted ? sw.data || [] : [];
+  const mine = state.wishlist.filter((w) => !theirs.some((t) => t.title === w.title));
+  if (mine.length) {
+    state.wishlist = [...theirs, ...mine];
+    await raw.put("kv", state.wishlist, "wishlist");
+    if (sw) sync.meta["kv/wishlist"] = sw.updatedAt;
+    await syncTouch("kv/wishlist", false);
+  }
+  await applyRecords(records);
+  state.outfits = [];
+  sync.rev = rev;
+  sync.joined = true;
+  await saveSyncState();
+}
+
+function syncChanged() {
+  // Refresh the screen, unless that would disturb someone typing or adding a piece.
+  if (view === "add" || document.activeElement?.matches("input, textarea")) { sync.pendingRender = true; return; }
+  sync.pendingRender = false;
+  render();
+}
+
+let syncReady;
+const syncFirst = new Promise((r) => (syncReady = r));
+async function syncLoop() {
+  let fails = 0;
+  for (;;) {
+    try {
+      if (sync.status !== "on") {
+        const ping = await fetch("api/ping", { cache: "no-store" });
+        if (!ping.ok || !(ping.headers.get("Content-Type") || "").includes("json")) {
+          sync.status = "off"; // no sync server here: this device only
+          syncReady();
+          if (view === "settings") syncChanged();
+          return;
+        }
+        const { rev } = await ping.json();
+        if (!sync.joined || rev < sync.rev) await joinServer(); // first visit, or the server's data was reset
+        sync.status = "on";
+        fails = 0;
+        syncReady();
+        syncChanged();
+        schedulePush(0);
+      }
+      sync.poll = new AbortController();
+      const { rev, records } = await api(`changes?since=${sync.rev}&wait=25`, { signal: sync.poll.signal });
+      const changed = await applyRecords(records);
+      sync.rev = rev;
+      sync.lastAt = new Date();
+      await saveSyncState();
+      if (changed) syncChanged();
+    } catch (e) {
+      if (e.name === "AbortError") continue;
+      // Never connected: probably no sync server at all (keep trying quietly). Connected before: it's just unreachable.
+      const status = sync.joined ? "offline" : "off";
+      if (sync.status !== status) { sync.status = status; if (view === "settings") syncChanged(); }
+      syncReady();
+      await new Promise((r) => setTimeout(r, Math.min(30000, 1000 * 2 ** fails++)));
+    }
+  }
+}
+document.addEventListener("visibilitychange", () => {
+  if (document.visibilityState !== "visible") return;
+  sync.poll?.abort(); // check for changes right away instead of waiting for the long-poll
+  schedulePush(0);
+});
+document.addEventListener("focusout", () => setTimeout(() => {
+  if (sync.pendingRender && view !== "add" && !document.activeElement?.matches("input, textarea")) syncChanged();
+}, 300));
+function syncLine() {
+  const n = state.items.length, o = state.log.length;
+  const pieces = `${n} piece${n === 1 ? "" : "s"} · ${o} outfit${o === 1 ? "" : "s"} logged`;
+  if (sync.status === "on") return `${pieces}. Shared live with every device that opens the app from the same computer${sync.dirty.size ? ` · sending ${sync.dirty.size} change${sync.dirty.size === 1 ? "" : "s"}…` : ""}.`;
+  if (sync.status === "offline") return `${pieces}. Can't reach the sync server right now; changes are kept here and sent when it's back${sync.dirty.size ? ` (${sync.dirty.size} waiting)` : ""}.`;
+  if (sync.status === "connecting") return `${pieces}. Connecting to the sync server…`;
+  return `${pieces}. Stored on this device only. Start the app with <code>python3 server.py</code> to share one wardrobe between devices.`;
+}
 
 /* ======================================================================
    Helpers
@@ -1091,11 +1419,12 @@ async function aiGenerate(opts) {
 }
 
 // One line per piece, short fields: keeps the stylist prompt to roughly 15 tokens per item.
+// "#n" numbers let the answer point at pieces, so their photos can be shown.
 function wardrobeText() {
-  return state.items.map((i) => {
+  return state.items.map((i, n) => {
     const b = brandInfo(i.brand);
     return [
-      i.name, catLabel(i.category), (i.colors || []).join("/"),
+      `#${n + 1} ${i.name}`, catLabel(i.category), (i.colors || []).join("/"),
       i.brand ? i.brand + (b ? ` (${b.tier})` : "") : "",
       (i.styles || []).join("/"), `w${i.warmth}`,
       i.wearCount ? `worn ${i.wearCount}x` : "unworn",
@@ -1103,9 +1432,47 @@ function wardrobeText() {
   }).join("\n");
 }
 const STYLIST_SYSTEM =
-  "You are a personal stylist in a smart-wardrobe app. Use the user's own pieces by name. " +
+  "You are a personal stylist in a smart-wardrobe app. Use the user's own pieces, each written as its #number and name, e.g. '#4 Navy knit'. " +
+  "For every outfit you suggest, write a line 'Outfit: <short title>', then one line per piece, then one line starting 'Why:'. " +
   "If something is missing (e.g. shoes), say what would work and mark it 'to buy'. " +
-  "Answer in at most 8 short plain-text lines, no markdown.";
+  "Plain text, no markdown, at most 20 short lines.";
+
+// Stylist answers: each "Outfit:" block becomes its own card with the pieces' photos.
+// `refs` maps the #numbers to item ids as they were when the question was asked.
+function refName(refs, n) { return state.items.find((i) => i.id === refs[n - 1]); }
+function cleanRefs(text, refs) {
+  // "#4 Navy knit" → "Navy knit"; a bare "#4" → the piece's name.
+  return text.replace(/#(\d+)\s*/g, (m, n, at, s) => {
+    const it = refName(refs, +n);
+    if (!it) return "";
+    const rest = s.slice(at + m.length);
+    if (rest.toLowerCase().startsWith(it.name.toLowerCase())) return "";
+    return /^\w/.test(rest) ? `${it.name} ` : it.name;
+  });
+}
+const pieceTile = (p) => `<button class="piece" data-item="${p.id}"><img class="pic-bg" src="${photoURL(p.photos?.[0])}" alt=""><span>${esc(p.name)}</span></button>`;
+function answerHTML(ans) {
+  if (!ans) return "";
+  if (typeof ans === "string") return esc(ans);
+  const intro = [], looks = [];
+  let look = null;
+  for (const src of ans.text.split("\n")) {
+    const line = src.replace(/\*\*|__/g, "").replace(/^[\s*•·–-]+/, "").trim();
+    if (!line) continue;
+    const head = line.match(/^(?:outfit|look|option)(?:\s*\d+)?\s*(?:[:.)–—-]\s*(.*))?$/i);
+    if (head) { look = { title: head[1] || `Outfit ${looks.length + 1}`, items: [], buy: [], lines: [] }; looks.push(look); continue; }
+    const items = [...line.matchAll(/#(\d+)/g)].map((m) => refName(ans.refs, +m[1])).filter(Boolean);
+    if (look && items.length && !/^why\b/i.test(line)) { for (const it of items) if (!look.items.includes(it)) look.items.push(it); continue; }
+    if (look && /to buy/i.test(line) && !items.length) { look.buy.push(line.replace(/^[^:]{0,20}:\s*/, "")); continue; }
+    (look ? look.lines : intro).push(cleanRefs(line, ans.refs));
+  }
+  if (!looks.length) {
+    // No outfit blocks: plain answer, with any pieces it mentions shown underneath.
+    const items = [...new Set([...ans.text.matchAll(/#(\d+)/g)].map((m) => refName(ans.refs, +m[1])).filter(Boolean))];
+    return `<div class="ai-rich"><p>${esc(cleanRefs(ans.text, ans.refs).trim())}</p>${items.length ? `<div class="pieces">${items.map(pieceTile).join("")}</div>` : ""}</div>`;
+  }
+  return `<div class="ai-rich">${intro.length ? `<p>${esc(intro.join("\n"))}</p>` : ""}<div class="looks">${looks.map((l) => `<article class="look"><h3>${esc(cleanRefs(l.title, ans.refs))}</h3><div class="pieces">${l.items.map(pieceTile).join("")}${l.buy.map((b) => `<button class="piece" data-go="shop"><div class="ph">${esc(b)}</div><span>To buy</span></button>`).join("")}</div>${l.lines.length ? `<p class="why">${esc(l.lines.join("\n"))}</p>` : ""}${l.items.length ? `<button class="btn" data-wearids="${l.items.map((i) => i.id).join(",")}">Wear this today</button>` : ""}</article>`).join("")}</div></div>`;
+}
 
 // Recognise type, colours, brand and style from one photo.
 const TAG_SCHEMA = {
@@ -1205,7 +1572,7 @@ function outfitCard(o, i) {
   const ph = (o.missing || []).map((m) => `<button class="piece" data-go="shop"><div class="ph">No ${SLOTS[m].toLowerCase()} yet<br>tap to shop</div><span>${SLOTS[m]}</span></button>`).join("");
   return `<article class="card outfit">
     <div class="row" style="justify-content:space-between"><h2 style="margin:0">${["Best match", "Option 2", "Option 3"][i] || "Option"}</h2>${i === 0 ? '<span class="score">Top pick</span>' : ""}</div>
-    <div class="pieces">${pieces.map((p) => `<button class="piece" data-item="${p.id}"><img class="pic-bg" src="${photoURL(p.photos?.[0])}" alt=""><span>${esc(p.name)}</span></button>`).join("")}${ph}</div>
+    <div class="pieces">${pieces.map(pieceTile).join("")}${ph}</div>
     ${o.reasons.length ? `<p class="why">${o.reasons.map(esc).join(" · ")}</p>` : ""}
     <button class="btn primary" data-wear="${i}">Wear this today</button>
   </article>`;
@@ -1218,7 +1585,7 @@ function aiCard() {
       ${["What should I wear for a dinner date?", "Which pieces should I donate?", "Build me a capsule for a weekend trip"].map((q) => `<button class="chip" data-ask="${esc(q)}">${esc(q)}</button>`).join("")}
     </div>
     <div class="row"><input id="ask-input" class="input" style="flex:1;min-width:0" placeholder="Ask about your wardrobe…" data-input="ask"><button class="btn primary" data-act="ask">Ask</button></div>
-    <div class="ai-answer" id="ai-answer">${esc(state.aiAnswer)}</div>
+    <div class="ai-answer" id="ai-answer">${answerHTML(state.aiAnswer)}</div>
   </section>`;
 }
 
@@ -1723,7 +2090,7 @@ function renderShop() {
         <h2 style="margin:0">Personal shopping advice</h2>
         <p class="muted small" style="margin:0">${aiReady() ? `${aiName()} looks at your whole wardrobe and suggests the next few buys.` : "Add a Gemini or Claude API key in Settings for tailored shopping advice."}</p>
         <div class="row"><button class="btn primary" data-ask="Looking at my wardrobe and style, what are the 5 most useful things to buy next? One line each with a search term I can paste into a shop.">What should I buy next?</button></div>
-        <div class="ai-answer" id="ai-answer">${esc(state.aiAnswer)}</div>
+        <div class="ai-answer" id="ai-answer">${answerHTML(state.aiAnswer)}</div>
       </section>
     </div>`;
 }
@@ -1791,7 +2158,7 @@ function renderSettings() {
           <button class="btn" data-act="import">Import backup</button>
           <button class="btn ghost danger" data-act="wipe">Erase everything</button>
         </div>
-        <p class="muted small" style="margin:0">${state.items.length} pieces · ${state.log.length} outfits logged. Everything is stored on this device.</p>
+        <p class="muted small" style="margin:0">${syncLine()}</p>
       </section>
     </div>`;
 }
@@ -1828,7 +2195,7 @@ async function loadSeed() {
       continue;
     }
     const item = {
-      id: uid(), seedKey: key, createdAt: new Date(Date.now() - n * 1000).toISOString(),
+      id: `seed-${key}`, seedKey: key, createdAt: new Date(Date.now() - n * 1000).toISOString(),
       name: s.name, category: s.category, colors: s.colors, brand: s.brand, warmth: s.warmth,
       tags: s.tags, notes: "", wearCount: 0, lastWorn: null, favorite: false, ...fields,
     };
@@ -1929,12 +2296,13 @@ async function ask(question, targetId = "ai-answer") {
   if (out) out.innerHTML = `<div class="row"><div class="spinner"></div><span class="muted">Thinking about your wardrobe…</span></div>`;
   try {
     const c = conditions();
-    const context = `Today: feels ${Math.round(c.feels)}°C${c.wet ? ", wet" : ""}. Occasion: ${OCCASIONS.find((o) => o.id === state.occasion).label}.\nWardrobe (name; type; colours; brand; style; warmth 1-5; wear):\n${wardrobeText() || "(empty)"}`;
-    const show = (t) => { const el = document.getElementById(targetId); if (el) el.textContent = t; };
-    const answer = await aiGenerate({ system: STYLIST_SYSTEM + "\n\n" + context, text: question, maxTokens: 500, onText: show });
+    const context = `Today: feels ${Math.round(c.feels)}°C${c.wet ? ", wet" : ""}. Occasion: ${OCCASIONS.find((o) => o.id === state.occasion).label}.\nWardrobe (#number name; type; colours; brand; style; warmth 1-5; wear):\n${wardrobeText() || "(empty)"}`;
+    const refs = state.items.map((i) => i.id);
+    const show = (t) => { const el = document.getElementById(targetId); if (el) el.textContent = cleanRefs(t, refs); };
+    const answer = { text: await aiGenerate({ system: STYLIST_SYSTEM + "\n\n" + context, text: question, maxTokens: 800, onText: show }), refs };
     if (targetId === "ai-answer") state.aiAnswer = answer;
     const el = document.getElementById(targetId);
-    if (el) el.textContent = answer;
+    if (el) el.innerHTML = answerHTML(answer);
   } catch (e) {
     const el = document.getElementById(targetId);
     if (el) el.textContent = e.message || "Something went wrong talking to the AI.";
@@ -1995,6 +2363,13 @@ document.addEventListener("click", async (e) => {
     await wearOutfit(Object.values(o.pieces).filter(Boolean));
     toast("Logged. Enjoy your day!");
     generateOutfits();
+    return render();
+  }
+  if (ds.wearids) {
+    const items = ds.wearids.split(",").map((id) => state.items.find((i) => i.id === id)).filter(Boolean);
+    await wearOutfit(items);
+    toast("Logged. Enjoy your day!");
+    state.outfits = [];
     return render();
   }
   if (ds.wearItem) {
@@ -2120,7 +2495,7 @@ document.addEventListener("click", async (e) => {
     case "export": return exportBackup();
     case "import": return importBackup();
     case "wipe":
-      if (!(await confirmBox("Erase all clothes, photos and history from this device?", "Erase everything"))) return;
+      if (!(await confirmBox(sync.status === "on" ? "Erase all clothes, photos and history? Every device sharing this wardrobe loses them too." : "Erase all clothes, photos and history from this device?", "Erase everything"))) return;
       await store.clear("items"); await store.clear("log");
       state.items = []; state.log = []; state.outfits = [];
       toast("Wardrobe erased");
@@ -2172,7 +2547,10 @@ previewSample.then((f) => {
   if (view !== "add" && !document.activeElement?.matches("input, textarea")) render();
 });
 go("today");
+syncLoop();
 {
+  // Join the shared wardrobe before deciding whether this device needs the samples.
+  await Promise.race([syncFirst, new Promise((r) => setTimeout(r, 4000))]);
   const seeded = await store.get("kv", "seeded");
   const version = (await store.get("kv", "seedVersion")) || 1;
   if ((!seeded && !state.items.length) || (seeded && version < SEED_VERSION)) loadSeed();

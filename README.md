@@ -1,6 +1,6 @@
 # Smart Wardrobe
 
-A touch-first web app for a self-built wardrobe tablet. It catalogues your clothes from two photos each (front and back), suggests outfits for the weather and the occasion, and points out what's worth buying next. It has no build step and no server-side code, and it stores everything on the device.
+A touch-first web app for a self-built wardrobe tablet. It catalogues your clothes from two photos each (front and back), suggests outfits for the weather and the occasion, and points out what's worth buying next. It has no build step. Every device keeps its own copy of the wardrobe, so it works offline, and the small `server.py` keeps those copies in sync.
 
 Plain HTML, CSS and JavaScript (ES modules), IndexedDB for storage, Open-Meteo for weather, and optional AI from Gemini or Claude.
 
@@ -9,12 +9,22 @@ Plain HTML, CSS and JavaScript (ES modules), IndexedDB for storage, Open-Meteo f
 ```bash
 git clone https://github.com/MatteoIngrosso/smart-wardrobe.git
 cd smart-wardrobe
-python3 -m http.server 8000
-# open http://localhost:8000 (or http://<computer-ip>:8000 from the tablet)
+python3 server.py
+# open http://localhost:8000 (or http://<computer-ip>:8000 from the tablet or phone)
 ```
 
+`server.py` serves the app and keeps **one shared wardrobe** for every device that opens it. Add a piece on the phone and it appears on the tablet and the computer within a second or two. The shared data lives in `data/` next to the script (photos in `data/blobs/`, everything else in `data/db.json`). That folder is never committed, so back it up, or use **Export backup**. `python3 -m http.server 8000` still works, but then each device keeps its own separate wardrobe.
+
 On the tablet, use the browser's "Add to Home screen" option. The app then opens fullscreen like a kiosk.
-The camera button and "Use this device's location" need **https** or **localhost**.
+The camera button and "Use this device's location" need **https** or **localhost**. To use the in-app camera on the phone or tablet, run `python3 server.py --cert cert.pem --key key.pem` with a certificate for the computer's address. Without one, **Take photos** opens the phone's own camera app instead, which works over plain http.
+
+### Sharing one wardrobe between devices
+- Every device keeps a full copy in IndexedDB, so it keeps working when the computer is off. Changes made in the meantime are sent when the server is back.
+- Pieces, the wear log and the wishlist are shared. Settings, the weather city and API keys stay on each device.
+- If two devices change the same piece, the latest change wins.
+- Photos are uploaded once, named by a hash of their contents.
+- The first time a device connects, the server's copy wins for anything both have. Pieces only that device has are uploaded. Sample pieces already shared by another device aren't added twice.
+- Settings > Data shows whether the device is connected.
 
 ### Putting it online
 
@@ -26,7 +36,7 @@ The first time it opens, it loads your 30 sample pieces (17 tops and jackets fro
 
 | Tab | Features |
 |---|---|
-| **Today** | Live weather (Open-Meteo, no key needed) and a "feels like" slider. With no internet (or in the Claude preview, which blocks outside connections) it uses the usual temperatures for the month from a built-in list of 75 cities, and switches back to live weather by itself once online. Occasion chips: everyday, smart casual, work, night out. You get 3 outfit ideas with the reason for each, and **Wear this today** logs the outfit. |
+| **Today** | Live weather (Open-Meteo, no key needed) and a "feels like" slider. With no internet (or in the Claude preview, which blocks outside connections) it uses the usual temperatures for the month from a built-in list of 75 cities, and switches back to live weather by itself once online. Occasion chips: everyday, smart casual, work, night out. You get 3 outfit ideas with the reason for each, and **Wear this today** logs the outfit. **Ask the stylist** (with an AI key) shows each outfit it suggests as its own card, with photos of your pieces, a placeholder for anything to buy, and its own **Wear this today** button. |
 | **Wardrobe** | Photo grid of cut-out pieces with search, category, style and colour filters, and sorting by newest, most worn or least worn. Tapping a piece shows its front and back photos, wear history, favourite, edit and delete, and **What goes with it?** |
 | **Add** | Two photos per piece: **Take photos** opens the camera inside the app, you shoot the front, flip the piece, shoot the back. The app then removes the background, turns both photos upright, detects colours and recognises style from the brand. With an AI key, Gemini or Claude also fills in type, name, brand and style and double-checks which way is up. Check it and tap **Save and add the next piece**, which reopens the camera. **Choose from gallery** pairs front and back photos by the time they were taken. **Turn** rotates a photo by hand. |
 | **Discover** | Your style mix (tap a style to see those pieces), brands with their tier (luxury, premium, mainstream, high street), wardrobe balance by category, your colour palette, pieces you never wear, and a **Worth adding** list explaining why each item fills a gap. Each item has links to Google Shopping, Zalando, Vinted and ASOS, plus a wishlist. |
@@ -72,12 +82,13 @@ Choose the provider in Settings and paste a key. The key stays on the tablet.
 |---|---|
 | Background removal, colours, daily outfits, pairings, shopping gaps | 0 (on the tablet) |
 | Recognising a new piece | Roughly 500–1,000 (estimate): front and back cut-outs sent as **one** 768×512 picture, JSON reply capped at 320 tokens, Gemini thinking off. Done once per piece and saved. |
-| Stylist question | About 900: the wardrobe is sent as one short line per piece (about 15 tokens each), and answers are capped at 8 lines. |
+| Stylist question | About 900 in plus up to 800 out: the wardrobe is sent as one short numbered line per piece (about 15 tokens each), and answers are capped at 20 short lines. |
 
 Settings shows how many requests and tokens were used this month.
 
 ## Files
 - `index.html`, `styles.css`, `app.js`: the whole app
+- `server.py`: serves the app and keeps the shared wardrobe in `data/` (Python 3 standard library only)
 - `sample/`: resized copies of your photos (`*.jpg`), their cut-outs (`cut/*.webp`) and `seed.js`, which holds the catalogue data for them
 - `manifest.webmanifest`, `icon.svg`: let you install the app on the home screen
 - `tools/build_preview.py`: builds a one-page copy in `dist/` for the Claude preview
@@ -88,6 +99,6 @@ Settings shows how many requests and tokens were used this month.
 API keys are typed into Settings on the device and stored only there. They are never part of this repository.
 
 ## Ideas for next steps
-- Sync across devices (small backend or Supabase) so you can add clothes from your phone and see them on the tablet
+- Sync away from home: today the devices share the wardrobe through the computer running `server.py` on the same Wi-Fi. A hosted backend (for example Supabase) would let the phone sync from anywhere
 - Calendar integration so outfit ideas match your events
 - Laundry status ("in the wash") so dirty pieces are left out of outfit ideas
