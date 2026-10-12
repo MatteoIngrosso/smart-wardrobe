@@ -1428,7 +1428,7 @@ function wardrobeText() {
     const b = brandInfo(i.brand);
     return [
       `#${n + 1} ${i.name}`, catLabel(i.category), (i.colors || []).join("/"),
-      i.brand ? i.brand + (b ? ` (${b.tier})` : "") : "",
+      i.brand ? i.brand + (b?.tier ? ` (${b.tier})` : "") : "",
       (i.styles || []).join("/"), `w${i.warmth}`,
       i.wearCount ? `worn ${i.wearCount}x` : "unworn",
     ].filter(Boolean).join("; ");
@@ -1653,7 +1653,7 @@ function openItem(id, showOriginal = false) {
   const panel = $(".sheet-panel");
   panel.innerHTML = `
     <div class="detail-head">
-      <div><h1 style="font-size:28px">${esc(i.name)}</h1><p class="sub">${esc([catLabel(i.category), i.brand].filter(Boolean).join(" · "))}${b ? ` · <span class="tier">${TIER_LABEL[b.tier]}</span>` : ""}</p></div>
+      <div><h1 style="font-size:28px">${esc(i.name)}</h1><p class="sub">${esc([catLabel(i.category), i.brand].filter(Boolean).join(" · "))}${b?.tier ? ` · <span class="tier">${TIER_LABEL[b.tier]}</span>` : ""}</p></div>
       <button class="btn icon-btn ghost" data-close aria-label="Close"><svg viewBox="0 0 24 24"><path d="M6 6l12 12M18 6 6 18"/></svg></button>
     </div>
     <div class="gallery">${pics.map((p) => `<img class="pic-bg" src="${photoURL(p)}" alt="">`).join("")}</div>
@@ -1723,9 +1723,9 @@ function newDraft() {
 function brandHint(brand) {
   const b = brandInfo(brand);
   if (!b) return "";
-  const styles = b.styles.length ? `usually ${b.styles.map(styleLabel).join(" / ").toLowerCase()}` : "";
-  if (b.about) return `${cap(b.about)}${styles ? `, ${styles}` : ""} (from Wikidata)`;
-  return [TIER_LABEL[b.tier], styles].filter(Boolean).join(", ");
+  const styles = b.styles?.length ? `usually ${b.styles.map(styleLabel).join(" / ").toLowerCase()}` : "";
+  const source = b.about && b.ai ? " (from Wikidata and AI)" : b.about ? " (from Wikidata)" : b.ai ? " (from AI)" : "";
+  return [b.about && cap(b.about), TIER_LABEL[b.tier], styles].filter(Boolean).join(", ") + source;
 }
 
 /* ---------- Brand lookup (Wikidata: free, no key) ----------
@@ -1782,15 +1782,48 @@ function rememberBrands(hits, k) {
 async function lookupBrand(brand) {
   const k = normBrand(brand);
   if (!k || k.length < 2 || BRANDS[k]) return false;
-  const c = brandCache[k];
-  if (c && (c.name || daysSince(c.at) < 30)) return false;
-  try {
-    const hits = await searchBrands(brand.trim());
-    const hit = rememberBrands(hits, k);
-    if (!hit) brandCache[k] = { at: today() };
-    await saveBrandCache();
-    return !!hit;
-  } catch { return false; } // offline or blocked: the list above still works
+  let c = brandCache[k], learnt = false;
+  if (!c || (!c.name && daysSince(c.at) >= 30)) {
+    try {
+      c = brandCache[k] = rememberBrands(await searchBrands(brand.trim()), k) || { at: today() };
+      learnt = !!c.name;
+    } catch { /* offline or blocked: the list above still works */ }
+  }
+  // Wikidata didn't say the tier or style (or doesn't know the brand): ask the AI once, if a key is set.
+  if ((!c?.tier || !c.styles?.length) && !c?.aiAt && aiReady() && !state.previewAI) {
+    try {
+      const r = await aiBrand(brand.trim());
+      c = brandCache[k] = !r.known ? { ...c, at: c?.at || today(), aiAt: today() } : {
+        ...c, name: c?.name || r.name || brand.trim(), at: c?.at || today(), aiAt: today(), ai: true,
+        tier: c?.tier || (TIER_LABEL[r.tier] ? r.tier : undefined),
+        styles: c?.styles?.length ? c.styles : (r.styles || []).filter((s) => STYLES[s]).slice(0, 3),
+      };
+      learnt = learnt || r.known;
+    } catch { /* no answer: Wikidata's info stays */ }
+  }
+  await saveBrandCache();
+  return learnt;
+}
+// About 150 tokens, once per brand the list and Wikidata can't place.
+const BRAND_SCHEMA = {
+  type: "object",
+  additionalProperties: false,
+  required: ["known", "name", "tier", "styles"],
+  properties: {
+    known: { type: "boolean", description: "false if you don't know this clothing brand" },
+    name: { type: "string", description: "The brand's usual spelling" },
+    tier: { type: "string", enum: [...Object.keys(TIER_LABEL), "unknown"] },
+    styles: { type: "array", items: { type: "string", enum: Object.keys(STYLES) }, description: "1 to 3 styles the brand is known for, best first" },
+  },
+};
+async function aiBrand(brand) {
+  const text = await aiGenerate({
+    system: "You classify clothing brands for a wardrobe app. Reply with JSON only. Tiers: luxury (designer houses), premium (Stone Island, Ralph Lauren), mainstream (Nike, Levi's), high street (Zara, H&M).",
+    text: `Clothing brand: "${brand}"`,
+    schema: BRAND_SCHEMA,
+    maxTokens: 120,
+  });
+  return JSON.parse(text.replace(/^```(json)?|```$/g, "").trim());
 }
 // Fill in brands of pieces already in the wardrobe (Discover shows their tier and style).
 async function lookupWardrobeBrands() {
