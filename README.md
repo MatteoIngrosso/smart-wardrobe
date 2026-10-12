@@ -69,6 +69,8 @@ The in-app camera needs https or localhost. Where it isn't available, the system
 
 ### Brand and style recognition
 - **Offline.** About 85 brands are built in with a tier and their usual styles, so typing "Lacoste" sets the style to preppy and smart casual. Without a known brand, the style comes from the garment type and tags (cargo or graphic means streetwear, knit means smart casual, plain means minimal).
+- **Any other brand (Wikidata, free, no key).** The Brand box suggests matching brands from Wikidata as you type, and brands that aren't built in are looked up there once and remembered on the device. Wikidata only gives a short description ("British streetwear brand", "Italian luxury fashion company"), so the app reads the style from it, and the tier only when the description says luxury or fast fashion. The built-in list stays the reliable source for tiers. Lookups need internet. If Wikidata asks the app to slow down, it waits 10 minutes.
+- **Still no tier or style?** With an AI key, Gemini (or Claude) is asked once for that brand's tier and 1 to 3 styles. That's about 150 tokens per brand, saved on the device. The order is: built-in list, then Wikidata (free), then AI only for what's still missing.
 - **With AI.** Gemini or Claude reads the photo once, reading the logo or label when one is visible, and returns type, colours, brand, 1 to 3 styles, warmth and tags as structured JSON. **Recognise pieces without a brand** in Settings does the same for pieces you already have.
 
 ### Optional AI: Gemini or Claude
