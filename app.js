@@ -1517,13 +1517,17 @@ function wardrobeText() {
   }).filter(Boolean).join("\n");
 }
 const STYLIST_SYSTEM =
-  "You are a personal stylist in a smart-wardrobe app. Use the user's own pieces, each written as its #number and name, e.g. '#4 Navy knit'. " +
+  "You are a personal stylist in a smart-wardrobe app. Whenever you mention one of the user's pieces, in any kind of answer, write its #number and name, e.g. '#4 Navy knit', so the app can show its photo. " +
   "When the question is about what to wear (a day, an occasion, a trip), suggest 3 clearly different outfits, best first, unless the user asks for another number. " +
   "For every outfit, write a line 'Outfit: <short title>', then one line per piece, then one line starting 'Why:'. " +
-  "If something is missing (e.g. shoes), say what would work and mark it 'to buy'. " +
+  "For anything the user doesn't own (a missing piece, a suggested buy), write its own line: 'To buy: <item> | search: <words to paste into a shop>'. " +
   "Plain text, no markdown, at most 24 short lines.";
+const SHOP_QUESTION =
+  "Looking at my wardrobe and style, what are the 5 most useful things to buy next? " +
+  "One line each: 'To buy: <item> | <why, a few words> | search: <words to paste into a shop> | with: <#numbers of my pieces it goes with>'.";
 
-// Stylist answers: each "Outfit:" block becomes its own card with the pieces' photos.
+// Stylist answers: each "Outfit:" block becomes its own card with the pieces' photos,
+// and every other line of advice shows photos of the pieces it mentions.
 // `refs` maps the #numbers to item ids as they were when the question was asked.
 function refName(refs, n) { return state.items.find((i) => i.id === refs[n - 1]); }
 function cleanRefs(text, refs) {
@@ -1536,10 +1540,155 @@ function cleanRefs(text, refs) {
     return /^\w/.test(rest) ? `${it.name} ` : it.name;
   });
 }
+const escRe = (s) => s.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+// Pieces that can be found by name when the AI forgets the #number, longest names first.
+const namedPieces = (refs) => refs.map((id) => state.items.find((i) => i.id === id))
+  .filter((i) => i && i.name.length >= 4).sort((a, b) => b.name.length - a.name.length);
+// The pieces a line of advice talks about, in the order it mentions them: "#4" numbers, then plain names.
+function piecesIn(text, refs, named = []) {
+  const found = new Map();
+  let rest = text.toLowerCase();
+  const blank = (s) => " ".repeat(s.length); // keeps positions, so a name isn't found twice
+  for (const m of text.matchAll(/#(\d+)/g)) {
+    const it = refName(refs, +m[1]);
+    if (!it) continue;
+    if (!found.has(it)) found.set(it, m.index);
+    rest = rest.replace(new RegExp(`#${m[1]}(?!\\d)\\s*(?:${escRe(it.name.toLowerCase())})?`), blank);
+  }
+  for (const it of named) {
+    if (found.has(it)) continue;
+    const re = new RegExp(`(?<![\\p{L}\\d])${escRe(it.name.toLowerCase())}(?![\\p{L}\\d])`, "u");
+    const at = rest.search(re);
+    if (at < 0) continue;
+    found.set(it, at);
+    rest = rest.replace(re, blank);
+  }
+  return [...found].sort((a, b) => a[1] - b[1]).map(([it]) => it);
+}
+
+// Line icons for pieces you don't own yet, so a suggested buy has a picture too.
+const KIND_ICON = {
+  tee: "M8.5 3 3 6l1.8 4 2.7-1.1V21h9V8.9l2.7 1.1L21 6l-5.5-3c-.6 1.4-1.9 2.2-3.5 2.2S9.1 4.4 8.5 3z",
+  shirt: "M9 3 4.5 5.2 2.5 16l2.8.6L7.5 9v12h9V9l2.2 7.6 2.8-.6-2-10.8L15 3l-3 3.2zM12 6.2V21M9 3l1.2 4.5L12 6.2l1.8 1.3L15 3M14 11h.01M14 15h.01",
+  hoodie: "M9 3.5c0-.8 1.3-1.5 3-1.5s3 .7 3 1.5l4.5 2 2 10.5-2.8.6L16.5 10v11h-9V10l-2.2 6.6-2.8-.6 2-10.5zM9 3.5c0 2.2 1.3 4 3 4s3-1.8 3-4M9.5 15h5",
+  knit: "M8.5 3 4.5 5 2.5 16l2.8.6L7.5 10v11h9V10l2.2 6.6 2.8-.6-2-11-4-2c-.6 1.3-1.9 2-3.5 2s-2.9-.7-3.5-2zM7.5 18.5h9",
+  jacket: "M8.5 3 4.5 5 2.5 17l2.8.6L7.5 11v10h9V11l2.2 6.6 2.8-.6-2-12-4-2L12 6zM12 6v15",
+  coat: "M8.5 2 4.5 4 3 16l2.8.5L7.5 10v12h9V10l1.7 6.5L21 16 19.5 4l-4-2L12 6zM12 6v16M10 12h.01M10 16h.01",
+  trousers: "M6 3h12l1.5 18h-5L12 9.5 9.5 21h-5zM6 6.5h12",
+  shorts: "M5 5h14l1.5 10.5H14L12 10l-2 5.5H3.5zM5 8h14",
+  skirt: "M8 4h8l4 16H4zM8 7h8",
+  shoe: "M2.5 9.5V18h19v-1.6c0-1.6-1.1-2.9-2.7-3.3L13 11.5 9 9.5c-1 1.2-2.5 1.6-4 1.5-1 0-1.8-.6-2.5-1.5zM2.5 15.5h19",
+  boot: "M7 3h6v9.5l5.5 2.7c1.3.6 2.5 1.6 2.5 3.3V20H7zM7 17h14",
+  cap: "M4 15.5a8 8 0 0 1 16 0zM20 15.5c1.5 0 2.5.5 2.5 1.2s-1 1.3-2.5 1.3h-8M12 7.5V6",
+  beanie: "M5 15a7 7 0 0 1 14 0M4 15h16v3.5H4zM12 8V5.5",
+  bag: "M4.5 8h15l-1.2 13H5.7zM9 8V6a3 3 0 0 1 6 0v2",
+  belt: "M2 9.5h20v5H2zM9 8.5h5v7H9zM11.5 12H14",
+  watch: "M12 16.5a4.5 4.5 0 1 0 0-9 4.5 4.5 0 0 0 0 9zM9 8l.8-5h4.4L15 8M9 16l.8 5h4.4l.8-5M12 10v2l1.5 1",
+  glasses: "M2 10h20M4 10l.8 4.2A2 2 0 0 0 6.8 16h2.4a2 2 0 0 0 2-1.8L11.5 11h1l.3 3.2a2 2 0 0 0 2 1.8h2.4a2 2 0 0 0 2-1.8L20 10",
+  jewel: "M12 20a6 6 0 1 0 0-12 6 6 0 0 0 0 12zM10 8l2-3.5L14 8",
+  wallet: "M3 7.5h17v12H3zM3 7.5 15 4v3.5M15 12h5v4h-5z",
+  scarf: "M6 4c2 1.5 10 1.5 12 0v5c-2 1.5-10 1.5-12 0zM10 9.8V21h3.5V10",
+  tie: "M10 3h4l-1 3 2.5 10L12 20l-3.5-4L11 6z",
+  umbrella: "M3 12a9 9 0 0 1 18 0zM12 12v6.5a2 2 0 0 1-4 0",
+  socks: "M8.5 2.5h6v9.5l3.3 3.3a3 3 0 0 1-4.2 4.2l-4.2-4.2c-.6-.6-.9-1.3-.9-2.1zM8.5 6h6",
+  underwear: "M3 6.5h18v3l-1.2 8.5h-5.6L12 13l-2.2 5H4.2L3 9.5zM3 9.5h18",
+  hanger: "M12 7.5a2 2 0 1 1 2-2M12 7.5v1L3.3 14.6c-.7.5-.4 1.4.5 1.4h16.4c.9 0 1.2-.9.5-1.4L12 8.5",
+};
+// What a suggested buy would be saved as, from its words: [pattern, type, icon]. First match wins.
+const BUY_KINDS = [
+  [/hoodie/, "hoodie", "hoodie"], [/sweatshirt|crewneck/, "sweatshirt", "hoodie"],
+  [/knit|sweater|jumper|cardigan|merino|cashmere/, "sweater", "knit"],
+  [/overshirt|shacket/, "overshirt", "jacket"], [/puffer|down jacket/, "puffer", "coat"],
+  [/coat|parka|trench/, "coat", "coat"], [/rain|\bshell\b|waterproof/, "rain", "jacket"],
+  [/jacket|bomber|blazer|windbreaker/, "jacket", "jacket"],
+  [/t-?shirts?|\btees?\b|tank/, "tshirt", "tee"], [/\bpolos?\b/, "polo", "tee"],
+  [/shirt|oxford|blouse/, "shirt", "shirt"],
+  [/jeans|denim/, "jeans", "trousers"], [/joggers|sweatpants|track pants/, "joggers", "trousers"],
+  [/trousers|chinos|cargo|pants|slacks/, "trousers", "trousers"], [/shorts/, "shorts", "shorts"],
+  [/skirt/, "skirt", "skirt"],
+  [/boots?\b/, "boots", "boot"], [/derby|derbies|loafers?|brogues|dress shoes/, "dress-shoes", "shoe"],
+  [/sneakers?|trainers?|runners|shoes/, "sneakers", "shoe"],
+  [/beanie/, "beanie", "beanie"], [/beret/, "beret", "beanie"], [/bucket hat/, "bucket-hat", "cap"],
+  [/\bcaps?\b/, "cap", "cap"], [/\bhats?\b|fedora/, "hat", "cap"],
+  [/watch/, "watch", "watch"], [/sunglasses|shades/, "sunglasses", "glasses"],
+  [/bracelet/, "bracelet", "jewel"], [/necklace|chain/, "necklace", "jewel"], [/\brings?\b/, "ring", "jewel"],
+  [/belt/, "belt", "belt"], [/backpack/, "backpack", "bag"], [/\bbags?\b|tote/, "bag", "bag"],
+  [/wallet|cardholder/, "wallet", "wallet"], [/scarf|scarves/, "scarf", "scarf"], [/gloves/, "gloves", "hanger"],
+  [/\bties?\b/, "tie", "tie"], [/umbrella/, "umbrella", "umbrella"],
+  [/socks?\b/, "socks", "socks"], [/boxers|briefs|underwear|trunks/, "underwear", "underwear"],
+];
+function buyKind(title) {
+  const k = BUY_KINDS.find(([re]) => re.test(title.toLowerCase()));
+  return k ? { cat: k[1], icon: k[2] } : { cat: "accessory", icon: "hanger" };
+}
+const SLOT_ICON = { base: "tee", mid: "hoodie", outer: "jacket", bottom: "trousers", shoes: "shoe", head: "cap", acc: "watch", under: "socks" };
+const kindIcon = (name) => `<svg class="kind" viewBox="0 0 24 24" aria-hidden="true"><path d="${KIND_ICON[name] || KIND_ICON.hanger}"/></svg>`;
+
+// Pieces you own that would make an outfit with something you don't have yet: the best match per section.
+function goesWith(title, n = 4) {
+  const t = title.toLowerCase().replace(/\bgray\b/g, "grey");
+  const { cat } = buyKind(t);
+  const color = Object.keys(COLORS).sort((a, b) => b.length - a.length).find((c) => new RegExp(`\\b${c}\\b`).test(t));
+  const ranked = pairingsFor({ id: "", category: cat, colors: color ? [color] : [], styles: CAT[cat]?.styles || [], tags: [] }, Infinity);
+  const picks = [];
+  for (const o of ranked) if (["base", "mid", "outer", "bottom", "shoes"].includes(slotOf(o)) && !picks.some((p) => slotOf(p) === slotOf(o))) picks.push(o);
+  return picks.slice(0, n);
+}
+
+// "To buy: White leather sneakers | lifts dark outfits | search: white leather sneakers | with: #3, #7"
+const isBuyLine = (line) => /^(?:\d+[.)]\s*)?(?:to buy|buy)\s*[:–—-]|\|\s*search\s*:|\(to buy\)|[–—-]\s*to buy\b/i.test(line);
+function parseBuy(line, refs, named) {
+  let title = "", query = "", why = [], withText = "";
+  for (const part of line.split("|").map((s) => s.trim()).filter(Boolean)) {
+    const m = part.match(/^(search(?: for)?|(?:goes |pairs )?with)\b\s*:?\s*(.*)$/i);
+    if (m && /^search/i.test(m[1])) query = m[2];
+    else if (m) withText += " " + m[2];
+    else if (!title) {
+      const t = part.replace(/^(?:\d+[.)]\s*)?(?:to buy|buy)\s*[:–—-]?\s*/i, "").replace(/\s*[(–—-]*\s*to buy\s*\)?[:.]?/i, "").replace(/^\w{1,12}:\s+/, "");
+      const [head, ...tail] = t.split(/\s[–—-]\s|:\s/);
+      title = head.replace(/[.;,]+$/, "").trim();
+      if (tail.length) why.push(tail.join(" – "));
+    } else why.push(part);
+  }
+  const whyText = why.join(" · ");
+  let pieces = piecesIn(`${withText} ${whyText}`, refs, named);
+  if (!pieces.length && title) pieces = goesWith(title);
+  return { title: cap(cleanRefs(title, refs)), why: cleanRefs(whyText, refs).trim(), query: query.replace(/^["']|["']$/g, "") || title, with: pieces };
+}
+const buyTile = (b) => `<a class="piece buy" href="${shopLinks(b.query)[0][1]}" target="_blank" rel="noopener"><div class="ph">${kindIcon(buyKind(b.title).icon)}<small>${esc(b.title)}</small></div><span>To buy</span></a>`;
+// A suggested buy with its picture, the pieces you own that it goes with, and shop links.
+function buyRow(b, { label = "To buy", shops = 4, extra = "" } = {}) {
+  return `<div class="buy-row">
+    <a class="buy-ic" href="${shopLinks(b.query)[0][1]}" target="_blank" rel="noopener" aria-label="Search for ${esc(b.title)}">${kindIcon(buyKind(b.title).icon)}</a>
+    <div class="buy-body">
+      ${label ? `<span class="prio">${label}</span>` : ""}<h3>${esc(b.title)}</h3>${b.why ? `<p>${esc(b.why)}</p>` : ""}
+      ${b.with.length ? `<div class="goes-with"><span class="muted small">Goes with</span><div class="pieces mini">${b.with.map(pieceTile).join("")}</div></div>` : ""}
+      <div class="shops">${shopLinks(b.query).slice(0, shops).map(([n, u]) => `<a class="btn" href="${u}" target="_blank" rel="noopener">${n}</a>`).join("")}${extra}</div>
+    </div>
+  </div>`;
+}
+const wishBtn = (b) => `<button class="btn" data-wishbuy="${esc(JSON.stringify({ prio: "medium", title: b.title, why: b.why, query: b.query }))}">${state.wishlist.some((w) => w.title === b.title) ? "♥ Saved" : "♡ Save"}</button>`;
+
 const pieceTile = (p) => `<button class="piece" data-item="${p.id}"><img class="pic-bg" src="${photoURL(p.photos?.[0])}" alt=""><span>${esc(p.name)}</span></button>`;
+// Advice that isn't an outfit: each line with photos of the pieces it mentions; buys get their own row.
+function tipsHTML(lines, refs, named) {
+  const out = [];
+  let plain = [];
+  const flush = () => { if (plain.length) out.push(`<p>${esc(plain.join("\n"))}</p>`); plain = []; };
+  for (const line of lines) {
+    if (isBuyLine(line)) { flush(); const b = parseBuy(line, refs, named); out.push(buyRow(b, { extra: wishBtn(b) })); continue; }
+    const items = piecesIn(line, refs, named);
+    if (!items.length) { plain.push(cleanRefs(line, refs)); continue; }
+    flush();
+    out.push(`<div class="tip"><p>${esc(cleanRefs(line, refs))}</p><div class="pieces mini">${items.map(pieceTile).join("")}</div></div>`);
+  }
+  flush();
+  return out.join("");
+}
 function answerHTML(ans) {
   if (!ans) return "";
   if (typeof ans === "string") return esc(ans);
+  const named = namedPieces(ans.refs);
   const intro = [], looks = [];
   let look = null;
   for (const src of ans.text.split("\n")) {
@@ -1547,17 +1696,14 @@ function answerHTML(ans) {
     if (!line) continue;
     const head = line.match(/^(?:outfit|look|option)(?:\s*\d+)?\s*(?:[:.)–—-]\s*(.*))?$/i);
     if (head) { look = { title: head[1] || `Outfit ${looks.length + 1}`, items: [], buy: [], lines: [] }; looks.push(look); continue; }
-    const items = [...line.matchAll(/#(\d+)/g)].map((m) => refName(ans.refs, +m[1])).filter(Boolean);
-    if (look && items.length && !/^why\b/i.test(line)) { for (const it of items) if (!look.items.includes(it)) look.items.push(it); continue; }
-    if (look && /to buy/i.test(line) && !items.length) { look.buy.push(line.replace(/^[^:]{0,20}:\s*/, "")); continue; }
-    (look ? look.lines : intro).push(cleanRefs(line, ans.refs));
+    const why = /^why\b/i.test(line);
+    if (look && !why && /to buy/i.test(line) && !/#\d/.test(line)) { look.buy.push(parseBuy(line, ans.refs, named)); continue; }
+    const items = look && !why ? piecesIn(line, ans.refs, named) : [];
+    if (items.length) { for (const it of items) if (!look.items.includes(it)) look.items.push(it); continue; }
+    (look ? look.lines : intro).push(line);
   }
-  if (!looks.length) {
-    // No outfit blocks: plain answer, with any pieces it mentions shown underneath.
-    const items = [...new Set([...ans.text.matchAll(/#(\d+)/g)].map((m) => refName(ans.refs, +m[1])).filter(Boolean))];
-    return `<div class="ai-rich"><p>${esc(cleanRefs(ans.text, ans.refs).trim())}</p>${items.length ? `<div class="pieces">${items.map(pieceTile).join("")}</div>` : ""}</div>`;
-  }
-  return `<div class="ai-rich">${intro.length ? `<p>${esc(intro.join("\n"))}</p>` : ""}<div class="looks">${looks.map((l) => `<article class="look"><h3>${esc(cleanRefs(l.title, ans.refs))}</h3><div class="pieces">${l.items.map(pieceTile).join("")}${l.buy.map((b) => `<button class="piece" data-go="shop"><div class="ph">${esc(b)}</div><span>To buy</span></button>`).join("")}</div>${l.lines.length ? `<p class="why">${esc(l.lines.join("\n"))}</p>` : ""}${l.items.length ? `<button class="btn" data-wearids="${l.items.map((i) => i.id).join(",")}">Wear this today</button>` : ""}</article>`).join("")}</div></div>`;
+  if (!looks.length) return `<div class="ai-rich">${tipsHTML(intro, ans.refs, named)}</div>`;
+  return `<div class="ai-rich">${tipsHTML(intro, ans.refs, named)}<div class="looks">${looks.map((l) => `<article class="look"><h3>${esc(cleanRefs(l.title, ans.refs))}</h3><div class="pieces">${l.items.map(pieceTile).join("")}${l.buy.map(buyTile).join("")}</div>${l.lines.length ? `<p class="why">${esc(l.lines.map((x) => cleanRefs(x, ans.refs)).join("\n"))}</p>` : ""}${l.items.length ? `<button class="btn" data-wearids="${l.items.map((i) => i.id).join(",")}">Wear this today</button>` : ""}</article>`).join("")}</div></div>`;
 }
 
 // Recognise type, colours, brand and style from one photo.
@@ -1655,7 +1801,7 @@ function renderToday() {
 function outfitCard(o, i) {
   const order = ["outer", "mid", "base", "bottom", "shoes"];
   const pieces = order.map((k) => o.pieces[k]).filter(Boolean);
-  const ph = (o.missing || []).map((m) => `<button class="piece" data-go="shop"><div class="ph">No ${SLOTS[m].toLowerCase()} yet<br>tap to shop</div><span>${SLOTS[m]}</span></button>`).join("");
+  const ph = (o.missing || []).map((m) => `<button class="piece" data-go="shop"><div class="ph">${kindIcon(SLOT_ICON[m])}<small>No ${SLOTS[m].toLowerCase()} yet<br>tap to shop</small></div><span>${SLOTS[m]}</span></button>`).join("");
   return `<article class="card outfit">
     <div class="row" style="justify-content:space-between"><h2 style="margin:0">${["Best match", "Option 2", "Option 3"][i] || "Option"}</h2>${i === 0 ? '<span class="score">Top pick</span>' : ""}</div>
     <div class="pieces">${pieces.map(pieceTile).join("")}${ph}</div>
@@ -1783,7 +1929,7 @@ function confirmBox(message, okLabel) {
   });
 }
 
-function pairingsFor(item) {
+function pairingsFor(item, limit = 6) {
   // Rule-based: neutrals with anything, avoid a second accent colour, avoid two graphic pieces, prefer a shared style.
   const c = item.colors?.[0];
   const accent = c && !COLORS[c]?.neutral;
@@ -1801,7 +1947,7 @@ function pairingsFor(item) {
       return { o, s };
     })
     .sort((a, b) => b.s - a.s)
-    .slice(0, 6)
+    .slice(0, limit)
     .map((x) => x.o);
 }
 
@@ -2371,21 +2517,20 @@ function renderShop() {
       </section>
       <section class="card">
         <h2>Worth adding</h2>
-        <div class="sugg">${a.suggestions.length ? a.suggestions.map((s, k) => `
-          <div class="sugg-item">
-            <div><span class="prio">${s.prio === "high" ? "Fills a gap" : s.prio === "medium" ? "Adds range" : "Nice to have"}</span><h3>${esc(s.title)}</h3><p>${esc(s.why)}</p></div>
-            <div class="shops">${shopLinks(s.query).map(([n, u]) => `<a class="btn" href="${u}" target="_blank" rel="noopener">${n}</a>`).join("")}<button class="btn" data-wish="${k}">${state.wishlist.some((w) => w.title === s.title) ? "♥ Saved" : "♡ Save"}</button></div>
-          </div>`).join("") : `<p class="muted">Your wardrobe looks well balanced.</p>`}
+        <div class="sugg">${a.suggestions.length ? a.suggestions.map((s, k) => buyRow({ ...s, with: goesWith(s.title) }, {
+          label: s.prio === "high" ? "Fills a gap" : s.prio === "medium" ? "Adds range" : "Nice to have",
+          extra: `<button class="btn" data-wish="${k}">${state.wishlist.some((w) => w.title === s.title) ? "♥ Saved" : "♡ Save"}</button>`,
+        })).join("") : `<p class="muted">Your wardrobe looks well balanced.</p>`}
         </div>
       </section>
-      ${state.wishlist.length ? `<section class="card"><h2>Wishlist</h2><div class="sugg">${state.wishlist.map((w, k) => `
-          <div class="sugg-item"><div><h3>${esc(w.title)}</h3><p>${esc(w.why)}</p></div>
-          <div class="shops">${shopLinks(w.query).slice(0, 2).map(([n, u]) => `<a class="btn" href="${u}" target="_blank" rel="noopener">${n}</a>`).join("")}<button class="btn ghost" data-unwish="${k}">Remove</button></div></div>`).join("")}</div></section>` : ""}
+      ${state.wishlist.length ? `<section class="card"><h2>Wishlist</h2><div class="sugg">${state.wishlist.map((w, k) => buyRow({ ...w, with: goesWith(w.title) }, {
+          label: "", shops: 2, extra: `<button class="btn ghost" data-unwish="${k}">Remove</button>`,
+        })).join("")}</div></section>` : ""}
       ${a.unworn.length || a.stale.length ? `<section class="card"><h2>Forgotten pieces</h2><p class="muted small" style="margin-top:-6px">Wear them, or think about selling or donating.</p><div class="grid">${[...a.unworn, ...a.stale].slice(0, 8).map(itemTile).join("")}</div></section>` : ""}
       <section class="card ai-box">
         <h2 style="margin:0">Personal shopping advice</h2>
         <p class="muted small" style="margin:0">${aiReady() ? `${aiName()} looks at your whole wardrobe and suggests the next few buys.` : "Add a Gemini or Claude API key in Settings for tailored shopping advice."}</p>
-        <div class="row"><button class="btn primary" data-ask="Looking at my wardrobe and style, what are the 5 most useful things to buy next? One line each with a search term I can paste into a shop.">What should I buy next?</button></div>
+        <div class="row"><button class="btn primary" data-ask="${esc(SHOP_QUESTION)}">What should I buy next?</button></div>
         <div class="ai-answer" id="ai-answer">${answerHTML(state.aiAnswer)}</div>
       </section>
     </div>`;
@@ -2723,6 +2868,13 @@ document.addEventListener("click", async (e) => {
     const s = analyse().suggestions[+ds.wish];
     if (!state.wishlist.some((w) => w.title === s.title)) { state.wishlist.push(s); await saveWishlist(); toast("Saved to wishlist"); }
     return render();
+  }
+  if (ds.wishbuy) {
+    const w = JSON.parse(ds.wishbuy);
+    if (!state.wishlist.some((x) => x.title === w.title)) { state.wishlist.push(w); await saveWishlist(); toast("Saved to wishlist"); }
+    t.textContent = "♥ Saved";
+    if (view === "shop") render();
+    return;
   }
   if (ds.unwish != null) { state.wishlist.splice(+ds.unwish, 1); await saveWishlist(); return render(); }
   if (ds.ask) return ask(ds.ask);
