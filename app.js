@@ -1436,9 +1436,10 @@ function wardrobeText() {
 }
 const STYLIST_SYSTEM =
   "You are a personal stylist in a smart-wardrobe app. Use the user's own pieces, each written as its #number and name, e.g. '#4 Navy knit'. " +
-  "For every outfit you suggest, write a line 'Outfit: <short title>', then one line per piece, then one line starting 'Why:'. " +
+  "When the question is about what to wear (a day, an occasion, a trip), suggest 3 clearly different outfits, best first, unless the user asks for another number. " +
+  "For every outfit, write a line 'Outfit: <short title>', then one line per piece, then one line starting 'Why:'. " +
   "If something is missing (e.g. shoes), say what would work and mark it 'to buy'. " +
-  "Plain text, no markdown, at most 20 short lines.";
+  "Plain text, no markdown, at most 24 short lines.";
 
 // Stylist answers: each "Outfit:" block becomes its own card with the pieces' photos.
 // `refs` maps the #numbers to item ids as they were when the question was asked.
@@ -1585,7 +1586,7 @@ function aiCard() {
     <h2 style="margin:0">Ask the stylist</h2>
     <p class="muted small" style="margin:0">${aiReady() ? `Ask anything about your clothes. Answers come from ${aiName()}.` : "Optional: add a Gemini or Claude API key in Settings for free-form styling advice. Outfit ideas above work without it."}</p>
     <div class="chips">
-      ${["What should I wear for a dinner date?", "Which pieces should I donate?", "Build me a capsule for a weekend trip"].map((q) => `<button class="chip" data-ask="${esc(q)}">${esc(q)}</button>`).join("")}
+      ${["3 outfits for today", "What should I wear for a dinner date?", "Which pieces should I donate?", "Build me a capsule for a weekend trip"].map((q) => `<button class="chip" data-ask="${esc(q)}">${esc(q)}</button>`).join("")}
     </div>
     <div class="row"><input id="ask-input" class="input" style="flex:1;min-width:0" placeholder="Ask about your wardrobe…" data-input="ask"><button class="btn primary" data-act="ask">Ask</button></div>
     <div class="ai-answer" id="ai-answer">${answerHTML(state.aiAnswer)}</div>
@@ -1663,6 +1664,9 @@ function openItem(id, showOriginal = false) {
       <div><b>Colours</b>${swatches(i.colors)} ${esc((i.colors || []).join(", "))}</div>
       <div><b>Warmth</b>${"●".repeat(i.warmth || 1)}${"○".repeat(5 - (i.warmth || 1))}</div>
       <div><b>Worn</b>${i.wearCount ? i.wearCount + "×" : "Not yet"} ${i.lastWorn ? `· ${daysSince(i.lastWorn) === 0 ? "today" : daysSince(i.lastWorn) + " days ago"}` : ""}</div>
+      ${i.price ? `<div><b>Price</b>${fmtPrice(i.price, i.currency)}${i.wearCount ? ` · ${fmtPrice(i.price / i.wearCount, i.currency)} per wear` : ""}</div>` : ""}
+      ${i.size ? `<div><b>Size</b>${esc(i.size)}</div>` : ""}
+      ${i.material ? `<div><b>Material</b>${esc(i.material)}</div>` : ""}
     </div>
     ${i.tags?.length ? `<div class="chips" style="margin-bottom:14px">${i.tags.map((t) => `<span class="chip">${esc(t)}</span>`).join("")}</div>` : ""}
     ${i.notes ? `<p>${esc(i.notes)}</p>` : ""}
@@ -1718,7 +1722,7 @@ function pairingsFor(item) {
 const shown = (p) => (p.useCut && p.cut ? p.cut : p.orig);
 const newPhoto = (src) => ({ src, orig: src, cutSrc: null, cut: null, useCut: false, rot: 0 });
 function newDraft() {
-  return { id: null, photos: [], active: 0, name: "", category: "", colors: [], brand: "", styles: [], stylesTouched: false, warmth: 3, tags: "", notes: "", analysing: false };
+  return { id: null, photos: [], active: 0, name: "", category: "", colors: [], brand: "", styles: [], stylesTouched: false, warmth: 3, tags: "", notes: "", price: "", currency: "", size: "", material: "", analysing: false };
 }
 function brandHint(brand) {
   const b = brandInfo(brand);
@@ -1853,7 +1857,8 @@ function brandTyped(value) {
 }
 const ICON_CAMERA = `<svg viewBox="0 0 24 24"><path d="M3 8a2 2 0 0 1 2-2h2l2-2h6l2 2h2a2 2 0 0 1 2 2v10a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><circle cx="12" cy="13" r="4"/></svg>`;
 const ICON_GALLERY = `<svg viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="16" rx="2"/><circle cx="9" cy="10" r="2"/><path d="m21 16-5-5-9 9"/></svg>`;
-const ICON_ROTATE = `<svg viewBox="0 0 24 24"><path d="M20 11a8 8 0 1 0-2.3 5.7"/><path d="M20 4v7h-7"/></svg>`;
+const ICON_TAG = `<svg viewBox="0 0 24 24"><path d="M3 12V4a1 1 0 0 1 1-1h8l9 9-9 9z"/><circle cx="8" cy="8" r="1.5"/></svg>`;
+const ICON_ROTATE =`<svg viewBox="0 0 24 24"><path d="M20 11a8 8 0 1 0-2.3 5.7"/><path d="M20 4v7h-7"/></svg>`;
 
 function renderAdd() {
   if (!draft) draft = newDraft();
@@ -1920,6 +1925,17 @@ function renderAdd() {
           <input id="f-brand" class="input" data-input="brand" value="${esc(d.brand)}" placeholder="e.g. Lacoste" list="brand-list" autocomplete="off">
           <datalist id="brand-list">${BRAND_LIST.map(([n]) => `<option value="${esc(n)}"></option>`).join("")}</datalist>
           <span class="muted small" id="brand-hint">${esc(brandHint(d.brand))}</span>
+        </div>
+        <div class="field"><label>Price tag <span style="text-transform:none;font-weight:400">(optional)</span></label>
+          <div class="row">
+            <button class="btn" data-act="scan-tag" ${d.scanningTag ? "disabled" : ""}>${d.scanningTag ? '<span class="spinner"></span>Reading the tag…' : `${ICON_TAG}Scan price tag`}</button>
+            <span class="muted small">${aiReady() ? `${aiName()} reads brand, price, size and material from a photo of the tag or label.` : "Add a Gemini key in Settings to read tags from a photo, or type them in."}</span>
+          </div>
+          <div class="tag-fields">
+            <input class="input" data-input="price" inputmode="decimal" value="${esc(d.price ?? "")}" placeholder="Price${d.currency ? ` (${esc(d.currency)})` : ""}" aria-label="Price">
+            <input class="input" data-input="size" value="${esc(d.size || "")}" placeholder="Size" aria-label="Size">
+            <input class="input" data-input="material" value="${esc(d.material || "")}" placeholder="Material, e.g. 100% cotton" aria-label="Material">
+          </div>
         </div>
         <div class="field"><label>Style <span style="text-transform:none;font-weight:400">(${d.stylesTouched ? "set" : "recognised from brand and type, tap to change"})</span></label><div class="chips">${Object.entries(STYLES).map(([k, v]) => `<button class="chip" aria-pressed="${d.styles.includes(k)}" data-sty="${esc(k)}">${v.label}</button>`).join("")}</div></div>
         <div class="field"><label>Colours <span style="text-transform:none;font-weight:400">(main colour first)</span></label><div class="chips">${Object.entries(COLORS).map(([n, v]) => `<button class="chip" aria-pressed="${d.colors.includes(n)}" data-col="${esc(n)}"><span class="dot" style="background:${v.hex}"></span>${cap(n)}${d.colors[0] === n ? " ·main" : ""}</button>`).join("")}</div></div>
@@ -2023,6 +2039,57 @@ async function recognise(d) {
   }
   d.analysing = false;
   rerenderAdd(d);
+}
+
+// Price tag or care label: one photo, read by the AI (about 400 tokens). The photo itself isn't kept.
+const TAG_LABEL_SCHEMA = {
+  type: "object",
+  additionalProperties: false,
+  required: ["brand", "name", "category", "price", "currency", "size", "material"],
+  properties: {
+    brand: { type: "string", description: "Brand printed on the tag; empty if none" },
+    name: { type: "string", description: "Product name or short description if printed, e.g. 'Slim fit chinos'; empty if none" },
+    category: { type: "string", enum: [...CATS.map((c) => c.id), ""], description: "Type of garment if the tag makes it clear; empty if not" },
+    price: { type: "number", description: "Current selling price (the discounted one if there are two); 0 if none" },
+    currency: { type: "string", description: "ISO code such as EUR, GBP, USD; empty if no price" },
+    size: { type: "string", description: "Size as printed, e.g. M, 32/32, EU 42; empty if none" },
+    material: { type: "string", description: "Composition, e.g. '100% cotton'; empty if none" },
+  },
+};
+const tagInput = Object.assign(document.createElement("input"), { type: "file", accept: "image/*", capture: "environment", hidden: true });
+document.body.append(tagInput);
+tagInput.onchange = () => { const f = tagInput.files[0]; tagInput.value = ""; if (f && draft) scanTag(draft, f); };
+async function scanTag(d, file) {
+  d.scanningTag = true;
+  rerenderAdd(d);
+  try {
+    const text = await aiGenerate({
+      system: "You read clothing price tags and labels for a wardrobe app. Reply with JSON only. Leave a field empty (or 0) rather than guess.",
+      text: "Read this tag or label.",
+      image: await resizeImage(file, 1024),
+      schema: TAG_LABEL_SCHEMA,
+      maxTokens: 200,
+    });
+    const r = JSON.parse(text.replace(/^```(json)?|```$/g, "").trim());
+    if (r.brand && !d.brand) d.brand = r.brand.trim();
+    if (r.name && !d.name) d.name = r.name.trim();
+    if (CAT[r.category] && !d.category) { d.category = r.category; d.warmth = CAT[r.category].warmth; }
+    if (r.price > 0) { d.price = String(r.price); d.currency = (r.currency || "").toUpperCase(); }
+    if (r.size) d.size = r.size.trim();
+    if (r.material) d.material = r.material.trim();
+    refreshStyles();
+    if (d.brand) lookupBrand(d.brand).then((learnt) => learnt && (refreshStyles(), rerenderAdd(d)));
+    if (draft === d) toast([r.brand, r.price > 0 && fmtPrice(r.price, r.currency), r.size].filter(Boolean).join(" · ") || "Nothing readable on that tag");
+  } catch (err) {
+    if (draft === d) toast(err.message || "Couldn't read the tag");
+  }
+  d.scanningTag = false;
+  rerenderAdd(d);
+}
+function fmtPrice(n, currency) {
+  const cur = currency || (state.settings.region === "it" ? "EUR" : "");
+  try { if (cur) return new Intl.NumberFormat(undefined, { style: "currency", currency: cur }).format(n); } catch { /* unknown code */ }
+  return `${Math.round(n * 100) / 100}${cur ? ` ${cur}` : ""}`;
 }
 
 // Front and back are usually taken within a minute of each other, so gallery photos are
@@ -2146,6 +2213,8 @@ async function saveDraft(next = false) {
     name: d.name.trim() || autoName(d) || "Untitled piece",
     category: d.category, colors: d.colors, brand: d.brand.trim(), styles, formality: formalityOf(styles),
     warmth: +d.warmth, tags, notes: d.notes.trim(),
+    price: parseFloat(String(d.price ?? "").replace(",", ".")) || undefined, currency: d.currency || undefined,
+    size: (d.size || "").trim() || undefined, material: (d.material || "").trim() || undefined,
     photos: d.photos.map(shown),
     originals: anyCut ? d.photos.map((p) => p.orig) : undefined,
     aiChecked: existing?.aiChecked || d.photos.some((p) => p.aiChecked) || undefined,
@@ -2181,6 +2250,12 @@ function renderShop() {
         <div class="stat"><b>${brands.length}</b><span>brands</span></div>
         <div class="stat"><b>${a.unworn.length}</b><span>never worn</span></div>
         <div class="stat"><b>${styleMix[0] ? styleLabel(styleMix[0][0]) : "–"}</b><span>main style</span></div>
+        ${(() => {
+          const priced = state.items.filter((i) => i.price);
+          if (!priced.length) return "";
+          const cur = priced[0].currency, same = priced.every((i) => i.currency === cur);
+          return same ? `<div class="stat"><b>${fmtPrice(priced.reduce((a, i) => a + i.price, 0), cur)}</b><span>value of ${priced.length} priced piece${priced.length === 1 ? "" : "s"}</span></div>` : "";
+        })()}
       </div>
       <div class="two-col">
         <section class="card">
@@ -2594,6 +2669,7 @@ document.addEventListener("click", async (e) => {
     case "save": return saveDraft(false);
     case "save-next": return saveDraft(true);
     case "ai-tag": return recognise(draft);
+    case "scan-tag": return aiReady() ? tagInput.click() : toast(NO_AI);
     case "cut-all": return cutAll();
     case "recognise-all": return recogniseAll();
     case "ask": return ask($('[data-input="ask"]')?.value);
@@ -2653,7 +2729,7 @@ document.addEventListener("input", (e) => {
     e.target._t = setTimeout(() => { generateOutfits(); render(); }, 250);
     return;
   }
-  if (draft && ["name", "brand", "tags", "notes", "warmth"].includes(k)) draft[k] = v;
+  if (draft && ["name", "brand", "tags", "notes", "warmth", "price", "size", "material"].includes(k)) draft[k] = v;
   if (draft && k === "brand") brandTyped(v);
   if (draft && (k === "brand" || k === "tags")) {
     refreshStyles();

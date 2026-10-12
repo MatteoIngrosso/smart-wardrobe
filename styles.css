@@ -273,3 +273,7 @@ img.pic-bg { object-fit: contain; background: var(--pic); }
 .shutter { width: 84px; height: 84px; border-radius: 50%; border: 6px solid #fff; background: #fff3; flex: 0 0 auto; }
 .shutter:active { background: #fff; }
 .cam-bar [data-cam="skip"][hidden] { visibility: hidden; display: inline-flex !important; }
+
+/* price tag fields on the Add form */
+.tag-fields { display: grid; grid-template-columns: minmax(90px, 1fr) minmax(70px, .7fr) minmax(140px, 2fr); gap: 8px; }
+@media (max-width: 520px) { .tag-fields { grid-template-columns: 1fr 1fr; } .tag-fields [data-input="material"] { grid-column: 1 / -1; } }
