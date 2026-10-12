@@ -116,7 +116,9 @@ function parseStyles(str) {
   return found.sort((a, b) => a[0] - b[0]).map(([, s]) => s);
 }
 const BRANDS = Object.fromEntries(BRAND_LIST.map(([name, tier, styles]) => [normBrand(name), { name, tier, styles: parseStyles(styles) }]));
-const brandInfo = (b) => BRANDS[normBrand(b)];
+// Brands not in the list above are looked up online (see "Brand lookup") and kept here.
+const brandCache = {};
+const brandInfo = (b) => { const k = normBrand(b); return BRANDS[k] || (brandCache[k]?.name ? brandCache[k] : undefined); };
 const TIER_LABEL = { luxury: "Luxury brand", premium: "Premium brand", mainstream: "Mainstream brand", "high street": "High-street brand" };
 
 const OCCASIONS = [
@@ -210,6 +212,7 @@ async function loadAll() {
   Object.assign(state.settings, (await store.get("kv", "settings")) || {});
   state.wishlist = (await store.get("kv", "wishlist")) || [];
   state.usage = (await store.get("kv", "usage")) || state.usage;
+  Object.assign(brandCache, (await raw.get("kv", "brandCache")) || {});
   Object.assign(sync, (await raw.get("kv", SYNC_STATE)) || {});
   sync.dirty = new Set(sync.dirty);
   for (const it of state.items) if (!it.styles) { it.styles = guessStyles(it); it.formality = formalityOf(it.styles); }
@@ -1719,7 +1722,101 @@ function newDraft() {
 }
 function brandHint(brand) {
   const b = brandInfo(brand);
-  return b ? `${TIER_LABEL[b.tier]}, usually ${b.styles.map(styleLabel).join(" / ").toLowerCase()}` : "";
+  if (!b) return "";
+  const styles = b.styles.length ? `usually ${b.styles.map(styleLabel).join(" / ").toLowerCase()}` : "";
+  if (b.about) return `${cap(b.about)}${styles ? `, ${styles}` : ""} (from Wikidata)`;
+  return [TIER_LABEL[b.tier], styles].filter(Boolean).join(", ");
+}
+
+/* ---------- Brand lookup (Wikidata: free, no key) ----------
+   The list above knows the tier and usual styles of about 85 brands. Any other brand
+   is looked up on Wikidata, which recognises thousands of labels, from luxury houses
+   to small streetwear brands. Its short description ("British streetwear brand",
+   "Italian luxury fashion company") gives a style and sometimes a tier. Results are
+   kept on the device, so each brand is looked up once. */
+const BRAND_WORDS = [
+  [/luxury|haute couture|fashion house/, "luxury", "luxury"],
+  [/streetwear|skate/, null, "streetwear"],
+  [/sportswear|sports?(wear| apparel| equipment| clothing)|athletic|activewear/, null, "sporty"],
+  [/outdoor|mountaineering|hiking/, null, "outdoor"],
+  [/fast fashion|retail chain|department store/, "high street", "casual"],
+  [/tailor|\bsuits?\b|menswear/, null, "smart"],
+  [/preppy/, null, "preppy"],
+  [/vintage/, null, "vintage"],
+  [/minimalis/, null, "minimal"],
+  [/denim|jeans|workwear/, null, "casual"],
+];
+const FASHION_WORDS = /cloth|fashion|apparel|garment|footwear|shoe|sneaker|streetwear|sportswear|couture|designer|retailer|knitwear|denim|luxury/;
+const NOT_FASHION = /\b(cars?|automobiles?|vehicles?|motorcycles?|tractors?|beer|wine|food|drinks?|software|video game|album|song|film|band|rapper|singer|cigarettes?|bank|airline|record label)\b/;
+// "Patagonia, Inc." → "Patagonia"
+const plainBrand = (name) => name.replace(/,?\s+(inc|ltd|llc|plc|s\.?p\.?a|s\.?a|gmbh|ag|co|corp|corporation|group|company)\.?$/i, "").trim();
+function brandFromWikidata(hit) {
+  const about = (hit.description || "").toLowerCase();
+  if (NOT_FASHION.test(about) || !(FASHION_WORDS.test(about) || /\b(brand|company)\b/.test(about))) return null;
+  let tier;
+  const styles = [];
+  for (const [re, t, s] of BRAND_WORDS) if (re.test(about)) { tier = tier || t || undefined; if (!styles.includes(s)) styles.push(s); }
+  return { name: plainBrand(hit.label), tier, styles: styles.slice(0, 3), about: hit.description, at: today() };
+}
+let brandPauseUntil = 0;
+async function searchBrands(q) {
+  if (Date.now() < brandPauseUntil) throw new Error("paused");
+  const url = `https://www.wikidata.org/w/api.php?action=wbsearchentities&search=${encodeURIComponent(q)}&language=en&uselang=en&type=item&limit=10&format=json&origin=*`;
+  const r = await fetch(url);
+  if (!r.ok) {
+    if (r.status === 429) brandPauseUntil = Date.now() + 10 * 60e3; // asked to slow down: try again in 10 minutes
+    throw new Error(`Wikidata ${r.status}`);
+  }
+  return ((await r.json()).search || []).map(brandFromWikidata).filter(Boolean);
+}
+const saveBrandCache = () => raw.put("kv", brandCache, "brandCache");
+// Keep every brand found, and return the one meant by `k`: the exact name, or a
+// longer one that starts with it ("Lululemon" → "Lululemon Athletica").
+function rememberBrands(hits, k) {
+  for (const h of hits) if (!BRANDS[normBrand(h.name)] && !brandCache[normBrand(h.name)]?.name) brandCache[normBrand(h.name)] = h;
+  const hit = hits.find((h) => normBrand(h.name) === k) || (k.length >= 4 && hits.find((h) => normBrand(h.name).startsWith(k)));
+  if (hit && !brandCache[k]?.name) brandCache[k] = hit;
+  return hit;
+}
+// Look a brand up once (misses are retried after a month). Returns true if something new was learnt.
+async function lookupBrand(brand) {
+  const k = normBrand(brand);
+  if (!k || k.length < 2 || BRANDS[k]) return false;
+  const c = brandCache[k];
+  if (c && (c.name || daysSince(c.at) < 30)) return false;
+  try {
+    const hits = await searchBrands(brand.trim());
+    const hit = rememberBrands(hits, k);
+    if (!hit) brandCache[k] = { at: today() };
+    await saveBrandCache();
+    return !!hit;
+  } catch { return false; } // offline or blocked: the list above still works
+}
+// Fill in brands of pieces already in the wardrobe (Discover shows their tier and style).
+async function lookupWardrobeBrands() {
+  let learnt = false;
+  for (const b of [...new Set(state.items.map((i) => i.brand).filter(Boolean))]) learnt = (await lookupBrand(b)) || learnt;
+  if (learnt && view === "shop") render();
+}
+// While typing a brand: suggest matching brands from Wikidata and update the hint.
+let brandTimer;
+function brandTyped(value) {
+  clearTimeout(brandTimer);
+  brandTimer = setTimeout(async () => {
+    const q = value.trim();
+    if (q.length < 2 || BRANDS[normBrand(q)]) return;
+    let hits = [];
+    try { hits = await searchBrands(q); } catch { return; }
+    rememberBrands(hits, ""); // half-typed names aren't saved as aliases; lookupBrand does that on save
+    await saveBrandCache();
+    const list = $("#brand-list");
+    if (list) for (const h of hits) if (!list.querySelector(`option[value="${CSS.escape(h.name)}"]`)) list.insertAdjacentHTML("afterbegin", `<option value="${esc(h.name)}"></option>`);
+    if (!draft || normBrand(draft.brand) !== normBrand(value)) return;
+    refreshStyles();
+    const hint = $("#brand-hint");
+    if (hint) hint.textContent = brandHint(draft.brand);
+    document.querySelectorAll("[data-sty]").forEach((c) => c.setAttribute("aria-pressed", draft.styles.includes(c.dataset.sty)));
+  }, 400);
 }
 const ICON_CAMERA = `<svg viewBox="0 0 24 24"><path d="M3 8a2 2 0 0 1 2-2h2l2-2h6l2 2h2a2 2 0 0 1 2 2v10a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><circle cx="12" cy="13" r="4"/></svg>`;
 const ICON_GALLERY = `<svg viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="16" rx="2"/><circle cx="9" cy="10" r="2"/><path d="m21 16-5-5-9 9"/></svg>`;
@@ -1887,6 +1984,7 @@ async function recognise(d) {
       if (TURN_FOR[side]) { p.rot = (p.rot + TURN_FOR[side]) % 360; await applyRotation(p); }
     }
     if (draft === d) toast(r.brand ? `Recognised ${r.brand}` : "Filled in, check and save");
+    if (r.brand) lookupBrand(r.brand).then((learnt) => learnt && rerenderAdd(d));
   } catch (err) {
     if (draft === d) toast(err.message || "Couldn't read the photos");
   }
@@ -2021,6 +2119,7 @@ async function saveDraft(next = false) {
   };
   await store.put("items", item);
   if (existing) Object.assign(existing, item); else state.items.push(item);
+  lookupBrand(item.brand);
   state.outfits = [];
   toast(existing ? "Saved" : `Added ${item.name}`);
   draft = null;
@@ -2255,6 +2354,7 @@ async function recogniseAll() {
   state.outfits = [];
   toast(`Found ${found} brand${found === 1 ? "" : "s"}; styles updated`);
   render();
+  lookupWardrobeBrands();
 }
 
 async function exportBackup() {
@@ -2521,6 +2621,7 @@ document.addEventListener("input", (e) => {
     return;
   }
   if (draft && ["name", "brand", "tags", "notes", "warmth"].includes(k)) draft[k] = v;
+  if (draft && k === "brand") brandTyped(v);
   if (draft && (k === "brand" || k === "tags")) {
     refreshStyles();
     // Update the hint and style chips without stealing focus from the text box.
@@ -2548,6 +2649,7 @@ previewSample.then((f) => {
 });
 go("today");
 syncLoop();
+setTimeout(lookupWardrobeBrands, 3000);
 {
   // Join the shared wardrobe before deciding whether this device needs the samples.
   await Promise.race([syncFirst, new Promise((r) => setTimeout(r, 4000))]);
