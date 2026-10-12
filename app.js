@@ -1088,6 +1088,9 @@ function scoreOutfit(o, cond, occ) {
   const warmth = pieces.filter((p) => ["base", "mid", "outer"].includes(slotOf(p))).reduce((a, p) => a + (p.warmth || 2), 0);
   const want = feels >= 24 ? 1 : feels >= 19 ? 2.5 : feels >= 14 ? 3.5 : feels >= 8 ? 6 : feels >= 2 ? 8 : 9.5;
   s -= Math.abs(warmth - want) * 0.7;
+  // Too hot for a hoodie or knit (outfits with more pieces collect more style points, so say it clearly).
+  if (o.mid && feels >= 24) s -= 3;
+  else if (o.mid && feels >= 21 && o.mid.warmth >= 3) s -= 1;
   if (o.outer) {
     if (o.outer.warmth >= 5 && feels > 12) s -= 3;
     if (feels < 6 && o.outer.warmth >= 4) reasons.push(`${o.outer.name} keeps you warm at ${fmtTemp(feels)}`);
@@ -1148,8 +1151,12 @@ function generateOutfits(n = 3) {
   const cands = [];
   for (let i = 0; i < 900; i++) {
     const o = {};
-    if (by.base.length && (!wantMid || Math.random() < 0.85 || !by.mid.length)) o.base = pick(by.base);
-    if (by.mid.length && (wantMid || !o.base)) o.mid = pick(by.mid);
+    // Cool days: mostly base + mid layer. Warm days: mostly a base layer alone, but mid
+    // layers are still tried (the score decides), so a wardrobe with one or two T-shirts
+    // still gets three different ideas.
+    const r = Math.random();
+    if (by.base.length && (!by.mid.length || r < (wantMid ? 0.85 : 0.7))) o.base = pick(by.base);
+    if (by.mid.length && (!o.base || wantMid || r < 0.15)) o.mid = pick(by.mid);
     if (!o.base && !o.mid) continue;
     if (by.outer.length && wantOuter) o.outer = pick(by.outer);
     if (by.bottom.length) o.bottom = pick(by.bottom);
@@ -1160,17 +1167,25 @@ function generateOutfits(n = 3) {
     cands.push({ pieces: o, ...scoreOutfit(o, cond, occ), jitter: Math.random() * 0.6 });
   }
   cands.sort((a, b) => b.score + b.jitter - (a.score + a.jitter));
-  // Keep the suggestions different from each other (no shared hero piece or bottom)
+  // Keep the suggestions different from each other: ideally no shared hero piece or bottom.
+  // If the wardrobe is too small for that (one T-shirt on a hot day), sharing one of them
+  // beats a much worse outfit (a hoodie at 29°); only then anything that's left.
   const out = [];
-  const used = new Set();
-  for (const c of cands) {
-    const hero = (c.pieces.mid || c.pieces.base).id;
-    const bottom = c.pieces.bottom?.id;
-    if (used.has(hero) || (bottom && used.has(bottom))) continue;
-    used.add(hero);
-    if (bottom) used.add(bottom);
-    out.push(c);
-    if (out.length === n) break;
+  const heroes = new Set(), bottoms = new Set();
+  const differ = (h, b) => !heroes.has(h) && !(b && bottoms.has(b));
+  const half = (h, b) => !heroes.has(h) || !(b && bottoms.has(b));
+  const good = (cands[0]?.score ?? 0) - 3;
+  const passes = [[differ, good], [half, good], [differ, -Infinity], [half, -Infinity], [() => true, -Infinity]];
+  for (const [ok, min] of passes) {
+    for (const c of cands) {
+      if (out.length === n) break;
+      const hero = (c.pieces.mid || c.pieces.base).id;
+      const bottom = c.pieces.bottom?.id;
+      if (out.includes(c) || c.score < min || !ok(hero, bottom)) continue;
+      heroes.add(hero);
+      if (bottom) bottoms.add(bottom);
+      out.push(c);
+    }
   }
   const missing = ["bottom", "shoes"].filter((s) => !by[s].length);
   if (!by.base.length && cond.feels >= 22) missing.unshift("base");
