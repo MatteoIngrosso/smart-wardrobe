@@ -1,0 +1,10 @@
+{
+  "name": "Smart Wardrobe",
+  "short_name": "Wardrobe",
+  "start_url": "./",
+  "display": "fullscreen",
+  "orientation": "any",
+  "background_color": "#16130f",
+  "theme_color": "#16130f",
+  "icons": [{ "src": "icon.svg", "sizes": "any", "type": "image/svg+xml" }]
+}

@@ -1,0 +1,10 @@
+# Preview build (tools/build_preview.py)
+dist/
+# Local tooling and OS files
+node_modules/
+__pycache__/
+.DS_Store
+Thumbs.db
+# Never commit keys
+.env
+*.key

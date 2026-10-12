@@ -1,0 +1,2179 @@
+// Smart Wardrobe — a touch-first, offline-first wardrobe app.
+// Everything (items, photos, wear log, settings) lives in IndexedDB on the device.
+// Token budget: background removal and daily outfit ideas run on the device and
+// cost nothing; the AI (Gemini or Claude) is only called to recognise a new photo
+// once, and when you ask the stylist something.
+
+/* ======================================================================
+   Reference data
+   ====================================================================== */
+const CATS = [
+  { id: "tshirt", label: "T-shirt", slot: "base", warmth: 1, styles: ["casual"] },
+  { id: "shirt", label: "Shirt", slot: "base", warmth: 1, styles: ["smart casual"] },
+  { id: "polo", label: "Polo", slot: "base", warmth: 1, styles: ["smart casual", "preppy"] },
+  { id: "sweatshirt", label: "Sweatshirt", slot: "mid", warmth: 2, styles: ["casual"] },
+  { id: "hoodie", label: "Hoodie", slot: "mid", warmth: 3, styles: ["casual"] },
+  { id: "zip-hoodie", label: "Zip hoodie", slot: "mid", warmth: 3, styles: ["casual"] },
+  { id: "sweater", label: "Sweater", slot: "mid", warmth: 3, styles: ["smart casual"] },
+  { id: "overshirt", label: "Overshirt", slot: "mid", warmth: 2, styles: ["smart casual"] },
+  { id: "jacket", label: "Jacket", slot: "outer", warmth: 3, styles: ["smart casual"] },
+  { id: "rain", label: "Rain jacket", slot: "outer", warmth: 2, styles: ["outdoor"] },
+  { id: "coat", label: "Coat", slot: "outer", warmth: 4, styles: ["smart"] },
+  { id: "puffer", label: "Puffer", slot: "outer", warmth: 5, styles: ["casual", "outdoor"] },
+  { id: "jeans", label: "Jeans", slot: "bottom", warmth: 2, styles: ["casual"] },
+  { id: "trousers", label: "Trousers", slot: "bottom", warmth: 2, styles: ["smart casual"] },
+  { id: "joggers", label: "Joggers", slot: "bottom", warmth: 2, styles: ["sporty"] },
+  { id: "shorts", label: "Shorts", slot: "bottom", warmth: 1, styles: ["casual"] },
+  { id: "skirt", label: "Skirt", slot: "bottom", warmth: 1, styles: ["smart casual"] },
+  { id: "sneakers", label: "Sneakers", slot: "shoes", warmth: 2, styles: ["casual"] },
+  { id: "boots", label: "Boots", slot: "shoes", warmth: 4, styles: ["smart casual"] },
+  { id: "dress-shoes", label: "Dress shoes", slot: "shoes", warmth: 2, styles: ["formal"] },
+  { id: "accessory", label: "Accessory", slot: "acc", warmth: 1, styles: [] },
+];
+const CAT = Object.fromEntries(CATS.map((c) => [c.id, c]));
+const SLOTS = {
+  base: "T-shirts & shirts", mid: "Hoodies & knits", outer: "Outerwear",
+  bottom: "Bottoms", shoes: "Shoes", acc: "Accessories",
+};
+// How many pieces per slot make a comfortable rotation.
+const SLOT_TARGET = { base: 6, mid: 4, outer: 2, bottom: 4, shoes: 3, acc: 0 };
+
+const COLORS = {
+  black: { hex: "#1c1c1c", neutral: true, tone: "dark" },
+  charcoal: { hex: "#3d3d3d", neutral: true, tone: "dark" },
+  grey: { hex: "#8b8b8b", neutral: true, tone: "mid" },
+  white: { hex: "#f4f4f0", neutral: true, tone: "light" },
+  cream: { hex: "#ebe2cc", neutral: true, tone: "light" },
+  beige: { hex: "#cbb58e", neutral: true, tone: "light" },
+  brown: { hex: "#5e4130", neutral: true, tone: "dark" },
+  navy: { hex: "#1f2a44", neutral: true, tone: "dark" },
+  denim: { hex: "#4d6a8c", neutral: true, tone: "mid" },
+  olive: { hex: "#5f6237", neutral: true, tone: "mid" },
+  burgundy: { hex: "#6a1d2b", neutral: false, tone: "dark" },
+  red: { hex: "#c0302b", neutral: false, tone: "mid" },
+  orange: { hex: "#e07a2e", neutral: false, tone: "mid" },
+  yellow: { hex: "#e8c547", neutral: false, tone: "light" },
+  green: { hex: "#3f7a47", neutral: false, tone: "mid" },
+  blue: { hex: "#3466b3", neutral: false, tone: "mid" },
+  "light blue": { hex: "#a3c6e6", neutral: false, tone: "light" },
+  purple: { hex: "#6b4a8c", neutral: false, tone: "mid" },
+  pink: { hex: "#e8a3b3", neutral: false, tone: "light" },
+};
+
+// Style vocabulary. `f` is how dressy the style is (1 casual … 4 formal).
+const STYLES = {
+  casual: { label: "Casual", f: 1 },
+  streetwear: { label: "Streetwear", f: 1 },
+  sporty: { label: "Sporty", f: 1 },
+  outdoor: { label: "Outdoor", f: 1 },
+  minimal: { label: "Minimal", f: 2 },
+  vintage: { label: "Vintage", f: 2 },
+  "smart casual": { label: "Smart casual", f: 2 },
+  preppy: { label: "Preppy", f: 3 },
+  smart: { label: "Smart", f: 3 },
+  luxury: { label: "Luxury", f: 3 },
+  formal: { label: "Formal", f: 4 },
+};
+const STYLE_CLASH = [["sporty", "formal"], ["outdoor", "formal"], ["streetwear", "formal"], ["sporty", "smart"]];
+
+// Brand knowledge used to recognise style offline (name, tier, typical styles).
+const BRAND_LIST = [
+  ["Gucci", "luxury", "luxury"], ["Prada", "luxury", "luxury smart"], ["Louis Vuitton", "luxury", "luxury"], ["Balenciaga", "luxury", "luxury streetwear"],
+  ["Dior", "luxury", "luxury smart"], ["Saint Laurent", "luxury", "luxury smart"], ["Burberry", "luxury", "luxury smart preppy"], ["Moncler", "luxury", "luxury outdoor"],
+  ["Fendi", "luxury", "luxury"], ["Versace", "luxury", "luxury"], ["Givenchy", "luxury", "luxury streetwear"], ["Valentino", "luxury", "luxury smart"],
+  ["Bottega Veneta", "luxury", "luxury minimal"], ["Loewe", "luxury", "luxury"], ["Celine", "luxury", "luxury minimal"], ["Hermès", "luxury", "luxury smart"],
+  ["Giorgio Armani", "luxury", "luxury smart"], ["Dolce & Gabbana", "luxury", "luxury"], ["Off-White", "luxury", "luxury streetwear"], ["Fear of God", "luxury", "luxury streetwear minimal"],
+  ["Amiri", "luxury", "luxury streetwear"], ["Palm Angels", "luxury", "luxury streetwear"], ["Rick Owens", "luxury", "luxury"], ["Brunello Cucinelli", "luxury", "luxury smart"],
+  ["Loro Piana", "luxury", "luxury smart minimal"], ["Zegna", "luxury", "luxury smart"], ["Max Mara", "luxury", "luxury smart"], ["Canada Goose", "luxury", "outdoor luxury"],
+  ["Stone Island", "premium", "streetwear sporty"], ["CP Company", "premium", "streetwear sporty"], ["Acne Studios", "premium", "minimal"], ["Ami Paris", "premium", "smart casual minimal"],
+  ["Maison Kitsuné", "premium", "smart casual preppy"], ["Kenzo", "premium", "streetwear"], ["Represent", "premium", "streetwear"],
+  ["Ralph Lauren", "premium", "preppy smart casual"], ["Polo Ralph Lauren", "premium", "preppy smart casual"], ["Tommy Hilfiger", "premium", "preppy casual"], ["Tommy Jeans", "premium", "casual streetwear"],
+  ["Lacoste", "premium", "preppy smart casual"], ["Hugo Boss", "premium", "smart"], ["Boss", "premium", "smart"], ["Armani Exchange", "premium", "smart casual sporty"],
+  ["Emporio Armani", "premium", "smart casual"], ["Calvin Klein", "premium", "minimal casual"], ["Stüssy", "premium", "streetwear"], ["Carhartt WIP", "premium", "streetwear casual"],
+  ["The North Face", "premium", "outdoor casual"], ["Patagonia", "premium", "outdoor casual"], ["Arc'teryx", "premium", "outdoor minimal"], ["Supreme", "premium", "streetwear"],
+  ["Palace", "premium", "streetwear"], ["Kith", "premium", "streetwear minimal"], ["Napapijri", "premium", "outdoor casual"], ["Woolrich", "premium", "outdoor smart casual"],
+  ["Fred Perry", "premium", "preppy casual"], ["Barbour", "premium", "smart casual outdoor"], ["Diesel", "premium", "casual"], ["Gant", "premium", "preppy smart casual"],
+  ["Levi's", "mainstream", "casual vintage"], ["Guess", "mainstream", "casual"], ["Champion", "mainstream", "casual vintage sporty"], ["Columbia", "mainstream", "outdoor"],
+  ["Massimo Dutti", "mainstream", "smart casual smart"], ["COS", "mainstream", "minimal"], ["Arket", "mainstream", "minimal"],
+  ["Nike", "mainstream", "sporty streetwear"], ["Adidas", "mainstream", "sporty streetwear"], ["Puma", "mainstream", "sporty"], ["Reebok", "mainstream", "sporty casual"],
+  ["New Balance", "mainstream", "sporty casual"], ["Jordan", "mainstream", "streetwear sporty"], ["Vans", "mainstream", "streetwear casual"], ["Converse", "mainstream", "casual"],
+  ["Formula 1", "mainstream", "sporty"], ["Superdry", "mainstream", "casual"], ["Abercrombie & Fitch", "mainstream", "casual preppy"],
+  ["Zara", "high street", "casual smart casual"], ["H&M", "high street", "casual"], ["Uniqlo", "high street", "minimal casual"], ["Pull&Bear", "high street", "casual streetwear"],
+  ["Bershka", "high street", "casual streetwear"], ["Mango", "high street", "smart casual"], ["Jack & Jones", "high street", "casual"], ["Primark", "high street", "casual"],
+  ["Gap", "high street", "casual"], ["Hollister", "high street", "casual"],
+];
+const normBrand = (s) => String(s || "").toLowerCase().normalize("NFD").replace(/[̀-ͯ]/g, "").replace(/[^a-z0-9&]/g, "");
+// "preppy smart casual" → ["preppy", "smart casual"]: longest style names are matched first.
+function parseStyles(str) {
+  let rest = ` ${str} `;
+  const found = [];
+  for (const s of Object.keys(STYLES).sort((a, b) => b.length - a.length)) {
+    const at = rest.indexOf(` ${s} `);
+    if (at === -1) continue;
+    found.push([at, s]);
+    rest = rest.slice(0, at) + " " + "_".repeat(s.length) + rest.slice(at + s.length + 1);
+  }
+  return found.sort((a, b) => a[0] - b[0]).map(([, s]) => s);
+}
+const BRANDS = Object.fromEntries(BRAND_LIST.map(([name, tier, styles]) => [normBrand(name), { name, tier, styles: parseStyles(styles) }]));
+const brandInfo = (b) => BRANDS[normBrand(b)];
+const TIER_LABEL = { luxury: "Luxury brand", premium: "Premium brand", mainstream: "Mainstream brand", "high street": "High-street brand" };
+
+const OCCASIONS = [
+  { id: "casual", label: "Everyday", target: 1.3, likes: ["casual", "streetwear", "sporty", "outdoor", "minimal", "vintage"] },
+  { id: "smart", label: "Smart casual", target: 2.3, likes: ["smart casual", "minimal", "preppy", "smart"] },
+  { id: "work", label: "Work / meeting", target: 2.9, likes: ["smart", "smart casual", "preppy", "formal", "minimal"] },
+  { id: "night", label: "Night out", target: 2.1, likes: ["streetwear", "luxury", "smart casual", "minimal", "smart"] },
+  { id: "event", label: "Elegant", target: 3.4, likes: ["formal", "smart", "luxury"] },
+];
+const SEED_VERSION = 3;
+
+/* ======================================================================
+   Storage (IndexedDB)
+   ====================================================================== */
+const db = await new Promise((resolve, reject) => {
+  const req = indexedDB.open("smart-wardrobe", 1);
+  req.onupgradeneeded = () => {
+    const d = req.result;
+    d.createObjectStore("items", { keyPath: "id" });
+    d.createObjectStore("log", { keyPath: "id", autoIncrement: true });
+    d.createObjectStore("kv");
+  };
+  req.onsuccess = () => resolve(req.result);
+  req.onerror = () => reject(req.error);
+});
+function tx(store, mode, fn) {
+  return new Promise((resolve, reject) => {
+    const t = db.transaction(store, mode);
+    const s = t.objectStore(store);
+    const r = fn(s);
+    t.oncomplete = () => resolve(r && "result" in r ? r.result : undefined);
+    t.onerror = () => reject(t.error);
+  });
+}
+const store = {
+  all: (s) => tx(s, "readonly", (o) => o.getAll()),
+  put: (s, v, k) => tx(s, "readwrite", (o) => o.put(v, k)),
+  del: (s, k) => tx(s, "readwrite", (o) => o.delete(k)),
+  get: (s, k) => tx(s, "readonly", (o) => o.get(k)),
+  clear: (s) => tx(s, "readwrite", (o) => o.clear()),
+};
+
+const state = {
+  items: [],
+  log: [],
+  settings: {
+    city: "", lat: null, lon: null, unit: "C", theme: "auto",
+    region: (navigator.language || "en").slice(0, 2) === "it" ? "it" : "com",
+    aiProvider: "gemini", geminiKey: "", geminiModel: "gemini-flash-latest", apiKey: "",
+    autoCutout: true, aiAuto: true,
+  },
+  usage: { month: "", requests: 0, input: 0, output: 0 },
+  wishlist: [],
+  filters: { q: "", slot: "all", color: "all", style: "all", sort: "recent" },
+  occasion: "casual",
+  manualTemp: null,
+  previewAI: false, // true inside the Claude preview, where AI goes through the viewer's Claude account
+  weather: null,
+  outfits: [],
+  aiAnswer: "",
+};
+
+async function loadAll() {
+  state.items = (await store.all("items")) || [];
+  state.log = (await store.all("log")) || [];
+  Object.assign(state.settings, (await store.get("kv", "settings")) || {});
+  state.wishlist = (await store.get("kv", "wishlist")) || [];
+  state.usage = (await store.get("kv", "usage")) || state.usage;
+  for (const it of state.items) if (!it.styles) { it.styles = guessStyles(it); it.formality = formalityOf(it.styles); }
+}
+const saveSettings = () => store.put("kv", state.settings, "settings");
+const saveWishlist = () => store.put("kv", state.wishlist, "wishlist");
+
+/* ======================================================================
+   Helpers
+   ====================================================================== */
+const $ = (sel, root = document) => root.querySelector(sel);
+const esc = (s) => String(s ?? "").replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
+const uid = () => (crypto.randomUUID ? crypto.randomUUID() : Date.now().toString(36) + Math.random().toString(36).slice(2));
+const today = () => new Date().toISOString().slice(0, 10);
+const daysSince = (iso) => (iso ? Math.floor((Date.now() - new Date(iso).getTime()) / 864e5) : Infinity);
+const slotOf = (item) => CAT[item.category]?.slot || "acc";
+const catLabel = (id) => CAT[id]?.label || id;
+const styleLabel = (s) => STYLES[s]?.label || s;
+const cap = (s) => s.charAt(0).toUpperCase() + s.slice(1);
+const fmtTemp = (c) => (state.settings.unit === "F" ? `${Math.round(c * 9 / 5 + 32)}°F` : `${Math.round(c)}°`);
+const formalityOf = (styles = []) => {
+  const fs = styles.map((s) => STYLES[s]?.f).filter(Boolean);
+  return fs.length ? Math.round((fs.reduce((a, b) => a + b, 0) / fs.length) * 10) / 10 : 1;
+};
+
+// Offline style recognition: brand knowledge first, then the type of garment and its tags.
+function guessStyles({ brand, category, tags = [] }) {
+  const out = new Set(brandInfo(brand)?.styles || []);
+  if (!out.size) for (const s of CAT[category]?.styles || []) out.add(s);
+  if (tags.some((t) => /graphic|statement|cargo|baggy/.test(t))) { out.add("streetwear"); out.delete("smart"); }
+  if (tags.some((t) => /knit|wool|cashmere/.test(t)) && !out.has("streetwear")) out.add("smart casual");
+  if (tags.some((t) => /plain|basic/.test(t))) out.add("minimal");
+  return [...out].slice(0, 3);
+}
+
+const urlCache = new WeakMap();
+function photoURL(blob) {
+  if (!blob) return "";
+  if (typeof blob === "string") return blob;
+  if (!urlCache.has(blob)) urlCache.set(blob, URL.createObjectURL(blob));
+  return urlCache.get(blob);
+}
+const swatches = (colors = []) =>
+  `<span class="swatches">${colors.map((c) => `<i style="background:${COLORS[c]?.hex || "#888"}" title="${esc(c)}"></i>`).join("")}</span>`;
+
+let toastTimer;
+function toast(msg) {
+  const t = $("#toast");
+  t.textContent = msg;
+  t.hidden = false;
+  clearTimeout(toastTimer);
+  toastTimer = setTimeout(() => (t.hidden = true), 2600);
+}
+
+function applyTheme() {
+  const t = state.settings.theme;
+  if (t === "auto") document.documentElement.removeAttribute("data-theme");
+  else document.documentElement.setAttribute("data-theme", t);
+}
+
+/* ---------- images ---------- */
+const newCanvas = (w, h) => Object.assign(document.createElement("canvas"), { width: w, height: h });
+const canvasBlob = (c, type = "image/webp", q = 0.86) => new Promise((r) => c.toBlob(r, type, q));
+
+async function resizeImage(file, max = 1100) {
+  const bmp = await createImageBitmap(file, { imageOrientation: "from-image" }).catch(() => createImageBitmap(file));
+  const scale = Math.min(1, max / Math.max(bmp.width, bmp.height));
+  const c = newCanvas(Math.round(bmp.width * scale), Math.round(bmp.height * scale));
+  c.getContext("2d").drawImage(bmp, 0, 0, c.width, c.height);
+  return canvasBlob(c, "image/jpeg", 0.82);
+}
+
+// Guess the garment colours. On a cut-out photo only the garment pixels count;
+// on a normal photo we sample the centre.
+async function detectColors(blob) {
+  const bmp = await createImageBitmap(blob);
+  const w = 60, h = 80;
+  const ctx = newCanvas(w, h).getContext("2d", { willReadFrequently: true });
+  ctx.drawImage(bmp, 0, 0, w, h);
+  let { data } = ctx.getImageData(0, 0, w, h);
+  let opaque = 0;
+  for (let i = 3; i < data.length; i += 4) if (data[i] > 200) opaque++;
+  const cutout = opaque < (w * h) * 0.9;
+  if (!cutout) data = ctx.getImageData(Math.round(w * 0.3), Math.round(h * 0.28), Math.round(w * 0.4), Math.round(h * 0.44)).data;
+  const palette = Object.entries(COLORS).map(([name, v]) => [name, hexToRgb(v.hex)]);
+  const counts = {};
+  let total = 0;
+  for (let i = 0; i < data.length; i += 4) {
+    if (cutout && data[i + 3] < 200) continue;
+    total++;
+    const p = [data[i], data[i + 1], data[i + 2]];
+    let best = null, bd = Infinity;
+    for (const [name, rgb] of palette) {
+      const d = colorDist(p, rgb);
+      if (d < bd) { bd = d; best = name; }
+    }
+    counts[best] = (counts[best] || 0) + 1;
+  }
+  return Object.entries(counts).sort((a, b) => b[1] - a[1]).filter(([, n], i) => i === 0 || n / total > 0.3).slice(0, 2).map(([n]) => n);
+}
+function hexToRgb(h) { const n = parseInt(h.slice(1), 16); return [n >> 16, (n >> 8) & 255, n & 255]; }
+function colorDist(a, b) {
+  const rm = (a[0] + b[0]) / 2;
+  const dr = a[0] - b[0], dg = a[1] - b[1], db = a[2] - b[2];
+  return (2 + rm / 256) * dr * dr + 4 * dg * dg + (2 + (255 - rm) / 256) * db * db;
+}
+function blobToBase64(blob) {
+  return new Promise((r) => { const fr = new FileReader(); fr.onload = () => r(fr.result.split(",")[1]); fr.readAsDataURL(blob); });
+}
+function blobToDataURL(blob) {
+  return new Promise((r) => { const fr = new FileReader(); fr.onload = () => r(fr.result); fr.readAsDataURL(blob); });
+}
+
+/* ======================================================================
+   Background removal (on the device, no tokens)
+   1. AI model running in the browser (@imgly/background-removal). Needs
+      internet the first time to download the model (~40 MB), then it's cached.
+   2. Fallback: a fast colour-based cut-out that works anywhere. Good on a
+      plain, contrasting surface (a bed sheet, the floor, a wall).
+   ====================================================================== */
+let imgly = null;
+let imglyBroken = false;
+async function aiCutout(blob) {
+  if (imglyBroken) throw new Error("unavailable");
+  try {
+    imgly = imgly || (await import("https://cdn.jsdelivr.net/npm/@imgly/background-removal@1.7.0/+esm"));
+    return await imgly.removeBackground(blob, { model: "isnet_fp16", output: { format: "image/png" } });
+  } catch (e) {
+    imglyBroken = true;
+    throw e;
+  }
+}
+
+async function basicCutout(blob) {
+  const bmp = await createImageBitmap(blob);
+  const S = 360 / Math.max(bmp.width, bmp.height);
+  const w = Math.round(bmp.width * S), h = Math.round(bmp.height * S);
+  const ctx = newCanvas(w, h).getContext("2d", { willReadFrequently: true });
+  ctx.drawImage(bmp, 0, 0, w, h);
+  const px = ctx.getImageData(0, 0, w, h).data;
+  const N = w * h;
+  const rgb = (i) => [px[i * 4], px[i * 4 + 1], px[i * 4 + 2]];
+  const isEdge = (x, y, bw) => x < bw || y < bw || x >= w - bw || y >= h - bw;
+
+  // Model the background from the photo's border with a few colour clusters.
+  const bw = Math.max(3, Math.round(Math.min(w, h) * 0.03));
+  const border = [];
+  for (let y = 0; y < h; y++) for (let x = 0; x < w; x++) if (isEdge(x, y, bw) && (x + y) % 2 === 0) border.push(rgb(y * w + x));
+  let centers = Array.from({ length: 5 }, (_, k) => border[Math.floor((k + 0.5) * border.length / 5)].slice());
+  for (let it = 0; it < 8; it++) {
+    const sum = centers.map(() => [0, 0, 0, 0]);
+    for (const p of border) {
+      let bi = 0, bd = Infinity;
+      centers.forEach((c, k) => { const d = (p[0] - c[0]) ** 2 + (p[1] - c[1]) ** 2 + (p[2] - c[2]) ** 2; if (d < bd) { bd = d; bi = k; } });
+      sum[bi][0] += p[0]; sum[bi][1] += p[1]; sum[bi][2] += p[2]; sum[bi][3]++;
+    }
+    centers = sum.map((s, k) => (s[3] ? [s[0] / s[3], s[1] / s[3], s[2] / s[3]] : centers[k]));
+  }
+  const distBg = new Float32Array(N);
+  for (let i = 0; i < N; i++) {
+    const p = rgb(i);
+    let bd = Infinity;
+    for (const c of centers) bd = Math.min(bd, Math.sqrt((p[0] - c[0]) ** 2 + (p[1] - c[1]) ** 2 + (p[2] - c[2]) ** 2));
+    distBg[i] = bd;
+  }
+  const bdists = [];
+  for (let y = 0; y < h; y++) for (let x = 0; x < w; x++) if (isEdge(x, y, bw)) bdists.push(distBg[y * w + x]);
+  bdists.sort((a, b) => a - b);
+  const T = Math.max(18, bdists[Math.floor(bdists.length * 0.9)] * 1.25);
+
+  // Grow the background inwards from the border through background-like pixels.
+  const bg = new Uint8Array(N);
+  const q = new Int32Array(N);
+  let qh = 0, qt = 0;
+  const seed = (i) => { if (!bg[i] && distBg[i] < T * 1.6) { bg[i] = 1; q[qt++] = i; } };
+  for (let x = 0; x < w; x++) { seed(x); seed((h - 1) * w + x); }
+  for (let y = 0; y < h; y++) { seed(y * w); seed(y * w + w - 1); }
+  while (qh < qt) {
+    const i = q[qh++], x = i % w, y = (i / w) | 0;
+    const a = rgb(i);
+    for (const j of [x > 0 ? i - 1 : -1, x < w - 1 ? i + 1 : -1, y > 0 ? i - w : -1, y < h - 1 ? i + w : -1]) {
+      if (j < 0 || bg[j]) continue;
+      const b = rgb(j);
+      const step = Math.abs(a[0] - b[0]) + Math.abs(a[1] - b[1]) + Math.abs(a[2] - b[2]);
+      if (distBg[j] < T || (step < 9 && distBg[j] < T * 1.8)) { bg[j] = 1; q[qt++] = j; }
+    }
+  }
+  // Clean up: open (erode + dilate) the foreground, keep the biggest piece.
+  let fg = new Uint8Array(N);
+  for (let i = 0; i < N; i++) fg[i] = bg[i] ? 0 : 1;
+  const morph = (src, erode) => {
+    const out = new Uint8Array(N);
+    for (let y = 1; y < h - 1; y++) for (let x = 1; x < w - 1; x++) {
+      const i = y * w + x;
+      const n = src[i] + src[i - 1] + src[i + 1] + src[i - w] + src[i + w];
+      out[i] = erode ? (n === 5 ? 1 : 0) : (n > 0 ? 1 : 0);
+    }
+    return out;
+  };
+  fg = morph(morph(fg, true), false);
+  const lab = new Int32Array(N);
+  let best = 0, bestSize = 0, label = 0;
+  for (let s = 0; s < N; s++) {
+    if (!fg[s] || lab[s]) continue;
+    label++; let size = 0; qh = qt = 0; q[qt++] = s; lab[s] = label;
+    while (qh < qt) {
+      const i = q[qh++]; size++;
+      const x = i % w;
+      for (const j of [x > 0 ? i - 1 : -1, x < w - 1 ? i + 1 : -1, i - w, i + w]) {
+        if (j >= 0 && j < N && fg[j] && !lab[j]) { lab[j] = label; q[qt++] = j; }
+      }
+    }
+    if (size > bestSize) { bestSize = size; best = label; }
+  }
+  const share = bestSize / N;
+  if (share < 0.06 || share > 0.92) throw new Error("Couldn't find the garment");
+
+  const mask = newCanvas(w, h);
+  const mctx = mask.getContext("2d");
+  const md = mctx.createImageData(w, h);
+  for (let i = 0; i < N; i++) md.data[i * 4 + 3] = lab[i] === best ? 255 : 0;
+  mctx.putImageData(md, 0, 0);
+
+  const out = newCanvas(bmp.width, bmp.height);
+  const octx = out.getContext("2d");
+  octx.drawImage(bmp, 0, 0);
+  octx.globalCompositeOperation = "destination-in";
+  octx.filter = "blur(1.5px)";
+  octx.imageSmoothingQuality = "high";
+  octx.drawImage(mask, 0, 0, out.width, out.height);
+  return canvasBlob(out, "image/png");
+}
+
+// Crop to the garment and centre it on a transparent 3:4 canvas.
+async function framePiece(blob) {
+  const bmp = await createImageBitmap(blob);
+  const s = 200 / Math.max(bmp.width, bmp.height);
+  const sw = Math.max(1, Math.round(bmp.width * s)), sh = Math.max(1, Math.round(bmp.height * s));
+  const sctx = newCanvas(sw, sh).getContext("2d", { willReadFrequently: true });
+  sctx.drawImage(bmp, 0, 0, sw, sh);
+  const a = sctx.getImageData(0, 0, sw, sh).data;
+  let x0 = sw, y0 = sh, x1 = -1, y1 = -1;
+  for (let y = 0; y < sh; y++) for (let x = 0; x < sw; x++) if (a[(y * sw + x) * 4 + 3] > 40) { x0 = Math.min(x0, x); x1 = Math.max(x1, x); y0 = Math.min(y0, y); y1 = Math.max(y1, y); }
+  if (x1 < 0) return blob;
+  const bx = Math.max(0, (x0 - 1) / s), by = Math.max(0, (y0 - 1) / s);
+  const bwid = Math.min(bmp.width - bx, (x1 - x0 + 3) / s), bhei = Math.min(bmp.height - by, (y1 - y0 + 3) / s);
+  const m = Math.max(bwid, bhei) * 0.06;
+  const W = Math.max(bwid + 2 * m, (bhei + 2 * m) * 0.75), H = W / 0.75;
+  const scale = Math.min(1, 1200 / H);
+  const c = newCanvas(Math.round(W * scale), Math.round(H * scale));
+  const ctx = c.getContext("2d");
+  ctx.imageSmoothingQuality = "high";
+  ctx.drawImage(bmp, bx, by, bwid, bhei, (W - bwid) / 2 * scale, (H - bhei) / 2 * scale, bwid * scale, bhei * scale);
+  return canvasBlob(c, "image/webp", 0.86);
+}
+
+// Returns { blob, engine } or throws if no method could find the garment.
+async function removeBackground(blob) {
+  try {
+    return { blob: await framePiece(await aiCutout(blob)), engine: "ai" };
+  } catch {
+    return { blob: await framePiece(await basicCutout(blob)), engine: "basic" };
+  }
+}
+
+/* ---------- Standing pieces upright (on the device, no tokens) ---------- */
+// Stand a cut-out garment upright. Returns the clockwise rotation in degrees: the garment's
+// left-right symmetry gives the axis, then the ends decide which way is up (legs go down;
+// a hood, collar or neckline goes up). `kind` is "top", "bottom" or "" when not known yet.
+async function uprightAngle(blob, kind = "") {
+  const bmp = await createImageBitmap(blob);
+  const N = 120, fit = 84 / Math.max(bmp.width, bmp.height);
+  const cv = Object.assign(document.createElement("canvas"), { width: N, height: N });
+  const ctx = cv.getContext("2d", { willReadFrequently: true });
+  const maskAt = (deg) => {
+    ctx.setTransform(1, 0, 0, 1, N / 2, N / 2);
+    ctx.clearRect(-N, -N, 2 * N, 2 * N);
+    ctx.rotate((deg * Math.PI) / 180);
+    ctx.drawImage(bmp, (-bmp.width * fit) / 2, (-bmp.height * fit) / 2, bmp.width * fit, bmp.height * fit);
+    const a = ctx.getImageData(0, 0, N, N).data;
+    const m = new Uint8Array(N * N);
+    for (let i = 0; i < N * N; i++) m[i] = a[i * 4 + 3] > 127 ? 1 : 0;
+    return m;
+  };
+  const centreX = (m) => { let sx = 0, n = 0; for (let i = 0; i < N * N; i++) if (m[i]) { sx += i % N; n++; } return n ? sx / n : N / 2; };
+  // How well the garment mirrors onto itself across a vertical line through its middle.
+  const symmetry = (m) => {
+    const cx = centreX(m);
+    let both = 0, either = 0;
+    for (let y = 0; y < N; y++) for (let x = 0; x < N; x++) {
+      const mx = Math.round(2 * cx - x);
+      const a = m[y * N + x], b = mx >= 0 && mx < N ? m[y * N + mx] : 0;
+      both += a & b; either += a | b;
+    }
+    return either ? both / either : 0;
+  };
+  // Shape of both ends once the axis is vertical.
+  const ends = (m) => {
+    const cx = Math.round(centreX(m));
+    const rows = [];
+    for (let y = 0; y < N; y++) {
+      let w = 0;
+      for (let x = 0; x < N; x++) w += m[y * N + x];
+      if (w) rows.push({ y, w });
+    }
+    let L = N, R = 0;
+    for (let i = 0; i < N * N; i++) if (m[i]) { L = Math.min(L, i % N); R = Math.max(R, i % N); }
+    const H = rows.length, maxW = Math.max(...rows.map((r) => r.w));
+    const side = (list) => {
+      // legs: the middle stays empty for a long way in from this end
+      let gap = 0;
+      for (const r of list.slice(0, Math.round(H * 0.6))) { if (m[r.y * N + cx] || m[r.y * N + cx - 1] || m[r.y * N + cx + 1]) break; gap++; }
+      // hood or collar: the edge of this end is uneven across the middle of the garment
+      const prof = [];
+      for (let x = Math.round(L + (R - L) * 0.2); x <= L + (R - L) * 0.8; x++) {
+        let d = 0;
+        for (const r of list) { if (m[r.y * N + x]) break; d++; }
+        prof.push(d / H);
+      }
+      const mean = prof.reduce((a, b) => a + b, 0) / prof.length;
+      const dev = Math.sqrt(prof.reduce((a, b) => a + (b - mean) ** 2, 0) / prof.length);
+      const k = list.slice(0, Math.max(2, Math.round(H * 0.15)));
+      return { gap: gap / H, dev, width: k.reduce((s, r) => s + r.w, 0) / k.length / maxW };
+    };
+    return H < 8 ? null : { top: side(rows), bottom: side([...rows].reverse()) };
+  };
+  // Decide which end is up. Returns [flip, confidence 0..2].
+  const decide = ({ top, bottom }) => {
+    const gapD = top.gap - bottom.gap, devD = top.dev - bottom.dev;
+    const trousers = Math.max(top.dev, bottom.dev) >= 0.17 && Math.abs(devD) >= 0.08;
+    const legs = kind === "bottom" || (kind !== "top" && (trousers || (Math.max(top.gap, bottom.gap) >= 0.15 && Math.abs(gapD) >= 0.08)));
+    if (legs) {
+      if (Math.abs(gapD) >= 0.08) return [gapD > 0, 2];
+      if (Math.abs(devD) >= 0.04) return [devD > 0, trousers ? 2 : 1];
+      return [false, 0];
+    }
+    if (Math.abs(devD) >= 0.05) return [devD < 0, 1.5];
+    if (Math.abs(top.width - bottom.width) >= 0.15) return [bottom.width < top.width, 0.5];
+    return [false, 0];
+  };
+
+  let best = 0, bestS = -1;
+  for (let d = -90; d < 90; d += 4) { const s = symmetry(maskAt(d)); if (s > bestS) { bestS = s; best = d; } }
+  for (let d = best - 3; d <= best + 3; d++) { const s = symmetry(maskAt(d)); if (s > bestS) { bestS = s; best = d; } }
+  // Square-ish pieces (shorts, folded knits) can be almost as symmetric the other way round;
+  // then the axis whose ends tell a clearer story wins.
+  const cands = [{ d: best, s: bestS }];
+  const other = best + 90, so = symmetry(maskAt(other));
+  if (bestS - so < 0.06) cands.push({ d: other, s: so });
+  let pick = null;
+  for (const c of cands) {
+    const e = ends(maskAt(c.d));
+    if (!e) continue;
+    let [flip, conf] = decide(e);
+    // Not sure which end is up: stay as close as possible to the photo as it was taken.
+    const deg = (d) => ((Math.round(d) % 360) + 360) % 360;
+    const turn = (d) => Math.min(deg(d), 360 - deg(d));
+    if (conf < 1 && turn(c.d + 180) < turn(c.d) - 20) flip = true;
+    if (conf < 1 && turn(c.d) < turn(c.d + 180) - 20) flip = false;
+    const score = conf + (c.s - bestS) * 10;
+    if (!pick || score > pick.score) pick = { deg: deg(c.d + (flip ? 180 : 0)), score, conf };
+  }
+  return pick ? pick.deg : 0;
+}
+
+const kindOf = (category) => {
+  const slot = CAT[category]?.slot;
+  return slot === "bottom" ? "bottom" : ["base", "mid", "outer"].includes(slot) ? "top" : "";
+};
+
+// Turn an image clockwise. Cut-outs are re-framed afterwards; photos only turn in quarter steps.
+async function rotateImage(blob, deg, cutout) {
+  if (!cutout) deg = Math.round(deg / 90) * 90;
+  deg = ((Math.round(deg) % 360) + 360) % 360;
+  if (!deg) return blob;
+  const bmp = await createImageBitmap(blob);
+  const r = (deg * Math.PI) / 180, cos = Math.abs(Math.cos(r)), sin = Math.abs(Math.sin(r));
+  const c = newCanvas(Math.round(bmp.width * cos + bmp.height * sin), Math.round(bmp.width * sin + bmp.height * cos));
+  const ctx = c.getContext("2d");
+  ctx.imageSmoothingQuality = "high";
+  ctx.translate(c.width / 2, c.height / 2);
+  ctx.rotate(r);
+  ctx.drawImage(bmp, -bmp.width / 2, -bmp.height / 2);
+  return cutout ? framePiece(await canvasBlob(c, "image/png")) : canvasBlob(c, "image/jpeg", 0.85);
+}
+
+/* ======================================================================
+   Weather (Open-Meteo, no key needed)
+   ====================================================================== */
+const WMO = (c) =>
+  c === 0 ? "Clear sky" : c <= 2 ? "Partly cloudy" : c === 3 ? "Overcast" : c <= 48 ? "Fog" :
+  c <= 57 ? "Drizzle" : c <= 67 ? "Rain" : c <= 77 ? "Snow" : c <= 82 ? "Showers" : c <= 86 ? "Snow showers" : "Thunderstorm";
+const isWet = (c) => (c >= 51 && c <= 67) || (c >= 80 && c <= 99);
+
+// Cities that can be found without internet, with their usual temperatures: approximate
+// monthly averages of the daily high and low (°C, January to December). When live weather
+// can't be reached (no connection, or a preview that blocks it), the app uses these.
+const CITY_DATA = `
+Roma|Rome|IT|41.90|12.50|13 14 17 20 24 28 31 32 28 23 17 13|3 4 5 8 12 16 18 18 15 12 7 4
+Milano|Milan|IT|45.46|9.19|8 10 15 19 24 28 30 30 25 19 12 8|1 2 5 9 13 17 20 19 16 11 6 2
+Napoli|Naples|IT|40.85|14.27|13 14 16 19 24 28 31 31 27 23 18 14|5 5 7 9 13 17 19 20 17 13 9 6
+Torino|Turin|IT|45.07|7.69|8 10 15 18 22 26 29 28 24 18 12 9|-1 0 4 7 11 15 18 17 13 9 4 0
+Palermo||IT|38.12|13.36|16 16 18 20 24 28 31 31 28 25 20 17|9 9 10 12 16 19 22 23 20 17 13 10
+Genova|Genoa|IT|44.41|8.93|12 13 15 18 21 25 28 29 25 21 16 13|6 6 9 11 15 18 21 21 18 15 10 7
+Bologna||IT|44.49|11.34|7 10 15 19 24 29 32 31 26 19 12 7|0 1 5 9 13 17 20 20 16 11 6 1
+Firenze|Florence|IT|43.77|11.25|11 13 17 20 25 29 33 33 28 22 16 12|2 3 5 8 12 16 18 18 15 11 6 3
+Bari||IT|41.12|16.87|13 14 16 19 24 28 30 30 27 22 18 14|5 5 7 10 14 18 20 20 17 14 10 6
+Catania||IT|37.50|15.09|16 16 18 21 25 30 33 33 29 25 21 17|6 6 8 10 14 18 21 21 18 15 11 8
+Venezia|Venice,Mestre|IT|45.44|12.33|7 9 13 17 22 26 28 28 24 18 12 8|0 1 4 8 13 17 19 18 15 10 6 1
+Verona||IT|45.44|10.99|7 10 15 19 24 28 31 30 25 19 12 7|-1 0 4 8 12 16 19 18 14 10 5 0
+Messina||IT|38.19|15.55|15 15 17 19 23 27 30 31 28 24 20 16|10 10 11 13 16 20 23 24 21 18 14 11
+Padova|Padua|IT|45.41|11.88|7 10 15 19 24 28 30 30 25 19 12 7|-1 0 4 8 12 16 18 18 14 10 5 0
+Trieste||IT|45.65|13.78|9 10 13 17 22 26 28 28 24 19 13 10|4 4 7 10 15 19 21 21 17 13 8 5
+Brescia||IT|45.54|10.21|7 10 15 19 24 28 31 30 25 19 12 7|-1 0 4 8 13 17 19 19 15 10 5 0
+Bergamo||IT|45.70|9.67|7 10 14 18 23 27 29 29 24 18 12 8|0 1 5 8 13 17 19 19 15 11 5 1
+Parma||IT|44.80|10.33|6 9 14 18 23 28 31 30 25 18 11 7|-1 0 4 8 12 16 19 18 15 10 5 0
+Modena||IT|44.65|10.93|6 9 14 18 23 28 31 30 25 19 11 7|-1 0 4 8 12 16 19 19 15 10 5 0
+Reggio Emilia||IT|44.70|10.63|6 9 14 18 23 28 31 30 25 19 11 7|-1 0 4 8 12 16 19 18 15 10 5 0
+Reggio Calabria||IT|38.11|15.65|15 15 17 20 24 28 31 31 28 24 20 16|9 9 10 12 16 20 23 23 21 17 13 10
+Perugia||IT|43.11|12.39|9 11 14 18 23 27 31 31 26 20 14 10|2 2 5 7 11 15 18 18 14 10 6 3
+Livorno||IT|43.55|10.31|12 13 15 18 22 26 29 29 26 21 16 13|5 5 7 10 13 17 20 20 17 14 9 6
+Pisa||IT|43.72|10.40|12 13 16 19 23 27 30 30 27 22 16 13|3 3 5 8 12 15 18 18 15 11 7 4
+Ravenna||IT|44.42|12.20|7 9 13 18 23 27 30 30 25 19 13 8|0 1 4 8 12 16 19 18 15 10 5 1
+Rimini||IT|44.06|12.57|9 10 14 18 23 27 30 30 25 20 14 10|1 2 5 8 13 17 19 19 15 11 7 3
+Cagliari||IT|39.22|9.12|15 15 17 20 24 28 31 32 28 24 19 16|6 6 8 10 13 17 20 20 18 15 10 7
+Sassari||IT|40.73|8.56|13 14 16 18 23 27 31 31 27 23 18 14|5 5 7 9 12 16 19 19 17 14 10 7
+Salerno||IT|40.68|14.77|13 14 16 19 24 28 31 31 27 23 18 14|5 5 7 9 13 17 19 20 17 13 9 6
+Foggia||IT|41.46|15.55|12 13 16 20 25 30 33 33 28 22 17 13|3 3 5 8 12 16 19 19 16 12 8 4
+Lecce||IT|40.35|18.17|14 14 17 20 24 29 32 32 28 23 18 15|5 5 7 9 13 17 19 20 17 13 10 6
+Taranto||IT|40.47|17.24|13 14 16 19 24 28 31 31 27 23 18 14|6 6 8 10 14 18 21 21 18 15 11 7
+Siracusa|Syracuse|IT|37.08|15.29|16 16 18 21 25 29 32 32 29 25 21 17|7 7 8 10 14 18 21 21 19 16 12 9
+Pescara||IT|42.46|14.21|12 13 15 18 23 27 30 30 26 21 16 13|3 4 6 9 13 17 19 19 16 12 8 4
+Ancona||IT|43.62|13.52|10 11 14 17 22 26 29 29 25 20 15 11|3 4 6 9 13 17 20 20 16 12 8 5
+Trento||IT|46.07|11.12|6 10 15 18 23 27 30 29 24 18 11 6|-3 -2 3 7 11 15 17 17 13 8 3 -2
+Bolzano|Bozen|IT|46.50|11.35|7 11 16 20 25 29 31 30 25 19 11 6|-5 -3 2 6 10 14 16 15 11 7 1 -4
+Udine||IT|46.06|13.24|8 10 14 17 22 26 29 28 24 18 12 8|-1 0 4 7 12 16 18 17 13 9 5 0
+Vicenza||IT|45.55|11.55|7 10 15 19 24 28 30 30 25 19 12 7|-1 0 4 8 12 16 18 18 14 10 5 0
+Monza||IT|45.58|9.27|7 10 15 18 23 27 30 29 25 19 12 8|0 1 5 8 13 17 19 19 15 11 5 1
+Como||IT|45.81|9.09|7 10 14 18 22 26 29 28 24 18 12 8|0 1 4 8 12 16 18 18 14 10 5 1
+Latina||IT|41.47|12.90|13 14 17 19 24 28 31 31 27 23 18 14|3 4 6 8 12 16 18 19 16 12 8 5
+Aosta||IT|45.74|7.32|5 9 14 18 22 26 29 28 23 17 10 5|-5 -3 1 4 9 12 14 14 10 6 0 -4
+L'Aquila|Aquila|IT|42.35|13.40|6 8 11 15 20 25 29 29 24 18 12 7|-3 -3 0 4 8 11 14 14 10 6 2 -2
+Potenza||IT|40.64|15.80|7 7 10 14 19 23 27 27 22 16 11 8|0 0 2 5 9 13 15 16 12 8 5 2
+Campobasso||IT|41.56|14.66|7 8 11 15 20 25 28 28 23 17 12 8|1 1 3 6 10 14 17 17 13 10 6 2
+London|Londra|GB|51.51|-0.13|8 9 12 15 18 21 24 23 20 16 11 9|2 2 4 6 9 12 14 14 12 9 5 3
+Paris|Parigi|FR|48.86|2.35|8 9 13 16 20 23 26 25 21 16 11 8|3 3 5 8 11 14 17 16 13 10 6 4
+Nice|Nizza|FR|43.70|7.27|14 14 16 18 22 25 28 29 26 22 17 14|6 6 8 11 14 18 21 21 18 14 10 7
+Madrid||ES|40.42|-3.70|10 12 16 19 23 29 33 32 27 20 14 11|3 3 6 8 11 16 19 19 15 11 6 4
+Barcelona|Barcellona|ES|41.39|2.17|15 15 17 19 22 26 29 29 27 23 18 15|8 8 10 12 16 20 23 23 20 17 12 9
+Berlin|Berlino|DE|52.52|13.40|3 5 9 15 20 23 25 25 20 14 8 4|-2 -1 2 5 9 13 15 14 11 7 3 -1
+München|Munich,Monaco di Baviera|DE|48.14|11.58|3 5 10 15 19 23 25 24 20 14 8 4|-4 -3 0 4 8 12 14 13 10 6 1 -3
+Amsterdam||NL|52.37|4.90|6 7 10 14 18 20 23 23 19 15 10 7|1 1 3 5 8 11 13 13 11 8 4 2
+Bruxelles|Brussels|BE|50.85|4.35|7 8 11 15 19 22 24 23 20 15 10 7|1 1 4 6 9 12 14 14 11 8 5 2
+Wien|Vienna|AT|48.21|16.37|4 6 11 16 21 24 27 26 21 15 9 4|-2 -1 3 7 12 15 17 17 13 8 4 0
+Zürich|Zurich,Zurigo|CH|47.37|8.54|4 6 10 15 19 22 24 24 19 14 8 5|-2 -2 2 5 9 12 14 14 10 7 2 -1
+Genève|Geneva,Ginevra|CH|46.20|6.14|5 7 12 16 20 24 27 26 21 16 9 6|-1 -1 2 5 9 13 15 14 11 8 3 0
+Lisboa|Lisbon,Lisbona|PT|38.72|-9.14|15 16 19 20 23 26 28 29 27 23 18 15|8 9 11 12 14 17 18 19 18 15 12 9
+Dublin|Dublino|IE|53.35|-6.26|8 9 10 12 15 18 19 19 17 14 10 9|3 3 4 5 7 10 12 11 10 7 5 3
+Praha|Prague,Praga|CZ|50.08|14.44|2 4 8 14 19 22 25 25 19 13 7 3|-4 -3 0 4 8 12 14 13 10 6 2 -2
+Warszawa|Warsaw,Varsavia|PL|52.23|21.01|1 2 7 14 20 23 25 24 19 13 6 2|-5 -4 -1 4 9 12 14 13 9 5 1 -3
+Budapest||HU|47.50|19.04|3 6 11 17 22 26 28 28 23 16 9 4|-3 -2 2 6 11 15 17 16 12 7 3 -2
+Athína|Athens,Atene|GR|37.98|23.73|14 15 17 21 26 31 34 34 29 24 19 15|7 8 9 12 16 21 24 24 20 16 12 9
+Stockholm|Stoccolma|SE|59.33|18.07|0 0 4 10 16 20 23 22 17 10 5 2|-5 -5 -3 2 7 11 14 13 9 5 1 -3
+København|Copenhagen,Copenaghen|DK|55.68|12.57|3 4 6 11 16 19 22 22 18 13 8 5|-1 -2 0 3 8 11 14 14 11 7 4 1
+Oslo||NO|59.91|10.75|-1 0 5 10 16 20 23 21 16 10 4 0|-7 -7 -4 1 6 10 13 12 8 4 -1 -6
+Helsinki||FI|60.17|24.94|-2 -3 2 8 15 19 22 21 15 9 4 0|-7 -8 -5 1 6 11 14 13 8 4 -1 -5
+New York|NYC|US|40.71|-74.01|4 6 10 17 22 27 30 29 25 19 12 7|-3 -2 2 8 13 18 21 21 17 11 5 1
+Los Angeles||US|34.05|-118.24|20 20 21 22 23 25 28 29 29 26 23 20|9 10 11 13 15 17 19 19 18 15 11 9
+Miami||US|25.76|-80.19|25 26 27 29 31 32 33 33 32 30 28 26|16 17 19 21 23 25 26 26 25 23 20 18
+Toronto||CA|43.65|-79.38|-1 0 5 12 19 24 27 26 22 15 8 2|-7 -7 -3 3 9 14 17 17 13 7 1 -4
+Dubai||AE|25.20|55.27|25 26 29 34 38 40 42 42 39 35 30 26|15 17 19 23 27 29 31 31 29 25 20 17
+Tokyo|Tokio|JP|35.68|139.69|10 11 14 20 24 26 30 32 28 22 17 13|1 2 5 10 15 19 23 24 21 15 9 4
+Sydney|Sidney|AU|-33.87|151.21|26 26 25 23 20 18 17 19 21 23 24 26|19 19 18 15 12 9 8 9 11 14 16 18
+`;
+const CITIES = CITY_DATA.trim().split("\n").map((l) => {
+  const [name, aka, cc, lat, lon, hi, lo] = l.split("|");
+  return { name, aka: aka ? aka.split(",") : [], cc, lat: +lat, lon: +lon, hi: hi.split(" ").map(Number), lo: lo.split(" ").map(Number) };
+});
+const fold = (s) => s.toLowerCase().normalize("NFD").replace(/[̀-ͯ]/g, "").replace(/[^a-z]/g, "");
+const MONTH = (m = new Date().getMonth()) => new Date(2000, m, 1).toLocaleDateString(undefined, { month: "long" });
+function offlineCities(q) {
+  const k = fold(q);
+  if (!k) return [];
+  const rank = (c) => {
+    const names = [c.name, ...c.aka].map(fold);
+    return names.includes(k) ? 0 : names.some((n) => n.startsWith(k)) ? 1 : names.some((n) => n.includes(k)) ? 2 : 9;
+  };
+  return CITIES.map((c) => [rank(c), c]).filter(([r]) => r < 9).sort((a, b) => a[0] - b[0]).slice(0, 5)
+    .map(([, c]) => ({ name: c.name, latitude: c.lat, longitude: c.lon, country_code: c.cc }));
+}
+function nearestCity(lat, lon, maxKm = 200) {
+  let best = null, bd = Infinity;
+  for (const c of CITIES) {
+    const dx = (c.lon - lon) * 111 * Math.cos((lat * Math.PI) / 180), dy = (c.lat - lat) * 111;
+    const d = Math.hypot(dx, dy);
+    if (d < bd) { bd = d; best = c; }
+  }
+  return bd <= maxKm ? best : null;
+}
+function typicalWeather(lat, lon) {
+  const c = nearestCity(lat, lon);
+  if (!c) return null;
+  const m = new Date().getMonth(), hi = c.hi[m], lo = c.lo[m];
+  const day = Math.round((2 * hi + lo) / 3);
+  return { at: Date.now(), lat, typical: true, near: c.name, temp: day, feels: day, max: hi, min: lo, code: null, rainChance: null };
+}
+const getJSON = async (u) => {
+  const r = await fetch(u, AbortSignal.timeout ? { signal: AbortSignal.timeout(8000) } : {});
+  if (!r.ok) throw new Error(`HTTP ${r.status}`);
+  return r.json();
+};
+
+async function loadWeather(force = false) {
+  const { lat, lon } = state.settings;
+  if (lat == null) return (state.weather = null);
+  const cached = await store.get("kv", "weather");
+  const fresh = cached && !cached.typical && cached.lat === lat;
+  if (!force && fresh && Date.now() - cached.at < 30 * 60e3) return (state.weather = cached);
+  try {
+    const j = await getJSON(`https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lon}&current=temperature_2m,apparent_temperature,weather_code,wind_speed_10m,precipitation&daily=temperature_2m_max,temperature_2m_min,precipitation_probability_max&forecast_days=1&timezone=auto`);
+    const w = {
+      at: Date.now(), lat,
+      temp: j.current.temperature_2m, feels: j.current.apparent_temperature, code: j.current.weather_code,
+      wind: j.current.wind_speed_10m, max: j.daily.temperature_2m_max[0], min: j.daily.temperature_2m_min[0],
+      rainChance: j.daily.precipitation_probability_max[0] ?? 0,
+    };
+    await store.put("kv", w, "weather");
+    return (state.weather = w);
+  } catch {
+    // Offline: today's forecast from earlier still counts; otherwise the usual temperatures.
+    if (fresh && Date.now() - cached.at < 12 * 3600e3) return (state.weather = cached);
+    return (state.weather = typicalWeather(lat, lon));
+  }
+}
+// Returns { results, offline }: the live city search, or the built-in list when it can't be reached.
+async function searchCity(name) {
+  try {
+    const j = await getJSON(`https://geocoding-api.open-meteo.com/v1/search?name=${encodeURIComponent(name)}&count=5&language=en`);
+    if (j.results?.length) return { results: j.results, offline: false };
+    return { results: offlineCities(name), offline: false };
+  } catch {
+    return { results: offlineCities(name), offline: true };
+  }
+}
+
+// One line for Settings saying where today's temperatures come from.
+function weatherSource() {
+  const w = state.weather, s = state.settings;
+  if (s.lat == null) return `<p class="muted small" style="margin:0">Pick your city so outfits match the weather.</p>`;
+  if (!w) return `<p class="muted small" style="margin:0">${esc(s.city)}: weather can't load here, and there's no built-in city nearby. Use the slider on Today.</p>`;
+  if (w.typical) return `<p class="muted small" style="margin:0">${esc(s.city)}: live weather can't be reached here, so outfits use the usual ${esc(MONTH())} temperatures${w.near !== s.city ? ` for ${esc(w.near)}` : ""} (${fmtTemp(w.min)}–${fmtTemp(w.max)}). Live weather comes back by itself once the app is online.</p>`;
+  return `<p class="muted small" style="margin:0">${esc(s.city)}: live weather, updated ${new Date(w.at).toLocaleTimeString(undefined, { hour: "2-digit", minute: "2-digit" })}.</p>`;
+}
+
+/* ======================================================================
+   Outfit engine (rule-based, works offline, no tokens)
+   ====================================================================== */
+function conditions() {
+  const w = state.weather;
+  const feels = state.manualTemp ?? (w ? Math.min(w.feels, (w.min + w.max) / 2 + 1) : 15);
+  const wet = w ? isWet(w.code) || w.rainChance >= 55 : false;
+  return { feels, wet };
+}
+
+function scoreOutfit(o, cond, occ) {
+  const reasons = [];
+  let s = 0;
+  const pieces = Object.values(o).filter(Boolean);
+
+  // Warmth / layering
+  const { feels, wet } = cond;
+  const warmth = pieces.filter((p) => ["base", "mid", "outer"].includes(slotOf(p))).reduce((a, p) => a + (p.warmth || 2), 0);
+  const want = feels >= 24 ? 1 : feels >= 19 ? 2.5 : feels >= 14 ? 3.5 : feels >= 8 ? 6 : feels >= 2 ? 8 : 9.5;
+  s -= Math.abs(warmth - want) * 0.7;
+  if (o.outer) {
+    if (o.outer.warmth >= 5 && feels > 12) s -= 3;
+    if (feels < 6 && o.outer.warmth >= 4) reasons.push(`${o.outer.name} keeps you warm at ${fmtTemp(feels)}`);
+    else if (feels < 14) reasons.push(`A light layer for ${fmtTemp(feels)}`);
+    if (wet && o.outer.category === "rain") { s += 1.5; reasons.push("Rain jacket for the showers"); }
+  }
+  if (o.bottom) {
+    const shorts = o.bottom.category === "shorts";
+    if (shorts && feels < 17) s -= 5;
+    else if (shorts && feels >= 23) { s += 1; reasons.push(`Shorts weather at ${fmtTemp(feels)}`); }
+    else if (!shorts && feels >= 27) s -= 1.5;
+  }
+  if (wet && o.shoes?.category === "sneakers" && /white|cream/.test(o.shoes.colors?.[0])) s -= 1;
+
+  // Colour harmony
+  const cols = pieces.map((p) => p.colors?.[0]).filter(Boolean);
+  const accents = [...new Set(cols.filter((c) => !COLORS[c]?.neutral))];
+  if (accents.length === 0) { s += 1; reasons.push(new Set(cols).size === 1 ? `Tonal ${cols[0]} look` : "All neutrals, easy to match"); }
+  else if (accents.length === 1) { s += 2; reasons.push(`${cap(accents[0])} as the single accent colour`); }
+  else { s -= 2.5 * (accents.length - 1); }
+  const tones = new Set(cols.map((c) => COLORS[c]?.tone));
+  if (tones.has("light") && tones.has("dark")) { s += 0.8; reasons.push("Light and dark pieces give contrast"); }
+  const graphics = pieces.filter((p) => (p.tags || []).some((t) => /graphic|statement/.test(t)));
+  if (graphics.length > 1) s -= 1.5 * (graphics.length - 1);
+
+  // Style: fits the occasion, and the pieces speak the same language
+  const f = pieces.reduce((a, p) => a + (p.formality || 1), 0) / Math.max(1, pieces.length);
+  s -= Math.abs(f - occ.target) * 1.2;
+  for (const p of pieces) s += (p.styles || []).some((st) => occ.likes.includes(st)) ? 0.7 : -0.5;
+  const freq = {};
+  for (const p of pieces) for (const st of p.styles || []) freq[st] = (freq[st] || 0) + 1;
+  const [topStyle, topN] = Object.entries(freq).sort((a, b) => b[1] - a[1])[0] || [];
+  if (pieces.length > 1 && topN === pieces.length) { s += 1.2; reasons.unshift(`A consistent ${styleLabel(topStyle).toLowerCase()} look`); }
+  for (const [a, b] of STYLE_CLASH) if (freq[a] && freq[b]) s -= 1.5;
+
+  // Rotation: don't repeat what you wore recently; give the forgotten pieces a turn
+  for (const p of pieces) {
+    const d = daysSince(p.lastWorn);
+    if (d <= 1) s -= 3; else if (d <= 4) s -= 1.2;
+    if (p.favorite) s += 0.4;
+    if (!p.wearCount) s += 0.3;
+  }
+  const fresh = pieces.find((p) => !p.wearCount || daysSince(p.lastWorn) > 21);
+  if (fresh) reasons.push(`Gives the ${fresh.name} some wear`);
+  return { score: s, reasons: reasons.slice(0, 3) };
+}
+
+function generateOutfits(n = 3) {
+  const by = { base: [], mid: [], outer: [], bottom: [], shoes: [] };
+  for (const it of state.items) if (by[slotOf(it)]) by[slotOf(it)].push(it);
+  const cond = conditions();
+  const occ = OCCASIONS.find((o) => o.id === state.occasion);
+  const pick = (arr) => arr[Math.floor(Math.random() * arr.length)];
+  const wantMid = cond.feels < 20 || by.base.length === 0;
+  const wantOuter = cond.feels < 15 || cond.wet;
+
+  const seen = new Set();
+  const cands = [];
+  for (let i = 0; i < 900; i++) {
+    const o = {};
+    if (by.base.length && (!wantMid || Math.random() < 0.85 || !by.mid.length)) o.base = pick(by.base);
+    if (by.mid.length && (wantMid || !o.base)) o.mid = pick(by.mid);
+    if (!o.base && !o.mid) continue;
+    if (by.outer.length && wantOuter) o.outer = pick(by.outer);
+    if (by.bottom.length) o.bottom = pick(by.bottom);
+    if (by.shoes.length) o.shoes = pick(by.shoes);
+    const key = Object.values(o).map((p) => p.id).sort().join("|");
+    if (seen.has(key)) continue;
+    seen.add(key);
+    cands.push({ pieces: o, ...scoreOutfit(o, cond, occ), jitter: Math.random() * 0.6 });
+  }
+  cands.sort((a, b) => b.score + b.jitter - (a.score + a.jitter));
+  // Keep the suggestions different from each other (no shared hero piece or bottom)
+  const out = [];
+  const used = new Set();
+  for (const c of cands) {
+    const hero = (c.pieces.mid || c.pieces.base).id;
+    const bottom = c.pieces.bottom?.id;
+    if (used.has(hero) || (bottom && used.has(bottom))) continue;
+    used.add(hero);
+    if (bottom) used.add(bottom);
+    out.push(c);
+    if (out.length === n) break;
+  }
+  const missing = ["bottom", "shoes"].filter((s) => !by[s].length);
+  if (!by.base.length && cond.feels >= 22) missing.unshift("base");
+  state.outfits = out.map((o) => ({ ...o, missing }));
+}
+
+async function wearOutfit(items) {
+  const now = new Date().toISOString();
+  for (const it of items) {
+    it.wearCount = (it.wearCount || 0) + 1;
+    it.lastWorn = now;
+    await store.put("items", it);
+  }
+  const entry = { date: today(), at: now, itemIds: items.map((i) => i.id) };
+  await store.put("log", entry);
+  state.log.push(entry);
+}
+
+/* ======================================================================
+   Shopping / gap analysis
+   ====================================================================== */
+function analyse() {
+  const items = state.items;
+  const bySlot = Object.fromEntries(Object.keys(SLOTS).map((s) => [s, items.filter((i) => slotOf(i) === s)]));
+  const colorCount = {};
+  for (const i of items) { const c = i.colors?.[0]; if (c) colorCount[c] = (colorCount[c] || 0) + 1; }
+  const styleCount = {};
+  for (const i of items) for (const st of i.styles || []) styleCount[st] = (styleCount[st] || 0) + 1;
+  const brandCount = {};
+  for (const i of items) if (i.brand) brandCount[i.brand] = (brandCount[i.brand] || 0) + 1;
+  const share = (n) => (items.length ? n / items.length : 0);
+  const darkShare = share(items.filter((i) => COLORS[i.colors?.[0]]?.tone === "dark").length);
+  const graphicShare = share(items.filter((i) => (i.tags || []).some((t) => /graphic|statement/.test(t))).length);
+  const hoodieShare = share(items.filter((i) => /hoodie|sweatshirt/.test(i.category)).length);
+  const smartShare = share(items.filter((i) => (i.formality || 1) >= 2.5).length);
+  const avgFormality = items.reduce((a, i) => a + (i.formality || 1), 0) / Math.max(1, items.length);
+  const unworn = items.filter((i) => !i.wearCount);
+  const stale = items.filter((i) => i.wearCount && daysSince(i.lastWorn) > 60);
+  const longBottoms = bySlot.bottom.filter((i) => i.category !== "shorts");
+
+  const s = [];
+  const add = (prio, title, why, query) => s.push({ prio, title, why, query });
+  const mostlyDark = darkShare > 0.55;
+
+  if (bySlot.bottom.length < 2) {
+    add("high", mostlyDark ? "Light-wash or grey straight jeans" : "Dark indigo straight jeans", `You have ${bySlot.bottom.length || "no"} bottoms saved, so every outfit is missing half. ${mostlyDark ? "Your tops are mostly dark, so a lighter jean adds contrast." : ""}`.trim(), mostlyDark ? "light wash straight jeans men" : "dark indigo straight jeans men");
+    add("high", "Black relaxed trousers or cargo pants", "Black bottoms pair with every hoodie and jacket you own.", "black relaxed cargo trousers men");
+  } else if (bySlot.bottom.length < SLOT_TARGET.bottom) {
+    add("medium", "Beige or stone chinos", "A light neutral bottom widens your combinations.", "beige chinos men relaxed");
+  } else if (longBottoms.length && !items.some((i) => i.category === "trousers" && (i.formality || 1) >= 2)) {
+    add("medium", "Tailored trousers in grey or navy", "All your bottoms are denim, cargo or shorts. One pair of tailored trousers covers smart days with your knits and bombers.", "tailored pleated trousers men grey");
+  }
+  if (bySlot.shoes.length < 2) {
+    add("high", "White leather sneakers", "Clean white sneakers lift dark outfits and go with every piece you have.", "white leather sneakers minimal");
+    if (avgFormality > 1.6 || bySlot.outer.length) add("medium", "Black leather boots or derbies", "For your knits and bomber jackets on smarter days.", "black leather chelsea boots men");
+  }
+  if (bySlot.base.length < 3) {
+    add("high", "Heavyweight plain T-shirts (white, black, grey)", "Base layers to wear under hoodies and alone when it's warm. Plain ones balance graphic tops.", "heavyweight plain t-shirt pack");
+  }
+  if (graphicShare > 0.4) {
+    add("medium", "A plain, quality knit or polo", `${Math.round(graphicShare * 100)}% of your pieces have prints or big logos; plain pieces make outfits calmer.`, "knit polo men merino");
+  }
+  if (smartShare < 0.25 && items.length > 5) {
+    add("medium", "An Oxford shirt in white or light blue", `Only ${Math.round(smartShare * 100)}% of your wardrobe works for smart occasions. An Oxford shirt goes under your knits and bombers.`, "oxford shirt men white");
+  }
+  if (hoodieShare > 0.4 && !items.some((i) => i.category === "overshirt")) {
+    add("medium", "Overshirt or shacket", "Something between a hoodie and a jacket for smart-casual days.", "wool overshirt men");
+  }
+  if (!items.some((i) => i.category === "rain")) {
+    add("low", "Lightweight rain shell", "None of your outerwear is made for rain.", "lightweight rain jacket packable");
+  }
+  if (bySlot.outer.length && !items.some((i) => i.category === "coat")) {
+    add("low", "Wool overcoat (camel or charcoal)", "A smart option for cold work days or evenings.", "wool overcoat men camel");
+  }
+  if (darkShare > 0.6) {
+    add("low", "One colour piece in olive, forest green or rust", "Your palette is mostly black and dark tones; one earthy colour adds variety without clashing.", "olive green crewneck sweatshirt");
+  }
+  return { bySlot, colorCount, styleCount, brandCount, darkShare, graphicShare, unworn, stale, suggestions: s };
+}
+
+function shopLinks(query) {
+  const r = state.settings.region;
+  const q = encodeURIComponent(query);
+  const it = r === "it";
+  return [
+    ["Google Shopping", `https://www.google.com/search?tbm=shop&q=${q}`],
+    ["Zalando", `https://www.zalando.${it ? "it" : "co.uk"}/catalog/?q=${q}`],
+    ["Vinted", `https://www.vinted.${it ? "it" : "com"}/catalog?search_text=${q}`],
+    ["ASOS", `https://www.asos.com/search/?q=${q}`],
+  ];
+}
+
+/* ======================================================================
+   AI (optional): Google Gemini or Anthropic Claude, with your own key.
+   Keys stay on this device. Token-saving rules:
+   - photos are sent once, as the cut-out (no background), at 512 px
+   - results are stored on the item and never requested again
+   - the stylist gets a compact one-line-per-piece wardrobe list
+   - output length is capped
+   ====================================================================== */
+const PROVIDERS = { gemini: "Gemini (Google)", claude: "Claude (Anthropic)", off: "Off" };
+function aiReady() {
+  const s = state.settings;
+  if (s.aiProvider === "off") return false;
+  return state.previewAI || (s.aiProvider === "gemini" && !!s.geminiKey) || (s.aiProvider === "claude" && !!s.apiKey);
+}
+const aiName = () => (state.previewAI || state.settings.aiProvider === "claude" ? "Claude" : "Gemini");
+const NO_AI = "Add a Gemini or Claude API key in Settings to use this.";
+
+async function trackUsage(input = 0, output = 0) {
+  const month = today().slice(0, 7);
+  if (state.usage.month !== month) state.usage = { month, requests: 0, input: 0, output: 0 };
+  state.usage.requests++;
+  state.usage.input += input;
+  state.usage.output += output;
+  await store.put("kv", state.usage, "usage");
+}
+
+// One small JPEG on white for the AI: front on the left, back on the right. One picture
+// instead of two costs fewer image tokens, and the garments fill the frame.
+async function aiImage(front, back, h = 512) {
+  const w = Math.round(h * 0.75);
+  const c = newCanvas(back ? w * 2 : w, h);
+  const ctx = c.getContext("2d");
+  ctx.fillStyle = "#fff";
+  ctx.fillRect(0, 0, c.width, c.height);
+  for (const [k, blob] of [front, back].entries()) {
+    if (!blob) continue;
+    const bmp = await createImageBitmap(blob);
+    const s = Math.min(w / bmp.width, h / bmp.height);
+    ctx.drawImage(bmp, k * w + (w - bmp.width * s) / 2, (h - bmp.height * s) / 2, bmp.width * s, bmp.height * s);
+  }
+  return canvasBlob(c, "image/jpeg", 0.8);
+}
+
+// --- Gemini (REST) ---
+function toGeminiSchema(s) {
+  const out = {};
+  if (s.type) out.type = s.type.toUpperCase();
+  if (s.description) out.description = s.description;
+  if (s.enum) out.enum = s.enum;
+  if (s.items) out.items = toGeminiSchema(s.items);
+  if (s.properties) {
+    out.properties = Object.fromEntries(Object.entries(s.properties).map(([k, v]) => [k, toGeminiSchema(v)]));
+    out.required = s.required;
+    out.propertyOrdering = Object.keys(s.properties);
+  }
+  return out;
+}
+async function geminiGenerate({ system, text, image, schema, maxTokens }) {
+  const { geminiKey, geminiModel } = state.settings;
+  const parts = [];
+  if (image) parts.push({ inline_data: { mime_type: "image/jpeg", data: await blobToBase64(image) } });
+  parts.push({ text });
+  const body = {
+    system_instruction: { parts: [{ text: system }] },
+    contents: [{ role: "user", parts }],
+    generationConfig: {
+      maxOutputTokens: maxTokens,
+      thinkingConfig: { thinkingBudget: 0 }, // no hidden "thinking" tokens for these short tasks
+      ...(schema ? { responseMimeType: "application/json", responseSchema: toGeminiSchema(schema) } : {}),
+    },
+  };
+  const call = (b) => fetch(`https://generativelanguage.googleapis.com/v1beta/models/${encodeURIComponent(geminiModel || "gemini-flash-latest")}:generateContent`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json", "x-goog-api-key": geminiKey },
+    body: JSON.stringify(b),
+  });
+  let res = await call(body);
+  if (res.status === 400) {
+    // Some models don't accept a thinking budget; retry with the model's default.
+    delete body.generationConfig.thinkingConfig;
+    res = await call(body);
+  }
+  const j = await res.json().catch(() => ({}));
+  if (!res.ok) throw new Error(j.error?.message ? `Gemini: ${j.error.message}` : `Gemini error ${res.status}`);
+  const u = j.usageMetadata || {};
+  await trackUsage(u.promptTokenCount || 0, (u.candidatesTokenCount || 0) + (u.thoughtsTokenCount || 0));
+  const out = (j.candidates?.[0]?.content?.parts || []).map((p) => p.text || "").join("").trim();
+  if (!out) throw new Error("Gemini returned no answer. Try again.");
+  return out;
+}
+
+// --- Claude (official SDK) ---
+const CLAUDE_MODEL = "claude-opus-5-5";
+let anthropicClient;
+async function claudeClient() {
+  if (!anthropicClient || anthropicClient.apiKey !== state.settings.apiKey) {
+    const { default: Anthropic } = await import("https://esm.sh/@anthropic-ai/sdk@0.133.0");
+    anthropicClient = new Anthropic({ apiKey: state.settings.apiKey, dangerouslyAllowBrowser: true });
+  }
+  return anthropicClient;
+}
+async function claudeGenerate({ system, text, image, schema }) {
+  const client = await claudeClient();
+  const content = image
+    ? [{ type: "image", source: { type: "base64", media_type: "image/jpeg", data: await blobToBase64(image) } }, { type: "text", text }]
+    : text;
+  const res = await client.beta.messages.create({
+    model: CLAUDE_MODEL,
+    max_tokens: 8000,
+    betas: ["server-side-fallback-2026-07-01"],
+    fallbacks: "default",
+    output_config: schema ? { effort: "low", format: { type: "json_schema", schema } } : { effort: "low" },
+    system,
+    messages: [{ role: "user", content }],
+  });
+  await trackUsage(res.usage?.input_tokens || 0, res.usage?.output_tokens || 0);
+  if (res.stop_reason === "refusal") throw new Error("Claude declined this request.");
+  return res.content.filter((b) => b.type === "text").map((b) => b.text).join("\n").trim();
+}
+
+// --- Claude preview ---
+// The Claude preview blocks every outside website, so Gemini and the Claude API can't be
+// reached there with a key. It lets the page ask Claude on the viewer's own claude.ai account
+// instead (the viewer allows it once). Anywhere else window.claude doesn't exist and this is null.
+const previewSample = window.claude?.use ? window.claude.use("sample").then((f) => f || null, () => null) : Promise.resolve(null);
+const PREVIEW_ERRORS = {
+  not_granted: "Claude isn't allowed in this preview. Reload and tap Allow when it asks, or use your Gemini key on the tablet.",
+  sampling_disabled: "Claude isn't available for this account in the preview.",
+  rate_limited: "Too many requests just now. Try again in a minute.",
+  session_expired: "Sign in to Claude again, then try once more.",
+  images_unavailable: "This preview can't send photos to Claude.",
+  image_rejected: "Claude couldn't read this photo. Try another one.",
+  refused: "Claude couldn't help with that one. Try asking another way.",
+  invalid_json: "Claude's answer couldn't be read. Tap Recognise again.",
+};
+async function previewGenerate({ system, text, image, schema, onText }) {
+  const sample = await previewSample;
+  const prompt = `${system}\n\n${text}` + (schema ? `\n\nReply with only one JSON object that follows this JSON Schema:\n${JSON.stringify(schema)}` : "");
+  const opts = { modelTier: "default", effort: "low", ...(image ? { images: [image] } : {}), ...(onText ? { onText: ({ text }) => onText(text) } : {}) };
+  try {
+    if (schema) return JSON.stringify(await sample.json(prompt, opts));
+    return (await sample(prompt, opts)).text.trim();
+  } catch (e) {
+    throw new Error(PREVIEW_ERRORS[e?.code] || "Claude couldn't answer right now. Try again in a moment.");
+  }
+}
+
+async function aiGenerate(opts) {
+  if (!aiReady()) throw new Error(NO_AI);
+  if (state.previewAI) return previewGenerate(opts);
+  try {
+    return await (state.settings.aiProvider === "claude" ? claudeGenerate(opts) : geminiGenerate(opts));
+  } catch (e) {
+    if (e instanceof TypeError && /fetch|network|load failed/i.test(e.message)) throw new Error(`Couldn't reach ${aiName()}. Check the internet connection and try again.`);
+    throw e;
+  }
+}
+
+// One line per piece, short fields: keeps the stylist prompt to roughly 15 tokens per item.
+function wardrobeText() {
+  return state.items.map((i) => {
+    const b = brandInfo(i.brand);
+    return [
+      i.name, catLabel(i.category), (i.colors || []).join("/"),
+      i.brand ? i.brand + (b ? ` (${b.tier})` : "") : "",
+      (i.styles || []).join("/"), `w${i.warmth}`,
+      i.wearCount ? `worn ${i.wearCount}x` : "unworn",
+    ].filter(Boolean).join("; ");
+  }).join("\n");
+}
+const STYLIST_SYSTEM =
+  "You are a personal stylist in a smart-wardrobe app. Use the user's own pieces by name. " +
+  "If something is missing (e.g. shoes), say what would work and mark it 'to buy'. " +
+  "Answer in at most 8 short plain-text lines, no markdown.";
+
+// Recognise type, colours, brand and style from one photo.
+const TAG_SCHEMA = {
+  type: "object",
+  additionalProperties: false,
+  required: ["name", "category", "colors", "brand", "styles", "warmth", "tags", "front_top", "back_top"],
+  properties: {
+    name: { type: "string", description: "Short name, e.g. 'Navy cable-knit sweater'" },
+    category: { type: "string", enum: CATS.map((c) => c.id) },
+    colors: { type: "array", items: { type: "string", enum: Object.keys(COLORS) }, description: "Main colour first, at most 3" },
+    brand: { type: "string", description: "Brand from a visible logo, label or very distinctive design; empty if unsure" },
+    styles: { type: "array", items: { type: "string", enum: Object.keys(STYLES) }, description: "1 to 3 styles, best first" },
+    warmth: { type: "integer", description: "1 very light to 5 winter" },
+    tags: { type: "array", items: { type: "string" }, description: "Up to 4 short lowercase tags, e.g. graphic, knit, logo, cargo" },
+    front_top: { type: "string", enum: ["up", "right", "down", "left"], description: "In the front photo, which way the collar, hood or waistband points" },
+    back_top: { type: "string", enum: ["up", "right", "down", "left"], description: "Same for the back photo; 'up' if there is none" },
+  },
+};
+// Clockwise turn that brings the collar or waistband to the top.
+const TURN_FOR = { up: 0, right: 270, down: 180, left: 90 };
+async function aiTagPhoto(front, back) {
+  const text = await aiGenerate({
+    system: "You catalogue clothing for a wardrobe app. Reply with JSON only.",
+    text: back
+      ? "Catalogue this garment. Left: its front. Right: its back. Recognise the brand if a logo or label is visible and describe its style."
+      : "Catalogue this garment. Recognise the brand if a logo or label is visible and describe its style.",
+    image: await aiImage(front, back),
+    schema: TAG_SCHEMA,
+    maxTokens: 320,
+  });
+  return JSON.parse(text.replace(/^```(json)?|```$/g, "").trim());
+}
+
+/* ======================================================================
+   Views
+   ====================================================================== */
+const main = $("#main");
+let view = "today";
+let draft = null; // item being added / edited
+
+function go(v) {
+  view = v;
+  document.querySelectorAll(".tab").forEach((b) => (b.dataset.view === v ? b.setAttribute("aria-current", "page") : b.removeAttribute("aria-current")));
+  render();
+  main.scrollTop = 0;
+}
+function render() {
+  ({ today: renderToday, wardrobe: renderWardrobe, add: renderAdd, shop: renderShop, settings: renderSettings })[view]();
+}
+
+/* ---------- Today ---------- */
+function renderToday() {
+  const w = state.weather;
+  const cond = conditions();
+  const greet = new Date().getHours() < 12 ? "Good morning" : new Date().getHours() < 18 ? "Good afternoon" : "Good evening";
+  const dateStr = new Date().toLocaleDateString(undefined, { weekday: "long", day: "numeric", month: "long" });
+
+  if (!state.items.length) {
+    main.innerHTML = `
+      <div class="head"><div><h1>${greet}</h1><p class="sub">${esc(dateStr)}</p></div></div>
+      ${emptyState("Your wardrobe is empty", "Add your first piece, or load the sample wardrobe from your photos.", `<button class="btn primary" data-go="add">Add clothes</button><button class="btn" data-act="seed">Load sample wardrobe</button>`)}`;
+    return;
+  }
+  if (!state.outfits.length) generateOutfits();
+
+  const weatherHtml = w?.typical
+    ? `<div class="weather"><div class="temp">${fmtTemp(state.manualTemp ?? w.temp)}</div>
+        <div class="wx"><b>${state.manualTemp != null ? "Manual temperature" : `Usual ${esc(MONTH())} weather`}</b>
+        <span class="muted small">${esc(state.settings.city)} · usually ${fmtTemp(w.min)}–${fmtTemp(w.max)} · live weather shows once the app is online</span></div></div>`
+    : w
+    ? `<div class="weather"><div class="temp">${fmtTemp(state.manualTemp ?? w.temp)}</div>
+        <div class="wx"><b>${state.manualTemp != null ? "Manual temperature" : esc(WMO(w.code))}</b>
+        <span class="muted small">${esc(state.settings.city)} · feels ${fmtTemp(w.feels)} · ${fmtTemp(w.min)}–${fmtTemp(w.max)} · rain ${w.rainChance}%</span></div></div>`
+    : `<div class="weather"><div class="temp">${fmtTemp(cond.feels)}</div><div class="wx"><b>No weather yet</b><span class="muted small">${state.settings.lat == null ? "Set your city in Settings for live weather." : "Weather can't load here right now. Set how it feels with the slider below."}</span></div></div>`;
+
+  main.innerHTML = `
+    <div class="head">
+      <div><h1>${greet}</h1><p class="sub">${esc(dateStr)}</p></div>
+      <button class="btn" data-act="shuffle"><svg viewBox="0 0 24 24"><path d="M16 3h5v5M4 20 21 3M21 16v5h-5M15 15l6 6M4 4l5 5"/></svg>New ideas</button>
+    </div>
+    <div class="stack">
+      <div class="card row" style="justify-content:space-between">
+        ${weatherHtml}
+        <div class="field" style="min-width:min(260px,100%);flex:1;max-width:420px">
+          <label for="temp-slider">Feels like ${fmtTemp(cond.feels)}${state.manualTemp != null ? ' · <a href="#" data-act="autotemp" style="color:var(--accent)">use weather</a>' : ""}</label>
+          <input id="temp-slider" type="range" min="-10" max="35" step="1" value="${Math.round(cond.feels)}" data-input="temp">
+        </div>
+      </div>
+      <div class="chips scroller">${OCCASIONS.map((o) => `<button class="chip" aria-pressed="${state.occasion === o.id}" data-occ="${o.id}">${o.label}</button>`).join("")}</div>
+      <div class="outfits">${state.outfits.map((o, i) => outfitCard(o, i)).join("") || `<p class="muted">Add a few more tops to get outfit ideas.</p>`}</div>
+      ${aiCard()}
+    </div>`;
+}
+function outfitCard(o, i) {
+  const order = ["outer", "mid", "base", "bottom", "shoes"];
+  const pieces = order.map((k) => o.pieces[k]).filter(Boolean);
+  const ph = (o.missing || []).map((m) => `<button class="piece" data-go="shop"><div class="ph">No ${SLOTS[m].toLowerCase()} yet<br>tap to shop</div><span>${SLOTS[m]}</span></button>`).join("");
+  return `<article class="card outfit">
+    <div class="row" style="justify-content:space-between"><h2 style="margin:0">${["Best match", "Option 2", "Option 3"][i] || "Option"}</h2>${i === 0 ? '<span class="score">Top pick</span>' : ""}</div>
+    <div class="pieces">${pieces.map((p) => `<button class="piece" data-item="${p.id}"><img class="pic-bg" src="${photoURL(p.photos?.[0])}" alt=""><span>${esc(p.name)}</span></button>`).join("")}${ph}</div>
+    ${o.reasons.length ? `<p class="why">${o.reasons.map(esc).join(" · ")}</p>` : ""}
+    <button class="btn primary" data-wear="${i}">Wear this today</button>
+  </article>`;
+}
+function aiCard() {
+  return `<section class="card ai-box">
+    <h2 style="margin:0">Ask the stylist</h2>
+    <p class="muted small" style="margin:0">${aiReady() ? `Ask anything about your clothes. Answers come from ${aiName()}.` : "Optional: add a Gemini or Claude API key in Settings for free-form styling advice. Outfit ideas above work without it."}</p>
+    <div class="chips">
+      ${["What should I wear for a dinner date?", "Which pieces should I donate?", "Build me a capsule for a weekend trip"].map((q) => `<button class="chip" data-ask="${esc(q)}">${esc(q)}</button>`).join("")}
+    </div>
+    <div class="row"><input id="ask-input" class="input" style="flex:1;min-width:0" placeholder="Ask about your wardrobe…" data-input="ask"><button class="btn primary" data-act="ask">Ask</button></div>
+    <div class="ai-answer" id="ai-answer">${esc(state.aiAnswer)}</div>
+  </section>`;
+}
+
+/* ---------- Wardrobe ---------- */
+function filteredItems() {
+  const { q, slot, color, style, sort } = state.filters;
+  const ql = q.trim().toLowerCase();
+  const list = state.items.filter((i) =>
+    (slot === "all" || (slot === "fav" ? i.favorite : slotOf(i) === slot)) &&
+    (color === "all" || (i.colors || []).includes(color)) &&
+    (style === "all" || (i.styles || []).includes(style)) &&
+    (!ql || [i.name, i.brand, catLabel(i.category), ...(i.tags || []), ...(i.colors || []), ...(i.styles || [])].join(" ").toLowerCase().includes(ql)));
+  const by = {
+    recent: (a, b) => (b.createdAt || "").localeCompare(a.createdAt || ""),
+    most: (a, b) => (b.wearCount || 0) - (a.wearCount || 0),
+    least: (a, b) => (a.wearCount || 0) - (b.wearCount || 0) || (a.lastWorn || "").localeCompare(b.lastWorn || ""),
+    name: (a, b) => a.name.localeCompare(b.name),
+  };
+  return list.sort(by[sort]);
+}
+function renderWardrobe() {
+  const list = filteredItems();
+  const usedColors = [...new Set(state.items.flatMap((i) => i.colors || []))];
+  const usedStyles = Object.keys(STYLES).filter((s) => state.items.some((i) => (i.styles || []).includes(s)));
+  const f = state.filters;
+  main.innerHTML = `
+    <div class="head">
+      <div><h1>Wardrobe</h1><p class="sub">${state.items.length} pieces</p></div>
+      <div class="chips">${[["recent", "Newest"], ["most", "Most worn"], ["least", "Least worn"], ["name", "A–Z"]].map(([k, l]) => `<button class="chip" aria-pressed="${f.sort === k}" data-sort="${k}">${l}</button>`).join("")}</div>
+    </div>
+    <div class="toolbar">
+      <div class="search"><svg viewBox="0 0 24 24"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg><input id="search-input" class="input" placeholder="Search name, brand, style, tag…" value="${esc(f.q)}" data-input="q"></div>
+      <div class="chips scroller">
+        <button class="chip" aria-pressed="${f.slot === "all"}" data-slot="all">All</button>
+        <button class="chip" aria-pressed="${f.slot === "fav"}" data-slot="fav">★ Favourites</button>
+        ${Object.entries(SLOTS).map(([k, l]) => `<button class="chip" aria-pressed="${f.slot === k}" data-slot="${k}">${l}</button>`).join("")}
+      </div>
+      ${usedStyles.length > 1 ? `<div class="chips scroller"><button class="chip" aria-pressed="${f.style === "all"}" data-style="all">Any style</button>${usedStyles.map((s) => `<button class="chip" aria-pressed="${f.style === s}" data-style="${esc(s)}">${styleLabel(s)}</button>`).join("")}</div>` : ""}
+      ${usedColors.length > 1 ? `<div class="chips scroller"><button class="chip" aria-pressed="${f.color === "all"}" data-color="all">Any colour</button>${usedColors.map((c) => `<button class="chip" aria-pressed="${f.color === c}" data-color="${esc(c)}"><span class="dot" style="background:${COLORS[c]?.hex}"></span>${esc(cap(c))}</button>`).join("")}</div>` : ""}
+    </div>
+    ${list.length ? `<div class="grid" id="grid">${list.map(itemTile).join("")}</div>` :
+      state.items.length ? `<p class="muted">Nothing matches these filters.</p>` :
+      emptyState("No clothes yet", "Snap a photo of each piece to start your catalogue.", `<button class="btn primary" data-go="add">Add clothes</button><button class="btn" data-act="seed">Load sample wardrobe</button>`)}`;
+}
+function itemTile(i) {
+  const sub = [i.brand, (i.styles || []).slice(0, 1).map(styleLabel)[0]].filter(Boolean).join(" · ") || catLabel(i.category);
+  return `<button class="item" data-item="${i.id}">
+    <div class="pic"><img class="thumb pic-bg" loading="lazy" src="${photoURL(i.photos?.[0])}" alt="">${i.favorite ? '<span class="fav">★</span>' : ""}</div>
+    <div class="meta"><span class="name">${esc(i.name)}</span><span class="info">${swatches(i.colors)} ${esc(sub)}</span></div>
+  </button>`;
+}
+function emptyState(title, text, actions) {
+  return `<div class="empty"><svg viewBox="0 0 24 24"><path d="M12 3a2 2 0 0 0-2 2h-.5L3 9l1.6 3.2L7 11v10h10V11l2.4 1.2L21 9l-6.5-4H14a2 2 0 0 0-2-2z"/></svg><h2 style="margin:0;color:var(--text)">${title}</h2><p style="margin:0">${text}</p><div class="row" style="justify-content:center">${actions}</div></div>`;
+}
+
+/* ---------- Item detail (sheet) ---------- */
+function openItem(id, showOriginal = false) {
+  const i = state.items.find((x) => x.id === id);
+  if (!i) return;
+  const b = brandInfo(i.brand);
+  const pics = showOriginal && i.originals?.length ? i.originals : i.photos || [];
+  const panel = $(".sheet-panel");
+  panel.innerHTML = `
+    <div class="detail-head">
+      <div><h1 style="font-size:28px">${esc(i.name)}</h1><p class="sub">${esc([catLabel(i.category), i.brand].filter(Boolean).join(" · "))}${b ? ` · <span class="tier">${TIER_LABEL[b.tier]}</span>` : ""}</p></div>
+      <button class="btn icon-btn ghost" data-close aria-label="Close"><svg viewBox="0 0 24 24"><path d="M6 6l12 12M18 6 6 18"/></svg></button>
+    </div>
+    <div class="gallery">${pics.map((p) => `<img class="pic-bg" src="${photoURL(p)}" alt="">`).join("")}</div>
+    ${i.originals?.length ? `<div class="row" style="margin-top:10px"><button class="chip" data-orig="${i.id}" data-show="${showOriginal ? 0 : 1}">${showOriginal ? "Show cut-out" : "Show original photo"}</button></div>` : ""}
+    <div class="kv" style="margin:18px 0">
+      <div><b>Style</b>${(i.styles || []).map(styleLabel).join(", ") || "Not set"}</div>
+      <div><b>Colours</b>${swatches(i.colors)} ${esc((i.colors || []).join(", "))}</div>
+      <div><b>Warmth</b>${"●".repeat(i.warmth || 1)}${"○".repeat(5 - (i.warmth || 1))}</div>
+      <div><b>Worn</b>${i.wearCount ? i.wearCount + "×" : "Not yet"} ${i.lastWorn ? `· ${daysSince(i.lastWorn) === 0 ? "today" : daysSince(i.lastWorn) + " days ago"}` : ""}</div>
+    </div>
+    ${i.tags?.length ? `<div class="chips" style="margin-bottom:14px">${i.tags.map((t) => `<span class="chip">${esc(t)}</span>`).join("")}</div>` : ""}
+    ${i.notes ? `<p>${esc(i.notes)}</p>` : ""}
+    <div class="row">
+      <button class="btn primary" data-wear-item="${i.id}">Wearing it today</button>
+      <button class="btn" data-fav="${i.id}">${i.favorite ? "★ Favourite" : "☆ Favourite"}</button>
+      <button class="btn" data-pair="${i.id}">What goes with it?</button>
+      <button class="btn" data-edit="${i.id}">Edit</button>
+      <button class="btn ghost danger" data-del="${i.id}">Delete</button>
+    </div>
+    <div class="ai-answer" id="pair-answer" style="margin-top:16px"></div>`;
+  $("#sheet").hidden = false;
+}
+const closeSheet = () => ($("#sheet").hidden = true);
+function confirmBox(message, okLabel) {
+  return new Promise((resolve) => {
+    const panel = $(".sheet-panel");
+    panel.innerHTML = `<div class="stack" style="max-width:560px;margin:0 auto;text-align:center">
+      <h2 style="margin:0">${esc(message)}</h2>
+      <div class="row" style="justify-content:center"><button class="btn" id="cb-no">Cancel</button><button class="btn primary" id="cb-yes">${esc(okLabel)}</button></div></div>`;
+    $("#sheet").hidden = false;
+    const done = (v) => { closeSheet(); resolve(v); };
+    $("#cb-yes").onclick = (e) => { e.stopPropagation(); done(true); };
+    $("#cb-no").onclick = (e) => { e.stopPropagation(); done(false); };
+  });
+}
+
+function pairingsFor(item) {
+  // Rule-based: neutrals with anything, avoid a second accent colour, avoid two graphic pieces, prefer a shared style.
+  const c = item.colors?.[0];
+  const accent = c && !COLORS[c]?.neutral;
+  const graphic = (item.tags || []).some((t) => /graphic|statement/.test(t));
+  const has = (x, st) => (x.styles || []).includes(st);
+  return state.items
+    .filter((o) => o.id !== item.id && slotOf(o) !== slotOf(item))
+    .map((o) => {
+      const oc = o.colors?.[0];
+      let s = COLORS[oc]?.neutral ? 2 : accent ? -2 : 1;
+      if (graphic && (o.tags || []).some((t) => /graphic|statement/.test(t))) s -= 1.5;
+      if (COLORS[oc]?.tone !== COLORS[c]?.tone) s += 0.7;
+      if ((o.styles || []).some((st) => has(item, st))) s += 1;
+      for (const [a, b] of STYLE_CLASH) if ((has(o, a) && has(item, b)) || (has(o, b) && has(item, a))) s -= 1.5;
+      return { o, s };
+    })
+    .sort((a, b) => b.s - a.s)
+    .slice(0, 6)
+    .map((x) => x.o);
+}
+
+/* ---------- Add / edit ---------- */
+// A draft photo keeps the photo as taken (src) and its cut-out (cutSrc), plus what is shown
+// after turning it upright by `rot` degrees: orig (photo) and cut (cut-out).
+const shown = (p) => (p.useCut && p.cut ? p.cut : p.orig);
+const newPhoto = (src) => ({ src, orig: src, cutSrc: null, cut: null, useCut: false, rot: 0 });
+function newDraft() {
+  return { id: null, photos: [], active: 0, name: "", category: "", colors: [], brand: "", styles: [], stylesTouched: false, warmth: 3, tags: "", notes: "", analysing: false };
+}
+function brandHint(brand) {
+  const b = brandInfo(brand);
+  return b ? `${TIER_LABEL[b.tier]}, usually ${b.styles.map(styleLabel).join(" / ").toLowerCase()}` : "";
+}
+const ICON_CAMERA = `<svg viewBox="0 0 24 24"><path d="M3 8a2 2 0 0 1 2-2h2l2-2h6l2 2h2a2 2 0 0 1 2 2v10a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><circle cx="12" cy="13" r="4"/></svg>`;
+const ICON_GALLERY = `<svg viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="16" rx="2"/><circle cx="9" cy="10" r="2"/><path d="m21 16-5-5-9 9"/></svg>`;
+const ICON_ROTATE = `<svg viewBox="0 0 24 24"><path d="M20 11a8 8 0 1 0-2.3 5.7"/><path d="M20 4v7h-7"/></svg>`;
+
+function renderAdd() {
+  if (!draft) draft = newDraft();
+  const d = draft;
+  if (pendingShots.length) {
+    // System-camera path: the front is in, now the back.
+    main.innerHTML = `
+      <div class="head"><div><h1>Now the back</h1><p class="sub">Flip the piece over, keep the collar or waistband at the top, and take the second photo.</p></div></div>
+      <div class="shot-step">
+        <img class="pic-bg" src="${photoURL(pendingShots[0])}" alt="Front photo">
+        <div class="stack">
+          <button class="btn primary big" data-act="shoot">${ICON_CAMERA}Take back photo</button>
+          <button class="btn ghost" data-act="shoot-done">No back photo, continue</button>
+        </div>
+      </div>`;
+    return;
+  }
+  if (!d.photos.length && !d.id) {
+    main.innerHTML = `
+      <div class="head"><div><h1>Add clothes</h1><p class="sub">Two photos per piece: the front, then the back. The app does the rest.</p></div></div>
+      <div class="add-start">
+        <button class="btn primary big" data-act="shoot">${ICON_CAMERA}<span class="big-label">Take photos<small>Front, then back</small></span></button>
+        <button class="btn big" data-act="gallery">${ICON_GALLERY}<span class="big-label">Choose from gallery<small>Front and back photos are paired up</small></span></button>
+      </div>
+      <ol class="how">
+        <li>Lay the piece flat on a plain surface, collar or waistband at the top.</li>
+        <li>Take the front, flip it over, take the back.</li>
+        <li>The background is removed, the photos are turned upright, and type, colours, brand and style are filled in${aiReady() ? ` by ${aiName()}` : " (add a Gemini key in Settings so the type is filled in too)"}. Check it and tap Save.</li>
+      </ol>`;
+    return;
+  }
+  const cur = d.photos[d.active] || d.photos[0];
+  const working = d.photos.some((p) => p.busy) || d.analysing;
+  const status = d.photos.some((p) => p.busy) ? "Removing backgrounds and straightening…" : d.analysing ? `Recognising with ${aiName()}…` : "";
+  main.innerHTML = `
+    <div class="head">
+      <div><h1>${d.id ? "Edit piece" : "New piece"}</h1>${status ? `<p class="sub row" style="gap:10px"><span class="spinner"></span>${status}</p>` : queue.length ? `<p class="sub">${queue.length} more piece${queue.length > 1 ? "s" : ""} waiting</p>` : ""}</div>
+      <div class="row">
+        ${aiReady() && !working ? `<button class="btn" data-act="ai-tag"><svg viewBox="0 0 24 24"><path d="M12 3l1.8 4.7L18.5 9.5l-4.7 1.8L12 16l-1.8-4.7L5.5 9.5l4.7-1.8z"/></svg>Recognise again</button>` : ""}
+        <button class="btn ghost" data-act="cancel-add">Cancel</button>
+      </div>
+    </div>
+    <div class="add-grid">
+      <div class="photos">
+        <div class="photo-wrap">
+          <img class="photo-main pic-bg" src="${photoURL(shown(cur))}" alt="">
+          ${cur.busy ? `<div class="busy"><div class="spinner"></div><span>Removing background…</span></div>` : ""}
+          ${d.photos.length > 1 ? `<span class="photo-tag">${d.active === 0 ? "Front" : d.active === 1 ? "Back" : `Photo ${d.active + 1}`}</span>` : ""}
+        </div>
+        <div class="row">
+          ${cur.busy ? "" : `<button class="chip" data-act="rotate">${ICON_ROTATE}Turn</button>`}
+          ${cur.cut ? `<button class="chip" data-cutview="${cur.useCut ? 0 : 1}">${cur.useCut ? "Use original photo" : "Use cut-out"}</button>` : cur.busy ? "" : `<button class="chip" data-act="cutout">Remove background</button>`}
+          ${cur.engine === "basic" && cur.useCut ? `<span class="muted small">Quick cut-out. The AI cut-out needs internet the first time.</span>` : ""}
+        </div>
+        <div class="photo-strip">
+          ${d.photos.map((p, k) => `<div class="mini ${k === d.active ? "on" : ""}"><img class="pic-bg" src="${photoURL(shown(p))}" data-photo="${k}" alt="">${p.busy ? '<div class="mini-busy"><div class="spinner"></div></div>' : ""}<button class="x" data-rmphoto="${k}" aria-label="Remove photo">×</button></div>`).join("")}
+          <button class="add-photo" data-act="more-photo" aria-label="Add photo">+</button>
+        </div>
+      </div>
+      <div class="stack">
+        <div class="field"><label for="f-name">Name</label><input id="f-name" class="input" data-input="name" value="${esc(d.name || "")}" placeholder="${esc(autoName(d) || "e.g. Navy cable-knit sweater")}"></div>
+        <div class="field"><label>Type</label><div class="chips">${CATS.map((c) => `<button class="chip" aria-pressed="${d.category === c.id}" data-cat="${c.id}">${c.label}</button>`).join("")}</div></div>
+        <div class="field"><label for="f-brand">Brand</label>
+          <input id="f-brand" class="input" data-input="brand" value="${esc(d.brand)}" placeholder="e.g. Lacoste" list="brand-list" autocomplete="off">
+          <datalist id="brand-list">${BRAND_LIST.map(([n]) => `<option value="${esc(n)}"></option>`).join("")}</datalist>
+          <span class="muted small" id="brand-hint">${esc(brandHint(d.brand))}</span>
+        </div>
+        <div class="field"><label>Style <span style="text-transform:none;font-weight:400">(${d.stylesTouched ? "set" : "recognised from brand and type, tap to change"})</span></label><div class="chips">${Object.entries(STYLES).map(([k, v]) => `<button class="chip" aria-pressed="${d.styles.includes(k)}" data-sty="${esc(k)}">${v.label}</button>`).join("")}</div></div>
+        <div class="field"><label>Colours <span style="text-transform:none;font-weight:400">(main colour first)</span></label><div class="chips">${Object.entries(COLORS).map(([n, v]) => `<button class="chip" aria-pressed="${d.colors.includes(n)}" data-col="${esc(n)}"><span class="dot" style="background:${v.hex}"></span>${cap(n)}${d.colors[0] === n ? " ·main" : ""}</button>`).join("")}</div></div>
+        <div class="field"><label for="f-warmth">Warmth</label><input id="f-warmth" type="range" min="1" max="5" value="${d.warmth}" data-input="warmth"><div class="warm-scale"><span>Light</span><span>Medium</span><span>Winter</span></div></div>
+        <div class="field"><label for="f-tags">Tags</label><input id="f-tags" class="input" data-input="tags" value="${esc(d.tags)}" placeholder="graphic, knit, gift from mum…"></div>
+        <div class="field"><label for="f-notes">Notes</label><textarea id="f-notes" class="input" data-input="notes" placeholder="Size, where you bought it, care…">${esc(d.notes)}</textarea></div>
+        <div class="row">
+          ${d.id
+            ? `<button class="btn primary big" data-act="save" ${d.category ? "" : "disabled"}>Save changes</button>`
+            : `<button class="btn primary big" data-act="save-next" ${d.category && !working ? "" : "disabled"}>${queue.length ? `Save, next piece (${queue.length} left)` : "Save and add the next piece"}</button>
+               <button class="btn big" data-act="save" ${d.category && !working ? "" : "disabled"}>Save</button>`}
+        </div>
+        ${!d.category && !working ? `<p class="muted small" style="margin:0">Pick the type to save.</p>` : ""}
+      </div>
+    </div>`;
+}
+function autoName(d) {
+  if (!d.category) return "";
+  return cap([d.colors[0], d.brand, catLabel(d.category).toLowerCase()].filter(Boolean).join(" "));
+}
+function refreshStyles() {
+  if (draft && !draft.stylesTouched) draft.styles = guessStyles({ brand: draft.brand, category: draft.category, tags: draft.tags.split(",").map((t) => t.trim().toLowerCase()) });
+}
+
+// Hidden file inputs: one opens the system camera, one the gallery.
+const camInput = Object.assign(document.createElement("input"), { type: "file", accept: "image/*", capture: "environment", hidden: true });
+const galInput = Object.assign(document.createElement("input"), { type: "file", accept: "image/*", multiple: true, hidden: true });
+document.body.append(camInput, galInput);
+let queue = []; // more pieces chosen from the gallery, each a [front, back?] list of photos
+let pendingShots = []; // system-camera path: the front photo while waiting for the back
+let addingExtraPhoto = false;
+const rerenderAdd = (d) => { if (draft === d && view === "add") render(); };
+
+async function applyRotation(p) {
+  p.orig = await rotateImage(p.src, p.rot, false);
+  if (p.cutSrc) p.cut = await rotateImage(p.cutSrc, p.rot, true);
+}
+// Cut the background out and stand the piece upright.
+async function preparePhoto(p, d, cut = state.settings.autoCutout) {
+  p.busy = true;
+  rerenderAdd(d);
+  try {
+    if (cut && !p.cutSrc) {
+      const r = await removeBackground(p.src);
+      p.cutSrc = r.blob; p.engine = r.engine; p.useCut = true;
+    }
+    if (p.cutSrc && !p.manual) p.rot = await uprightAngle(p.cutSrc, kindOf(d.category));
+    await applyRotation(p);
+    if (d.photos[0] === p) d.colors = await detectColors(shown(p)).catch(() => d.colors);
+  } catch {
+    if (draft === d && view === "add") toast("Couldn't separate the garment from the background");
+  }
+  p.busy = false;
+  rerenderAdd(d);
+}
+// Without AI, knowing the type (top or bottom) makes the upright guess more reliable.
+async function reorient(d) {
+  for (const p of d.photos) {
+    if (!p.cutSrc || p.manual || p.aiChecked || p.busy) continue;
+    const rot = await uprightAngle(p.cutSrc, kindOf(d.category));
+    if (Math.abs(rot - p.rot) > 2) { p.rot = rot; await applyRotation(p); }
+  }
+  rerenderAdd(d);
+}
+async function startDraft(srcs) {
+  draft = newDraft();
+  const d = draft;
+  d.photos = srcs.slice(0, 4).map(newPhoto);
+  d.colors = await detectColors(srcs[0]).catch(() => []);
+  render();
+  for (const p of d.photos) await preparePhoto(p, d);
+  if (aiReady() && state.settings.aiAuto) await recognise(d);
+}
+async function recognise(d) {
+  d.analysing = true;
+  rerenderAdd(d);
+  try {
+    const [front, back] = d.photos;
+    const r = await aiTagPhoto(shown(front), back && shown(back));
+    Object.assign(d, {
+      name: d.name || r.name || "",
+      category: CAT[r.category] ? r.category : d.category,
+      colors: (r.colors || []).filter((c) => COLORS[c]).slice(0, 3),
+      brand: r.brand || d.brand,
+      styles: (r.styles || []).filter((s) => STYLES[s]).slice(0, 3),
+      stylesTouched: true,
+      warmth: Math.min(5, Math.max(1, r.warmth || 3)),
+      tags: (r.tags || []).join(", "),
+    });
+    // The AI also says which way is up in each photo: turn any that are still sideways.
+    for (const [k, side] of [[0, r.front_top], [1, r.back_top]]) {
+      const p = d.photos[k];
+      if (!p || p.manual) continue;
+      p.aiChecked = true;
+      if (TURN_FOR[side]) { p.rot = (p.rot + TURN_FOR[side]) % 360; await applyRotation(p); }
+    }
+    if (draft === d) toast(r.brand ? `Recognised ${r.brand}` : "Filled in, check and save");
+  } catch (err) {
+    if (draft === d) toast(err.message || "Couldn't read the photos");
+  }
+  d.analysing = false;
+  rerenderAdd(d);
+}
+
+// Front and back are usually taken within a minute of each other, so gallery photos are
+// paired by the time they were taken: from camera file names like PXL_20261012_132131204.jpg
+// or IMG_20261012_132131.jpg, else the file date, else the order they were chosen in.
+function photoTime(f) {
+  const m = f.name.match(/(20\d{2})(\d{2})(\d{2})[_-]?(\d{2})(\d{2})(\d{2})/);
+  return m ? new Date(+m[1], m[2] - 1, +m[3], +m[4], +m[5], +m[6]).getTime() : f.lastModified;
+}
+function pairPhotos(files) {
+  const list = [...files].map((f) => ({ f, t: photoTime(f) })).sort((a, b) => a.t - b.t);
+  const timed = list.length > 1 && list.at(-1).t - list[0].t > 2000;
+  const groups = [];
+  for (const x of list) {
+    const g = groups.at(-1);
+    if (g && g.length < 2 && (!timed || x.t - g.last < 90e3)) { g.push(x.f); g.last = x.t; }
+    else groups.push(Object.assign([x.f], { last: x.t }));
+  }
+  return groups;
+}
+async function handleFiles(files, fromCamera) {
+  files = [...files];
+  if (!files.length) return;
+  if (fromCamera && !addingExtraPhoto) {
+    const blob = await resizeImage(files[0]);
+    if (!pendingShots.length) { pendingShots = [blob]; return go("add"); }
+    const shots = [pendingShots[0], blob];
+    pendingShots = [];
+    return startDraft(shots);
+  }
+  toast("Preparing photos…");
+  if (addingExtraPhoto && draft) {
+    addingExtraPhoto = false;
+    const d = draft;
+    const added = (await Promise.all(files.map((f) => resizeImage(f)))).map(newPhoto);
+    d.photos.push(...added);
+    d.active = d.photos.length - 1;
+    render();
+    for (const p of added) await preparePhoto(p, d);
+    return;
+  }
+  const groups = pairPhotos(files);
+  queue = groups.slice(1);
+  await startDraft(await Promise.all(groups[0].map((f) => resizeImage(f))));
+}
+camInput.onchange = () => { handleFiles(camInput.files, true); camInput.value = ""; };
+galInput.onchange = () => { handleFiles(galInput.files, false); galInput.value = ""; };
+
+/* ---------- In-app camera: front, then back ---------- */
+// Uses the tablet's camera inside the app (needs https or localhost). If it isn't available,
+// the system camera opens instead, once for the front and once for the back.
+let liveCamera = !!navigator.mediaDevices?.getUserMedia;
+const cam = { el: null, stream: null, shots: [] };
+async function startShooting() {
+  if (!liveCamera) return camInput.click();
+  if (!cam.el) {
+    cam.el = document.createElement("div");
+    cam.el.className = "cam";
+    cam.el.innerHTML = `
+      <video playsinline muted autoplay></video>
+      <div class="cam-guide" aria-hidden="true"><span>▲ Collar or waistband this way</span></div>
+      <div class="cam-top"><b class="cam-step"></b><button class="btn icon-btn" data-cam="close" aria-label="Close camera"><svg viewBox="0 0 24 24"><path d="M6 6l12 12M18 6 6 18"/></svg></button></div>
+      <div class="cam-bar">
+        <div class="cam-thumbs"></div>
+        <button class="shutter" data-cam="snap" aria-label="Take photo"></button>
+        <button class="btn" data-cam="skip">No back photo</button>
+      </div>`;
+    document.body.append(cam.el);
+  }
+  cam.shots = [];
+  try {
+    cam.stream = await navigator.mediaDevices.getUserMedia({ audio: false, video: { facingMode: { ideal: "environment" }, width: { ideal: 1920 }, height: { ideal: 1920 } } });
+  } catch {
+    liveCamera = false;
+    cam.el.hidden = true;
+    toast("The camera can't open inside the app here. Tap Take photos again to use the system camera.");
+    return;
+  }
+  cam.el.querySelector("video").srcObject = cam.stream;
+  cam.el.hidden = false;
+  updateCamera();
+}
+function updateCamera() {
+  const back = cam.shots.length === 1;
+  cam.el.querySelector(".cam-step").textContent = back ? "2 of 2 · Back: flip it over" : "1 of 2 · Front";
+  cam.el.querySelector('[data-cam="skip"]').hidden = !back;
+  cam.el.querySelector(".cam-thumbs").innerHTML = cam.shots.map((b) => `<img src="${photoURL(b)}" alt="">`).join("");
+}
+function stopCamera() {
+  cam.stream?.getTracks().forEach((t) => t.stop());
+  cam.stream = null;
+  if (cam.el) cam.el.hidden = true;
+}
+async function snap() {
+  const v = cam.el.querySelector("video");
+  if (!v.videoWidth) return;
+  const c = newCanvas(v.videoWidth, v.videoHeight);
+  c.getContext("2d").drawImage(v, 0, 0);
+  cam.el.classList.add("flash");
+  setTimeout(() => cam.el.classList.remove("flash"), 150);
+  cam.shots.push(await resizeImage(await canvasBlob(c, "image/jpeg", 0.92)));
+  if (cam.shots.length < 2) return updateCamera();
+  finishShooting();
+}
+function finishShooting() {
+  const shots = cam.shots;
+  stopCamera();
+  if (!shots.length) return;
+  go("add");
+  startDraft(shots);
+}
+
+async function saveDraft(next = false) {
+  const d = draft;
+  const existing = d.id && state.items.find((i) => i.id === d.id);
+  const tags = d.tags.split(",").map((t) => t.trim().toLowerCase()).filter(Boolean);
+  const styles = d.styles.length ? d.styles : guessStyles({ brand: d.brand, category: d.category, tags });
+  const anyCut = d.photos.some((p) => p.useCut && p.cut);
+  const item = {
+    ...(existing || { id: uid(), createdAt: new Date().toISOString(), wearCount: 0, lastWorn: null, favorite: false }),
+    name: d.name.trim() || autoName(d) || "Untitled piece",
+    category: d.category, colors: d.colors, brand: d.brand.trim(), styles, formality: formalityOf(styles),
+    warmth: +d.warmth, tags, notes: d.notes.trim(),
+    photos: d.photos.map(shown),
+    originals: anyCut ? d.photos.map((p) => p.orig) : undefined,
+    aiChecked: existing?.aiChecked || d.photos.some((p) => p.aiChecked) || undefined,
+  };
+  await store.put("items", item);
+  if (existing) Object.assign(existing, item); else state.items.push(item);
+  state.outfits = [];
+  toast(existing ? "Saved" : `Added ${item.name}`);
+  draft = null;
+  if (queue.length) {
+    const group = queue.shift();
+    return startDraft(await Promise.all(group.map((f) => resizeImage(f))));
+  }
+  if (next) { go("add"); return startShooting(); }
+  go("wardrobe");
+}
+
+/* ---------- Discover / shop ---------- */
+function renderShop() {
+  const a = analyse();
+  const total = state.items.length || 1;
+  const palette = Object.entries(a.colorCount).sort((x, y) => y[1] - x[1]);
+  const styleMix = Object.entries(a.styleCount).sort((x, y) => y[1] - x[1]);
+  const brands = Object.entries(a.brandCount).sort((x, y) => y[1] - x[1]);
+  const tiers = {};
+  for (const i of state.items) { const t = brandInfo(i.brand)?.tier; if (t) tiers[t] = (tiers[t] || 0) + 1; }
+  main.innerHTML = `
+    <div class="head"><div><h1>Discover</h1><p class="sub">What your wardrobe has, what it's missing, and where to find it.</p></div></div>
+    <div class="stack">
+      <div class="stats">
+        <div class="stat"><b>${state.items.length}</b><span>pieces</span></div>
+        <div class="stat"><b>${brands.length}</b><span>brands</span></div>
+        <div class="stat"><b>${a.unworn.length}</b><span>never worn</span></div>
+        <div class="stat"><b>${styleMix[0] ? styleLabel(styleMix[0][0]) : "–"}</b><span>main style</span></div>
+      </div>
+      <div class="two-col">
+        <section class="card">
+          <h2>Your style</h2>
+          <div class="stack" style="gap:12px">
+            ${styleMix.length ? styleMix.map(([s, n]) => `<button class="style-row" data-stylego="${esc(s)}"><span>${styleLabel(s)}</span><span class="muted">${Math.round((n / total) * 100)}%</span><span class="bar"><i style="width:${(n / total) * 100}%"></i></span></button>`).join("") : `<p class="muted">Add pieces to see your style mix.</p>`}
+          </div>
+        </section>
+        <section class="card">
+          <h2>Brands</h2>
+          ${brands.length ? `<div class="chips">${brands.map(([b, n]) => { const t = brandInfo(b)?.tier; return `<button class="chip" data-brandgo="${esc(b)}">${esc(b)}${n > 1 ? ` <span class="muted">×${n}</span>` : ""}${t ? ` <span class="tier">${t}</span>` : ""}</button>`; }).join("")}</div>` : `<p class="muted">No brands recorded yet.</p>`}
+          ${Object.keys(tiers).length ? `<p class="muted small" style="margin:14px 0 0">${Object.entries(tiers).map(([t, n]) => `${n} ${t}`).join(" · ")}</p>` : ""}
+          ${palette.length ? `<h2 style="margin-top:22px">Palette</h2><div class="chips">${palette.map(([c, n]) => `<span class="chip"><span class="dot" style="background:${COLORS[c]?.hex}"></span>${cap(c)} ${Math.round((n / total) * 100)}%</span>`).join("")}</div>` : ""}
+        </section>
+      </div>
+      <section class="card">
+        <h2>Balance</h2>
+        <div class="stack" style="gap:14px">
+          ${Object.entries(SLOTS).filter(([k]) => SLOT_TARGET[k]).map(([k, l]) => {
+            const n = a.bySlot[k].length, t = SLOT_TARGET[k];
+            return `<div><div class="row" style="justify-content:space-between"><span>${l}</span><span class="muted">${n} / ${t} suggested</span></div><div class="bar"><i style="width:${Math.min(100, (n / t) * 100)}%;${n === 0 ? "background:var(--warn);width:4%" : ""}"></i></div></div>`;
+          }).join("")}
+        </div>
+      </section>
+      <section class="card">
+        <h2>Worth adding</h2>
+        <div class="sugg">${a.suggestions.length ? a.suggestions.map((s, k) => `
+          <div class="sugg-item">
+            <div><span class="prio">${s.prio === "high" ? "Fills a gap" : s.prio === "medium" ? "Adds range" : "Nice to have"}</span><h3>${esc(s.title)}</h3><p>${esc(s.why)}</p></div>
+            <div class="shops">${shopLinks(s.query).map(([n, u]) => `<a class="btn" href="${u}" target="_blank" rel="noopener">${n}</a>`).join("")}<button class="btn" data-wish="${k}">${state.wishlist.some((w) => w.title === s.title) ? "♥ Saved" : "♡ Save"}</button></div>
+          </div>`).join("") : `<p class="muted">Your wardrobe looks well balanced.</p>`}
+        </div>
+      </section>
+      ${state.wishlist.length ? `<section class="card"><h2>Wishlist</h2><div class="sugg">${state.wishlist.map((w, k) => `
+          <div class="sugg-item"><div><h3>${esc(w.title)}</h3><p>${esc(w.why)}</p></div>
+          <div class="shops">${shopLinks(w.query).slice(0, 2).map(([n, u]) => `<a class="btn" href="${u}" target="_blank" rel="noopener">${n}</a>`).join("")}<button class="btn ghost" data-unwish="${k}">Remove</button></div></div>`).join("")}</div></section>` : ""}
+      ${a.unworn.length || a.stale.length ? `<section class="card"><h2>Forgotten pieces</h2><p class="muted small" style="margin-top:-6px">Wear them, or think about selling or donating.</p><div class="grid">${[...a.unworn, ...a.stale].slice(0, 8).map(itemTile).join("")}</div></section>` : ""}
+      <section class="card ai-box">
+        <h2 style="margin:0">Personal shopping advice</h2>
+        <p class="muted small" style="margin:0">${aiReady() ? `${aiName()} looks at your whole wardrobe and suggests the next few buys.` : "Add a Gemini or Claude API key in Settings for tailored shopping advice."}</p>
+        <div class="row"><button class="btn primary" data-ask="Looking at my wardrobe and style, what are the 5 most useful things to buy next? One line each with a search term I can paste into a shop.">What should I buy next?</button></div>
+        <div class="ai-answer" id="ai-answer">${esc(state.aiAnswer)}</div>
+      </section>
+    </div>`;
+}
+
+/* ---------- Settings ---------- */
+function renderSettings() {
+  const s = state.settings;
+  const uncut = state.items.filter((i) => !i.originals?.length).length;
+  const unrecognised = state.items.filter((i) => !i.brand && !i.aiChecked).length;
+  const u = state.usage.month === today().slice(0, 7) ? state.usage : { requests: 0, input: 0, output: 0 };
+  const toggle = (key, label, hint) => `<button class="toggle" role="switch" aria-checked="${!!s[key]}" data-toggle="${key}"><span class="knob"></span><span class="toggle-text"><b>${label}</b><span class="muted small">${hint}</span></span></button>`;
+  const prov = s.aiProvider;
+  main.innerHTML = `
+    <div class="head"><div><h1>Settings</h1></div></div>
+    <div class="stack" style="max-width:760px">
+      <section class="card stack">
+        <h2 style="margin:0">Weather</h2>
+        ${weatherSource()}
+        <div class="field"><label for="city-input">City</label>
+          <div class="row"><input id="city-input" class="input" style="flex:1;min-width:0" data-input="city" value="${esc(s.city)}" placeholder="e.g. Milano"><button class="btn primary" data-act="city">Find</button></div>
+          <div class="chips" id="city-results"></div>
+        </div>
+        <div class="row"><button class="btn" data-act="geo">Use this device's location</button></div>
+        <div class="field"><label>Units</label><div class="chips">${["C", "F"].map((x) => `<button class="chip" aria-pressed="${s.unit === x}" data-unit="${x}">°${x}</button>`).join("")}</div></div>
+      </section>
+      <section class="card stack">
+        <h2 style="margin:0">Photos</h2>
+        ${toggle("autoCutout", "Remove backgrounds automatically", "Runs on the tablet, no AI tokens. Downloads a 40 MB model once; offline it uses a quick colour-based cut-out.")}
+        ${uncut ? `<div class="row"><button class="btn" data-act="cut-all">Remove background from ${uncut} older piece${uncut > 1 ? "s" : ""}</button></div>` : ""}
+      </section>
+      <section class="card stack">
+        <h2 style="margin:0">AI recognition and stylist</h2>
+        <p class="muted small" style="margin:0">Optional. Used to recognise brand and style from a new photo (once per piece) and to answer stylist questions. Daily outfits, cut-outs and style from known brands work without it.</p>
+        ${state.previewAI && prov !== "off" ? `<p class="small" style="margin:0;padding:10px 12px;border-radius:12px;background:var(--surface-2)">You're in the Claude preview, which blocks outside websites, so your ${prov === "claude" ? "Claude" : "Gemini"} key can't be used here. Here, recognition and the stylist answer through your Claude account instead (it asks you to allow it the first time). On the tablet the app uses your key.</p>` : ""}
+        <div class="chips">${Object.entries(PROVIDERS).map(([k, l]) => `<button class="chip" aria-pressed="${prov === k}" data-provider="${k}">${l}</button>`).join("")}</div>
+        ${prov === "gemini" ? `
+          <div class="field"><label for="gemini-key">Gemini API key</label>
+            <div class="row"><input id="gemini-key" class="input" style="flex:1;min-width:0" type="password" data-input="geminikey" value="${esc(s.geminiKey)}" placeholder="AIza…" autocomplete="off"><button class="btn primary" data-act="savegemini">Save</button></div>
+            <span class="muted small">Create a free key at aistudio.google.com → Get API key. The Gemini app subscription does not include the API, but AI Studio has a free tier.</span>
+          </div>
+          <div class="field"><label for="gemini-model">Model</label>
+            <input id="gemini-model" class="input" data-input="geminimodel" value="${esc(s.geminiModel)}" list="gemini-models" autocomplete="off">
+            <datalist id="gemini-models"><option value="gemini-flash-latest"></option><option value="gemini-flash-lite-latest"></option><option value="gemini-pro-latest"></option></datalist>
+            <span class="muted small">Flash is fast and cheap. Flash-Lite uses the fewest tokens. Pro gives the best styling answers.</span>
+          </div>` : ""}
+        ${prov === "claude" ? `
+          <div class="field"><label for="apikey-input">Claude API key</label>
+            <div class="row"><input id="apikey-input" class="input" style="flex:1;min-width:0" type="password" data-input="apikey" value="${esc(s.apiKey)}" placeholder="sk-ant-…" autocomplete="off"><button class="btn primary" data-act="savekey">Save</button></div>
+            <span class="muted small">From console.anthropic.com. Stored only on this device.</span>
+          </div>` : ""}
+        ${prov !== "off" ? toggle("aiAuto", "Recognise new photos automatically", "Fills in type, brand, style and colours, and checks which way is up, right after the cut-out. Roughly 500–1,000 tokens per piece, once.") : ""}
+        ${aiReady() && unrecognised ? `<div class="row"><button class="btn" data-act="recognise-all">Recognise ${unrecognised} piece${unrecognised > 1 ? "s" : ""} without a brand</button></div>` : ""}
+        <p class="muted small" style="margin:0">This month: ${u.requests} AI request${u.requests === 1 ? "" : "s"} · ${(u.input + u.output).toLocaleString()} tokens (${u.input.toLocaleString()} in, ${u.output.toLocaleString()} out)</p>
+      </section>
+      <section class="card stack">
+        <h2 style="margin:0">Look</h2>
+        <div class="chips">${[["auto", "Match system"], ["dark", "Dark"], ["light", "Light"]].map(([k, l]) => `<button class="chip" aria-pressed="${s.theme === k}" data-theme="${k}">${l}</button>`).join("")}</div>
+        <div class="field"><label>Shops</label><div class="chips">${[["it", "Italy"], ["com", "International"]].map(([k, l]) => `<button class="chip" aria-pressed="${s.region === k}" data-region="${k}">${l}</button>`).join("")}</div></div>
+      </section>
+      <section class="card stack">
+        <h2 style="margin:0">Data</h2>
+        <div class="row">
+          <button class="btn" data-act="seed">Load sample wardrobe</button>
+          <button class="btn" data-act="export">Export backup</button>
+          <button class="btn" data-act="import">Import backup</button>
+          <button class="btn ghost danger" data-act="wipe">Erase everything</button>
+        </div>
+        <p class="muted small" style="margin:0">${state.items.length} pieces · ${state.log.length} outfits logged. Everything is stored on this device.</p>
+      </section>
+    </div>`;
+}
+
+/* ======================================================================
+   Actions
+   ====================================================================== */
+async function loadSeed() {
+  const seed = window.WARDROBE_SEED || [];
+  if (!seed.length) return toast("No sample data found");
+  toast("Loading sample wardrobe…");
+  const get = async (u) => { try { const r = await fetch(u); return r.ok ? await r.blob() : null; } catch { return null; } };
+  let added = 0, updated = 0;
+  for (const [n, s] of seed.entries()) {
+    const key = s.photos[0];
+    const existing = state.items.find((i) => i.seedKey === key || i.seedKey === `${key}.jpg`); // v1 keys kept the extension
+    if (existing && (existing.seedVersion || 1) >= SEED_VERSION) continue;
+    const originals = (await Promise.all(s.photos.map((p) => get(`sample/${p}.jpg`)))).filter(Boolean);
+    const cuts = (await Promise.all(s.photos.map((p) => get(`sample/cut/${p}.webp`)))).filter(Boolean);
+    if (!originals.length) return toast("Open the app through a web server to load samples");
+    const useCuts = cuts.length === originals.length;
+    const fields = {
+      seedVersion: SEED_VERSION, styles: s.styles, formality: formalityOf(s.styles),
+      ...(useCuts ? { photos: cuts, originals } : { photos: originals }),
+    };
+    if (existing) {
+      // Upgrade an earlier sample piece to the new (cut-out, upright) photos. Wear history,
+      // favourites and edits stay; styles are only filled in if the piece had none (version 1).
+      const keepStyles = (existing.seedVersion || 1) >= 2 ? { styles: existing.styles, formality: existing.formality } : {};
+      Object.assign(existing, fields, keepStyles, { seedKey: key });
+      if (!existing.brand && s.brand) existing.brand = s.brand;
+      await store.put("items", existing);
+      updated++;
+      continue;
+    }
+    const item = {
+      id: uid(), seedKey: key, createdAt: new Date(Date.now() - n * 1000).toISOString(),
+      name: s.name, category: s.category, colors: s.colors, brand: s.brand, warmth: s.warmth,
+      tags: s.tags, notes: "", wearCount: 0, lastWorn: null, favorite: false, ...fields,
+    };
+    await store.put("items", item);
+    state.items.push(item);
+    added++;
+  }
+  state.outfits = [];
+  await store.put("kv", true, "seeded");
+  await store.put("kv", SEED_VERSION, "seedVersion");
+  toast(added || updated ? [added && `Added ${added} pieces`, updated && `updated ${updated}`].filter(Boolean).join(", ") : "Sample wardrobe already loaded");
+  render();
+}
+
+async function cutAll() {
+  const todo = state.items.filter((i) => !i.originals?.length);
+  let done = 0;
+  for (const it of todo) {
+    toast(`Removing backgrounds… ${done + 1} of ${todo.length}`);
+    try {
+      const cuts = [], originals = [];
+      for (const p of it.photos) {
+        const cut = (await removeBackground(p)).blob;
+        const rot = await uprightAngle(cut, kindOf(it.category));
+        cuts.push(await rotateImage(cut, rot, true));
+        originals.push(await rotateImage(p, rot, false));
+      }
+      it.originals = originals;
+      it.photos = cuts;
+      await store.put("items", it);
+      done++;
+    } catch { /* keep the original photo */ }
+  }
+  state.outfits = [];
+  toast(`Updated ${done} of ${todo.length} pieces`);
+  render();
+}
+async function recogniseAll() {
+  const todo = state.items.filter((i) => !i.brand && !i.aiChecked);
+  let found = 0;
+  for (const [k, it] of todo.entries()) {
+    toast(`Recognising… ${k + 1} of ${todo.length}`);
+    try {
+      const r = await aiTagPhoto(it.photos[0], it.photos[1]);
+      if (r.brand) { it.brand = r.brand; found++; }
+      for (const [k, side] of [[0, r.front_top], [1, r.back_top]]) {
+        if (!it.photos[k] || !TURN_FOR[side]) continue;
+        it.photos[k] = await rotateImage(it.photos[k], TURN_FOR[side], !!it.originals);
+        if (it.originals?.[k]) it.originals[k] = await rotateImage(it.originals[k], TURN_FOR[side], false);
+      }
+      const st = (r.styles || []).filter((s) => STYLES[s]);
+      if (st.length) { it.styles = st.slice(0, 3); it.formality = formalityOf(it.styles); }
+      it.aiChecked = true; // never pay for the same photo twice
+      await store.put("items", it);
+    } catch (e) { toast(e.message || "Recognition failed"); break; }
+  }
+  state.outfits = [];
+  toast(`Found ${found} brand${found === 1 ? "" : "s"}; styles updated`);
+  render();
+}
+
+async function exportBackup() {
+  const items = [];
+  for (const i of state.items) items.push({
+    ...i,
+    photos: await Promise.all((i.photos || []).map(blobToDataURL)),
+    originals: i.originals ? await Promise.all(i.originals.map(blobToDataURL)) : undefined,
+  });
+  const blob = new Blob([JSON.stringify({ version: 2, exportedAt: new Date().toISOString(), items, log: state.log, wishlist: state.wishlist })], { type: "application/json" });
+  const a = Object.assign(document.createElement("a"), { href: URL.createObjectURL(blob), download: `wardrobe-backup-${today()}.json` });
+  a.click();
+}
+async function importBackup() {
+  const input = Object.assign(document.createElement("input"), { type: "file", accept: "application/json" });
+  input.onchange = async () => {
+    try {
+      const data = JSON.parse(await input.files[0].text());
+      const toBlobs = (arr) => Promise.all((arr || []).map(async (u) => (await fetch(u)).blob()));
+      for (const i of data.items || []) {
+        i.photos = await toBlobs(i.photos);
+        if (i.originals) i.originals = await toBlobs(i.originals);
+        await store.put("items", i);
+      }
+      for (const l of data.log || []) { delete l.id; await store.put("log", l); }
+      if (data.wishlist) { state.wishlist = data.wishlist; await saveWishlist(); }
+      await loadAll();
+      state.outfits = [];
+      toast(`Imported ${data.items?.length || 0} pieces`);
+      render();
+    } catch { toast("That file couldn't be imported"); }
+  };
+  input.click();
+}
+
+async function ask(question, targetId = "ai-answer") {
+  const out = document.getElementById(targetId);
+  if (!question?.trim()) return;
+  if (out) out.innerHTML = `<div class="row"><div class="spinner"></div><span class="muted">Thinking about your wardrobe…</span></div>`;
+  try {
+    const c = conditions();
+    const context = `Today: feels ${Math.round(c.feels)}°C${c.wet ? ", wet" : ""}. Occasion: ${OCCASIONS.find((o) => o.id === state.occasion).label}.\nWardrobe (name; type; colours; brand; style; warmth 1-5; wear):\n${wardrobeText() || "(empty)"}`;
+    const show = (t) => { const el = document.getElementById(targetId); if (el) el.textContent = t; };
+    const answer = await aiGenerate({ system: STYLIST_SYSTEM + "\n\n" + context, text: question, maxTokens: 500, onText: show });
+    if (targetId === "ai-answer") state.aiAnswer = answer;
+    const el = document.getElementById(targetId);
+    if (el) el.textContent = answer;
+  } catch (e) {
+    const el = document.getElementById(targetId);
+    if (el) el.textContent = e.message || "Something went wrong talking to the AI.";
+  }
+}
+
+document.addEventListener("click", async (e) => {
+  const t = e.target.closest("button, a, [data-close], img[data-photo]");
+  if (!t) return;
+  const ds = t.dataset;
+
+  if (t.matches("[data-close]")) return closeSheet();
+  if (ds.cam === "snap") return snap();
+  if (ds.cam === "skip") return finishShooting();
+  if (ds.cam === "close") { cam.shots = []; return stopCamera(); }
+  if (ds.view) return go(ds.view);
+  if (ds.go) { closeSheet(); return go(ds.go); }
+  if (ds.item) return openItem(ds.item);
+  if (ds.orig) return openItem(ds.orig, ds.show === "1");
+  if (ds.occ) { state.occasion = ds.occ; generateOutfits(); return render(); }
+  if (ds.slot) { state.filters.slot = ds.slot; return render(); }
+  if (ds.color) { state.filters.color = ds.color; return render(); }
+  if (ds.style) { state.filters.style = ds.style; return render(); }
+  if (ds.stylego) { Object.assign(state.filters, { style: ds.stylego, slot: "all", color: "all", q: "" }); return go("wardrobe"); }
+  if (ds.brandgo) { Object.assign(state.filters, { q: ds.brandgo, style: "all", slot: "all", color: "all" }); return go("wardrobe"); }
+  if (ds.sort) { state.filters.sort = ds.sort; return render(); }
+  if (ds.cat && draft) {
+    const prev = CAT[draft.category];
+    draft.category = ds.cat;
+    if (!prev || draft.warmth == prev.warmth) draft.warmth = CAT[ds.cat].warmth;
+    refreshStyles();
+    render();
+    return reorient(draft);
+  }
+  if (ds.sty && draft) {
+    const i = draft.styles.indexOf(ds.sty);
+    if (i === -1) draft.styles.push(ds.sty); else draft.styles.splice(i, 1);
+    draft.stylesTouched = true;
+    return render();
+  }
+  if (ds.col && draft) {
+    const i = draft.colors.indexOf(ds.col);
+    if (i === -1) draft.colors.push(ds.col); else draft.colors.splice(i, 1);
+    return render();
+  }
+  if (ds.cutview && draft) { draft.photos[draft.active].useCut = ds.cutview === "1"; return render(); }
+  if (ds.photo && draft) { draft.active = +ds.photo; return render(); }
+  if (ds.rmphoto && draft) {
+    draft.photos.splice(+ds.rmphoto, 1);
+    draft.active = 0;
+    if (!draft.photos.length && !draft.id) draft = null;
+    return render();
+  }
+  if (ds.toggle) { state.settings[ds.toggle] = !state.settings[ds.toggle]; await saveSettings(); return render(); }
+  if (ds.provider) { state.settings.aiProvider = ds.provider; await saveSettings(); return render(); }
+  if (ds.wear != null) {
+    const o = state.outfits[+ds.wear];
+    await wearOutfit(Object.values(o.pieces).filter(Boolean));
+    toast("Logged. Enjoy your day!");
+    generateOutfits();
+    return render();
+  }
+  if (ds.wearItem) {
+    const it = state.items.find((i) => i.id === ds.wearItem);
+    await wearOutfit([it]);
+    toast(`Logged ${it.name}`);
+    state.outfits = [];
+    return openItem(it.id);
+  }
+  if (ds.fav) {
+    const it = state.items.find((i) => i.id === ds.fav);
+    it.favorite = !it.favorite;
+    await store.put("items", it);
+    openItem(it.id);
+    return render();
+  }
+  if (ds.edit) {
+    const it = state.items.find((i) => i.id === ds.edit);
+    draft = {
+      ...newDraft(), ...it,
+      photos: (it.photos || []).map((p, k) => (it.originals?.[k] ? { ...newPhoto(it.originals[k]), cutSrc: p, cut: p, useCut: true, manual: true } : { ...newPhoto(p), manual: true })),
+      active: 0, tags: (it.tags || []).join(", "), colors: [...(it.colors || [])], styles: [...(it.styles || [])], stylesTouched: true,
+      notes: it.notes || "", brand: it.brand || "",
+    };
+    queue = [];
+    pendingShots = [];
+    closeSheet();
+    return go("add");
+  }
+  if (ds.del) {
+    const it = state.items.find((i) => i.id === ds.del);
+    if (!(await confirmBox(`Delete “${it.name}” from your wardrobe?`, "Delete"))) return openItem(it.id);
+    await store.del("items", it.id);
+    state.items = state.items.filter((i) => i.id !== it.id);
+    state.outfits = [];
+    toast("Deleted");
+    return render();
+  }
+  if (ds.pair) {
+    const it = state.items.find((i) => i.id === ds.pair);
+    const out = $("#pair-answer");
+    const matches = pairingsFor(it);
+    out.innerHTML = matches.length
+      ? `<h2>Goes well with</h2><div class="grid">${matches.map(itemTile).join("")}</div>`
+      : `<p class="muted">Add pieces from other categories (bottoms, shoes, jackets) to see pairings.</p>`;
+    if (aiReady()) {
+      out.insertAdjacentHTML("beforeend", `<div id="pair-ai" class="ai-answer" style="margin-top:14px"></div>`);
+      ask(`3 outfit ideas built around my "${it.name}", using pieces I own.`, "pair-ai");
+    }
+    return;
+  }
+  if (ds.wish != null) {
+    const s = analyse().suggestions[+ds.wish];
+    if (!state.wishlist.some((w) => w.title === s.title)) { state.wishlist.push(s); await saveWishlist(); toast("Saved to wishlist"); }
+    return render();
+  }
+  if (ds.unwish != null) { state.wishlist.splice(+ds.unwish, 1); await saveWishlist(); return render(); }
+  if (ds.ask) return ask(ds.ask);
+  if (ds.unit) { state.settings.unit = ds.unit; await saveSettings(); return render(); }
+  if (ds.theme) { state.settings.theme = ds.theme; applyTheme(); await saveSettings(); return render(); }
+  if (ds.region) { state.settings.region = ds.region; await saveSettings(); return render(); }
+  if (ds.city) {
+    const [lat, lon, name] = JSON.parse(ds.city);
+    Object.assign(state.settings, { lat, lon, city: name });
+    await saveSettings();
+    await loadWeather(true);
+    state.outfits = [];
+    toast(state.weather?.typical ? `${name} set, using its usual ${MONTH()} temperatures for now` : `Weather set to ${name}`);
+    return render();
+  }
+
+  switch (ds.act) {
+    case "seed": return loadSeed();
+    case "shuffle": generateOutfits(); return render();
+    case "autotemp": e.preventDefault(); state.manualTemp = null; generateOutfits(); return render();
+    case "shoot": addingExtraPhoto = false; return startShooting();
+    case "shoot-done": { const shots = pendingShots; pendingShots = []; return startDraft(shots); }
+    case "gallery": addingExtraPhoto = false; return galInput.click();
+    case "more-photo": addingExtraPhoto = true; return galInput.click();
+    case "cutout": return preparePhoto(draft.photos[draft.active], draft, true);
+    case "rotate": {
+      const d = draft, p = d.photos[d.active];
+      p.rot = (p.rot + 90) % 360;
+      p.manual = true;
+      await applyRotation(p);
+      return rerenderAdd(d);
+    }
+    case "cancel-add": draft = null; queue = []; pendingShots = []; return go(state.items.length ? "wardrobe" : "today");
+    case "save": return saveDraft(false);
+    case "save-next": return saveDraft(true);
+    case "ai-tag": return recognise(draft);
+    case "cut-all": return cutAll();
+    case "recognise-all": return recogniseAll();
+    case "ask": return ask($('[data-input="ask"]')?.value);
+    case "savekey":
+      state.settings.apiKey = $('[data-input="apikey"]').value.trim(); anthropicClient = null;
+      await saveSettings(); toast(state.settings.apiKey ? "Claude key saved on this device" : "Claude key removed"); return render();
+    case "savegemini":
+      state.settings.geminiKey = $('[data-input="geminikey"]').value.trim();
+      state.settings.geminiModel = $('[data-input="geminimodel"]').value.trim() || "gemini-flash-latest";
+      await saveSettings(); toast(state.settings.geminiKey ? "Gemini key saved on this device" : "Gemini key removed"); return render();
+    case "city": {
+      const q = $('[data-input="city"]').value.trim();
+      if (!q) return;
+      const box = $("#city-results");
+      box.innerHTML = `<div class="spinner"></div>`;
+      const { results, offline } = await searchCity(q);
+      box.innerHTML = results.map((r) => `<button class="chip" data-city='${esc(JSON.stringify([r.latitude, r.longitude, r.name]))}'>${esc([r.name, r.admin1, r.country_code].filter(Boolean).join(", "))}</button>`).join("") +
+        (offline
+          ? `<p class="muted small" style="margin:4px 0 0;flex-basis:100%">${results.length ? "No internet here, so this is the built-in list of " + CITIES.length + " cities. Until live weather can load, the app uses their usual temperatures for the month." : `No internet here, and “${esc(q)}” isn't in the built-in list of ${CITIES.length} cities. Try the nearest big city, or set the temperature with the slider on the Today screen.`}</p>`
+          : results.length ? "" : `<span class="muted">No city found</span>`);
+      return;
+    }
+    case "geo":
+      if (!navigator.geolocation) return toast("Location isn't available on this device");
+      navigator.geolocation.getCurrentPosition(async (p) => {
+        Object.assign(state.settings, { lat: +p.coords.latitude.toFixed(3), lon: +p.coords.longitude.toFixed(3), city: "Current location" });
+        await saveSettings(); await loadWeather(true); state.outfits = [];
+        toast(state.weather ? (state.weather.typical ? `Location set, using usual temperatures near ${state.weather.near}` : "Location set") : "Location set, but weather can't load here. Use the slider on Today.");
+        render();
+      }, () => toast("Location isn't available here. Type your city instead."));
+      return;
+    case "export": return exportBackup();
+    case "import": return importBackup();
+    case "wipe":
+      if (!(await confirmBox("Erase all clothes, photos and history from this device?", "Erase everything"))) return;
+      await store.clear("items"); await store.clear("log");
+      state.items = []; state.log = []; state.outfits = [];
+      toast("Wardrobe erased");
+      return render();
+  }
+});
+
+document.addEventListener("input", (e) => {
+  const k = e.target.dataset.input;
+  if (!k) return;
+  const v = e.target.value;
+  if (k === "q") {
+    state.filters.q = v;
+    const grid = $("#grid");
+    if (grid) grid.innerHTML = filteredItems().map(itemTile).join("");
+    else render();
+    return;
+  }
+  if (k === "temp") {
+    state.manualTemp = +v;
+    clearTimeout(e.target._t);
+    e.target._t = setTimeout(() => { generateOutfits(); render(); }, 250);
+    return;
+  }
+  if (draft && ["name", "brand", "tags", "notes", "warmth"].includes(k)) draft[k] = v;
+  if (draft && (k === "brand" || k === "tags")) {
+    refreshStyles();
+    // Update the hint and style chips without stealing focus from the text box.
+    const hint = $("#brand-hint");
+    if (hint) hint.textContent = brandHint(draft.brand);
+    document.querySelectorAll("[data-sty]").forEach((c) => c.setAttribute("aria-pressed", draft.styles.includes(c.dataset.sty)));
+  }
+});
+document.addEventListener("keydown", (e) => {
+  if (e.key === "Enter" && e.target.dataset.input === "ask") ask(e.target.value);
+  if (e.key === "Enter" && e.target.dataset.input === "city") $('[data-act="city"]').click();
+  if (e.key === "Escape") { closeSheet(); if (cam.stream) { cam.shots = []; stopCamera(); } }
+});
+
+/* ======================================================================
+   Boot
+   ====================================================================== */
+await loadAll();
+applyTheme();
+loadWeather().then(() => { if (view === "today") { state.outfits = []; render(); } });
+previewSample.then((f) => {
+  if (!f) return;
+  state.previewAI = true;
+  if (view !== "add" && !document.activeElement?.matches("input, textarea")) render();
+});
+go("today");
+{
+  const seeded = await store.get("kv", "seeded");
+  const version = (await store.get("kv", "seedVersion")) || 1;
+  if ((!seeded && !state.items.length) || (seeded && version < SEED_VERSION)) loadSeed();
+}
