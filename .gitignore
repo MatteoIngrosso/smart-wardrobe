@@ -8,3 +8,5 @@ Thumbs.db
 # Never commit keys
 .env
 *.key
+# Shared wardrobe kept by server.py (photos and data, never committed)
+data/
