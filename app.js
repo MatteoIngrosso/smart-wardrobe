@@ -28,15 +28,35 @@ const CATS = [
   { id: "sneakers", label: "Sneakers", slot: "shoes", warmth: 2, styles: ["casual"] },
   { id: "boots", label: "Boots", slot: "shoes", warmth: 4, styles: ["smart casual"] },
   { id: "dress-shoes", label: "Dress shoes", slot: "shoes", warmth: 2, styles: ["formal"] },
-  { id: "accessory", label: "Accessory", slot: "acc", warmth: 1, styles: [] },
+  { id: "cap", label: "Cap", slot: "head", warmth: 1, styles: ["casual", "streetwear"] },
+  { id: "beanie", label: "Beanie", slot: "head", warmth: 3, styles: ["casual", "streetwear"] },
+  { id: "beret", label: "Beret", slot: "head", warmth: 2, styles: ["smart casual", "vintage"] },
+  { id: "bucket-hat", label: "Bucket hat", slot: "head", warmth: 1, styles: ["streetwear"] },
+  { id: "hat", label: "Hat", slot: "head", warmth: 2, styles: ["smart"] },
+  { id: "watch", label: "Watch", slot: "acc", warmth: 1, styles: [] },
+  { id: "bracelet", label: "Bracelet", slot: "acc", warmth: 1, styles: [] },
+  { id: "necklace", label: "Necklace", slot: "acc", warmth: 1, styles: [] },
+  { id: "ring", label: "Ring", slot: "acc", warmth: 1, styles: [] },
+  { id: "sunglasses", label: "Sunglasses", slot: "acc", warmth: 1, styles: [] },
+  { id: "belt", label: "Belt", slot: "acc", warmth: 1, styles: ["smart casual"] },
+  { id: "bag", label: "Bag", slot: "acc", warmth: 1, styles: [] },
+  { id: "backpack", label: "Backpack", slot: "acc", warmth: 1, styles: ["casual"] },
+  { id: "wallet", label: "Wallet", slot: "acc", warmth: 1, styles: [] },
+  { id: "scarf", label: "Scarf", slot: "acc", warmth: 3, styles: ["smart casual"] },
+  { id: "gloves", label: "Gloves", slot: "acc", warmth: 3, styles: [] },
+  { id: "tie", label: "Tie", slot: "acc", warmth: 1, styles: ["smart", "formal"] },
+  { id: "umbrella", label: "Umbrella", slot: "acc", warmth: 1, styles: [] },
+  { id: "accessory", label: "Other accessory", slot: "acc", warmth: 1, styles: [] },
+  { id: "underwear", label: "Underwear", slot: "under", warmth: 1, styles: [] },
+  { id: "socks", label: "Socks", slot: "under", warmth: 1, styles: [] },
 ];
 const CAT = Object.fromEntries(CATS.map((c) => [c.id, c]));
 const SLOTS = {
   base: "T-shirts & shirts", mid: "Hoodies & knits", outer: "Outerwear",
-  bottom: "Bottoms", shoes: "Shoes", acc: "Accessories",
+  bottom: "Bottoms", shoes: "Shoes", head: "Headwear", acc: "Accessories", under: "Underwear & socks",
 };
 // How many pieces per slot make a comfortable rotation.
-const SLOT_TARGET = { base: 6, mid: 4, outer: 2, bottom: 4, shoes: 3, acc: 0 };
+const SLOT_TARGET = { base: 6, mid: 4, outer: 2, bottom: 4, shoes: 3, head: 0, acc: 0, under: 0 };
 
 const COLORS = {
   black: { hex: "#1c1c1c", neutral: true, tone: "dark" },
@@ -197,7 +217,7 @@ const state = {
   },
   usage: { month: "", requests: 0, input: 0, output: 0 },
   wishlist: [],
-  filters: { q: "", slot: "all", color: "all", style: "all", sort: "recent" },
+  filters: { q: "", slot: "all", cat: "all", color: "all", style: "all", sort: "recent" },
   occasion: "casual",
   manualTemp: null,
   previewAI: false, // true inside the Claude preview, where AI goes through the viewer's Claude account
@@ -1189,7 +1209,51 @@ function generateOutfits(n = 3) {
   }
   const missing = ["bottom", "shoes"].filter((s) => !by[s].length);
   if (!by.base.length && cond.feels >= 22) missing.unshift("base");
-  state.outfits = out.map((o) => ({ ...o, missing }));
+  const usedExtras = new Set();
+  state.outfits = out.map((o) => ({ ...o, missing, ...extrasFor(o.pieces, cond, occ, usedExtras) }));
+}
+
+// Headwear and accessories that suit the weather and the occasion, added to an outfit.
+// Each need picks one piece: colours that go with the outfit, the occasion's styles,
+// and pieces not worn lately come first; the other ideas get a different one if possible.
+function extrasFor(pieces, cond, occ, used) {
+  const { feels, wet } = cond;
+  const smart = occ.target >= 2.2; // smart casual and up
+  const needs = [];
+  if (wet) needs.push([["umbrella"], "Umbrella: rain is likely"]);
+  if (feels < 8) needs.push([["beanie", "beret", "hat"], `Something on your head at ${fmtTemp(feels)}`], [["scarf"], ""]);
+  if (feels < 4) needs.push([["gloves"], ""]);
+  if (feels >= 22 && !wet) {
+    if (!smart) needs.push([["cap", "bucket-hat"], ""]);
+    needs.push([["sunglasses"], ""]);
+  }
+  needs.push([["watch"], ""]);
+  const bottom = pieces.bottom?.category;
+  if (smart && ["trousers", "jeans"].includes(bottom)) needs.push([["belt"], ""]);
+  if (occ.target >= 2.9 && pieces.base?.category === "shirt") needs.push([["tie"], ""]);
+
+  const cols = Object.values(pieces).filter(Boolean).map((p) => p.colors?.[0]).filter(Boolean);
+  const accent = cols.find((c) => !COLORS[c]?.neutral);
+  const extras = [], why = [];
+  for (const [cats, reason] of needs) {
+    const options = state.items.filter((i) => cats.includes(i.category));
+    if (!options.length) continue;
+    const score = (i) => {
+      const c = i.colors?.[0];
+      let s = COLORS[c]?.neutral || !c ? 1 : c === accent ? 1.5 : accent ? -1.5 : 0.5;
+      if ((i.styles || []).some((st) => occ.likes.includes(st))) s += 0.7;
+      const d = daysSince(i.lastWorn);
+      if (d <= 1) s -= 1.5;
+      if (i.favorite) s += 0.4;
+      if (used.has(i.id)) s -= 1;
+      return s + Math.random() * 0.3;
+    };
+    const best = options.map((i) => [i, score(i)]).sort((a, b) => b[1] - a[1])[0][0];
+    used.add(best.id);
+    extras.push(best);
+    if (reason) why.push(reason);
+  }
+  return { extras, extrasWhy: why };
 }
 
 async function wearOutfit(items) {
@@ -1222,8 +1286,9 @@ function analyse() {
   const hoodieShare = share(items.filter((i) => /hoodie|sweatshirt/.test(i.category)).length);
   const smartShare = share(items.filter((i) => (i.formality || 1) >= 2.5).length);
   const avgFormality = items.reduce((a, i) => a + (i.formality || 1), 0) / Math.max(1, items.length);
-  const unworn = items.filter((i) => !i.wearCount);
-  const stale = items.filter((i) => i.wearCount && daysSince(i.lastWorn) > 60);
+  const tracked = items.filter((i) => slotOf(i) !== "under"); // underwear and socks aren't logged per wear
+  const unworn = tracked.filter((i) => !i.wearCount);
+  const stale = tracked.filter((i) => i.wearCount && daysSince(i.lastWorn) > 60);
   const longBottoms = bySlot.bottom.filter((i) => i.category !== "shorts");
 
   const s = [];
@@ -1439,7 +1504,9 @@ async function aiGenerate(opts) {
 // One line per piece, short fields: keeps the stylist prompt to roughly 15 tokens per item.
 // "#n" numbers let the answer point at pieces, so their photos can be shown.
 function wardrobeText() {
+  // Underwear and socks are left out: they cost tokens and rarely change the advice.
   return state.items.map((i, n) => {
+    if (slotOf(i) === "under") return "";
     const b = brandInfo(i.brand);
     return [
       `#${n + 1} ${i.name}`, catLabel(i.category), (i.colors || []).join("/"),
@@ -1447,7 +1514,7 @@ function wardrobeText() {
       (i.styles || []).join("/"), `w${i.warmth}`,
       i.wearCount ? `worn ${i.wearCount}x` : "unworn",
     ].filter(Boolean).join("; ");
-  }).join("\n");
+  }).filter(Boolean).join("\n");
 }
 const STYLIST_SYSTEM =
   "You are a personal stylist in a smart-wardrobe app. Use the user's own pieces, each written as its #number and name, e.g. '#4 Navy knit'. " +
@@ -1592,7 +1659,8 @@ function outfitCard(o, i) {
   return `<article class="card outfit">
     <div class="row" style="justify-content:space-between"><h2 style="margin:0">${["Best match", "Option 2", "Option 3"][i] || "Option"}</h2>${i === 0 ? '<span class="score">Top pick</span>' : ""}</div>
     <div class="pieces">${pieces.map(pieceTile).join("")}${ph}</div>
-    ${o.reasons.length ? `<p class="why">${o.reasons.map(esc).join(" · ")}</p>` : ""}
+    ${o.extras?.length ? `<div class="pieces extras">${o.extras.map(pieceTile).join("")}</div>` : ""}
+    ${o.reasons.length || o.extrasWhy?.length ? `<p class="why">${[...o.reasons, ...(o.extrasWhy || [])].map(esc).join(" · ")}</p>` : ""}
     <button class="btn primary" data-wear="${i}">Wear this today</button>
   </article>`;
 }
@@ -1610,10 +1678,11 @@ function aiCard() {
 
 /* ---------- Wardrobe ---------- */
 function filteredItems() {
-  const { q, slot, color, style, sort } = state.filters;
+  const { q, slot, cat, color, style, sort } = state.filters;
   const ql = q.trim().toLowerCase();
   const list = state.items.filter((i) =>
     (slot === "all" || (slot === "fav" ? i.favorite : slotOf(i) === slot)) &&
+    (cat === "all" || i.category === cat) &&
     (color === "all" || (i.colors || []).includes(color)) &&
     (style === "all" || (i.styles || []).includes(style)) &&
     (!ql || [i.name, i.brand, catLabel(i.category), ...(i.tags || []), ...(i.colors || []), ...(i.styles || [])].join(" ").toLowerCase().includes(ql)));
@@ -1642,6 +1711,11 @@ function renderWardrobe() {
         <button class="chip" aria-pressed="${f.slot === "fav"}" data-slot="fav">★ Favourites</button>
         ${Object.entries(SLOTS).map(([k, l]) => `<button class="chip" aria-pressed="${f.slot === k}" data-slot="${k}">${l}</button>`).join("")}
       </div>
+      ${(() => {
+        // Inside a section (e.g. Accessories): one chip per type you own, e.g. Watches, Bracelets.
+        const types = CATS.filter((c) => c.slot === f.slot && state.items.some((i) => i.category === c.id));
+        return types.length > 1 ? `<div class="chips scroller"><button class="chip" aria-pressed="${f.cat === "all"}" data-catf="all">All ${esc(SLOTS[f.slot].toLowerCase())}</button>${types.map((c) => `<button class="chip" aria-pressed="${f.cat === c.id}" data-catf="${c.id}">${c.label} <span class="muted">${state.items.filter((i) => i.category === c.id).length}</span></button>`).join("")}</div>` : "";
+      })()}
       ${usedStyles.length > 1 ? `<div class="chips scroller"><button class="chip" aria-pressed="${f.style === "all"}" data-style="all">Any style</button>${usedStyles.map((s) => `<button class="chip" aria-pressed="${f.style === s}" data-style="${esc(s)}">${styleLabel(s)}</button>`).join("")}</div>` : ""}
       ${usedColors.length > 1 ? `<div class="chips scroller"><button class="chip" aria-pressed="${f.color === "all"}" data-color="all">Any colour</button>${usedColors.map((c) => `<button class="chip" aria-pressed="${f.color === c}" data-color="${esc(c)}"><span class="dot" style="background:${COLORS[c]?.hex}"></span>${esc(cap(c))}</button>`).join("")}</div>` : ""}
     </div>
@@ -1716,7 +1790,7 @@ function pairingsFor(item) {
   const graphic = (item.tags || []).some((t) => /graphic|statement/.test(t));
   const has = (x, st) => (x.styles || []).includes(st);
   return state.items
-    .filter((o) => o.id !== item.id && slotOf(o) !== slotOf(item))
+    .filter((o) => o.id !== item.id && slotOf(o) !== slotOf(item) && slotOf(o) !== "under")
     .map((o) => {
       const oc = o.colors?.[0];
       let s = COLORS[oc]?.neutral ? 2 : accent ? -2 : 1;
@@ -1935,7 +2009,7 @@ function renderAdd() {
       </div>
       <div class="stack">
         <div class="field"><label for="f-name">Name</label><input id="f-name" class="input" data-input="name" value="${esc(d.name || "")}" placeholder="${esc(autoName(d) || "e.g. Navy cable-knit sweater")}"></div>
-        <div class="field"><label>Type</label><div class="chips">${CATS.map((c) => `<button class="chip" aria-pressed="${d.category === c.id}" data-cat="${c.id}">${c.label}</button>`).join("")}</div></div>
+        <div class="field"><label>Type</label>${Object.entries(SLOTS).map(([slot, label]) => `<div class="type-group"><span class="muted small">${label}</span><div class="chips">${CATS.filter((c) => c.slot === slot).map((c) => `<button class="chip" aria-pressed="${d.category === c.id}" data-cat="${c.id}">${c.label}</button>`).join("")}</div></div>`).join("")}</div>
         <div class="field"><label for="f-brand">Brand</label>
           <input id="f-brand" class="input" data-input="brand" value="${esc(d.brand)}" placeholder="e.g. Lacoste" list="brand-list" autocomplete="off">
           <datalist id="brand-list">${BRAND_LIST.map(([n]) => `<option value="${esc(n)}"></option>`).join("")}</datalist>
@@ -2546,7 +2620,8 @@ document.addEventListener("click", async (e) => {
   if (ds.item) return openItem(ds.item);
   if (ds.orig) return openItem(ds.orig, ds.show === "1");
   if (ds.occ) { state.occasion = ds.occ; generateOutfits(); return render(); }
-  if (ds.slot) { state.filters.slot = ds.slot; return render(); }
+  if (ds.slot) { state.filters.slot = ds.slot; state.filters.cat = "all"; return render(); }
+  if (ds.catf) { state.filters.cat = ds.catf; return render(); }
   if (ds.color) { state.filters.color = ds.color; return render(); }
   if (ds.style) { state.filters.style = ds.style; return render(); }
   if (ds.stylego) { Object.assign(state.filters, { style: ds.stylego, slot: "all", color: "all", q: "" }); return go("wardrobe"); }
@@ -2583,7 +2658,7 @@ document.addEventListener("click", async (e) => {
   if (ds.provider) { state.settings.aiProvider = ds.provider; await saveSettings(); return render(); }
   if (ds.wear != null) {
     const o = state.outfits[+ds.wear];
-    await wearOutfit(Object.values(o.pieces).filter(Boolean));
+    await wearOutfit([...Object.values(o.pieces), ...(o.extras || [])].filter(Boolean));
     toast("Logged. Enjoy your day!");
     generateOutfits();
     return render();

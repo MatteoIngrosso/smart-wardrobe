@@ -277,3 +277,9 @@ img.pic-bg { object-fit: contain; background: var(--pic); }
 /* price tag fields on the Add form */
 .tag-fields { display: grid; grid-template-columns: minmax(90px, 1fr) minmax(70px, .7fr) minmax(140px, 2fr); gap: 8px; }
 @media (max-width: 520px) { .tag-fields { grid-template-columns: 1fr 1fr; } .tag-fields [data-input="material"] { grid-column: 1 / -1; } }
+
+/* Add form: types grouped by section */
+.type-group { display: grid; gap: 6px; margin-top: 6px; }
+/* outfit cards: headwear and accessories as a smaller row */
+.outfit .pieces.extras { grid-template-columns: repeat(auto-fill, minmax(64px, 1fr)); }
+.outfit .pieces.extras span { font-size: 12px; }
