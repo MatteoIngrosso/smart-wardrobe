@@ -1244,12 +1244,17 @@ function scoreOutfit(o, cond, occ, t = taste()) {
 }
 
 // Today's candidates, best first. Cheap enough to redo on every tap (900 tries).
-function ideaPool() {
-  const occ = OCCASIONS.find((o) => o.id === state.occasion);
+// The pieces that can fill each part of an outfit for an occasion.
+function piecesByRole(occ) {
   const gym = occ.id === "gym";
   const by = { base: [], mid: [], outer: [], bottom: [], shoes: [] };
   for (const it of state.items) if (by[roleOf(it)] && (slotOf(it) === "gym") === gym) by[roleOf(it)].push(it);
   if (gym) for (const [role, cats] of Object.entries(GYM_FALLBACK)) if (!by[role].length) by[role] = state.items.filter((i) => cats.includes(i.category));
+  return by;
+}
+function ideaPool() {
+  const occ = OCCASIONS.find((o) => o.id === state.occasion);
+  const by = piecesByRole(occ);
   const cond = conditions();
   const t = taste();
   const pick = (arr) => arr[Math.floor(Math.random() * arr.length)];
@@ -1322,6 +1327,36 @@ function generateOutfits(n = 3, avoid = []) {
   if (picks.length < n) picks.push(...pickIdeas(pool, n - picks.length, picks)); // small wardrobe: repeats are fine
   state.outfits = picks.map((c) => dressIdea(c, pool, used));
 }
+// Swapping one piece of an idea: the other pieces that could take its place, best fit with the
+// rest of the outfit first. A jacket, or one of two top layers, can also just be left off.
+function swapOptions(o, role) {
+  const occ = OCCASIONS.find((x) => x.id === state.occasion);
+  const cond = conditions(), t = taste();
+  const cur = o.pieces[role];
+  const options = piecesByRole(occ)[role]
+    .filter((p) => p.id !== cur?.id)
+    .map((p) => ({ p, s: scoreOutfit({ ...o.pieces, [role]: p }, cond, occ, t).score }))
+    .sort((a, b) => b.s - a.s)
+    .slice(0, 8)
+    .map((x) => x.p);
+  const canDrop = role === "outer" || (role === "mid" && o.pieces.base) || (role === "base" && o.pieces.mid);
+  return { options, canDrop };
+}
+async function swapPiece(i, role, toId) {
+  const o = state.outfits[i];
+  const from = o.pieces[role];
+  const to = toId ? state.items.find((x) => x.id === toId) : null;
+  // What you swap out counts against it going with the rest of this outfit.
+  await addLog({ kind: "swap", itemIds: Object.values(o.pieces).filter(Boolean).map((p) => p.id), removed: from?.id, added: to?.id || null, ...outfitContext() });
+  const occ = OCCASIONS.find((x) => x.id === state.occasion);
+  const pieces = { ...o.pieces, [role]: to || undefined };
+  if (!to) delete pieces[role];
+  const used = new Set(state.outfits.filter((_, k) => k !== i).flatMap((x) => (x.extras || []).map((e) => e.id)));
+  const key = outfitKey(Object.values(pieces));
+  const cond = conditions();
+  state.outfits[i] = { ...o, key, pieces, swapping: null, likedId: likedToday(key), ...scoreOutfit(pieces, cond, occ), ...extrasFor(pieces, cond, occ, used) };
+}
+
 // After "Not for me": swap that idea for the next best one, keeping the others where they are.
 function replaceOutfit(i) {
   const pool = ideaPool();
@@ -1352,7 +1387,7 @@ function taste() {
   const sig = `${state.log.length}|${state.items.length}|${today()}|${state.log.at(-1)?.id}`;
   if (tasteMemo?.sig === sig) return tasteMemo.t;
   const byId = new Map(state.items.map((i) => [i.id, i]));
-  const t = { pairs: {}, items: {}, colours: {}, fits: {}, styles: {}, offset: 0, blocked: new Set(), counts: { wear: 0, like: 0, skip: 0 }, comfortN: 0 };
+  const t = { pairs: {}, items: {}, colours: {}, fits: {}, styles: {}, offset: 0, blocked: new Set(), counts: { wear: 0, like: 0, skip: 0, swap: 0 }, comfortN: 0 };
   const add = (map, k, v) => (map[k] = (map[k] || 0) + v);
   let warmSum = 0, warmW = 0;
   for (const l of state.log) {
@@ -1369,12 +1404,26 @@ function taste() {
     // How warm you dressed (or wanted to) for how it felt
     if (l.feels != null && occ !== "gym" && (o.base || o.mid)) {
       const nudge = { warm: -1.5, cold: 1.5 }[l.reason];
-      if (kind !== "skip" || nudge) {
+      if (kind === "wear" || kind === "like" || nudge) {
         const ww = w * (kind === "like" ? 0.5 : 1);
         warmSum += ww * (layerWarmth(pieces) + (nudge || 0) - wantedWarmth(l.feels));
         warmW += ww;
         t.comfortN++;
       }
+    }
+    if (kind === "swap") {
+      // A piece taken out of an outfit doesn't go with the rest of it (or not for this occasion).
+      const out = pieces.find((p) => p.id === l.removed);
+      if (!out) continue;
+      const v = -0.8 * w;
+      for (const p of pieces) if (p !== out) add(t.pairs, pairKey(out.id, p.id), v);
+      add(t.items, `${occ}|${out.id}`, v * 0.3);
+      const hero = heroOf(o);
+      if ((out === hero || out === o.bottom) && hero && o.bottom) {
+        add(t.colours, `${hero.colors?.[0]}|${o.bottom.colors?.[0]}`, v * 0.6);
+        if (hero.fit && o.bottom.fit) add(t.fits, `${hero.fit}|${o.bottom.fit}`, v * 0.6);
+      }
+      continue;
     }
     if (kind === "skip") {
       // That exact outfit stays out of the ideas: for today if it was the weather or the day, else for a month.
@@ -1442,10 +1491,10 @@ function tasteScore(o, occ, t) {
 // One line under the ideas saying what they've learnt so far.
 function tasteLine() {
   const t = taste();
-  const { wear, like, skip } = t.counts;
-  if (!wear && !like && !skip) return "Ideas learn from you: tap Wear this today, ♥ or Not for me, and they get closer to your taste.";
+  const { wear, like, skip, swap } = t.counts;
+  if (!wear && !like && !skip && !swap) return "Ideas learn from you: tap Wear this today, ♥, Not for me or ⇄ on a piece, and they get closer to your taste.";
   const n = (k, one, many) => `${k} ${k === 1 ? one : many}`;
-  let line = `Learning from ${[wear && n(wear, "outfit worn", "outfits worn"), like && n(like, "like", "likes"), skip && n(skip, "skip", "skips")].filter(Boolean).join(", ")}.`;
+  let line = `Learning from ${[wear && n(wear, "outfit worn", "outfits worn"), like && n(like, "like", "likes"), skip && n(skip, "skip", "skips"), swap && n(swap, "swap", "swaps")].filter(Boolean).join(", ")}.`;
   if (t.offset <= -0.8) line += " You dress lighter than most for the weather, so ideas go a layer lighter.";
   else if (t.offset >= 0.8) line += " You like to dress warmer than most, so ideas add a layer sooner.";
   return line;
@@ -1466,6 +1515,8 @@ function tasteText() {
   if (liked.length) lines.push(`Liked outfits: ${liked.join(", ")}.`);
   const nope = recent("skip", (l) => ["colours", "style", undefined].includes(l.reason)).map((l) => `${refs(l.itemIds)}${l.reason ? ` (${l.reason})` : ""}`).filter((x) => /#/.test(x));
   if (nope.length) lines.push(`Turned down: ${nope.join(", ")}.`);
+  const swapped = recent("swap", (l) => num.has(l.removed)).map((l) => `${num.get(l.removed)} (with ${refs(l.itemIds.filter((id) => id !== l.removed))})`);
+  if (swapped.length) lines.push(`Swapped out of outfits: ${swapped.join(", ")}.`);
   const fits = Object.entries(t.fits).filter(([, v]) => v >= 1).sort((a, b) => b[1] - a[1])[0];
   if (fits) lines.push(`Favourite proportions: ${fits[0].split("|").map((f) => FITS[f]?.label.toLowerCase()).join(" top, ")} bottom.`);
   const worn = state.items.filter((i) => daysSince(i.lastWorn) <= 2 && slotOf(i) !== "under").map((i) => num.get(i.id));
@@ -2091,13 +2142,25 @@ function renderToday() {
     </div>`;
 }
 const ICON_HEART = `<svg viewBox="0 0 24 24"><path d="M12 20s-7.5-4.6-9.3-9.4C1.5 7.3 3.6 4 7 4c2.1 0 3.6 1.2 5 3 1.4-1.8 2.9-3 5-3 3.4 0 5.5 3.3 4.3 6.6C19.5 15.4 12 20 12 20z"/></svg>`;
+const ICON_SWAP = `<svg viewBox="0 0 24 24"><path d="M7 4 3 8l4 4M3 8h14M17 20l4-4-4-4M21 16H7"/></svg>`;
+const DROP_LABEL = { outer: "No jacket", mid: "No layer", base: "No T-shirt" };
+function swapPicker(o, i) {
+  const role = o.swapping;
+  const { options, canDrop } = swapOptions(o, role);
+  return `<div class="swap-pick stack" style="gap:8px">
+    <span class="muted small">Instead of the ${esc(o.pieces[role]?.name)}, best match first:</span>
+    <div class="pieces mini">${options.map((p) => `<button class="piece" data-swapto="${i}:${role}:${p.id}"><img class="pic-bg" src="${photoURL(p.photos?.[0])}" alt=""><span>${esc(p.name)}</span></button>`).join("")}</div>
+    ${!options.length ? `<span class="muted small">Nothing else of this kind for this occasion yet.</span>` : ""}
+    <div class="chips">${canDrop ? `<button class="chip" data-swapto="${i}:${role}:">${DROP_LABEL[role]}</button>` : ""}<button class="chip" data-swap="${i}:${role}">Cancel</button></div>
+  </div>`;
+}
 function outfitCard(o, i) {
   const order = ["outer", "mid", "base", "bottom", "shoes"];
-  const pieces = order.map((k) => o.pieces[k]).filter(Boolean);
   const ph = (o.missing || []).map((m) => `<button class="piece" data-go="shop"><div class="ph">${kindIcon(SLOT_ICON[m])}<small>No ${SLOTS[m].toLowerCase()} yet<br>tap to shop</small></div><span>${SLOTS[m]}</span></button>`).join("");
   return `<article class="card outfit">
     <div class="row" style="justify-content:space-between"><h2 style="margin:0">${["Best match", "Option 2", "Option 3"][i] || "Option"}</h2>${i === 0 ? '<span class="score">Top pick</span>' : ""}</div>
-    <div class="pieces">${pieces.map(pieceTile).join("")}${ph}</div>
+    <div class="pieces">${order.filter((k) => o.pieces[k]).map((k) => `<div class="swap-wrap">${pieceTile(o.pieces[k])}<button class="swap-btn" data-swap="${i}:${k}" aria-pressed="${o.swapping === k}" aria-label="Swap the ${esc(o.pieces[k].name)}">${ICON_SWAP}</button></div>`).join("")}${ph}</div>
+    ${o.swapping ? swapPicker(o, i) : ""}
     ${o.extras?.length ? `<div class="pieces extras">${o.extras.map(pieceTile).join("")}</div>` : ""}
     ${o.reasons.length || o.extrasWhy?.length ? `<p class="why">${[...o.reasons, ...(o.extrasWhy || [])].map(esc).join(" · ")}</p>` : ""}
     ${o.asking
@@ -3227,6 +3290,17 @@ document.addEventListener("click", async (e) => {
     await addLog({ kind: "like", itemIds: ds.likeids.split(","), ...outfitContext(), source: "stylist" });
     t.setAttribute("aria-pressed", "true");
     return toast("Liked. Outfit ideas will lean this way.");
+  }
+  if (ds.swap) {
+    const [i, role] = ds.swap.split(":");
+    const o = state.outfits[+i];
+    o.swapping = o.swapping === role ? null : role;
+    return render();
+  }
+  if (ds.swapto != null) {
+    const [i, role, id] = ds.swapto.split(":");
+    await swapPiece(+i, role, id);
+    return render();
   }
   if (ds.skip != null) { state.outfits[+ds.skip].asking = !ds.cancel; return render(); }
   if (ds.skipwhy) {

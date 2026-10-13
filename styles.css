@@ -148,7 +148,7 @@ input[type=range] { width: 100%; height: 44px; accent-color: var(--accent); }
 .weather .temp { font-size: 56px; font-weight: 700; line-height: 1; letter-spacing: -.03em; }
 .weather .wx { display: grid; gap: 2px; }
 .outfits { display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 18px; }
-.outfit { display: grid; gap: 14px; }
+.outfit { display: grid; gap: 14px; align-content: start; }
 .outfit .pieces, .ai-rich .pieces { display: grid; grid-template-columns: repeat(auto-fill, minmax(90px, 1fr)); gap: 10px; }
 .piece { border: 0; padding: 0; background: none; text-align: left; display: grid; gap: 6px; }
 .piece img, .piece .ph { aspect-ratio: 3/4; width: 100%; object-fit: cover; border-radius: 12px; background: var(--surface-2); }
@@ -308,3 +308,14 @@ img.pic-bg { object-fit: contain; background: var(--pic); }
 .btn.like[aria-pressed="true"] svg { fill: currentColor; }
 .find-fields { display: grid; grid-template-columns: 2fr 1fr; gap: 10px; }
 @media (max-width: 640px) { .find-fields { grid-template-columns: 1fr; } }
+
+/* Swap one piece of an outfit idea */
+.swap-wrap { position: relative; }
+.swap-btn {
+  position: absolute; top: 6px; right: 6px; width: 40px; height: 40px; padding: 0; border-radius: 50%;
+  display: grid; place-items: center; border: 1px solid var(--line); background: var(--surface); color: var(--text);
+  box-shadow: 0 1px 4px rgba(0,0,0,.15);
+}
+.swap-btn svg { width: 20px; height: 20px; }
+.swap-btn[aria-pressed="true"] { background: var(--text); color: var(--bg); border-color: var(--text); }
+.swap-pick { padding: 12px; border-radius: 14px; background: var(--surface-2); }
