@@ -1,5 +1,6 @@
-// Smart Wardrobe on Cloudflare Pages: the same sync API as server.py, kept in a D1
+// Smart Wardrobe on Cloudflare Workers: the same sync API as server.py, kept in a D1
 // database, plus a pass-through to Gemini and Claude so API keys never reach a device.
+// The app's files are served as static assets (wrangler.jsonc); only /api/* runs here.
 //
 //     GET  /api/ping                      {"ok": true, "rev": n, "sync": bool, "keys": {...}}
 //     GET  /api/changes?since=r&wait=s    records changed after rev r; waits up to s seconds
@@ -9,8 +10,8 @@
 //     POST /api/ai/gemini/<model>         Gemini generateContent with the GEMINI_KEY secret
 //     POST /api/ai/claude/v1/messages     Claude Messages API with the CLAUDE_KEY secret
 //
-// Settings on the Pages project (see README, "Putting it online"):
-//     DB            D1 database binding
+// Settings (see README, "Putting it online"):
+//     DB            D1 database binding, created on the first deploy (wrangler.jsonc)
 //     ACCESS_TEAM   Cloudflare Access team name (the part before .cloudflareaccess.com)
 //     ACCESS_AUD    Application Audience (AUD) tag of the Access application
 //     GEMINI_KEY    optional secret
@@ -29,9 +30,16 @@ const json = (obj, status = 200) =>
   new Response(JSON.stringify(obj), { status, headers: { "Content-Type": "application/json", "Cache-Control": "no-store" } });
 const fail = (status, error) => json({ error }, status);
 
-export async function onRequest({ request, env, params }) {
+export default {
+  fetch(request, env) {
+    if (new URL(request.url).pathname.startsWith("/api/")) return handleApi(request, env);
+    return env.ASSETS.fetch(request);
+  },
+};
+
+export async function handleApi(request, env) {
   if (!(await signedIn(request, env))) return fail(403, "Sign in through Cloudflare Access first.");
-  const path = (params.path || []).join("/");
+  const path = new URL(request.url).pathname.slice("/api/".length);
   const method = request.method;
   try {
     if (path.startsWith("ai/")) return await ai(request, env, path.slice(3));
@@ -72,7 +80,7 @@ async function accessKeys(team, refresh) {
 
 async function signedIn(request, env) {
   const host = new URL(request.url).hostname;
-  if (host === "localhost" || host === "127.0.0.1") return true; // `wrangler pages dev` on your own computer
+  if (host === "localhost" || host === "127.0.0.1") return true; // `wrangler dev` on your own computer
   const team = String(env.ACCESS_TEAM || "").replace(/^https?:\/\//, "").replace(/\.cloudflareaccess\.com.*$/, "").replace(/\/.*$/, "");
   const aud = String(env.ACCESS_AUD || "").trim();
   if (!team || !aud) return false;

@@ -1,6 +1,6 @@
 # Smart Wardrobe
 
-A touch-first web app for a self-built wardrobe tablet. It catalogues your clothes from two photos each (front and back), suggests outfits for the weather and the occasion, and points out what's worth buying next. It has no build step. Every device keeps its own copy of the wardrobe, so it works offline, and a small sync server keeps those copies in sync: `server.py` on a computer at home, or the free Cloudflare version in `functions/` when the app is online.
+A touch-first web app for a self-built wardrobe tablet. It catalogues your clothes from two photos each (front and back), suggests outfits for the weather and the occasion, and points out what's worth buying next. It has no build step. Every device keeps its own copy of the wardrobe, so it works offline, and a small sync server keeps those copies in sync: `server.py` on a computer at home, or the free Cloudflare Worker in `worker/` when the app is online.
 
 Plain HTML, CSS and JavaScript (ES modules), IndexedDB for storage, Open-Meteo for weather, and optional AI from Gemini or Claude.
 
@@ -30,29 +30,25 @@ The camera button and "Use this device's location" need **https** or **localhost
 
 This puts the app on its own web address so it works from anywhere, with no computer left on at home. Everything below fits in Cloudflare's free plan.
 
-- **Cloudflare Pages** publishes the app from this private repository and publishes it again every time a pull request is merged into `main`.
-- **A Pages Function** (`functions/api/[[path]].js`) takes over from `server.py`. It offers the same sync API and keeps the shared wardrobe in **D1**, Cloudflare's free database: one table of records and one of photos. Every device still keeps its own copy, so the app works offline and sends changes when it's back online.
-- **Cloudflare Access** puts a sign-in page in front of the site (a code sent to your email). The function also checks that sign-in on every request and refuses to answer without it, so the wardrobe and keys are never open to the web, even if Access is switched off by mistake.
-- **The Gemini key** (and the Claude key, if you use it) is saved as a secret in Cloudflare. The app sends AI requests through `/api/ai/…` and the function adds the key, so no device stores it and nobody can read it from the app.
+- **A Cloudflare Worker** called `smart-wardrobe` is connected to this private repository, and every push to `main` (every merged pull request) deploys it again. `wrangler.jsonc` holds its settings. The app's files are served as they are (`.assetsignore` lists what stays private: the README, `server.py`, `worker/`…).
+- **`worker/api.js`** takes over from `server.py`. It offers the same sync API and keeps the shared wardrobe in **D1**, Cloudflare's free database: one table of records and one of photos. Cloudflare creates the database on the first deploy, and the tables are created on the first request. Every device still keeps its own copy, so the app works offline and sends its changes when it's back online.
+- **Cloudflare Access** puts a sign-in page in front of the site (a code sent to your email). The Worker also checks that sign-in on every `/api` request and refuses to answer without it, so the wardrobe and keys are never open to the web, even if Access is switched off by mistake.
+- **The Gemini key** (and the Claude key, if you use it) is saved as a secret in Cloudflare. The app sends AI requests through `/api/ai/…` and the Worker adds the key, so no device stores it and nobody can read it from the app.
 
-**One-time setup** (in the Cloudflare dashboard, dash.cloudflare.com):
-1. **Create the site.** Workers & Pages → Create → Pages → Connect to Git → choose `smart-wardrobe`. Framework preset: None. Leave the build command empty, and set the build output directory to `/` (the repository root). Production branch: `main`. Deploy. The site gets an address like `smart-wardrobe.pages.dev`.
-2. **Create the database.** Storage & Databases → D1 → Create → name it `wardrobe`. Then open the Pages project → Settings → Bindings → Add → D1 database: variable name `DB`, database `wardrobe`. The tables are created on the first request.
-3. **Add the sign-in.** Open Zero Trust (one.dash.cloudflare.com). The first time, pick a team name (for example `matteo`) and the Free plan. Cloudflare may ask for a card at this step, but the Free plan costs nothing. Then go to Access → Applications → Add an application → Self-hosted. Add two domains, `smart-wardrobe.pages.dev` and `*.smart-wardrobe.pages.dev` (this one covers the preview copies of each pull request). Set the session duration to 1 month. Add a policy with action Allow and include Emails = your email address. Save, then copy the **Application Audience (AUD) Tag** from the application's overview.
-4. **Add the settings.** Pages project → Settings → Variables and Secrets (Production):
-   - `ACCESS_TEAM`: your team name (`matteo`)
-   - `ACCESS_AUD`: the AUD tag from step 3
+**One-time setup** (Cloudflare dashboard → Compute → Workers & Pages → `smart-wardrobe`):
+1. **Connect the repository.** Already done if the Worker deploys from GitHub: Settings → Build should show `MatteoIngrosso/smart-wardrobe` on branch `main`. Leave the deploy command as `npx wrangler deploy`.
+2. **Add the sign-in.** Turn on Cloudflare Access for the `workers.dev` address: use the **Access** tab, or Settings → Domains & Routes → `workers.dev` → Enable Cloudflare Access. Cloudflare shows the team domain (`<team>.cloudflareaccess.com`) and the **Application Audience (AUD) Tag**, so copy both. Then open Zero Trust → Access → Applications → the new application → Policies, and allow only your email address (Include → Emails). Set the session duration to 1 month.
+3. **Add the settings.** Settings → Variables and Secrets → Add:
+   - `ACCESS_TEAM`: the team name (the part before `.cloudflareaccess.com`)
+   - `ACCESS_AUD`: the AUD tag
    - `GEMINI_KEY`, type **Secret**: your key from aistudio.google.com (optional `CLAUDE_KEY` the same way)
-5. **Deploy again** so the settings apply: Deployments → the latest one → Retry deployment.
-6. **Open the site** on each device, sign in with the emailed code and use "Add to Home screen". Settings > Data should say the wardrobe is shared live, and Settings > AI should say the key is saved on your server. If a device still has an old key saved, tap **Remove the old key from this device**.
+4. **Open the site** (`https://smart-wardrobe.<your-account>.workers.dev`) on each device, sign in with the emailed code and use "Add to Home screen". Settings > Data should say the wardrobe is shared live, and Settings > AI should say the key is saved on your server. If a device still has an old key saved, tap **Remove the old key from this device**.
 
 **Moving your wardrobe over.** The browser keeps each address's data separately. Open the old app (`localhost:8000`), tap **Export backup**, then open the new address and tap **Import backup**. The imported pieces are sent to the online wardrobe and reach every device.
 
 **If sync stops.** When the sign-in expires (after a month), the app keeps working on its own copy and shows "Can't reach the sync server". Reload the page and sign in again; waiting changes are then sent.
 
-**Pull request previews.** Pages also publishes each branch on its own address (`<branch>.smart-wardrobe.pages.dev`), behind the same sign-in. Previews have no database binding, so they keep their data on the device and never touch the real wardrobe.
-
-**Trying the function on a computer.** `npx wrangler pages dev . --d1 DB=wardrobe` runs the site with a local database on `localhost:8788`. Sign-in is only skipped on `localhost`.
+**Trying it on a computer.** `npx wrangler dev` runs the site with a local database on `localhost:8787`. The sign-in is only skipped on `localhost`.
 
 `server.py` still works the same way at home, for example on a Raspberry Pi in the wardrobe.
 
@@ -121,7 +117,7 @@ Settings shows how many requests and tokens were used this month.
 ## Files
 - `index.html`, `styles.css`, `app.js`: the whole app
 - `server.py`: serves the app and keeps the shared wardrobe in `data/` (Python 3 standard library only)
-- `functions/api/[[path]].js`: the same sync API on Cloudflare Pages, plus the AI pass-through that keeps keys off the devices
+- `worker/api.js`, `wrangler.jsonc`, `.assetsignore`: the same sync API as a Cloudflare Worker, plus the AI pass-through that keeps keys off the devices
 - `sample/`: resized copies of your photos (`*.jpg`), their cut-outs (`cut/*.webp`) and `seed.js`, which holds the catalogue data for them
 - `manifest.webmanifest`, `icon.svg`: let you install the app on the home screen
 - `tools/build_preview.py`: builds a one-page copy in `dist/` for the Claude preview
