@@ -2733,6 +2733,42 @@ async function exportBackup() {
   const a = Object.assign(document.createElement("a"), { href: URL.createObjectURL(blob), download: `wardrobe-backup-${today()}.json` });
   a.click();
 }
+const seedBase = (k) => String(k || "").replace(/\.jpg$/, ""); // v1 sample keys kept the extension
+
+// Two copies of the same sample piece (a backup imported before this was handled, or two
+// devices that loaded the samples on their own): keep the copy that came with the backup,
+// move its wear history over, and remove the other copy on every device.
+async function dropDuplicateSamples() {
+  const groups = new Map();
+  for (const i of state.items) {
+    if (!i.seedKey) continue;
+    const k = seedBase(i.seedKey);
+    groups.set(k, [...(groups.get(k) || []), i]);
+  }
+  const removed = new Set();
+  for (const group of groups.values()) {
+    if (group.length < 2) continue;
+    // The same choice on every device: the backup's copy (lowest id), else the lowest id.
+    const byId = [...group].sort((a, b) => String(a.id).localeCompare(String(b.id)));
+    const keep = byId.find((i) => !String(i.id).startsWith("seed-")) || byId[0];
+    for (const dup of group) {
+      if (dup === keep) continue;
+      for (const l of state.log) {
+        if (!l.itemIds?.includes(dup.id)) continue;
+        l.itemIds = [...new Set(l.itemIds.map((x) => (x === dup.id ? keep.id : x)))];
+        await store.put("log", l);
+      }
+      await store.del("items", dup.id);
+      removed.add(dup.id);
+    }
+  }
+  if (removed.size) {
+    state.items = state.items.filter((i) => !removed.has(i.id));
+    state.outfits = [];
+  }
+  return removed.size;
+}
+
 async function importBackup() {
   const input = Object.assign(document.createElement("input"), { type: "file", accept: "application/json" });
   input.onchange = async () => {
@@ -2743,7 +2779,7 @@ async function importBackup() {
         i.photos = await toBlobs(i.photos);
         if (i.originals) i.originals = await toBlobs(i.originals);
         // Older versions gave sample pieces random ids: keep the backup's copy, not a second one.
-        for (const dup of (await store.all("items")).filter((x) => i.seedKey && x.seedKey === i.seedKey && x.id !== i.id)) {
+        for (const dup of (await store.all("items")).filter((x) => i.seedKey && seedBase(x.seedKey) === seedBase(i.seedKey) && x.id !== i.id)) {
           await store.del("items", dup.id);
         }
         await store.put("items", i);
@@ -3039,5 +3075,6 @@ setTimeout(lookupWardrobeBrands, 3000);
   await Promise.race([syncFirst, new Promise((r) => setTimeout(r, 4000))]);
   const seeded = await store.get("kv", "seeded");
   const version = (await store.get("kv", "seedVersion")) || 1;
-  if ((!seeded && !state.items.length) || (seeded && version < SEED_VERSION)) loadSeed();
+  if ((!seeded && !state.items.length) || (seeded && version < SEED_VERSION)) await loadSeed();
+  if (await dropDuplicateSamples()) render();
 }
