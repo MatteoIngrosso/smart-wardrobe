@@ -258,6 +258,7 @@ const state = {
   serverKeys: {}, // {gemini, claude}: keys saved on the hosted server (Cloudflare), so this device needs none
   weather: null,
   outfits: [],
+  anchor: null, // id of a piece you picked to build today's ideas around
   aiAnswer: "",
   find: { q: "", brand: "", fit: "", shown: null, answer: "" }, // Discover: something you'd like to buy
 };
@@ -1260,6 +1261,8 @@ function ideaPool() {
   const pick = (arr) => arr[Math.floor(Math.random() * arr.length)];
   const wantMid = cond.feels < 20 || by.base.length === 0;
   const wantOuter = cond.feels < 15 || cond.wet;
+  // A piece you picked goes in every idea; the rest is built around it.
+  const anchor = state.items.find((i) => i.id === state.anchor && CORE.includes(roleOf(i)));
 
   const seen = new Set();
   const cands = [];
@@ -1275,6 +1278,7 @@ function ideaPool() {
     if (by.outer.length && wantOuter) o.outer = pick(by.outer);
     if (by.bottom.length) o.bottom = pick(by.bottom);
     if (by.shoes.length) o.shoes = pick(by.shoes);
+    if (anchor) o[roleOf(anchor)] = anchor;
     const key = outfitKey(Object.values(o));
     if (seen.has(key)) continue;
     seen.add(key);
@@ -2136,6 +2140,7 @@ function renderToday() {
         </div>
       </div>
       <div class="chips scroller">${OCCASIONS.map((o) => `<button class="chip" aria-pressed="${state.occasion === o.id}" data-occ="${o.id}">${o.label}</button>`).join("")}</div>
+      ${anchorBar()}
       <div class="outfits">${state.outfits.map((o, i) => outfitCard(o, i)).join("") || `<p class="muted">Add a few more tops to get outfit ideas.</p>`}</div>
       <p class="muted small" style="margin:0">${esc(tasteLine())}</p>
       ${aiCard()}
@@ -2144,6 +2149,40 @@ function renderToday() {
 const ICON_HEART = `<svg viewBox="0 0 24 24"><path d="M12 20s-7.5-4.6-9.3-9.4C1.5 7.3 3.6 4 7 4c2.1 0 3.6 1.2 5 3 1.4-1.8 2.9-3 5-3 3.4 0 5.5 3.3 4.3 6.6C19.5 15.4 12 20 12 20z"/></svg>`;
 const ICON_SWAP = `<svg viewBox="0 0 24 24"><path d="M7 4 3 8l4 4M3 8h14M17 20l4-4-4-4M21 16H7"/></svg>`;
 const DROP_LABEL = { outer: "No jacket", mid: "No layer", base: "No T-shirt" };
+// "Start from a piece": you pick what you want to wear, the ideas complete the outfit.
+function anchorBar() {
+  const a = state.items.find((i) => i.id === state.anchor);
+  if (!a) return `<div class="row"><button class="btn" data-act="anchor-pick"><svg viewBox="0 0 24 24"><path d="${KIND_ICON.hanger}"/></svg>Start from a piece</button><span class="muted small">Pick what you want to wear and get outfits built around it.</span></div>`;
+  return `<div class="card row anchor-bar">
+    <img class="pic-bg" src="${photoURL(a.photos?.[0])}" alt="">
+    <span style="flex:1;min-width:0">Ideas built around your <b>${esc(a.name)}</b></span>
+    <button class="chip" data-act="anchor-pick">Pick another</button>
+    <button class="chip" data-act="anchor-clear">Show all ideas</button>
+  </div>`;
+}
+function openAnchorPicker() {
+  const occ = OCCASIONS.find((x) => x.id === state.occasion);
+  const by = piecesByRole(occ);
+  const groups = [["base", "T-shirts & shirts"], ["mid", "Hoodies & knits"], ["outer", "Outerwear"], ["bottom", "Bottoms"], ["shoes", "Shoes"]].filter(([r]) => by[r].length);
+  $(".sheet-panel").innerHTML = `
+    <div class="detail-head">
+      <div><h1 style="font-size:28px">What do you want to wear?</h1><p class="sub">Pick a piece and the outfit ideas are built around it.</p></div>
+      <button class="btn icon-btn ghost" data-close aria-label="Close"><svg viewBox="0 0 24 24"><path d="M6 6l12 12M18 6 6 18"/></svg></button>
+    </div>
+    <div class="stack">${groups.map(([r, label]) => `<section><h2 style="margin:0 0 10px">${label}</h2><div class="pieces mini anchor-grid">${by[r].map((p) => `<button class="piece" data-anchor="${p.id}" aria-pressed="${state.anchor === p.id}"><img class="pic-bg" src="${photoURL(p.photos?.[0])}" alt=""><span>${esc(p.name)}</span></button>`).join("")}</div></section>`).join("") || `<p class="muted">Add some clothes first.</p>`}</div>`;
+  $("#sheet").hidden = false;
+}
+async function setAnchor(id) {
+  const it = state.items.find((i) => i.id === id);
+  state.anchor = it ? id : null;
+  // A gym piece belongs in a gym outfit, and an everyday piece in an everyday one.
+  if (it && (slotOf(it) === "gym") !== (state.occasion === "gym")) state.occasion = slotOf(it) === "gym" ? "gym" : "casual";
+  closeSheet();
+  generateOutfits();
+  if (view !== "today") return go("today");
+  render();
+}
+
 function swapPicker(o, i) {
   const role = o.swapping;
   const { options, canDrop } = swapOptions(o, role);
@@ -2151,7 +2190,7 @@ function swapPicker(o, i) {
     <span class="muted small">Instead of the ${esc(o.pieces[role]?.name)}, best match first:</span>
     <div class="pieces mini">${options.map((p) => `<button class="piece" data-swapto="${i}:${role}:${p.id}"><img class="pic-bg" src="${photoURL(p.photos?.[0])}" alt=""><span>${esc(p.name)}</span></button>`).join("")}</div>
     ${!options.length ? `<span class="muted small">Nothing else of this kind for this occasion yet.</span>` : ""}
-    <div class="chips">${canDrop ? `<button class="chip" data-swapto="${i}:${role}:">${DROP_LABEL[role]}</button>` : ""}<button class="chip" data-swap="${i}:${role}">Cancel</button></div>
+    <div class="chips">${canDrop ? `<button class="chip" data-swapto="${i}:${role}:">${DROP_LABEL[role]}</button>` : ""}${state.anchor !== o.pieces[role]?.id ? `<button class="chip" data-anchor="${o.pieces[role]?.id}">Keep it, build around it</button>` : ""}<button class="chip" data-swap="${i}:${role}">Cancel</button></div>
   </div>`;
 }
 function outfitCard(o, i) {
@@ -2271,6 +2310,7 @@ function openItem(id, showOriginal = false) {
     <div class="row">
       <button class="btn primary" data-wear-item="${i.id}">Wearing it today</button>
       <button class="btn" data-fav="${i.id}">${i.favorite ? "★ Favourite" : "☆ Favourite"}</button>
+      ${CORE.includes(roleOf(i)) ? `<button class="btn" data-anchor="${i.id}">Build outfits with it</button>` : ""}
       <button class="btn" data-pair="${i.id}">What goes with it?</button>
       <button class="btn" data-edit="${i.id}">Edit</button>
       <button class="btn ghost danger" data-del="${i.id}">Delete</button>
@@ -3291,6 +3331,7 @@ document.addEventListener("click", async (e) => {
     t.setAttribute("aria-pressed", "true");
     return toast("Liked. Outfit ideas will lean this way.");
   }
+  if (ds.anchor) return setAnchor(ds.anchor);
   if (ds.swap) {
     const [i, role] = ds.swap.split(":");
     const o = state.outfits[+i];
@@ -3314,6 +3355,7 @@ document.addEventListener("click", async (e) => {
   if (ds.wear != null) {
     const o = state.outfits[+ds.wear];
     await wearOutfit([...Object.values(o.pieces), ...(o.extras || [])].filter(Boolean), { source: "idea" });
+    state.anchor = null;
     toast("Logged. Enjoy your day!");
     generateOutfits();
     return render();
@@ -3436,6 +3478,8 @@ document.addEventListener("click", async (e) => {
     case "cut-all": return cutAll();
     case "recognise-all": return recogniseAll();
     case "fit-all": return fitAll();
+    case "anchor-pick": return openAnchorPicker();
+    case "anchor-clear": return setAnchor(null);
     case "find": return findIt();
     case "find-ai": {
       const b = state.find.shown;

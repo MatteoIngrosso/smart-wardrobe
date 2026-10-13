@@ -319,3 +319,8 @@ img.pic-bg { object-fit: contain; background: var(--pic); }
 .swap-btn svg { width: 20px; height: 20px; }
 .swap-btn[aria-pressed="true"] { background: var(--text); color: var(--bg); border-color: var(--text); }
 .swap-pick { padding: 12px; border-radius: 14px; background: var(--surface-2); }
+
+/* Outfits built around a piece you pick */
+.anchor-bar { gap: 12px; padding: 10px 14px; }
+.anchor-bar img { width: 48px; aspect-ratio: 3/4; object-fit: cover; border-radius: 8px; }
+.anchor-grid .piece[aria-pressed="true"] img { outline: 3px solid var(--accent); outline-offset: 2px; }
