@@ -300,3 +300,11 @@ img.pic-bg { object-fit: contain; background: var(--pic); }
 /* outfit cards: headwear and accessories as a smaller row */
 .outfit .pieces.extras { grid-template-columns: repeat(auto-fill, minmax(64px, 1fr)); }
 .outfit .pieces.extras span { font-size: 12px; }
+
+/* Like / Not for me on outfit ideas */
+.outfit-actions { gap: 10px; }
+.outfit-actions .btn.primary { flex: 1; }
+.btn.like[aria-pressed="true"] { color: var(--accent); border-color: var(--accent); }
+.btn.like[aria-pressed="true"] svg { fill: currentColor; }
+.find-fields { display: grid; grid-template-columns: 2fr 1fr; gap: 10px; }
+@media (max-width: 640px) { .find-fields { grid-template-columns: 1fr; } }

@@ -71,6 +71,23 @@ const SLOTS = {
 // How many pieces per slot make a comfortable rotation.
 const SLOT_TARGET = { base: 6, mid: 4, outer: 2, bottom: 4, shoes: 3, head: 0, acc: 0, gym: 0, under: 0 };
 
+// How a piece fits. `v` is its volume (-1 close to the body … 2 roomy), which outfit
+// ideas use to balance the silhouette; `on` says which pieces can have it.
+const FITS = {
+  slim: { label: "Slim", v: -1, on: ["top", "bottom"] },
+  regular: { label: "Regular", v: 0, on: ["top", "bottom"] },
+  straight: { label: "Straight", v: 0, on: ["bottom"] },
+  relaxed: { label: "Relaxed", v: 1, on: ["top", "bottom"] },
+  oversized: { label: "Oversized", v: 2, on: ["top"] },
+  baggy: { label: "Baggy", v: 2, on: ["bottom"] },
+  wide: { label: "Wide leg", v: 2, on: ["bottom"] },
+  cropped: { label: "Cropped", v: 0, on: ["top"] },
+};
+// Tops and bottoms have a fit; shoes, accessories and underwear don't.
+const fitPart = (item) => ({ base: "top", mid: "top", outer: "top", bottom: "bottom" })[roleOf(item)];
+const fitsFor = (item) => Object.keys(FITS).filter((f) => FITS[f].on.includes(fitPart(item)));
+const fitVol = (item) => FITS[item?.fit]?.v;
+
 const COLORS = {
   black: { hex: "#1c1c1c", neutral: true, tone: "dark" },
   charcoal: { hex: "#3d3d3d", neutral: true, tone: "dark" },
@@ -242,6 +259,7 @@ const state = {
   weather: null,
   outfits: [],
   aiAnswer: "",
+  find: { q: "", brand: "", fit: "", shown: null, answer: "" }, // Discover: something you'd like to buy
 };
 
 async function loadAll() {
@@ -253,7 +271,10 @@ async function loadAll() {
   Object.assign(brandCache, (await raw.get("kv", "brandCache")) || {});
   Object.assign(sync, (await raw.get("kv", SYNC_STATE)) || {});
   sync.dirty = new Set(sync.dirty);
-  for (const it of state.items) if (!it.styles) { it.styles = guessStyles(it); it.formality = formalityOf(it.styles); }
+  for (const it of state.items) {
+    if (!it.styles) { it.styles = guessStyles(it); it.formality = formalityOf(it.styles); }
+    if (!it.fit) it.fit = guessFit(it);
+  }
 }
 const saveSettings = () => store.put("kv", state.settings, "settings");
 const saveWishlist = () => store.put("kv", state.wishlist, "wishlist");
@@ -557,7 +578,7 @@ document.addEventListener("focusout", () => setTimeout(() => {
   if (sync.pendingRender && view !== "add" && !document.activeElement?.matches("input, textarea")) syncChanged();
 }, 300));
 function syncLine() {
-  const n = state.items.length, o = state.log.length;
+  const n = state.items.length, o = state.log.filter((l) => logKind(l) === "wear").length;
   const pieces = `${n} piece${n === 1 ? "" : "s"} · ${o} outfit${o === 1 ? "" : "s"} logged`;
   if (sync.status === "on") return `${pieces}. Shared live with every device that opens the app from the same address${sync.dirty.size ? ` · sending ${sync.dirty.size} change${sync.dirty.size === 1 ? "" : "s"}…` : ""}.`;
   if (sync.status === "offline") return `${pieces}. Can't reach the sync server right now; changes are kept here and sent when it's back${sync.dirty.size ? ` (${sync.dirty.size} waiting)` : ""}.`;
@@ -593,6 +614,14 @@ function guessStyles({ brand, category, tags = [] }) {
   if (tags.some((t) => /knit|wool|cashmere/.test(t)) && !out.has("streetwear")) out.add("smart casual");
   if (tags.some((t) => /plain|basic/.test(t))) out.add("minimal");
   return [...out].slice(0, 3);
+}
+
+// Fit from the tags ("oversized", "baggy"…) when nobody has set it.
+function guessFit(item) {
+  const tags = (item.tags || []).join(" ");
+  const f = [[/oversize/, "oversized"], [/baggy|loose fit/, "baggy"], [/wide/, "wide"], [/relaxed|loose/, "relaxed"], [/skinny|slim/, "slim"], [/straight/, "straight"], [/cropped/, "cropped"], [/regular/, "regular"]]
+    .find(([re]) => re.test(tags))?.[1];
+  return f && fitsFor(item).includes(f) ? f : f === "baggy" && fitsFor(item).includes("oversized") ? "oversized" : undefined;
 }
 
 const urlCache = new WeakMap();
@@ -1116,6 +1145,8 @@ function weatherSource() {
 
 /* ======================================================================
    Outfit engine (rule-based, works offline, no tokens)
+   The rules below score each candidate outfit; your taste (next section) adds to
+   that score, so the ideas move towards what you actually wear and like.
    ====================================================================== */
 function conditions() {
   const w = state.weather;
@@ -1123,16 +1154,23 @@ function conditions() {
   const wet = w ? isWet(w.code) || w.rainChance >= 55 : false;
   return { feels, wet };
 }
+const CORE = ["base", "mid", "outer", "bottom", "shoes"];
+// Warmth points of the top layers, and how many the rule of thumb wants at a temperature.
+const layerWarmth = (pieces) => pieces.filter((p) => ["base", "mid", "outer"].includes(roleOf(p))).reduce((a, p) => a + (p.warmth || 2), 0);
+const wantedWarmth = (feels) => (feels >= 24 ? 1 : feels >= 19 ? 2.5 : feels >= 14 ? 3.5 : feels >= 8 ? 6 : feels >= 2 ? 8 : 9.5);
+// The piece people see first (the top under any jacket), which sets the outfit's colour and fit.
+const heroOf = (o) => o.mid || o.base;
+const outfitKey = (pieces) => pieces.filter((p) => p && CORE.includes(roleOf(p))).map((p) => p.id).sort().join("|");
 
-function scoreOutfit(o, cond, occ) {
+function scoreOutfit(o, cond, occ, t = taste()) {
   const reasons = [];
   let s = 0;
   const pieces = Object.values(o).filter(Boolean);
 
-  // Warmth / layering
+  // Warmth / layering, shifted by how warm you like to dress (learnt from what you wear)
   const { feels, wet } = cond;
-  const warmth = pieces.filter((p) => ["base", "mid", "outer"].includes(roleOf(p))).reduce((a, p) => a + (p.warmth || 2), 0);
-  const want = feels >= 24 ? 1 : feels >= 19 ? 2.5 : feels >= 14 ? 3.5 : feels >= 8 ? 6 : feels >= 2 ? 8 : 9.5;
+  const warmth = layerWarmth(pieces);
+  const want = wantedWarmth(feels) + (occ.id === "gym" ? 0 : t.offset);
   s -= Math.abs(warmth - want) * 0.7;
   // Too hot for a hoodie or knit (outfits with more pieces collect more style points, so say it clearly).
   if (o.mid && feels >= 24) s -= 3;
@@ -1161,6 +1199,22 @@ function scoreOutfit(o, cond, occ) {
   if (tones.has("light") && tones.has("dark")) { s += 0.8; reasons.push("Light and dark pieces give contrast"); }
   const graphics = pieces.filter((p) => (p.tags || []).some((t) => /graphic|statement/.test(t)));
   if (graphics.length > 1) s -= 1.5 * (graphics.length - 1);
+  // Denim top with jeans reads as a costume unless the washes clearly differ.
+  if (o.bottom?.category === "jeans" && [o.base, o.mid, o.outer].some((p) => p?.colors?.[0] === "denim")) s -= 1;
+
+  // Silhouette: a roomy top looks best over slimmer bottoms and the other way round.
+  // Baggy on baggy is a streetwear look: fine for streetwear, sloppy for anything dressier.
+  const hero = heroOf(o);
+  const top = fitVol(hero), bottom = fitVol(o.bottom);
+  if (occ.id !== "gym" && top != null && bottom != null) {
+    if (top >= 1 && bottom <= 0) { s += 1; reasons.push(`${FITS[hero.fit].label} top balanced by ${FITS[o.bottom.fit].label.toLowerCase()} ${catLabel(o.bottom.category).toLowerCase()}`); }
+    else if (top <= -1 && bottom >= 1) { s += 0.8; reasons.push(`Fitted top with ${FITS[o.bottom.fit].label.toLowerCase()} ${catLabel(o.bottom.category).toLowerCase()}`); }
+    else if (top >= 2 && bottom >= 2) {
+      const street = pieces.some((p) => (p.styles || []).includes("streetwear"));
+      if (street && occ.target < 2.2) { s += 0.5; reasons.push("Relaxed streetwear proportions"); } else s -= 1.5;
+    } else if (top <= -1 && bottom <= -1 && occ.target >= 2.2) s += 0.5;
+  }
+  if (occ.target >= 2.9) for (const p of [hero, o.bottom]) if (fitVol(p) >= 2) s -= 0.8;
 
   // Style: fits the occasion, and the pieces speak the same language
   const f = pieces.reduce((a, p) => a + (p.formality || 1), 0) / Math.max(1, pieces.length);
@@ -1180,17 +1234,24 @@ function scoreOutfit(o, cond, occ) {
     if (!p.wearCount) s += 0.3;
   }
   const fresh = pieces.find((p) => !p.wearCount || daysSince(p.lastWorn) > 21);
+
+  // Your taste: what you've worn, liked and skipped before
+  const learnt = tasteScore(o, occ, t);
+  s += learnt.score;
+  if (learnt.reason) reasons.unshift(learnt.reason);
   if (fresh) reasons.push(`Gives the ${fresh.name} some wear`);
   return { score: s, reasons: reasons.slice(0, 3) };
 }
 
-function generateOutfits(n = 3) {
+// Today's candidates, best first. Cheap enough to redo on every tap (900 tries).
+function ideaPool() {
   const occ = OCCASIONS.find((o) => o.id === state.occasion);
   const gym = occ.id === "gym";
   const by = { base: [], mid: [], outer: [], bottom: [], shoes: [] };
   for (const it of state.items) if (by[roleOf(it)] && (slotOf(it) === "gym") === gym) by[roleOf(it)].push(it);
   if (gym) for (const [role, cats] of Object.entries(GYM_FALLBACK)) if (!by[role].length) by[role] = state.items.filter((i) => cats.includes(i.category));
   const cond = conditions();
+  const t = taste();
   const pick = (arr) => arr[Math.floor(Math.random() * arr.length)];
   const wantMid = cond.feels < 20 || by.base.length === 0;
   const wantOuter = cond.feels < 15 || cond.wet;
@@ -1209,36 +1270,207 @@ function generateOutfits(n = 3) {
     if (by.outer.length && wantOuter) o.outer = pick(by.outer);
     if (by.bottom.length) o.bottom = pick(by.bottom);
     if (by.shoes.length) o.shoes = pick(by.shoes);
-    const key = Object.values(o).map((p) => p.id).sort().join("|");
+    const key = outfitKey(Object.values(o));
     if (seen.has(key)) continue;
     seen.add(key);
-    cands.push({ pieces: o, ...scoreOutfit(o, cond, occ), jitter: Math.random() * 0.6 });
+    cands.push({ key, pieces: o, ...scoreOutfit(o, cond, occ, t), jitter: Math.random() * 0.6, blocked: t.blocked.has(key) });
   }
   cands.sort((a, b) => b.score + b.jitter - (a.score + a.jitter));
-  // Keep the suggestions different from each other: ideally no shared hero piece or bottom.
-  // If the wardrobe is too small for that (one T-shirt on a hot day), sharing one of them
-  // beats a much worse outfit (a hoodie at 29°); only then anything that's left.
-  const out = [];
-  const heroes = new Set(), bottoms = new Set();
-  const differ = (h, b) => !heroes.has(h) && !(b && bottoms.has(b));
-  const half = (h, b) => !heroes.has(h) || !(b && bottoms.has(b));
-  const good = (cands[0]?.score ?? 0) - 3;
-  const passes = [[differ, good], [half, good], [differ, -Infinity], [half, -Infinity], [() => true, -Infinity]];
-  for (const [ok, min] of passes) {
-    for (const c of cands) {
-      if (out.length === n) break;
-      const hero = (c.pieces.mid || c.pieces.base).id;
-      const bottom = c.pieces.bottom?.id;
-      if (out.includes(c) || c.score < min || !ok(hero, bottom)) continue;
-      heroes.add(hero);
-      if (bottom) bottoms.add(bottom);
-      out.push(c);
-    }
-  }
   const missing = ["bottom", "shoes"].filter((s) => !by[s].length);
   if (!by.base.length && cond.feels >= 22) missing.unshift("base");
-  const usedExtras = new Set();
-  state.outfits = out.map((o) => ({ ...o, missing, ...extrasFor(o.pieces, cond, occ, usedExtras) }));
+  return { occ, cond, cands, missing };
+}
+
+// Pick `n` ideas that differ from each other and from the ones in `keep`: ideally no shared
+// hero piece or bottom. If the wardrobe is too small for that (one T-shirt on a hot day),
+// sharing one of them beats a much worse outfit (a hoodie at 29°); only then anything left.
+// Outfits you said no to are left out while there's anything else.
+function pickIdeas(pool, n, keep = [], avoid = []) {
+  const { cands } = pool;
+  const out = [];
+  const shown = new Set([...keep.map((o) => o.key), ...avoid]);
+  const heroes = new Set(keep.map((o) => heroOf(o.pieces).id)), bottoms = new Set(keep.map((o) => o.pieces.bottom?.id).filter(Boolean));
+  const differ = (h, b) => !heroes.has(h) && !(b && bottoms.has(b));
+  const half = (h, b) => !heroes.has(h) || !(b && bottoms.has(b));
+  const good = (cands.find((c) => !c.blocked)?.score ?? 0) - 3;
+  const passes = [[differ, good], [half, good], [differ, -Infinity], [half, -Infinity], [() => true, -Infinity]];
+  for (const allowBlocked of [false, true]) {
+    for (const [ok, min] of passes) {
+      for (const c of cands) {
+        if (out.length === n) break;
+        const hero = heroOf(c.pieces).id;
+        const bottom = c.pieces.bottom?.id;
+        if (out.includes(c) || shown.has(c.key) || (c.blocked && !allowBlocked) || c.score < min || !ok(hero, bottom)) continue;
+        heroes.add(hero);
+        if (bottom) bottoms.add(bottom);
+        out.push(c);
+      }
+    }
+  }
+  return out;
+}
+// An idea you already ♥ today keeps its heart when it comes back.
+const likedToday = (key) => state.log.find((l) => l.kind === "like" && l.date === today() && outfitKey((l.itemIds || []).map((id) => state.items.find((i) => i.id === id))) === key)?.id;
+const dressIdea = (c, pool, used) => ({ ...c, missing: pool.missing, likedId: likedToday(c.key), ...extrasFor(c.pieces, pool.cond, pool.occ, used) });
+
+// `avoid`: outfits just shown, so "New ideas" always brings different ones.
+function generateOutfits(n = 3, avoid = []) {
+  tasteMemo = null; // pieces may have changed (colours, fit) since it was worked out
+  const pool = ideaPool();
+  const used = new Set();
+  const picks = pickIdeas(pool, n, [], avoid);
+  if (picks.length < n) picks.push(...pickIdeas(pool, n - picks.length, picks)); // small wardrobe: repeats are fine
+  state.outfits = picks.map((c) => dressIdea(c, pool, used));
+}
+// After "Not for me": swap that idea for the next best one, keeping the others where they are.
+function replaceOutfit(i) {
+  const pool = ideaPool();
+  const keep = state.outfits.filter((_, k) => k !== i);
+  const used = new Set(keep.flatMap((o) => (o.extras || []).map((x) => x.id)));
+  const [next] = pickIdeas(pool, 1, keep);
+  if (next) state.outfits[i] = dressIdea(next, pool, used);
+  else state.outfits.splice(i, 1);
+}
+
+/* ======================================================================
+   Taste: what the outfit ideas learn from you (on the device, no tokens)
+   Every "Wear this today", ♥ and "Not for me" goes in the wear log, which every
+   device shares. From it the ideas learn, per piece, pair and occasion:
+   - pieces you put together, and combinations you turned down
+   - colour pairings and fits you go for (top with bottom)
+   - which pieces and styles you reach for in each occasion
+   - whether you dress warmer or lighter than the rule of thumb for the temperature
+   A signal counts half as much after 60 days, so the ideas follow your taste as it changes.
+   ====================================================================== */
+const SKIP_REASONS = [["warm", "Too warm"], ["cold", "Too cold"], ["colours", "Colours"], ["style", "Not my style"], ["today", "Just not today"]];
+const logKind = (l) => l.kind || "wear";
+const pairKey = (a, b) => (a < b ? `${a}|${b}` : `${b}|${a}`);
+const clamp = (x, lo, hi) => Math.min(hi, Math.max(lo, x));
+let tasteMemo = null;
+
+function taste() {
+  const sig = `${state.log.length}|${state.items.length}|${today()}|${state.log.at(-1)?.id}`;
+  if (tasteMemo?.sig === sig) return tasteMemo.t;
+  const byId = new Map(state.items.map((i) => [i.id, i]));
+  const t = { pairs: {}, items: {}, colours: {}, fits: {}, styles: {}, offset: 0, blocked: new Set(), counts: { wear: 0, like: 0, skip: 0 }, comfortN: 0 };
+  const add = (map, k, v) => (map[k] = (map[k] || 0) + v);
+  let warmSum = 0, warmW = 0;
+  for (const l of state.log) {
+    const kind = logKind(l);
+    const pieces = (l.itemIds || []).map((id) => byId.get(id)).filter((p) => p && CORE.includes(roleOf(p)));
+    if (!pieces.length) continue;
+    t.counts[kind] = (t.counts[kind] || 0) + 1;
+    const age = Math.max(0, daysSince(l.at || l.date));
+    const w = 0.5 ** (age / 60);
+    const occ = l.occasion || "*";
+    const o = {};
+    for (const p of pieces) o[roleOf(p)] = p;
+
+    // How warm you dressed (or wanted to) for how it felt
+    if (l.feels != null && occ !== "gym" && (o.base || o.mid)) {
+      const nudge = { warm: -1.5, cold: 1.5 }[l.reason];
+      if (kind !== "skip" || nudge) {
+        const ww = w * (kind === "like" ? 0.5 : 1);
+        warmSum += ww * (layerWarmth(pieces) + (nudge || 0) - wantedWarmth(l.feels));
+        warmW += ww;
+        t.comfortN++;
+      }
+    }
+    if (kind === "skip") {
+      // That exact outfit stays out of the ideas: for today if it was the weather or the day, else for a month.
+      const short = ["today", "warm", "cold"].includes(l.reason);
+      if (short ? l.date === today() : age < 30) t.blocked.add(outfitKey(pieces));
+      if (short) continue;
+    }
+    const v = w * ({ wear: 1, like: 1.5, skip: -1.2 }[kind] || 0);
+    const onlyColours = l.reason === "colours";
+    const hero = heroOf(o);
+    if (hero && o.bottom) {
+      const [c1, c2] = [hero.colors?.[0], o.bottom.colors?.[0]];
+      if (c1 && c2) add(t.colours, `${c1}|${c2}`, onlyColours ? v * 1.5 : v);
+      if (!onlyColours && hero.fit && o.bottom.fit) add(t.fits, `${hero.fit}|${o.bottom.fit}`, v);
+    }
+    if (pieces.length < 2) { add(t.items, `*|${pieces[0].id}`, v); continue; } // "Wearing it today" on one piece
+    for (let i = 0; i < pieces.length; i++) for (let j = i + 1; j < pieces.length; j++) add(t.pairs, pairKey(pieces[i].id, pieces[j].id), onlyColours ? v * 0.5 : v);
+    if (onlyColours) continue;
+    for (const p of pieces) {
+      add(t.items, `${occ}|${p.id}`, kind === "skip" ? v * 0.3 : v);
+      for (const st of p.styles || []) add(t.styles, `${occ}|${st}`, v / pieces.length);
+    }
+  }
+  // A few outfits shouldn't swing it: start from the rule of thumb (as if 3 outfits agreed with it).
+  t.offset = warmW ? clamp(warmSum / (warmW + 3), -3, 3) : 0;
+  tasteMemo = { sig, t };
+  return t;
+}
+
+function tasteScore(o, occ, t) {
+  const pieces = Object.values(o).filter(Boolean);
+  let s = 0, reason = null;
+  if (t.blocked.has(outfitKey(pieces))) s -= 6;
+  // Pairs of pieces you've worn or liked together (or turned down)
+  let ps = 0, best = null;
+  for (let i = 0; i < pieces.length; i++) for (let j = i + 1; j < pieces.length; j++) {
+    const a = t.pairs[pairKey(pieces[i].id, pieces[j].id)];
+    if (!a) continue;
+    ps += Math.tanh(a / 2) * 0.9;
+    if (a >= 0.8 && (!best || a > best[0])) best = [a, pieces[i], pieces[j]];
+  }
+  s += clamp(ps, -3, 3);
+  // Pieces you reach for in this occasion (and in general)
+  let is = 0;
+  for (const p of pieces) is += Math.tanh(((t.items[`${occ.id}|${p.id}`] || 0) + 0.3 * (t.items[`*|${p.id}`] || 0)) / 3) * 0.5;
+  s += clamp(is, -1.5, 1.5);
+  // Styles you wear for this occasion
+  let ss = 0;
+  for (const p of pieces) for (const st of p.styles || []) ss += Math.tanh((t.styles[`${occ.id}|${st}`] || 0) / 4) * 0.25;
+  s += clamp(ss, -1, 1);
+  // Top and bottom: colours and fits you go for
+  const hero = heroOf(o);
+  let colourLiked = false;
+  if (hero && o.bottom) {
+    const c = t.colours[`${hero.colors?.[0]}|${o.bottom.colors?.[0]}`];
+    if (c) { s += Math.tanh(c / 2); colourLiked = c >= 1.5; }
+    const f = t.fits[`${hero.fit}|${o.bottom.fit}`];
+    if (f) s += Math.tanh(f / 2) * 0.8;
+  }
+  if (best) reason = `You like the ${best[1].name} with the ${best[2].name}`;
+  else if (colourLiked) reason = `${cap(hero.colors[0])} with ${o.bottom.colors[0]}: a pairing you go for`;
+  return { score: s, reason };
+}
+
+// One line under the ideas saying what they've learnt so far.
+function tasteLine() {
+  const t = taste();
+  const { wear, like, skip } = t.counts;
+  if (!wear && !like && !skip) return "Ideas learn from you: tap Wear this today, ♥ or Not for me, and they get closer to your taste.";
+  const n = (k, one, many) => `${k} ${k === 1 ? one : many}`;
+  let line = `Learning from ${[wear && n(wear, "outfit worn", "outfits worn"), like && n(like, "like", "likes"), skip && n(skip, "skip", "skips")].filter(Boolean).join(", ")}.`;
+  if (t.offset <= -0.8) line += " You dress lighter than most for the weather, so ideas go a layer lighter.";
+  else if (t.offset >= 0.8) line += " You like to dress warmer than most, so ideas add a layer sooner.";
+  return line;
+}
+
+// The same, for the stylist: a few short lines, using the wardrobe's #numbers.
+function tasteText() {
+  const t = taste();
+  const num = new Map(state.items.map((i, n) => [i.id, `#${n + 1}`]));
+  const byId = new Map(state.items.map((i) => [i.id, i]));
+  const refs = (ids) => ids.map((id) => num.get(id)).filter(Boolean).join("+");
+  const lines = [];
+  if (Math.abs(t.offset) >= 0.8) lines.push(`Dresses ${t.offset > 0 ? "warmer" : "lighter"} than usual for the temperature (about ${Math.abs(t.offset).toFixed(1)} warmth points).`);
+  const pairs = Object.entries(t.pairs).filter(([, v]) => v >= 1).sort((a, b) => b[1] - a[1]).slice(0, 5).map(([k]) => refs(k.split("|")));
+  if (pairs.length) lines.push(`Often worn or liked together: ${pairs.join(", ")}.`);
+  const recent = (kind, filter = () => true) => state.log.filter((l) => logKind(l) === kind && filter(l) && daysSince(l.at || l.date) < 90).slice(-3).reverse();
+  const liked = recent("like").map((l) => refs(l.itemIds.filter((id) => byId.has(id)))).filter(Boolean);
+  if (liked.length) lines.push(`Liked outfits: ${liked.join(", ")}.`);
+  const nope = recent("skip", (l) => ["colours", "style", undefined].includes(l.reason)).map((l) => `${refs(l.itemIds)}${l.reason ? ` (${l.reason})` : ""}`).filter((x) => /#/.test(x));
+  if (nope.length) lines.push(`Turned down: ${nope.join(", ")}.`);
+  const fits = Object.entries(t.fits).filter(([, v]) => v >= 1).sort((a, b) => b[1] - a[1])[0];
+  if (fits) lines.push(`Favourite proportions: ${fits[0].split("|").map((f) => FITS[f]?.label.toLowerCase()).join(" top, ")} bottom.`);
+  const worn = state.items.filter((i) => daysSince(i.lastWorn) <= 2 && slotOf(i) !== "under").map((i) => num.get(i.id));
+  if (worn.length) lines.push(`Worn in the last 2 days (avoid unless asked): ${worn.join(", ")}.`);
+  return lines.join("\n");
 }
 
 // Headwear and accessories that suit the weather and the occasion, added to an outfit.
@@ -1285,17 +1517,28 @@ function extrasFor(pieces, cond, occ, used) {
   return { extras, extrasWhy: why };
 }
 
-async function wearOutfit(items) {
+// `ctx` (for whole outfits) records the occasion and how warm it felt, so ideas can learn from it.
+async function wearOutfit(items, ctx) {
   const now = new Date().toISOString();
   for (const it of items) {
     it.wearCount = (it.wearCount || 0) + 1;
     it.lastWorn = now;
     await store.put("items", it);
   }
-  const entry = { date: today(), at: now, itemIds: items.map((i) => i.id) };
+  await addLog({ itemIds: items.map((i) => i.id), ...(ctx && outfitContext()), ...ctx });
+}
+// Likes and skips go in the wear log too (with a `kind`), so they reach every device and backups.
+async function addLog(fields) {
+  const entry = { date: today(), at: new Date().toISOString(), ...fields };
   await store.put("log", entry);
   state.log.push(entry);
+  return entry;
 }
+async function dropLog(id) {
+  await store.del("log", id);
+  state.log = state.log.filter((l) => l.id !== id);
+}
+const outfitContext = () => ({ occasion: state.occasion, feels: Math.round(conditions().feels) });
 
 /* ======================================================================
    Shopping / gap analysis
@@ -1551,8 +1794,8 @@ function wardrobeText() {
     return [
       `#${n + 1} ${i.name}`, catLabel(i.category), (i.colors || []).join("/"),
       i.brand ? i.brand + (b?.tier ? ` (${b.tier})` : "") : "",
-      (i.styles || []).join("/"), `w${i.warmth}`,
-      i.wearCount ? `worn ${i.wearCount}x` : "unworn",
+      (i.styles || []).join("/"), FITS[i.fit] ? `${i.fit} fit` : "", `w${i.warmth}`,
+      i.wearCount ? `worn ${i.wearCount}x${daysSince(i.lastWorn) <= 7 ? `, last ${daysSince(i.lastWorn)}d ago` : ""}` : "unworn",
     ].filter(Boolean).join("; ");
   }).filter(Boolean).join("\n");
 }
@@ -1561,6 +1804,9 @@ const STYLIST_SYSTEM =
   "When the question is about what to wear (a day, an occasion, a trip), suggest 3 clearly different outfits, best first, unless the user asks for another number. " +
   "For every outfit, write a line 'Outfit: <short title>', then one line per piece, then one line starting 'Why:'. " +
   "For anything the user doesn't own (a missing piece, a suggested buy), write its own line: 'To buy: <item> | search: <words to paste into a shop>'. " +
+  "Dress for the temperature: add up the warmth of the top layers (about 1 when hot, 3-4 when mild, 6+ when cold). " +
+  "Keep to one accent colour and one graphic piece per outfit, and balance proportions: roomy (oversized, baggy, wide) with slimmer pieces, unless it's a deliberate streetwear look. " +
+  "Follow the user's taste notes when given: build on pairings they wear and like, avoid what they turned down, and don't repeat pieces worn in the last 2 days unless asked. " +
   "Plain text, no markdown, at most 24 short lines.";
 const SHOP_QUESTION =
   "Looking at my wardrobe and style, what are the 5 most useful things to buy next? " +
@@ -1747,20 +1993,21 @@ function answerHTML(ans) {
     (look ? look.lines : intro).push(line);
   }
   if (!looks.length) return `<div class="ai-rich">${tipsHTML(intro, ans.refs, named)}</div>`;
-  return `<div class="ai-rich">${tipsHTML(intro, ans.refs, named)}<div class="looks">${looks.map((l) => `<article class="look"><h3>${esc(cleanRefs(l.title, ans.refs))}</h3><div class="pieces">${l.items.map(pieceTile).join("")}${l.buy.map(buyTile).join("")}</div>${l.lines.length ? `<p class="why">${esc(l.lines.map((x) => cleanRefs(x, ans.refs)).join("\n"))}</p>` : ""}${l.items.length ? `<button class="btn" data-wearids="${l.items.map((i) => i.id).join(",")}">Wear this today</button>` : ""}</article>`).join("")}</div></div>`;
+  return `<div class="ai-rich">${tipsHTML(intro, ans.refs, named)}<div class="looks">${looks.map((l) => `<article class="look"><h3>${esc(cleanRefs(l.title, ans.refs))}</h3><div class="pieces">${l.items.map(pieceTile).join("")}${l.buy.map(buyTile).join("")}</div>${l.lines.length ? `<p class="why">${esc(l.lines.map((x) => cleanRefs(x, ans.refs)).join("\n"))}</p>` : ""}${l.items.length ? `<div class="row"><button class="btn" data-wearids="${l.items.map((i) => i.id).join(",")}">Wear this today</button><button class="btn icon-btn like" data-likeids="${l.items.map((i) => i.id).join(",")}" aria-pressed="false" aria-label="Like this outfit">${ICON_HEART}</button></div>` : ""}</article>`).join("")}</div></div>`;
 }
 
 // Recognise type, colours, brand and style from one photo.
 const TAG_SCHEMA = {
   type: "object",
   additionalProperties: false,
-  required: ["name", "category", "colors", "brand", "styles", "warmth", "tags", "front_top", "back_top"],
+  required: ["name", "category", "colors", "brand", "styles", "fit", "warmth", "tags", "front_top", "back_top"],
   properties: {
     name: { type: "string", description: "Short name, e.g. 'Navy cable-knit sweater'" },
     category: { type: "string", enum: CATS.map((c) => c.id), description: "Use the gym types (gym-top, leggings, training-shoes…) only for clothes made for training" },
     colors: { type: "array", items: { type: "string", enum: Object.keys(COLORS) }, description: "Main colour first, at most 3" },
     brand: { type: "string", description: "Brand from a visible logo, label or very distinctive design; empty if unsure" },
     styles: { type: "array", items: { type: "string", enum: Object.keys(STYLES) }, description: "1 to 3 styles, best first" },
+    fit: { type: "string", enum: [...Object.keys(FITS), "none"], description: "How it fits on the body: tops slim/regular/relaxed/oversized/cropped, bottoms slim/straight/regular/relaxed/baggy/wide; none for shoes and accessories" },
     warmth: { type: "integer", description: "1 very light to 5 winter" },
     tags: { type: "array", items: { type: "string" }, description: "Up to 4 short lowercase tags, e.g. graphic, knit, logo, cargo" },
     front_top: { type: "string", enum: ["up", "right", "down", "left"], description: "In the front photo, which way the collar, hood or waistband points" },
@@ -1839,9 +2086,11 @@ function renderToday() {
       </div>
       <div class="chips scroller">${OCCASIONS.map((o) => `<button class="chip" aria-pressed="${state.occasion === o.id}" data-occ="${o.id}">${o.label}</button>`).join("")}</div>
       <div class="outfits">${state.outfits.map((o, i) => outfitCard(o, i)).join("") || `<p class="muted">Add a few more tops to get outfit ideas.</p>`}</div>
+      <p class="muted small" style="margin:0">${esc(tasteLine())}</p>
       ${aiCard()}
     </div>`;
 }
+const ICON_HEART = `<svg viewBox="0 0 24 24"><path d="M12 20s-7.5-4.6-9.3-9.4C1.5 7.3 3.6 4 7 4c2.1 0 3.6 1.2 5 3 1.4-1.8 2.9-3 5-3 3.4 0 5.5 3.3 4.3 6.6C19.5 15.4 12 20 12 20z"/></svg>`;
 function outfitCard(o, i) {
   const order = ["outer", "mid", "base", "bottom", "shoes"];
   const pieces = order.map((k) => o.pieces[k]).filter(Boolean);
@@ -1851,7 +2100,13 @@ function outfitCard(o, i) {
     <div class="pieces">${pieces.map(pieceTile).join("")}${ph}</div>
     ${o.extras?.length ? `<div class="pieces extras">${o.extras.map(pieceTile).join("")}</div>` : ""}
     ${o.reasons.length || o.extrasWhy?.length ? `<p class="why">${[...o.reasons, ...(o.extrasWhy || [])].map(esc).join(" · ")}</p>` : ""}
-    <button class="btn primary" data-wear="${i}">Wear this today</button>
+    ${o.asking
+      ? `<div class="stack" style="gap:8px"><span class="muted small">What's off? The next ideas take it into account.</span><div class="chips">${SKIP_REASONS.map(([k, l]) => `<button class="chip" data-skipwhy="${i}:${k}">${l}</button>`).join("")}<button class="chip" data-skip="${i}" data-cancel="1">Cancel</button></div></div>`
+      : `<div class="row outfit-actions">
+          <button class="btn primary" data-wear="${i}">Wear this today</button>
+          <button class="btn icon-btn like" data-like="${i}" aria-pressed="${!!o.likedId}" aria-label="${o.likedId ? "Liked" : "Like this outfit"}">${ICON_HEART}</button>
+          <button class="btn ghost" data-skip="${i}">Not for me</button>
+        </div>`}
   </article>`;
 }
 function aiCard() {
@@ -1875,7 +2130,7 @@ function filteredItems() {
     (cat === "all" || i.category === cat) &&
     (color === "all" || (i.colors || []).includes(color)) &&
     (style === "all" || (i.styles || []).includes(style)) &&
-    (!ql || [i.name, i.brand, catLabel(i.category), ...(i.tags || []), ...(i.colors || []), ...(i.styles || [])].join(" ").toLowerCase().includes(ql)));
+    (!ql || [i.name, i.brand, catLabel(i.category), FITS[i.fit]?.label, ...(i.tags || []), ...(i.colors || []), ...(i.styles || [])].join(" ").toLowerCase().includes(ql)));
   const by = {
     recent: (a, b) => (b.createdAt || "").localeCompare(a.createdAt || ""),
     most: (a, b) => (b.wearCount || 0) - (a.wearCount || 0),
@@ -1947,6 +2202,7 @@ function openItem(id, showOriginal = false) {
       ${i.size ? `<div><b>Size</b>${esc(i.size)}</div>` : ""}
       ${i.material ? `<div><b>Material</b>${esc(i.material)}</div>` : ""}
     </div>
+    ${fitsFor(i).length ? `<div class="field" style="margin-bottom:14px"><label>Fit</label><div class="chips">${fitsFor(i).map((f) => `<button class="chip" aria-pressed="${i.fit === f}" data-setfit="${i.id}:${f}">${FITS[f].label}</button>`).join("")}</div></div>` : ""}
     ${i.tags?.length ? `<div class="chips" style="margin-bottom:14px">${i.tags.map((t) => `<span class="chip">${esc(t)}</span>`).join("")}</div>` : ""}
     ${i.notes ? `<p>${esc(i.notes)}</p>` : ""}
     <div class="row">
@@ -2001,7 +2257,7 @@ function pairingsFor(item, limit = 6) {
 const shown = (p) => (p.useCut && p.cut ? p.cut : p.orig);
 const newPhoto = (src) => ({ src, orig: src, cutSrc: null, cut: null, useCut: false, rot: 0 });
 function newDraft() {
-  return { id: null, photos: [], active: 0, name: "", category: "", colors: [], brand: "", styles: [], stylesTouched: false, warmth: 3, tags: "", notes: "", price: "", currency: "", size: "", material: "", analysing: false };
+  return { id: null, photos: [], active: 0, name: "", category: "", colors: [], brand: "", styles: [], stylesTouched: false, fit: "", warmth: 3, tags: "", notes: "", price: "", currency: "", size: "", material: "", analysing: false };
 }
 function brandHint(brand) {
   const b = brandInfo(brand);
@@ -2219,6 +2475,7 @@ function renderAdd() {
         <div class="field"><label>Style <span style="text-transform:none;font-weight:400">(${d.stylesTouched ? "set" : "recognised from brand and type, tap to change"})</span></label><div class="chips">${Object.entries(STYLES).map(([k, v]) => `<button class="chip" aria-pressed="${d.styles.includes(k)}" data-sty="${esc(k)}">${v.label}</button>`).join("")}</div></div>
         <div class="field"><label>Colours <span style="text-transform:none;font-weight:400">(main colour first)</span></label><div class="chips">${Object.entries(COLORS).map(([n, v]) => `<button class="chip" aria-pressed="${d.colors.includes(n)}" data-col="${esc(n)}"><span class="dot" style="background:${v.hex}"></span>${cap(n)}${d.colors[0] === n ? " ·main" : ""}</button>`).join("")}</div></div>
         <div class="field"><label for="f-warmth">Warmth</label><input id="f-warmth" type="range" min="1" max="5" value="${d.warmth}" data-input="warmth"><div class="warm-scale"><span>Light</span><span>Medium</span><span>Winter</span></div></div>
+        ${fitsFor(d).length ? `<div class="field"><label>Fit</label><div class="chips">${fitsFor(d).map((f) => `<button class="chip" aria-pressed="${d.fit === f}" data-fit="${f}">${FITS[f].label}</button>`).join("")}</div></div>` : ""}
         <div class="field"><label for="f-tags">Tags</label><input id="f-tags" class="input" data-input="tags" value="${esc(d.tags)}" placeholder="graphic, knit, gift from mum…"></div>
         <div class="field"><label for="f-notes">Notes</label><textarea id="f-notes" class="input" data-input="notes" placeholder="Size, where you bought it, care…">${esc(d.notes)}</textarea></div>
         <div class="row">
@@ -2304,6 +2561,7 @@ async function recognise(d) {
       warmth: Math.min(5, Math.max(1, r.warmth || 3)),
       tags: (r.tags || []).join(", "),
     });
+    if (FITS[r.fit] && fitsFor(d).includes(r.fit)) d.fit = r.fit;
     // The AI also says which way is up in each photo: turn any that are still sideways.
     for (const [k, side] of [[0, r.front_top], [1, r.back_top]]) {
       const p = d.photos[k];
@@ -2492,6 +2750,7 @@ async function saveDraft(next = false) {
     name: d.name.trim() || autoName(d) || "Untitled piece",
     category: d.category, colors: d.colors, brand: d.brand.trim(), styles, formality: formalityOf(styles),
     warmth: +d.warmth, tags, notes: d.notes.trim(),
+    fit: (fitsFor(d).includes(d.fit) ? d.fit : "") || guessFit({ category: d.category, tags }),
     price: parseFloat(String(d.price ?? "").replace(",", ".")) || undefined, currency: d.currency || undefined,
     size: (d.size || "").trim() || undefined, material: (d.material || "").trim() || undefined,
     photos: d.photos.map(shown),
@@ -2524,6 +2783,7 @@ function renderShop() {
   main.innerHTML = `
     <div class="head"><div><h1>Discover</h1><p class="sub">What your wardrobe has, what it's missing, and where to find it.</p></div></div>
     <div class="stack">
+      ${findCard(brands.map(([b]) => b))}
       <div class="stats">
         <div class="stat"><b>${state.items.length}</b><span>pieces</span></div>
         <div class="stat"><b>${brands.length}</b><span>brands</span></div>
@@ -2580,11 +2840,47 @@ function renderShop() {
     </div>`;
 }
 
+// "Looking for something": type what you'd like, optionally a brand and fit; get shop links
+// for it, the pieces you own it would go with, and (on request) the stylist's opinion.
+function findCard(myBrands) {
+  const f = state.find;
+  const fits = Object.keys(FITS);
+  const b = f.shown;
+  return `<section class="card stack find">
+    <h2 style="margin:0">Looking for something?</h2>
+    <p class="muted small" style="margin:0">Type what you'd like to buy and, if you want, the brand. You get shop links and the pieces you own it would go with.</p>
+    <div class="find-fields">
+      <input class="input" data-input="findq" value="${esc(f.q)}" placeholder="e.g. white leather sneakers, black cargo trousers" aria-label="What you'd like to buy">
+      <input class="input" data-input="findbrand" value="${esc(f.brand)}" placeholder="Brand (optional)" list="find-brands" autocomplete="off" aria-label="Brand">
+      <datalist id="find-brands">${[...new Set([...myBrands, ...BRAND_LIST.map(([n]) => n)])].map((n) => `<option value="${esc(n)}"></option>`).join("")}</datalist>
+    </div>
+    ${myBrands.length ? `<div class="chips scroller"><span class="muted small" style="align-self:center;white-space:nowrap">Your brands</span>${myBrands.slice(0, 12).map((n) => `<button class="chip" aria-pressed="${f.brand === n}" data-findbrand="${esc(n)}">${esc(n)}</button>`).join("")}</div>` : ""}
+    <div class="chips scroller"><span class="muted small" style="align-self:center;white-space:nowrap">Fit</span>${fits.map((k) => `<button class="chip" aria-pressed="${f.fit === k}" data-findfit="${k}">${FITS[k].label}</button>`).join("")}</div>
+    <div class="row"><button class="btn primary" data-act="find">Find it</button>${b && aiReady() ? `<button class="btn" data-act="find-ai">Ask the stylist about it</button>` : ""}</div>
+    ${b ? `<div class="sugg">${buyRow({ ...b, with: goesWith(b.title) }, { label: b.brand ? `From ${esc(b.brand)}` : "", extra: wishBtn(b) })}</div>` : ""}
+    <div class="ai-answer" id="find-ai">${answerHTML(f.answer)}</div>
+  </section>`;
+}
+function findIt() {
+  const f = state.find;
+  const what = f.q.trim().replace(/\s+/g, " ");
+  if (!what) return toast("Type what you're looking for first");
+  const brand = f.brand.trim();
+  // The fit only means something for tops and bottoms (not "slim sneakers").
+  const fitOk = f.fit && fitsFor({ category: buyKind(what.toLowerCase()).cat }).includes(f.fit) && !new RegExp(`\\b${f.fit}`, "i").test(what);
+  const fit = fitOk ? `${FITS[f.fit].label.toLowerCase()} ` : "";
+  const title = cap(`${brand ? brand + " " : ""}${fit}${what}`);
+  f.shown = { prio: "medium", title, why: "", query: title, brand };
+  f.answer = "";
+  render();
+}
+
 /* ---------- Settings ---------- */
 function renderSettings() {
   const s = state.settings;
   const uncut = state.items.filter((i) => !i.originals?.length).length;
   const unrecognised = state.items.filter((i) => !i.brand && !i.aiChecked).length;
+  const noFit = state.items.filter((i) => fitsFor(i).length && !i.fit && i.photos?.length).length;
   const u = state.usage.month === today().slice(0, 7) ? state.usage : { requests: 0, input: 0, output: 0 };
   const toggle = (key, label, hint) => `<button class="toggle" role="switch" aria-checked="${!!s[key]}" data-toggle="${key}"><span class="knob"></span><span class="toggle-text"><b>${label}</b><span class="muted small">${hint}</span></span></button>`;
   const prov = s.aiProvider;
@@ -2633,6 +2929,7 @@ function renderSettings() {
           </div>` : ""}
         ${prov !== "off" ? toggle("aiAuto", "Recognise new photos automatically", "Fills in type, brand, style and colours, and checks which way is up, right after the cut-out. Roughly 500–1,000 tokens per piece, once.") : ""}
         ${aiReady() && unrecognised ? `<div class="row"><button class="btn" data-act="recognise-all">Recognise ${unrecognised} piece${unrecognised > 1 ? "s" : ""} without a brand</button></div>` : ""}
+        ${aiReady() && noFit ? `<div class="row"><button class="btn" data-act="fit-all">Find the fit of ${noFit} piece${noFit > 1 ? "s" : ""}</button><span class="muted small">About 300 tokens per piece. You can also tap the fit on any piece.</span></div>` : ""}
         <p class="muted small" style="margin:0">This month: ${u.requests} AI request${u.requests === 1 ? "" : "s"} · ${(u.input + u.output).toLocaleString()} tokens (${u.input.toLocaleString()} in, ${u.output.toLocaleString()} out)</p>
       </section>
       <section class="card stack">
@@ -2646,6 +2943,7 @@ function renderSettings() {
           <button class="btn" data-act="seed">Load sample wardrobe</button>
           <button class="btn" data-act="export">Export backup</button>
           <button class="btn" data-act="import">Import backup</button>
+          ${state.log.some((l) => logKind(l) !== "wear") ? `<button class="btn" data-act="forget-taste">Forget likes and skips</button>` : ""}
           <button class="btn ghost danger" data-act="wipe">Erase everything</button>
         </div>
         <p class="muted small" style="margin:0">${syncLine()}</p>
@@ -2738,6 +3036,7 @@ async function recogniseAll() {
       }
       const st = (r.styles || []).filter((s) => STYLES[s]);
       if (st.length) { it.styles = st.slice(0, 3); it.formality = formalityOf(it.styles); }
+      if (!it.fit && fitsFor(it).includes(r.fit)) it.fit = r.fit;
       it.aiChecked = true; // never pay for the same photo twice
       await store.put("items", it);
     } catch (e) { toast(e.message || "Recognition failed"); break; }
@@ -2746,6 +3045,29 @@ async function recogniseAll() {
   toast(`Found ${found} brand${found === 1 ? "" : "s"}; styles updated`);
   render();
   lookupWardrobeBrands();
+}
+
+// Fit for pieces saved before the app knew about fit: one small AI request per piece.
+async function fitAll() {
+  const todo = state.items.filter((i) => fitsFor(i).length && !i.fit && i.photos?.length);
+  let found = 0;
+  for (const [k, it] of todo.entries()) {
+    toast(`Checking the fit… ${k + 1} of ${todo.length}`);
+    try {
+      const text = await aiGenerate({
+        system: "You describe how clothes fit for a wardrobe app. Reply with JSON only.",
+        text: `How does this ${catLabel(it.category).toLowerCase()} fit on the body?${it.photos[1] ? " Left: front. Right: back." : ""}`,
+        image: await aiImage(it.photos[0], it.photos[1]),
+        schema: { type: "object", additionalProperties: false, required: ["fit"], properties: { fit: { type: "string", enum: fitsFor(it) } } },
+        maxTokens: 30,
+      });
+      const fit = JSON.parse(text.replace(/^```(json)?|```$/g, "").trim()).fit;
+      if (fitsFor(it).includes(fit)) { it.fit = fit; found++; await store.put("items", it); }
+    } catch (e) { toast(e.message || "Couldn't check the fit"); break; }
+  }
+  state.outfits = [];
+  toast(`Set the fit of ${found} piece${found === 1 ? "" : "s"}`);
+  render();
 }
 
 async function exportBackup() {
@@ -2827,11 +3149,13 @@ async function ask(question, targetId = "ai-answer") {
   if (out) out.innerHTML = `<div class="row"><div class="spinner"></div><span class="muted">Thinking about your wardrobe…</span></div>`;
   try {
     const c = conditions();
-    const context = `Today: feels ${Math.round(c.feels)}°C${c.wet ? ", wet" : ""}. Occasion: ${OCCASIONS.find((o) => o.id === state.occasion).label}.\nWardrobe (#number name; type; colours; brand; style; warmth 1-5; wear):\n${wardrobeText() || "(empty)"}`;
+    const likes = tasteText();
+    const context = `Today: feels ${Math.round(c.feels)}°C${c.wet ? ", wet" : ""}. Occasion: ${OCCASIONS.find((o) => o.id === state.occasion).label}.\nWardrobe (#number name; type; colours; brand; style; fit; warmth 1-5; wear):\n${wardrobeText() || "(empty)"}${likes ? `\nTaste (learnt from what the user wears, likes and skips):\n${likes}` : ""}`;
     const refs = state.items.map((i) => i.id);
     const show = (t) => { const el = document.getElementById(targetId); if (el) el.textContent = cleanRefs(t, refs); };
     const answer = { text: await aiGenerate({ system: STYLIST_SYSTEM + "\n\n" + context, text: question, maxTokens: 800, onText: show }), refs };
     if (targetId === "ai-answer") state.aiAnswer = answer;
+    if (targetId === "find-ai") state.find.answer = answer;
     const el = document.getElementById(targetId);
     if (el) el.innerHTML = answerHTML(answer);
   } catch (e) {
@@ -2865,10 +3189,12 @@ document.addEventListener("click", async (e) => {
     const prev = CAT[draft.category];
     draft.category = ds.cat;
     if (!prev || draft.warmth == prev.warmth) draft.warmth = CAT[ds.cat].warmth;
+    if (!fitsFor(draft).includes(draft.fit)) draft.fit = "";
     refreshStyles();
     render();
     return reorient(draft);
   }
+  if (ds.fit && draft) { draft.fit = draft.fit === ds.fit ? "" : ds.fit; return render(); }
   if (ds.sty && draft) {
     const i = draft.styles.indexOf(ds.sty);
     if (i === -1) draft.styles.push(ds.sty); else draft.styles.splice(i, 1);
@@ -2890,16 +3216,37 @@ document.addEventListener("click", async (e) => {
   }
   if (ds.toggle) { state.settings[ds.toggle] = !state.settings[ds.toggle]; await saveSettings(); return render(); }
   if (ds.provider) { state.settings.aiProvider = ds.provider; await saveSettings(); return render(); }
+  if (ds.like != null) {
+    const o = state.outfits[+ds.like];
+    if (o.likedId) { await dropLog(o.likedId); o.likedId = null; }
+    else { o.likedId = (await addLog({ kind: "like", itemIds: Object.values(o.pieces).filter(Boolean).map((p) => p.id), ...outfitContext(), source: "idea" })).id; toast("Liked. More ideas like this one."); }
+    return render();
+  }
+  if (ds.likeids) {
+    if (t.getAttribute("aria-pressed") === "true") return;
+    await addLog({ kind: "like", itemIds: ds.likeids.split(","), ...outfitContext(), source: "stylist" });
+    t.setAttribute("aria-pressed", "true");
+    return toast("Liked. Outfit ideas will lean this way.");
+  }
+  if (ds.skip != null) { state.outfits[+ds.skip].asking = !ds.cancel; return render(); }
+  if (ds.skipwhy) {
+    const [i, reason] = ds.skipwhy.split(":");
+    const o = state.outfits[+i];
+    await addLog({ kind: "skip", reason, itemIds: Object.values(o.pieces).filter(Boolean).map((p) => p.id), ...outfitContext() });
+    replaceOutfit(+i);
+    toast(reason === "today" ? "Okay, here's another idea" : "Got it. Here's another idea");
+    return render();
+  }
   if (ds.wear != null) {
     const o = state.outfits[+ds.wear];
-    await wearOutfit([...Object.values(o.pieces), ...(o.extras || [])].filter(Boolean));
+    await wearOutfit([...Object.values(o.pieces), ...(o.extras || [])].filter(Boolean), { source: "idea" });
     toast("Logged. Enjoy your day!");
     generateOutfits();
     return render();
   }
   if (ds.wearids) {
     const items = ds.wearids.split(",").map((id) => state.items.find((i) => i.id === id)).filter(Boolean);
-    await wearOutfit(items);
+    await wearOutfit(items, { source: "stylist" });
     toast("Logged. Enjoy your day!");
     state.outfits = [];
     return render();
@@ -2910,6 +3257,15 @@ document.addEventListener("click", async (e) => {
     toast(`Logged ${it.name}`);
     state.outfits = [];
     return openItem(it.id);
+  }
+  if (ds.setfit) {
+    const [id, fit] = ds.setfit.split(":");
+    const it = state.items.find((i) => i.id === id);
+    it.fit = it.fit === fit ? "" : fit;
+    await store.put("items", it);
+    state.outfits = [];
+    openItem(it.id);
+    return render();
   }
   if (ds.fav) {
     const it = state.items.find((i) => i.id === ds.fav);
@@ -2924,7 +3280,7 @@ document.addEventListener("click", async (e) => {
       ...newDraft(), ...it,
       photos: (it.photos || []).map((p, k) => (it.originals?.[k] ? { ...newPhoto(it.originals[k]), cutSrc: p, cut: p, useCut: true, manual: true } : { ...newPhoto(p), manual: true })),
       active: 0, tags: (it.tags || []).join(", "), colors: [...(it.colors || [])], styles: [...(it.styles || [])], stylesTouched: true,
-      notes: it.notes || "", brand: it.brand || "",
+      notes: it.notes || "", brand: it.brand || "", fit: it.fit || "",
     };
     queue = [];
     pendingShots = [];
@@ -2958,6 +3314,8 @@ document.addEventListener("click", async (e) => {
     if (!state.wishlist.some((w) => w.title === s.title)) { state.wishlist.push(s); await saveWishlist(); toast("Saved to wishlist"); }
     return render();
   }
+  if (ds.findbrand != null) { state.find.brand = state.find.brand === ds.findbrand ? "" : ds.findbrand; return render(); }
+  if (ds.findfit) { state.find.fit = state.find.fit === ds.findfit ? "" : ds.findfit; return render(); }
   if (ds.wishbuy) {
     const w = JSON.parse(ds.wishbuy);
     if (!state.wishlist.some((x) => x.title === w.title)) { state.wishlist.push(w); await saveWishlist(); toast("Saved to wishlist"); }
@@ -2982,7 +3340,7 @@ document.addEventListener("click", async (e) => {
 
   switch (ds.act) {
     case "seed": return loadSeed();
-    case "shuffle": generateOutfits(); return render();
+    case "shuffle": generateOutfits(3, state.outfits.map((o) => o.key)); return render();
     case "autotemp": e.preventDefault(); state.manualTemp = null; generateOutfits(); return render();
     case "shoot": addingExtraPhoto = false; return startShooting();
     case "shoot-done": { const shots = pendingShots; pendingShots = []; return startDraft(shots); }
@@ -3003,6 +3361,20 @@ document.addEventListener("click", async (e) => {
     case "scan-tag": return aiReady() ? tagInput.click() : toast(NO_AI);
     case "cut-all": return cutAll();
     case "recognise-all": return recogniseAll();
+    case "fit-all": return fitAll();
+    case "find": return findIt();
+    case "find-ai": {
+      const b = state.find.shown;
+      return ask(`I'm thinking of buying: ${b.title}. Is it a good addition to my wardrobe? Which colour and version would work best with what I own, and what would I wear it with? If something else would suit me better, say so.`, "find-ai");
+    }
+    case "forget-taste": {
+      const learnt = state.log.filter((l) => logKind(l) !== "wear");
+      if (!(await confirmBox(`Forget ${learnt.length} likes and skips? What you wore stays.`, "Forget them"))) return render();
+      for (const l of learnt) await dropLog(l.id);
+      state.outfits = [];
+      toast("Likes and skips forgotten");
+      return render();
+    }
     case "ask": return ask($('[data-input="ask"]')?.value);
     case "savekey":
       state.settings.apiKey = $('[data-input="apikey"]').value.trim(); anthropicClient = null;
@@ -3060,6 +3432,7 @@ document.addEventListener("input", (e) => {
     else render();
     return;
   }
+  if (k === "findq" || k === "findbrand") { state.find[k === "findq" ? "q" : "brand"] = v; return; }
   if (k === "temp") {
     state.manualTemp = +v;
     clearTimeout(e.target._t);
@@ -3079,6 +3452,7 @@ document.addEventListener("input", (e) => {
 document.addEventListener("keydown", (e) => {
   if (e.key === "Enter" && e.target.dataset.input === "ask") ask(e.target.value);
   if (e.key === "Enter" && e.target.dataset.input === "city") $('[data-act="city"]').click();
+  if (e.key === "Enter" && ["findq", "findbrand"].includes(e.target.dataset.input)) findIt();
   if (e.key === "Escape") { closeSheet(); if (cam.stream) { cam.shots = []; stopCamera(); } }
 });
 
