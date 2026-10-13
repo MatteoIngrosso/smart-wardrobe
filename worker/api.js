@@ -1,7 +1,9 @@
 // Smart Wardrobe on Cloudflare Workers: the same sync API as server.py, kept in a D1
 // database, plus a pass-through to Gemini and Claude so API keys never reach a device.
-// The app's files are served as static assets (wrangler.jsonc); only /api/* runs here.
+// The app's files are served from the assets in this repository (wrangler.jsonc), but
+// only after you sign in with the password.
 //
+//     GET  /login, POST /login, GET /logout   the password page
 //     GET  /api/ping                      {"ok": true, "rev": n, "sync": bool, "keys": {...}}
 //     GET  /api/changes?since=r&wait=s    records changed after rev r; waits up to s seconds
 //     POST /api/records                   {"records": [...]}, the newest updatedAt wins
@@ -12,33 +14,39 @@
 //
 // Settings (see README, "Putting it online"):
 //     DB            D1 database binding, created on the first deploy (wrangler.jsonc)
-//     ACCESS_TEAM   Cloudflare Access team name (the part before .cloudflareaccess.com)
-//     ACCESS_AUD    Application Audience (AUD) tag of the Access application
+//     APP_PASSWORD  secret: the password for the sign-in page. Without it nothing is served.
 //     GEMINI_KEY    optional secret
 //     CLAUDE_KEY    optional secret
-//
-// Every request must carry a valid Cloudflare Access login. Without ACCESS_TEAM and
-// ACCESS_AUD the API answers nothing, so the wardrobe and keys are never open to the web.
 
 const COLS = new Set(["items", "log", "kv"]);
 const BLOB_KEY = /^[0-9a-z-]{4,80}\.(jpg|webp|png|bin)$/;
 const BLOB_TYPE = { jpg: "image/jpeg", webp: "image/webp", png: "image/png", bin: "application/octet-stream" };
 const MAX_BLOB = 1_900_000; // a D1 row holds up to 2 MB; photos are resized to 1100 px, far below that
 const MAX_BODY = 25 * 1024 * 1024;
+const PUBLIC = new Set(["/manifest.webmanifest", "/icon.svg"]); // browsers fetch these without cookies
+const SESSION_DAYS = 365;
+const MAX_TRIES = 10; // wrong passwords per address before a 15-minute pause
+const PAUSE_MS = 15 * 60_000;
 
 const json = (obj, status = 200) =>
   new Response(JSON.stringify(obj), { status, headers: { "Content-Type": "application/json", "Cache-Control": "no-store" } });
 const fail = (status, error) => json({ error }, status);
+const redirect = (to, cookie) => new Response(null, { status: 303, headers: { Location: to, "Cache-Control": "no-store", ...(cookie ? { "Set-Cookie": cookie } : {}) } });
 
 export default {
-  fetch(request, env) {
-    if (new URL(request.url).pathname.startsWith("/api/")) return handleApi(request, env);
+  async fetch(request, env) {
+    const url = new URL(request.url);
+    if (PUBLIC.has(url.pathname)) return env.ASSETS.fetch(request);
+    if (!env.APP_PASSWORD) return loginPage(503, "", "Almost there: add the APP_PASSWORD secret in the Worker's settings, then reload.");
+    if (url.pathname === "/login") return request.method === "POST" ? login(request, env) : loginPage(200);
+    if (url.pathname === "/logout") return redirect("/login", sessionCookie("", 0));
+    if (!(await signedIn(request, env))) return url.pathname.startsWith("/api/") ? fail(401, "Sign in first.") : redirect("/login");
+    if (url.pathname.startsWith("/api/")) return handleApi(request, env);
     return env.ASSETS.fetch(request);
   },
 };
 
 export async function handleApi(request, env) {
-  if (!(await signedIn(request, env))) return fail(403, "Sign in through Cloudflare Access first.");
   const path = new URL(request.url).pathname.slice("/api/".length);
   const method = request.method;
   try {
@@ -64,44 +72,72 @@ export async function handleApi(request, env) {
   }
 }
 
-/* ---------- Sign-in (Cloudflare Access) ---------- */
+/* ---------- Sign-in (one password, kept as a Cloudflare secret) ---------- */
 
-let certs = { team: "", at: 0, keys: [] };
-const b64url = (s) => Uint8Array.from(atob(s.replace(/-/g, "+").replace(/_/g, "/").padEnd(Math.ceil(s.length / 4) * 4, "=")), (c) => c.charCodeAt(0));
-
-async function accessKeys(team, refresh) {
-  if (refresh || certs.team !== team || Date.now() - certs.at > 3600_000) {
-    const r = await fetch(`https://${team}.cloudflareaccess.com/cdn-cgi/access/certs`);
-    if (!r.ok) throw new Error("Couldn't load the Cloudflare Access keys");
-    certs = { team, at: Date.now(), keys: (await r.json()).keys || [] };
-  }
-  return certs.keys;
-}
+// A session is "<expiry>.<signature>", signed with a key made from the password, so changing
+// the password signs every device out.
+const enc = new TextEncoder();
+const hmacKey = (secret) => crypto.subtle.importKey("raw", enc.encode(secret), { name: "HMAC", hash: "SHA-256" }, false, ["sign", "verify"]);
+const toHex = (buf) => [...new Uint8Array(buf)].map((b) => b.toString(16).padStart(2, "0")).join("");
+const fromHex = (hex) => new Uint8Array((hex.match(/../g) || []).map((h) => parseInt(h, 16)));
+const sessionCookie = (value, maxAge) => `wardrobe_session=${value}; Path=/; HttpOnly; Secure; SameSite=Lax; Max-Age=${maxAge}`;
 
 async function signedIn(request, env) {
-  const host = new URL(request.url).hostname;
-  if (host === "localhost" || host === "127.0.0.1") return true; // `wrangler dev` on your own computer
-  const team = String(env.ACCESS_TEAM || "").replace(/^https?:\/\//, "").replace(/\.cloudflareaccess\.com.*$/, "").replace(/\/.*$/, "");
-  const aud = String(env.ACCESS_AUD || "").trim();
-  if (!team || !aud) return false;
-  const cookie = (request.headers.get("Cookie") || "").match(/(?:^|;\s*)CF_Authorization=([^;]+)/);
-  const token = request.headers.get("Cf-Access-Jwt-Assertion") || cookie?.[1];
-  if (!token) return false;
-  try {
-    const [h, p, sig] = token.split(".");
-    const header = JSON.parse(new TextDecoder().decode(b64url(h)));
-    const claims = JSON.parse(new TextDecoder().decode(b64url(p)));
-    if (header.alg !== "RS256") return false;
-    let jwk = (await accessKeys(team)).find((k) => k.kid === header.kid);
-    if (!jwk) jwk = (await accessKeys(team, true)).find((k) => k.kid === header.kid);
-    if (!jwk) return false;
-    const key = await crypto.subtle.importKey("jwk", jwk, { name: "RSASSA-PKCS1-v1_5", hash: "SHA-256" }, false, ["verify"]);
-    const ok = await crypto.subtle.verify("RSASSA-PKCS1-v1_5", key, b64url(sig), new TextEncoder().encode(`${h}.${p}`));
-    const auds = Array.isArray(claims.aud) ? claims.aud : [claims.aud];
-    return ok && auds.includes(aud) && claims.iss === `https://${team}.cloudflareaccess.com` && claims.exp * 1000 > Date.now();
-  } catch {
-    return false;
+  const m = (request.headers.get("Cookie") || "").match(/(?:^|;\s*)wardrobe_session=(\d+)\.([0-9a-f]{64})(?:;|$)/);
+  if (!m || Number(m[1]) < Date.now()) return false;
+  return crypto.subtle.verify("HMAC", await hmacKey(`session:${env.APP_PASSWORD}`), fromHex(m[2]), enc.encode(m[1]));
+}
+
+async function login(request, env) {
+  const ip = request.headers.get("CF-Connecting-IP") || "local";
+  const db = env.DB;
+  if (db) {
+    await ready(db);
+    const row = await db.prepare("SELECT n, at FROM login_fails WHERE ip = ?").bind(ip).first();
+    if (row && row.n >= MAX_TRIES && Date.now() - row.at < PAUSE_MS) return loginPage(429, "", "Too many wrong passwords. Try again in 15 minutes.");
   }
+  const given = String((await request.formData().catch(() => null))?.get("password") || "");
+  // Compare signatures instead of the strings themselves, so the time taken gives nothing away.
+  const k = await hmacKey("password-check");
+  const ok = await crypto.subtle.verify("HMAC", k, await crypto.subtle.sign("HMAC", k, enc.encode(env.APP_PASSWORD)), enc.encode(given));
+  if (!ok) {
+    if (db) {
+      await db.prepare(`INSERT INTO login_fails (ip, n, at) VALUES (?1, 1, ?2)
+        ON CONFLICT (ip) DO UPDATE SET n = CASE WHEN ?2 - at > ${PAUSE_MS} THEN 1 ELSE n + 1 END, at = ?2`).bind(ip, Date.now()).run();
+    }
+    await new Promise((r) => setTimeout(r, 800));
+    return loginPage(401, "That password isn't right.");
+  }
+  if (db) await db.prepare("DELETE FROM login_fails WHERE ip = ?").bind(ip).run();
+  const exp = String(Date.now() + SESSION_DAYS * 864e5);
+  const sig = toHex(await crypto.subtle.sign("HMAC", await hmacKey(`session:${env.APP_PASSWORD}`), enc.encode(exp)));
+  return redirect("/", sessionCookie(`${exp}.${sig}`, SESSION_DAYS * 86400));
+}
+
+function loginPage(status, error = "", note = "") {
+  const esc = (t) => t.replace(/[&<>"]/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" })[c]);
+  return new Response(`<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Smart Wardrobe</title><link rel="icon" href="/icon.svg"><meta name="theme-color" content="#f4efe8">
+<style>
+  :root { color-scheme: light dark; --bg: #f4efe8; --card: #fffaf3; --text: #1f1a14; --muted: #6f6558; --line: #e4dbcf; --accent: #b8782e; }
+  @media (prefers-color-scheme: dark) { :root { --bg: #16130f; --card: #211c17; --text: #f3ece3; --muted: #a99d8e; --line: #3a3229; } }
+  * { box-sizing: border-box; }
+  body { margin: 0; min-height: 100vh; display: grid; place-items: center; padding: 16px; background: var(--bg); color: var(--text); font: 16px/1.45 system-ui, -apple-system, "Segoe UI", sans-serif; }
+  form { width: min(380px, 100%); background: var(--card); border: 1px solid var(--line); border-radius: 22px; padding: 28px; display: grid; gap: 14px; }
+  h1 { margin: 0; font-size: 1.5rem; }
+  p { margin: 0; color: var(--muted); }
+  input { font: inherit; padding: 14px 16px; border-radius: 14px; border: 1px solid var(--line); background: var(--bg); color: var(--text); }
+  button { font: inherit; font-weight: 600; padding: 14px; border: 0; border-radius: 999px; background: var(--accent); color: #fff; cursor: pointer; }
+  .error { color: #c0392b; }
+</style></head><body>
+<form method="post" action="/login">
+  <h1>Smart Wardrobe</h1>
+  ${note ? `<p>${esc(note)}</p>` : `<p>Enter your password. This device then stays signed in for a year.</p>
+  <input type="password" name="password" autocomplete="current-password" aria-label="Password" placeholder="Password" required autofocus>
+  ${error ? `<p class="error">${esc(error)}</p>` : ""}
+  <button type="submit">Open my wardrobe</button>`}
+</form></body></html>`, { status, headers: { "Content-Type": "text/html; charset=utf-8", "Cache-Control": "no-store" } });
 }
 
 /* ---------- Sync ---------- */
@@ -113,6 +149,7 @@ function ready(db) {
       rev INTEGER NOT NULL, updatedAt TEXT NOT NULL, deleted INTEGER NOT NULL DEFAULT 0, data TEXT)`),
     db.prepare("CREATE INDEX IF NOT EXISTS records_rev ON records (rev)"),
     db.prepare("CREATE TABLE IF NOT EXISTS blobs (key TEXT PRIMARY KEY, type TEXT NOT NULL, body BLOB NOT NULL)"),
+    db.prepare("CREATE TABLE IF NOT EXISTS login_fails (ip TEXT PRIMARY KEY, n INTEGER NOT NULL, at INTEGER NOT NULL)"),
   ]).catch((e) => { schema = null; throw e; });
   return schema;
 }
