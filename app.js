@@ -2742,6 +2742,10 @@ async function importBackup() {
       for (const i of data.items || []) {
         i.photos = await toBlobs(i.photos);
         if (i.originals) i.originals = await toBlobs(i.originals);
+        // Older versions gave sample pieces random ids: keep the backup's copy, not a second one.
+        for (const dup of (await store.all("items")).filter((x) => i.seedKey && x.seedKey === i.seedKey && x.id !== i.id)) {
+          await store.del("items", dup.id);
+        }
         await store.put("items", i);
       }
       for (const l of data.log || []) { delete l.id; await store.put("log", l); }
