@@ -47,16 +47,29 @@ const CATS = [
   { id: "tie", label: "Tie", slot: "acc", warmth: 1, styles: ["smart", "formal"] },
   { id: "umbrella", label: "Umbrella", slot: "acc", warmth: 1, styles: [] },
   { id: "accessory", label: "Other accessory", slot: "acc", warmth: 1, styles: [] },
+  // Gym: its own section. `role` says where each piece goes in a gym outfit.
+  { id: "gym-top", label: "Gym T-shirt", slot: "gym", role: "base", warmth: 1, styles: ["sporty"] },
+  { id: "tank-top", label: "Tank top", slot: "gym", role: "base", warmth: 1, styles: ["sporty"] },
+  { id: "long-sleeve-top", label: "Long-sleeve top", slot: "gym", role: "base", warmth: 2, styles: ["sporty"] },
+  { id: "sports-bra", label: "Sports bra", slot: "gym", role: "base", warmth: 1, styles: ["sporty"] },
+  { id: "gym-hoodie", label: "Training hoodie", slot: "gym", role: "mid", warmth: 3, styles: ["sporty"] },
+  { id: "track-jacket", label: "Track jacket", slot: "gym", role: "mid", warmth: 2, styles: ["sporty"] },
+  { id: "gym-shorts", label: "Gym shorts", slot: "gym", role: "bottom", warmth: 1, styles: ["sporty"] },
+  { id: "leggings", label: "Leggings", slot: "gym", role: "bottom", warmth: 2, styles: ["sporty"] },
+  { id: "track-pants", label: "Track pants", slot: "gym", role: "bottom", warmth: 2, styles: ["sporty"] },
+  { id: "training-shoes", label: "Training shoes", slot: "gym", role: "shoes", warmth: 2, styles: ["sporty"] },
+  { id: "gym-bag", label: "Gym bag", slot: "gym", role: "acc", warmth: 1, styles: ["sporty"] },
+  { id: "gym-gear", label: "Gym accessory", slot: "gym", role: "acc", warmth: 1, styles: ["sporty"] },
   { id: "underwear", label: "Underwear", slot: "under", warmth: 1, styles: [] },
   { id: "socks", label: "Socks", slot: "under", warmth: 1, styles: [] },
 ];
 const CAT = Object.fromEntries(CATS.map((c) => [c.id, c]));
 const SLOTS = {
   base: "T-shirts & shirts", mid: "Hoodies & knits", outer: "Outerwear",
-  bottom: "Bottoms", shoes: "Shoes", head: "Headwear", acc: "Accessories", under: "Underwear & socks",
+  bottom: "Bottoms", shoes: "Shoes", head: "Headwear", acc: "Accessories", gym: "Gym", under: "Underwear & socks",
 };
 // How many pieces per slot make a comfortable rotation.
-const SLOT_TARGET = { base: 6, mid: 4, outer: 2, bottom: 4, shoes: 3, head: 0, acc: 0, under: 0 };
+const SLOT_TARGET = { base: 6, mid: 4, outer: 2, bottom: 4, shoes: 3, head: 0, acc: 0, gym: 0, under: 0 };
 
 const COLORS = {
   black: { hex: "#1c1c1c", neutral: true, tone: "dark" },
@@ -147,7 +160,11 @@ const OCCASIONS = [
   { id: "work", label: "Work / meeting", target: 2.9, likes: ["smart", "smart casual", "preppy", "formal", "minimal"] },
   { id: "night", label: "Night out", target: 2.1, likes: ["streetwear", "luxury", "smart casual", "minimal", "smart"] },
   { id: "event", label: "Elegant", target: 3.4, likes: ["formal", "smart", "luxury"] },
+  { id: "gym", label: "Gym", target: 1, likes: ["sporty", "outdoor", "casual"] },
 ];
+// Gym outfits use gym pieces; until there are some for a role, everyday sporty ones stand in.
+// A jacket over the top only comes from the everyday outerwear (cold or rainy days).
+const GYM_FALLBACK = { base: ["tshirt"], mid: ["hoodie", "zip-hoodie", "sweatshirt"], outer: ["rain", "puffer", "jacket"], bottom: ["shorts", "joggers"], shoes: ["sneakers"] };
 const SEED_VERSION = 3;
 
 /* ======================================================================
@@ -557,6 +574,8 @@ const uid = () => (crypto.randomUUID ? crypto.randomUUID() : Date.now().toString
 const today = () => new Date().toISOString().slice(0, 10);
 const daysSince = (iso) => (iso ? Math.floor((Date.now() - new Date(iso).getTime()) / 864e5) : Infinity);
 const slotOf = (item) => CAT[item.category]?.slot || "acc";
+// Where a piece goes in an outfit: its section, or for gym pieces their role (top, bottom, shoes…).
+const roleOf = (item) => CAT[item.category]?.role || slotOf(item);
 const catLabel = (id) => CAT[id]?.label || id;
 const styleLabel = (s) => STYLES[s]?.label || s;
 const cap = (s) => s.charAt(0).toUpperCase() + s.slice(1);
@@ -1112,7 +1131,7 @@ function scoreOutfit(o, cond, occ) {
 
   // Warmth / layering
   const { feels, wet } = cond;
-  const warmth = pieces.filter((p) => ["base", "mid", "outer"].includes(slotOf(p))).reduce((a, p) => a + (p.warmth || 2), 0);
+  const warmth = pieces.filter((p) => ["base", "mid", "outer"].includes(roleOf(p))).reduce((a, p) => a + (p.warmth || 2), 0);
   const want = feels >= 24 ? 1 : feels >= 19 ? 2.5 : feels >= 14 ? 3.5 : feels >= 8 ? 6 : feels >= 2 ? 8 : 9.5;
   s -= Math.abs(warmth - want) * 0.7;
   // Too hot for a hoodie or knit (outfits with more pieces collect more style points, so say it clearly).
@@ -1125,8 +1144,8 @@ function scoreOutfit(o, cond, occ) {
     if (wet && o.outer.category === "rain") { s += 1.5; reasons.push("Rain jacket for the showers"); }
   }
   if (o.bottom) {
-    const shorts = o.bottom.category === "shorts";
-    if (shorts && feels < 17) s -= 5;
+    const shorts = /shorts/.test(o.bottom.category);
+    if (shorts && feels < 17) s -= o.bottom.category === "gym-shorts" ? 1 : 5; // you train indoors in gym shorts
     else if (shorts && feels >= 23) { s += 1; reasons.push(`Shorts weather at ${fmtTemp(feels)}`); }
     else if (!shorts && feels >= 27) s -= 1.5;
   }
@@ -1166,10 +1185,12 @@ function scoreOutfit(o, cond, occ) {
 }
 
 function generateOutfits(n = 3) {
-  const by = { base: [], mid: [], outer: [], bottom: [], shoes: [] };
-  for (const it of state.items) if (by[slotOf(it)]) by[slotOf(it)].push(it);
-  const cond = conditions();
   const occ = OCCASIONS.find((o) => o.id === state.occasion);
+  const gym = occ.id === "gym";
+  const by = { base: [], mid: [], outer: [], bottom: [], shoes: [] };
+  for (const it of state.items) if (by[roleOf(it)] && (slotOf(it) === "gym") === gym) by[roleOf(it)].push(it);
+  if (gym) for (const [role, cats] of Object.entries(GYM_FALLBACK)) if (!by[role].length) by[role] = state.items.filter((i) => cats.includes(i.category));
+  const cond = conditions();
   const pick = (arr) => arr[Math.floor(Math.random() * arr.length)];
   const wantMid = cond.feels < 20 || by.base.length === 0;
   const wantOuter = cond.feels < 15 || cond.wet;
@@ -1234,6 +1255,7 @@ function extrasFor(pieces, cond, occ, used) {
     if (!smart) needs.push([["cap", "bucket-hat"], ""]);
     needs.push([["sunglasses"], ""]);
   }
+  if (occ.id === "gym") needs.push([["gym-bag", "backpack"], ""]);
   needs.push([["watch"], ""]);
   const bottom = pieces.bottom?.category;
   if (smart && ["trousers", "jeans"].includes(bottom)) needs.push([["belt"], ""]);
@@ -1611,9 +1633,13 @@ const KIND_ICON = {
   socks: "M8.5 2.5h6v9.5l3.3 3.3a3 3 0 0 1-4.2 4.2l-4.2-4.2c-.6-.6-.9-1.3-.9-2.1zM8.5 6h6",
   underwear: "M3 6.5h18v3l-1.2 8.5h-5.6L12 13l-2.2 5H4.2L3 9.5zM3 9.5h18",
   hanger: "M12 7.5a2 2 0 1 1 2-2M12 7.5v1L3.3 14.6c-.7.5-.4 1.4.5 1.4h16.4c.9 0 1.2-.9.5-1.4L12 8.5",
+  dumbbell: "M6.5 6.5v11M3.5 9v6M17.5 6.5v11M20.5 9v6M6.5 12h11",
 };
 // What a suggested buy would be saved as, from its words: [pattern, type, icon]. First match wins.
 const BUY_KINDS = [
+  [/leggings|tights/, "leggings", "trousers"], [/sports bra/, "sports-bra", "tee"], [/gym bag|duffel/, "gym-bag", "bag"],
+  [/track jacket/, "track-jacket", "jacket"], [/track pants|tracksuit bottoms/, "track-pants", "trousers"],
+  [/training shoes|gym shoes|running shoes/, "training-shoes", "shoe"], [/lifting|wrist wraps|gym gloves|resistance band/, "gym-gear", "dumbbell"],
   [/hoodie/, "hoodie", "hoodie"], [/sweatshirt|crewneck/, "sweatshirt", "hoodie"],
   [/knit|sweater|jumper|cardigan|merino|cashmere/, "sweater", "knit"],
   [/overshirt|shacket/, "overshirt", "jacket"], [/puffer|down jacket/, "puffer", "coat"],
@@ -1639,7 +1665,7 @@ function buyKind(title) {
   const k = BUY_KINDS.find(([re]) => re.test(title.toLowerCase()));
   return k ? { cat: k[1], icon: k[2] } : { cat: "accessory", icon: "hanger" };
 }
-const SLOT_ICON = { base: "tee", mid: "hoodie", outer: "jacket", bottom: "trousers", shoes: "shoe", head: "cap", acc: "watch", under: "socks" };
+const SLOT_ICON = { base: "tee", mid: "hoodie", outer: "jacket", bottom: "trousers", shoes: "shoe", head: "cap", acc: "watch", gym: "dumbbell", under: "socks" };
 const kindIcon = (name) => `<svg class="kind" viewBox="0 0 24 24" aria-hidden="true"><path d="${KIND_ICON[name] || KIND_ICON.hanger}"/></svg>`;
 
 // Pieces you own that would make an outfit with something you don't have yet: the best match per section.
@@ -1649,7 +1675,7 @@ function goesWith(title, n = 4) {
   const color = Object.keys(COLORS).sort((a, b) => b.length - a.length).find((c) => new RegExp(`\\b${c}\\b`).test(t));
   const ranked = pairingsFor({ id: "", category: cat, colors: color ? [color] : [], styles: CAT[cat]?.styles || [], tags: [] }, Infinity);
   const picks = [];
-  for (const o of ranked) if (["base", "mid", "outer", "bottom", "shoes"].includes(slotOf(o)) && !picks.some((p) => slotOf(p) === slotOf(o))) picks.push(o);
+  for (const o of ranked) if (["base", "mid", "outer", "bottom", "shoes"].includes(roleOf(o)) && !picks.some((p) => roleOf(p) === roleOf(o))) picks.push(o);
   return picks.slice(0, n);
 }
 
@@ -1731,7 +1757,7 @@ const TAG_SCHEMA = {
   required: ["name", "category", "colors", "brand", "styles", "warmth", "tags", "front_top", "back_top"],
   properties: {
     name: { type: "string", description: "Short name, e.g. 'Navy cable-knit sweater'" },
-    category: { type: "string", enum: CATS.map((c) => c.id) },
+    category: { type: "string", enum: CATS.map((c) => c.id), description: "Use the gym types (gym-top, leggings, training-shoes…) only for clothes made for training" },
     colors: { type: "array", items: { type: "string", enum: Object.keys(COLORS) }, description: "Main colour first, at most 3" },
     brand: { type: "string", description: "Brand from a visible logo, label or very distinctive design; empty if unsure" },
     styles: { type: "array", items: { type: "string", enum: Object.keys(STYLES) }, description: "1 to 3 styles, best first" },
@@ -1954,7 +1980,7 @@ function pairingsFor(item, limit = 6) {
   const graphic = (item.tags || []).some((t) => /graphic|statement/.test(t));
   const has = (x, st) => (x.styles || []).includes(st);
   return state.items
-    .filter((o) => o.id !== item.id && slotOf(o) !== slotOf(item) && slotOf(o) !== "under")
+    .filter((o) => o.id !== item.id && roleOf(o) !== roleOf(item) && slotOf(o) !== "under" && (slotOf(o) !== "gym" || slotOf(item) === "gym"))
     .map((o) => {
       const oc = o.colors?.[0];
       let s = COLORS[oc]?.neutral ? 2 : accent ? -2 : 1;
