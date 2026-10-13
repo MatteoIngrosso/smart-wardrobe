@@ -1,0 +1,19 @@
+# Files that are part of the repository but not of the app
+.git
+.github
+.wrangler
+.assetsignore
+.gitignore
+.dev.vars
+wrangler.jsonc
+worker
+server.py
+tools
+data
+dist
+node_modules
+README.md
+*.pem
+*.key
+package.json
+package-lock.json

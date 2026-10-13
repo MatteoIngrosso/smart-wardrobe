@@ -1,0 +1,12 @@
+{
+  "name": "smart-wardrobe",
+  "private": true,
+  "description": "Tools for running Smart Wardrobe on Cloudflare. The app itself needs no build or packages.",
+  "scripts": {
+    "dev": "wrangler dev",
+    "deploy": "wrangler deploy"
+  },
+  "devDependencies": {
+    "wrangler": "4.149.0"
+  }
+}

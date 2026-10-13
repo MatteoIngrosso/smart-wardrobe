@@ -221,6 +221,7 @@ const state = {
   occasion: "casual",
   manualTemp: null,
   previewAI: false, // true inside the Claude preview, where AI goes through the viewer's Claude account
+  serverKeys: {}, // {gemini, claude}: keys saved on the hosted server (Cloudflare), so this device needs none
   weather: null,
   outfits: [],
   aiAnswer: "",
@@ -499,7 +500,13 @@ async function syncLoop() {
           if (view === "settings") syncChanged();
           return;
         }
-        const { rev } = await ping.json();
+        const { rev, sync: shared, keys } = await ping.json();
+        state.serverKeys = keys || {};
+        if (shared === false) { // hosted without a database: AI keys on the server, wardrobe on this device
+          sync.status = "off";
+          syncReady();
+          return render();
+        }
         if (!sync.joined || rev < sync.rev) await joinServer(); // first visit, or the server's data was reset
         sync.status = "on";
         fails = 0;
@@ -535,10 +542,10 @@ document.addEventListener("focusout", () => setTimeout(() => {
 function syncLine() {
   const n = state.items.length, o = state.log.length;
   const pieces = `${n} piece${n === 1 ? "" : "s"} · ${o} outfit${o === 1 ? "" : "s"} logged`;
-  if (sync.status === "on") return `${pieces}. Shared live with every device that opens the app from the same computer${sync.dirty.size ? ` · sending ${sync.dirty.size} change${sync.dirty.size === 1 ? "" : "s"}…` : ""}.`;
+  if (sync.status === "on") return `${pieces}. Shared live with every device that opens the app from the same address${sync.dirty.size ? ` · sending ${sync.dirty.size} change${sync.dirty.size === 1 ? "" : "s"}…` : ""}.`;
   if (sync.status === "offline") return `${pieces}. Can't reach the sync server right now; changes are kept here and sent when it's back${sync.dirty.size ? ` (${sync.dirty.size} waiting)` : ""}.`;
   if (sync.status === "connecting") return `${pieces}. Connecting to the sync server…`;
-  return `${pieces}. Stored on this device only. Start the app with <code>python3 server.py</code> to share one wardrobe between devices.`;
+  return `${pieces}. Stored on this device only. Start the app with <code>python3 server.py</code>, or put it online (see the README), to share one wardrobe between devices.`;
 }
 
 /* ======================================================================
@@ -1355,7 +1362,8 @@ const PROVIDERS = { gemini: "Gemini (Google)", claude: "Claude (Anthropic)", off
 function aiReady() {
   const s = state.settings;
   if (s.aiProvider === "off") return false;
-  return state.previewAI || (s.aiProvider === "gemini" && !!s.geminiKey) || (s.aiProvider === "claude" && !!s.apiKey);
+  return state.previewAI || (s.aiProvider === "gemini" && !!(s.geminiKey || state.serverKeys.gemini)) ||
+    (s.aiProvider === "claude" && !!(s.apiKey || state.serverKeys.claude));
 }
 const aiName = () => (state.previewAI || state.settings.aiProvider === "claude" ? "Claude" : "Gemini");
 const NO_AI = "Add a Gemini or Claude API key in Settings to use this.";
@@ -1414,11 +1422,15 @@ async function geminiGenerate({ system, text, image, schema, maxTokens }) {
       ...(schema ? { responseMimeType: "application/json", responseSchema: toGeminiSchema(schema) } : {}),
     },
   };
-  const call = (b) => fetch(`https://generativelanguage.googleapis.com/v1beta/models/${encodeURIComponent(geminiModel || "gemini-flash-latest")}:generateContent`, {
-    method: "POST",
-    headers: { "Content-Type": "application/json", "x-goog-api-key": geminiKey },
-    body: JSON.stringify(b),
-  });
+  const model = encodeURIComponent(geminiModel || "gemini-flash-latest");
+  // With the key saved on the server, the request goes through it and this device never holds the key.
+  const call = (b) => state.serverKeys.gemini
+    ? fetch(`api/ai/gemini/${model}`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(b) })
+    : fetch(`https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json", "x-goog-api-key": geminiKey },
+      body: JSON.stringify(b),
+    });
   let res = await call(body);
   if (res.status === 400) {
     // Some models don't accept a thinking budget; retry with the model's default.
@@ -1436,11 +1448,17 @@ async function geminiGenerate({ system, text, image, schema, maxTokens }) {
 
 // --- Claude (official SDK) ---
 const CLAUDE_MODEL = "claude-opus-5-5";
-let anthropicClient;
+let anthropicClient, anthropicFor;
 async function claudeClient() {
-  if (!anthropicClient || anthropicClient.apiKey !== state.settings.apiKey) {
+  // With the key saved on the server, the SDK talks to it and the server adds the key.
+  const viaServer = !!state.serverKeys.claude;
+  const want = viaServer ? "server" : state.settings.apiKey;
+  if (!anthropicClient || anthropicFor !== want) {
     const { default: Anthropic } = await import("https://esm.sh/@anthropic-ai/sdk@0.133.0");
-    anthropicClient = new Anthropic({ apiKey: state.settings.apiKey, dangerouslyAllowBrowser: true });
+    anthropicClient = viaServer
+      ? new Anthropic({ apiKey: "kept-on-server", baseURL: new URL("api/ai/claude", location.href).href, dangerouslyAllowBrowser: true })
+      : new Anthropic({ apiKey: state.settings.apiKey, dangerouslyAllowBrowser: true });
+    anthropicFor = want;
   }
   return anthropicClient;
 }
@@ -2567,17 +2585,22 @@ function renderSettings() {
         <p class="muted small" style="margin:0">Optional. Used to recognise brand and style from a new photo (once per piece) and to answer stylist questions. Daily outfits, cut-outs and style from known brands work without it.</p>
         ${state.previewAI && prov !== "off" ? `<p class="small" style="margin:0;padding:10px 12px;border-radius:12px;background:var(--surface-2)">You're in the Claude preview, which blocks outside websites, so your ${prov === "claude" ? "Claude" : "Gemini"} key can't be used here. Here, recognition and the stylist answer through your Claude account instead (it asks you to allow it the first time). On the tablet the app uses your key.</p>` : ""}
         <div class="chips">${Object.entries(PROVIDERS).map(([k, l]) => `<button class="chip" aria-pressed="${prov === k}" data-provider="${k}">${l}</button>`).join("")}</div>
-        ${prov === "gemini" ? `
+        ${prov !== "off" && state.serverKeys[prov] ? `
+          <p class="small" style="margin:0;padding:10px 12px;border-radius:12px;background:var(--surface-2)">Your ${prov === "claude" ? "Claude" : "Gemini"} key is saved on your server, so it isn't stored on this device and nobody can read it from the app.</p>
+          ${(prov === "gemini" ? s.geminiKey : s.apiKey) ? `<div class="row"><button class="btn" data-act="forget-key">Remove the old key from this device</button></div>` : ""}` : ""}
+        ${prov === "gemini" ? `${state.serverKeys.gemini ? "" : `
           <div class="field"><label for="gemini-key">Gemini API key</label>
             <div class="row"><input id="gemini-key" class="input" style="flex:1;min-width:0" type="password" data-input="geminikey" value="${esc(s.geminiKey)}" placeholder="AIza…" autocomplete="off"><button class="btn primary" data-act="savegemini">Save</button></div>
             <span class="muted small">Create a free key at aistudio.google.com → Get API key. The Gemini app subscription does not include the API, but AI Studio has a free tier.</span>
-          </div>
+          </div>`}
           <div class="field"><label for="gemini-model">Model</label>
-            <input id="gemini-model" class="input" data-input="geminimodel" value="${esc(s.geminiModel)}" list="gemini-models" autocomplete="off">
+            ${state.serverKeys.gemini
+              ? `<div class="row"><input id="gemini-model" class="input" style="flex:1;min-width:0" data-input="geminimodel" value="${esc(s.geminiModel)}" list="gemini-models" autocomplete="off"><button class="btn primary" data-act="savemodel">Save</button></div>`
+              : `<input id="gemini-model" class="input" data-input="geminimodel" value="${esc(s.geminiModel)}" list="gemini-models" autocomplete="off">`}
             <datalist id="gemini-models"><option value="gemini-flash-latest"></option><option value="gemini-flash-lite-latest"></option><option value="gemini-pro-latest"></option></datalist>
             <span class="muted small">Flash is fast and cheap. Flash-Lite uses the fewest tokens. Pro gives the best styling answers.</span>
           </div>` : ""}
-        ${prov === "claude" ? `
+        ${prov === "claude" && !state.serverKeys.claude ? `
           <div class="field"><label for="apikey-input">Claude API key</label>
             <div class="row"><input id="apikey-input" class="input" style="flex:1;min-width:0" type="password" data-input="apikey" value="${esc(s.apiKey)}" placeholder="sk-ant-…" autocomplete="off"><button class="btn primary" data-act="savekey">Save</button></div>
             <span class="muted small">From console.anthropic.com. Stored only on this device.</span>
@@ -2922,6 +2945,12 @@ document.addEventListener("click", async (e) => {
       state.settings.geminiKey = $('[data-input="geminikey"]').value.trim();
       state.settings.geminiModel = $('[data-input="geminimodel"]').value.trim() || "gemini-flash-latest";
       await saveSettings(); toast(state.settings.geminiKey ? "Gemini key saved on this device" : "Gemini key removed"); return render();
+    case "savemodel":
+      state.settings.geminiModel = $('[data-input="geminimodel"]').value.trim() || "gemini-flash-latest";
+      await saveSettings(); toast("Model saved"); return render();
+    case "forget-key":
+      if (state.settings.aiProvider === "claude") { state.settings.apiKey = ""; anthropicClient = null; } else state.settings.geminiKey = "";
+      await saveSettings(); toast("Key removed from this device"); return render();
     case "city": {
       const q = $('[data-input="city"]').value.trim();
       if (!q) return;

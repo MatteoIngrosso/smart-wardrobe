@@ -1,6 +1,6 @@
 # Smart Wardrobe
 
-A touch-first web app for a self-built wardrobe tablet. It catalogues your clothes from two photos each (front and back), suggests outfits for the weather and the occasion, and points out what's worth buying next. It has no build step. Every device keeps its own copy of the wardrobe, so it works offline, and the small `server.py` keeps those copies in sync.
+A touch-first web app for a self-built wardrobe tablet. It catalogues your clothes from two photos each (front and back), suggests outfits for the weather and the occasion, and points out what's worth buying next. It has no build step. Every device keeps its own copy of the wardrobe, so it works offline, and a small sync server keeps those copies in sync: `server.py` on a computer at home, or the free Cloudflare Worker in `worker/` when the app is online.
 
 Plain HTML, CSS and JavaScript (ES modules), IndexedDB for storage, Open-Meteo for weather, and optional AI from Gemini or Claude.
 
@@ -20,15 +20,37 @@ The camera button and "Use this device's location" need **https** or **localhost
 
 ### Sharing one wardrobe between devices
 - Every device keeps a full copy in IndexedDB, so it keeps working when the computer is off. Changes made in the meantime are sent when the server is back.
-- Pieces, the wear log and the wishlist are shared. Settings, the weather city and API keys stay on each device.
+- Pieces, the wear log and the wishlist are shared. Settings and the weather city stay on each device. API keys stay on each device too, unless they're saved on the Cloudflare server (see below), in which case no device holds them.
 - If two devices change the same piece, the latest change wins.
 - Photos are uploaded once, named by a hash of their contents.
 - The first time a device connects, the server's copy wins for anything both have. Pieces only that device has are uploaded. Sample pieces already shared by another device aren't added twice.
 - Settings > Data shows whether the device is connected.
 
-### Putting it online
+### Putting it online (free, with Cloudflare)
 
-Live weather and Gemini need the app on a normal web address (they're blocked inside the Claude preview). The repository is private, and GitHub Pages only serves private repositories on a paid GitHub plan. Cloudflare Pages and Netlify can both deploy a private GitHub repository for free: connect the repository, leave the build command empty and set the output folder to the repository root.
+This puts the app on its own web address so it works from anywhere, with no computer left on at home. Everything below fits in Cloudflare's free plan.
+
+- **A Cloudflare Worker** called `smart-wardrobe` is connected to this private repository, and every push to `main` (every merged pull request) deploys it again. `wrangler.jsonc` holds its settings. The app's files are served as they are, and `.assetsignore` lists what is never served (the README, `server.py`, `worker/`…).
+- **`worker/api.js`** takes over from `server.py`. It offers the same sync API and keeps the shared wardrobe in **D1**, Cloudflare's free database: one table of records and one of photos. Cloudflare creates the database on the first deploy, and the tables are created on the first request. Every device still keeps its own copy, so the app works offline and sends its changes when it's back online.
+- **A password page** comes first. Until you sign in, the Worker shows nothing else: no app, photos, wardrobe or AI. After the right password, the device stays signed in for a year (a signed, HttpOnly cookie). After 10 wrong passwords from one address, the page pauses for 15 minutes. Changing the password signs every device out. Without a password set, the site shows only a "set APP_PASSWORD" message.
+- **The Gemini key** (and the Claude key, if you use it) is saved as a secret in Cloudflare. The app sends AI requests through `/api/ai/…` and the Worker adds the key, so no device stores it and nobody can read it from the app.
+
+**One-time setup** (Cloudflare dashboard → Compute → Workers & Pages → `smart-wardrobe`):
+1. **Connect the repository.** If the Worker already deploys from GitHub, this is done: Settings → Build should show `MatteoIngrosso/smart-wardrobe` on branch `main`. Leave the deploy command as `npx wrangler deploy`.
+2. **Add the secrets.** Settings → Variables and Secrets → Add, choosing type **Secret** for each:
+   - `APP_PASSWORD`: the password for the sign-in page. Make it long, for example four random words.
+   - `GEMINI_KEY`: your key from aistudio.google.com (optional `CLAUDE_KEY` the same way)
+3. **Open the site** (`https://smart-wardrobe.<your-account>.workers.dev`) on each device, sign in and use "Add to Home screen". Settings > Data should say the wardrobe is shared live, and Settings > AI should say the key is saved on your server. If a device still has an old key saved, tap **Remove the old key from this device**.
+
+To sign a device out, open `/logout` on it.
+
+**Moving your wardrobe over.** The browser keeps each address's data separately. Open the old app (`localhost:8000`), tap **Export backup**, then open the new address and tap **Import backup**. The imported pieces are sent to the online wardrobe and reach every device.
+
+**If sync stops.** When a sign-in expires (after a year) or the password changes, the app keeps working on its own copy and shows "Can't reach the sync server". Reload the page and sign in again; any changes waiting on the device are then sent.
+
+**Trying it on a computer.** Put `APP_PASSWORD=something` in a `.dev.vars` file (never committed), then `npm install` and `npm run dev`. That runs the site with a local database on `localhost:8787`.
+
+`server.py` still works the same way at home, for example on a Raspberry Pi in the wardrobe.
 
 The first time it opens, it loads your 30 sample pieces (17 tops and jackets from `Photos-1-001`, plus 13 shorts and trousers from the second batch). Their backgrounds are already removed. **Load sample wardrobe** in Settings loads them again.
 
@@ -76,7 +98,7 @@ The in-app camera needs https or localhost. Where it isn't available, the system
 - **With AI.** Gemini or Claude reads the photo once, reading the logo or label when one is visible, and returns type, colours, brand, 1 to 3 styles, warmth and tags as structured JSON. **Recognise pieces without a brand** in Settings does the same for pieces you already have.
 
 ### Optional AI: Gemini or Claude
-Choose the provider in Settings and paste a key. The key stays on the tablet.
+Choose the provider in Settings and paste a key; it stays on that device. Online, save the key in Cloudflare instead (see "Putting it online") and no device needs one.
 
 - **Gemini** (default model `gemini-flash-latest`; `gemini-flash-lite-latest` and `gemini-pro-latest` are listed too). Get a key at aistudio.google.com. A Gemini app subscription (Gemini Pro or Advanced) does **not** include API access, but AI Studio has a free tier that should cover the light use this app makes of it.
 - **Claude** uses `claude-opus-5-5` through the official `@anthropic-ai/sdk`.
@@ -95,6 +117,7 @@ Settings shows how many requests and tokens were used this month.
 ## Files
 - `index.html`, `styles.css`, `app.js`: the whole app
 - `server.py`: serves the app and keeps the shared wardrobe in `data/` (Python 3 standard library only)
+- `worker/api.js`, `wrangler.jsonc`, `.assetsignore`: the same sync API as a Cloudflare Worker, plus the AI pass-through that keeps keys off the devices
 - `sample/`: resized copies of your photos (`*.jpg`), their cut-outs (`cut/*.webp`) and `seed.js`, which holds the catalogue data for them
 - `manifest.webmanifest`, `icon.svg`: let you install the app on the home screen
 - `tools/build_preview.py`: builds a one-page copy in `dist/` for the Claude preview
@@ -102,9 +125,8 @@ Settings shows how many requests and tokens were used this month.
 ## How changes are made
 `main` always holds the working app. Every update goes on its own branch (for example `update/weather-offline`) with a pull request describing what changed, and is merged into `main` once it's checked.
 
-API keys are typed into Settings on the device and stored only there. They are never part of this repository.
+API keys are saved as secrets in Cloudflare, or typed into Settings on a device and stored only there. They are never part of this repository.
 
 ## Ideas for next steps
-- Sync away from home: today the devices share the wardrobe through the computer running `server.py` on the same Wi-Fi. A hosted backend (for example Supabase) would let the phone sync from anywhere
 - Calendar integration so outfit ideas match your events
 - Laundry status ("in the wash") so dirty pieces are left out of outfit ideas
