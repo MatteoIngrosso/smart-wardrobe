@@ -10,3 +10,5 @@ Thumbs.db
 *.key
 # Shared wardrobe kept by server.py (photos and data, never committed)
 data/
+# Cloudflare local dev state (wrangler)
+.wrangler/
