@@ -15,3 +15,5 @@ node_modules
 README.md
 *.pem
 *.key
+package.json
+package-lock.json

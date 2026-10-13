@@ -48,7 +48,7 @@ This puts the app on its own web address so it works from anywhere, with no comp
 
 **If sync stops.** When the sign-in expires (after a month), the app keeps working on its own copy and shows "Can't reach the sync server". Reload the page and sign in again; waiting changes are then sent.
 
-**Trying it on a computer.** `npx wrangler dev` runs the site with a local database on `localhost:8787`. The sign-in is only skipped on `localhost`.
+**Trying it on a computer.** `npm install`, then `npm run dev` runs the site with a local database on `localhost:8787`. The sign-in is only skipped on `localhost`.
 
 `server.py` still works the same way at home, for example on a Raspberry Pi in the wardrobe.
 
