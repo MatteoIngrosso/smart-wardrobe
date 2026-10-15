@@ -398,3 +398,7 @@ a.chip { text-decoration: none; }
 .toast-act { border: 0; background: none; color: inherit; text-decoration: underline; text-underline-offset: 3px; font-weight: 700; padding: 6px 4px; min-height: 40px; }
 .cal-link { gap: 12px; align-items: center; }
 details summary { cursor: pointer; }
+.art-tile { position: relative; }
+/* a product photo covers the drawing once it has loaded */
+.art-tile img.prod-img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: contain; background: #fff; opacity: 0; transition: opacity .2s; }
+.art-tile img.prod-img.ok { opacity: 1; }
