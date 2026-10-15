@@ -1331,8 +1331,8 @@ function generateOutfits(n = 3, avoid = []) {
   if (picks.length < n) picks.push(...pickIdeas(pool, n - picks.length, picks)); // small wardrobe: repeats are fine
   state.outfits = picks.map((c) => dressIdea(c, pool, used));
 }
-// Swapping one piece of an idea: the other pieces that could take its place, best fit with the
-// rest of the outfit first. A jacket, or one of two top layers, can also just be left off.
+// Swapping one piece of an idea: every other piece that could take its place, best fit with
+// the rest of the outfit first. A jacket, or one of two top layers, can also just be left off.
 function swapOptions(o, role) {
   const occ = OCCASIONS.find((x) => x.id === state.occasion);
   const cond = conditions(), t = taste();
@@ -1341,7 +1341,6 @@ function swapOptions(o, role) {
     .filter((p) => p.id !== cur?.id)
     .map((p) => ({ p, s: scoreOutfit({ ...o.pieces, [role]: p }, cond, occ, t).score }))
     .sort((a, b) => b.s - a.s)
-    .slice(0, 8)
     .map((x) => x.p);
   const canDrop = role === "outer" || (role === "mid" && o.pieces.base) || (role === "base" && o.pieces.mid);
   return { options, canDrop };
@@ -2186,9 +2185,16 @@ async function setAnchor(id) {
 function swapPicker(o, i) {
   const role = o.swapping;
   const { options, canDrop } = swapOptions(o, role);
+  // Every piece of this kind you own, best match first; with several types (jeans, shorts…)
+  // a chip per type narrows the list.
+  const cats = [...new Set(options.map((p) => p.category))];
+  const cat = cats.includes(o.swapCat) ? o.swapCat : "all";
+  const shown = options.filter((p) => cat === "all" || p.category === cat);
+  const top = new Set(options.slice(0, 3).map((p) => p.id));
   return `<div class="swap-pick stack" style="gap:8px">
-    <span class="muted small">Instead of the ${esc(o.pieces[role]?.name)}, best match first:</span>
-    <div class="pieces mini">${options.map((p) => `<button class="piece" data-swapto="${i}:${role}:${p.id}"><img class="pic-bg" src="${photoURL(p.photos?.[0])}" alt=""><span>${esc(p.name)}</span></button>`).join("")}</div>
+    <span class="muted small">Instead of the ${esc(o.pieces[role]?.name)}: all ${options.length} option${options.length === 1 ? "" : "s"}, best match first.</span>
+    ${cats.length > 1 ? `<div class="chips"><button class="chip" aria-pressed="${cat === "all"}" data-swapcat="${i}:all">All</button>${cats.map((c) => `<button class="chip" aria-pressed="${cat === c}" data-swapcat="${i}:${c}">${esc(catLabel(c))} <span class="muted">${options.filter((p) => p.category === c).length}</span></button>`).join("")}</div>` : ""}
+    <div class="pieces mini">${shown.map((p) => `<button class="piece" data-swapto="${i}:${role}:${p.id}">${top.has(p.id) ? `<em class="best">Best match</em>` : ""}<img class="pic-bg" src="${photoURL(p.photos?.[0])}" alt=""><span>${esc(p.name)}</span></button>`).join("")}</div>
     ${!options.length ? `<span class="muted small">Nothing else of this kind for this occasion yet.</span>` : ""}
     <div class="chips">${canDrop ? `<button class="chip" data-swapto="${i}:${role}:">${DROP_LABEL[role]}</button>` : ""}${state.anchor !== o.pieces[role]?.id ? `<button class="chip" data-anchor="${o.pieces[role]?.id}">Keep it, build around it</button>` : ""}<button class="chip" data-swap="${i}:${role}">Cancel</button></div>
   </div>`;
@@ -3336,6 +3342,12 @@ document.addEventListener("click", async (e) => {
     const [i, role] = ds.swap.split(":");
     const o = state.outfits[+i];
     o.swapping = o.swapping === role ? null : role;
+    o.swapCat = "all";
+    return render();
+  }
+  if (ds.swapcat) {
+    const [i, c] = ds.swapcat.split(":");
+    state.outfits[+i].swapCat = c;
     return render();
   }
   if (ds.swapto != null) {
