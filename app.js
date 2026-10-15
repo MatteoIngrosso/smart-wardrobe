@@ -247,6 +247,7 @@ const state = {
   settings: {
     city: "", lat: null, lon: null, unit: "C", theme: "auto",
     region: (navigator.language || "en").slice(0, 2) === "it" ? "it" : "com",
+    gender: "men", // who the shopping ideas are for: "men" or "women"
     aiProvider: "gemini", geminiKey: "", geminiModel: "gemini-flash-latest", apiKey: "",
     autoCutout: true, aiAuto: true, autoWash: true,
   },
@@ -1878,35 +1879,35 @@ function analyse() {
   const mostlyDark = darkShare > 0.55;
 
   if (bySlot.bottom.length < 2) {
-    add("high", mostlyDark ? "Light-wash or grey straight jeans" : "Dark indigo straight jeans", `You have ${bySlot.bottom.length || "no"} bottoms saved, so every outfit is missing half. ${mostlyDark ? "Your tops are mostly dark, so a lighter jean adds contrast." : ""}`.trim(), mostlyDark ? "light wash straight jeans men" : "dark indigo straight jeans men",
+    add("high", mostlyDark ? "Light-wash or grey straight jeans" : "Dark indigo straight jeans", `You have ${bySlot.bottom.length || "no"} bottoms saved, so every outfit is missing half. ${mostlyDark ? "Your tops are mostly dark, so a lighter jean adds contrast." : ""}`.trim(), mostlyDark ? "light wash straight jeans" : "dark indigo straight jeans",
       ["jeans", "straight jeans", mostlyDark ? ["light-wash", "grey", "denim"] : ["indigo", "denim", "black"]]);
-    add("high", "Black relaxed trousers or cargo pants", "Black bottoms pair with every hoodie and jacket you own.", "black relaxed cargo trousers men", ["trousers", "relaxed cargo trousers", ["black", "olive", "beige"]]);
+    add("high", "Black relaxed trousers or cargo pants", "Black bottoms pair with every hoodie and jacket you own.", "black relaxed cargo trousers", ["trousers", "relaxed cargo trousers", ["black", "olive", "beige"]]);
   } else if (bySlot.bottom.length < SLOT_TARGET.bottom) {
-    add("medium", "Beige or stone chinos", "A light neutral bottom widens your combinations.", "beige chinos men relaxed", ["trousers", "chinos", ["beige", "stone", "navy"]]);
+    add("medium", "Beige or stone chinos", "A light neutral bottom widens your combinations.", "beige relaxed chinos", ["trousers", "chinos", ["beige", "stone", "navy"]]);
   } else if (longBottoms.length && !items.some((i) => i.category === "trousers" && (i.formality || 1) >= 2)) {
-    add("medium", "Tailored trousers in grey or navy", "All your bottoms are denim, cargo or shorts. One pair of tailored trousers covers smart days with your knits and bombers.", "tailored pleated trousers men grey", ["trousers", "tailored trousers", ["grey", "navy", "charcoal"]]);
+    add("medium", "Tailored trousers in grey or navy", "All your bottoms are denim, cargo or shorts. One pair of tailored trousers covers smart days with your knits and bombers.", "tailored pleated trousers grey", ["trousers", "tailored trousers", ["grey", "navy", "charcoal"]]);
   }
   if (bySlot.shoes.length < 2) {
     add("high", "White leather sneakers", "Clean white sneakers lift dark outfits and go with every piece you have.", "white leather sneakers minimal", ["sneakers", "leather sneakers", ["white", "cream", "black"]]);
-    if (avgFormality > 1.6 || bySlot.outer.length) add("medium", "Black leather boots or derbies", "For your knits and bomber jackets on smarter days.", "black leather chelsea boots men", ["boots", "leather Chelsea boots", ["black", "brown", "tan"]]);
+    if (avgFormality > 1.6 || bySlot.outer.length) add("medium", "Black leather boots or derbies", "For your knits and bomber jackets on smarter days.", "black leather chelsea boots", ["boots", "leather Chelsea boots", ["black", "brown", "tan"]]);
   }
   if (bySlot.base.length < 3) {
     add("high", "Heavyweight plain T-shirts (white, black, grey)", "Base layers to wear under hoodies and alone when it's warm. Plain ones balance graphic tops.", "heavyweight plain t-shirt pack", ["tshirt", "heavyweight plain T-shirt", ["white", "black", "grey"]]);
   }
   if (graphicShare > 0.4) {
-    add("medium", "A plain, quality knit or polo", `${Math.round(graphicShare * 100)}% of your pieces have prints or big logos; plain pieces make outfits calmer.`, "knit polo men merino", ["polo", "knitted polo", ["navy", "cream", "olive"]]);
+    add("medium", "A plain, quality knit or polo", `${Math.round(graphicShare * 100)}% of your pieces have prints or big logos; plain pieces make outfits calmer.`, "merino knit polo", ["polo", "knitted polo", ["navy", "cream", "olive"]]);
   }
   if (smartShare < 0.25 && items.length > 5) {
-    add("medium", "An Oxford shirt in white or light blue", `Only ${Math.round(smartShare * 100)}% of your wardrobe works for smart occasions. An Oxford shirt goes under your knits and bombers.`, "oxford shirt men white", ["shirt", "Oxford shirt", ["white", "light blue", "navy"]]);
+    add("medium", "An Oxford shirt in white or light blue", `Only ${Math.round(smartShare * 100)}% of your wardrobe works for smart occasions. An Oxford shirt goes under your knits and bombers.`, "oxford shirt white", ["shirt", "Oxford shirt", ["white", "light blue", "navy"]]);
   }
   if (hoodieShare > 0.4 && !items.some((i) => i.category === "overshirt")) {
-    add("medium", "Overshirt or shacket", "Something between a hoodie and a jacket for smart-casual days.", "wool overshirt men", ["overshirt", "wool overshirt", ["olive", "brown", "charcoal"]]);
+    add("medium", "Overshirt or shacket", "Something between a hoodie and a jacket for smart-casual days.", "wool overshirt", ["overshirt", "wool overshirt", ["olive", "brown", "charcoal"]]);
   }
   if (!items.some((i) => i.category === "rain")) {
     add("low", "Lightweight rain shell", "None of your outerwear is made for rain.", "lightweight rain jacket packable", ["rain", "lightweight rain jacket", ["black", "olive", "navy"]]);
   }
   if (bySlot.outer.length && !items.some((i) => i.category === "coat")) {
-    add("low", "Wool overcoat (camel or charcoal)", "A smart option for cold work days or evenings.", "wool overcoat men camel", ["coat", "wool overcoat", ["camel", "charcoal", "navy"]]);
+    add("low", "Wool overcoat (camel or charcoal)", "A smart option for cold work days or evenings.", "wool overcoat camel", ["coat", "wool overcoat", ["camel", "charcoal", "navy"]]);
   }
   if (darkShare > 0.6) {
     add("low", "One colour piece in olive, forest green or rust", "Your palette is mostly black and dark tones; one earthy colour adds variety without clashing.", "olive green crewneck sweatshirt", ["sweatshirt", "crewneck sweatshirt", ["olive", "forest green", "rust"]]);
@@ -1914,9 +1915,15 @@ function analyse() {
   return { bySlot, colorCount, styleCount, brandCount, darkShare, graphicShare, unworn, stale, suggestions: s };
 }
 
+// Shop searches say who they're for ("men"/"women", or "uomo"/"donna" for Italian shops),
+// unless the words already do.
+const GENDER_WORDS = { men: { en: "men", it: "uomo" }, women: { en: "women", it: "donna" } };
+const forWho = (query, lang = state.settings.region === "it" ? "it" : "en") =>
+  /\b(men|man|mens|women|woman|womens|uomo|donna|unisex)\b/i.test(query) ? query : `${query} ${GENDER_WORDS[state.settings.gender]?.[lang] || "men"}`;
+const shopperText = () => (state.settings.gender === "women" ? "a woman (womenswear)" : "a man (menswear)");
 function shopLinks(query) {
   const r = state.settings.region;
-  const q = encodeURIComponent(query);
+  const q = encodeURIComponent(forWho(query));
   const it = r === "it";
   return [
     ["Google Shopping", `https://www.google.com/search?tbm=shop&q=${q}`],
@@ -2264,11 +2271,11 @@ function parseBuy(line, refs, named) {
   if (!pieces.length && title) pieces = goesWith(title);
   return { title: cap(cleanRefs(title, refs)), why: cleanRefs(whyText, refs).trim(), query: query.replace(/^["']|["']$/g, "") || title, with: pieces };
 }
-const buyTile = (b) => `<a class="piece buy" href="${shopsFor(b)[0]?.[1] || shopLinks(b.query)[0][1]}" target="_blank" rel="noopener"><div class="art-tile">${garmentArt(b)}</div><span>To buy: ${esc(b.title)}</span></a>`;
+const buyTile = (b) => `<a class="piece buy" href="${shopsFor(b)[0]?.[1] || shopLinks(b.query)[0][1]}" target="_blank" rel="noopener">${artTile(b)}<span>To buy: ${esc(b.title)}</span></a>`;
 // A suggested buy with its picture, the pieces you own that it goes with, and shop links.
 function buyRow(b, { label = "To buy", shops = 4, extra = "" } = {}) {
   return `<div class="buy-row">
-    <a class="buy-ic art-tile" href="${shopsFor(b)[0]?.[1] || shopLinks(b.query)[0][1]}" target="_blank" rel="noopener" aria-label="Search for ${esc(b.title)}">${garmentArt(b)}</a>
+    <a class="buy-ic art-tile" href="${shopsFor(b)[0]?.[1] || shopLinks(b.query)[0][1]}" target="_blank" rel="noopener" aria-label="Search for ${esc(b.title)}"${prodAttr(b)}>${tileInner(b)}</a>
     <div class="buy-body">
       ${label ? `<span class="prio">${label}</span>` : ""}<h3>${esc(b.title)}</h3>${b.why ? `<p>${esc(b.why)}</p>` : ""}
       ${b.with.length ? `<div class="goes-with"><span class="muted small">Goes with</span><div class="pieces mini">${b.with.map(pieceTile).join("")}</div></div>` : ""}
@@ -2364,6 +2371,7 @@ function go(v) {
 }
 function render() {
   ({ today: renderToday, wardrobe: renderWardrobe, add: renderAdd, shop: renderShop, settings: renderSettings })[view]();
+  watchTiles();
 }
 
 /* ---------- Today ---------- */
@@ -3227,13 +3235,12 @@ function garmentArt(b) {
   const icon = CAT_ICON[b.cat] || buyKind(b.title || "").icon;
   return `<svg class="art" viewBox="0 0 24 24" aria-hidden="true"><path d="${KIND_ICON[icon] || KIND_ICON.hanger}" style="fill:${hex};stroke:${light ? "#7d7468" : "#1b1712"};stroke-width:.45;stroke-linejoin:round;stroke-linecap:round"/></svg>`;
 }
-const artTile = (b) => `<div class="art-tile">${b.photo ? `<img src="${photoURL(b.photo)}" alt="">` : garmentArt(b)}</div>`;
+const artTile = (b) => `<div class="art-tile"${prodAttr(b)}>${tileInner(b)}</div>`;
 
-// Something to buy: { cat, color, title, query }. `men` keeps the search to menswear when
-// the idea came with it.
-function mkIdea({ cat, color = "", noun = "", brand = "", fit = "", men = false, title = "", why = "", styles }) {
+// Something to buy: { cat, color, title, query }. Shop searches add who it's for (forWho).
+function mkIdea({ cat, color = "", noun = "", brand = "", fit = "", title = "", why = "", styles }) {
   const words = [brand, color, fit ? FITS[fit]?.label.toLowerCase() : "", noun || catLabel(cat).toLowerCase()].filter(Boolean).join(" ");
-  return { cat, color, brand, fit, styles, title: title || cap(words), query: (title ? [brand, title].filter(Boolean).join(" ") : words) + (men ? " men" : ""), why };
+  return { cat, color, brand, fit, styles, title: title || cap(words), query: title ? [brand, title].filter(Boolean).join(" ") : words, why };
 }
 // The same idea as a wardrobe piece, so the outfit rules can try it with what you own.
 // It counts as worn ten days ago: no "never worn" bonus, no "worn yesterday" penalty.
@@ -3254,9 +3261,8 @@ const goesLine = (n) => (n ? `Goes with ${n} of your pieces` : "Hard to match wi
 // The versions of a "Worth adding" idea, the one that goes with most of your pieces first.
 function variantsOf(s) {
   if (!s.cat) return [{ ...s, cat: buyKind(s.title).cat, n: goesWith(s.title).length }];
-  const men = /\bmen\b/.test(s.query);
   return s.colors.map((color, i) => {
-    const b = mkIdea({ cat: s.cat, color, noun: s.noun, men, why: s.why });
+    const b = mkIdea({ cat: s.cat, color, noun: s.noun, why: s.why });
     const piece = asPiece(b);
     const fit = wornWith(piece).reduce((a, o) => a + pairScore(piece, o), 0);
     return { ...b, n: matchesFor(piece).length, fit, i };
@@ -3275,7 +3281,7 @@ const sellsIt = (store, b) => !store.sells?.length || store.sells.includes(group
 // The shops on the trip that sell it, or null when no trip is planned.
 const tripStores = (b) => (state.trip ? state.trip.stores.filter((st) => sellsIt(st, b)) : null);
 // A search on the shop's own website, through Google: works for any shop in any country.
-const storeLink = (st, query) => `https://www.google.com/search?q=${encodeURIComponent(st.domain ? `${query} site:${st.domain}` : `${st.name} ${query}`)}`;
+const storeLink = (st, query) => `https://www.google.com/search?q=${encodeURIComponent(st.domain ? `${forWho(query)} site:${st.domain}` : `${st.name} ${forWho(query)}`)}`;
 function shopsFor(b) {
   const st = tripStores(b);
   // The shop a new look named for this piece comes first.
@@ -3418,7 +3424,7 @@ function tryTab() {
     <section class="card stack find">
       <h2 style="margin:0">What are you thinking of buying?</h2>
       <p class="muted small" style="margin:0">Pick what it is and its colour${aiReady() ? ", or take a photo of it in the shop" : ""}. The app checks it against everything you own and builds outfits with it.</p>
-      <div class="field"><label>Type</label><div class="chips">${TRY_CATS.map((c) => chip("trycat", c.id, c.label, t.cat === c.id)).join("")}</div></div>
+      <div class="field"><label>Type</label><div class="chips">${TRY_CATS.filter((c) => c.id !== "skirt" || state.settings.gender === "women").map((c) => chip("trycat", c.id, c.label, t.cat === c.id)).join("")}</div></div>
       <div class="field"><label>Colour</label><div class="chips">${Object.keys(COLORS).map((c) => chip("trycolor", c, cap(c), t.color === c, `<span class="dot" style="background:${COLORS[c].hex}"></span>`)).join("")}</div></div>
       ${fits.length ? `<div class="field"><label>Fit <span class="muted">(optional)</span></label><div class="chips">${fits.map((k) => chip("tryfit", k, FITS[k].label, t.fit === k)).join("")}</div></div>` : ""}
       <div class="field"><label>Style <span class="muted">(optional)</span></label><div class="chips scroller">${Object.keys(STYLES).map((k) => chip("trystyle", k, styleLabel(k), t.style === k)).join("")}</div></div>
@@ -3547,7 +3553,7 @@ async function lookupTrip(raw) {
   state.disc.tripBusy = place;
   render();
   try {
-    const text = await aiGenerate({ system: TRIP_SYSTEM, text: `Place: ${place}\nThe shopper lives in: ${state.settings.city || "unknown"}`, search: true, maxTokens: 1600 });
+    const text = await aiGenerate({ system: TRIP_SYSTEM, text: `Place: ${place}\nThe shopper lives in: ${state.settings.city || "unknown"}\nThe shopper is ${shopperText()}: list only shops that sell for them.`, search: true, maxTokens: 1600 });
     const trip = parseTrip(text, key);
     state.disc.tripBusy = "";
     if (!trip) { toast(`Couldn't find “${place}”. Try adding the city.`); return render(); }
@@ -3637,7 +3643,12 @@ const LOOK_KIT = [
   ["shoes", "boots", "leather work boots", 1.5, 4, "outdoor vintage casual streetwear"],
   ["shoes", "dress-shoes", "leather loafers", 3, 2, "preppy smart luxury smart casual"],
   ["shoes", "dress-shoes", "Derby shoes", 3.5, 2, "smart formal"],
-].map(([role, cat, noun, f, w, styles]) => ({ role, cat, noun, f, w, styles: parseStyles(styles) }));
+  // Only offered when shopping for women (Settings > Shop for).
+  ["base", "tshirt", "fitted rib top", 1.5, 1, "minimal casual smart casual", "women"],
+  ["bottom", "skirt", "midi skirt", 2.5, 1, "smart casual minimal luxury preppy", "women"],
+  ["bottom", "skirt", "pleated mini skirt", 1.8, 1, "preppy casual streetwear vintage", "women"],
+  ["shoes", "dress-shoes", "ballet flats", 2.3, 2, "minimal preppy smart casual luxury", "women"],
+].map(([role, cat, noun, f, w, styles, who]) => ({ role, cat, noun, f, w, styles: parseStyles(styles), who }));
 // Colours for [base, mid, outer, bottom, shoes]; jeans and denim keep their own colour.
 const LOOK_PALETTES = [
   { name: "Monochrome", c: ["white", "grey", "black", "black", "white"], styles: "minimal streetwear smart sporty luxury" },
@@ -3668,7 +3679,7 @@ function builtInLook(season, style, occ) {
   };
   const pal = LOOK_PALETTES.map((p) => [p.styles.includes(style) ? 2 + Math.random() : Math.random(), p]).sort((a, b) => b[0] - a[0])[0][1];
   const pieces = roles.map((role) => {
-    const best = LOOK_KIT.filter((k) => k.role === role && fitsSeason(k))
+    const best = LOOK_KIT.filter((k) => k.role === role && fitsSeason(k) && (!k.who || k.who === state.settings.gender))
       .map((k) => [(k.styles.includes(style) ? 3 : 0) - Math.abs(k.f - want) * 1.5 + (cold && k.cat === "boots" ? 1 : 0) + Math.random() * 1.6, k])
       .sort((a, b) => b[0] - a[0])[0]?.[1];
     if (!best) return null;
@@ -3713,7 +3724,7 @@ async function makeLook() {
     const shops = state.trip ? state.trip.stores.map((s) => s.name).slice(0, 30).join(", ") : "";
     const text = await aiGenerate({
       system: "You are a stylist in a wardrobe app. Design one complete outfit made only of new pieces the user can buy. Reply with JSON only.",
-      text: `Season: ${SEASONS[season].label}. Style: ${styleLabel(style)}. Occasion: ${occ.label}.` +
+      text: `For ${shopperText()}. Season: ${SEASONS[season].label}. Style: ${styleLabel(style)}. Occasion: ${occ.label}.` +
         (palette ? ` Colours they usually wear: ${palette}.` : "") + (brands ? ` Brands they own: ${brands}.` : "") +
         (shops ? ` Only use pieces sold by these shops and name the shop for each: ${shops}.` : "") +
         ` Real, easy-to-find pieces; at most one accent colour.` + (L.seen.length ? ` Make it different from: ${L.seen.slice(-4).join("; ")}.` : ""),
@@ -3759,7 +3770,7 @@ function lookTab() {
 /* ---- Real photos ---- */
 // Asked for one idea at a time: Gemini searches Google for real products, and the app's
 // server opens each page to read its product photo (shops don't let a browser do that).
-const photoKey = (b) => `${b.query}|${state.trip?.key || ""}`;
+const photoKey = (b) => `${b.query}|${state.settings.gender}|${state.trip?.key || ""}`;
 const realBtn = (b) => `<button class="btn" data-real="${esc(JSON.stringify({ title: b.title, query: b.query, cat: b.cat, color: b.color }))}"><svg viewBox="0 0 24 24"><rect x="3" y="5" width="18" height="14" rx="2"/><circle cx="9" cy="10" r="1.6"/><path d="m21 16-5-5-8 8"/></svg>Real photos</button>`;
 function photosHTML(b) {
   const ph = state.disc.photos[photoKey(b)];
@@ -3768,6 +3779,7 @@ function photosHTML(b) {
   if (ph.error) return `<p class="muted small" style="margin:0">${esc(ph.error)}</p>`;
   const safe = (u) => (/^https?:\/\//i.test(u || "") ? u : "");
   return `<div class="real">
+    ${ph.note ? `<p class="muted small" style="margin:0;grid-column:1/-1">${esc(ph.note)}</p>` : ""}
     ${ph.items.map((p) => `<a class="real-card" href="${esc(safe(p.url))}" target="_blank" rel="noopener"><img class="real-img" src="${esc(safe(p.image))}" referrerpolicy="no-referrer" loading="lazy" alt=""><b>${esc(p.title)}</b><span class="muted small">${esc([p.shop, p.price].filter(Boolean).join(" · "))}</span></a>`).join("")}
     ${!ph.items.length && ph.links.length ? `<div class="stack" style="gap:6px"><span class="muted small">${ph.noServer ? "Photos can only be loaded on the hosted app. Products found:" : "No photos could be loaded from these shops. Products found:"}</span>${ph.links.map((p) => `<a class="btn ghost" href="${esc(safe(p.url))}" target="_blank" rel="noopener">${esc([p.title, p.shop, p.price].filter(Boolean).join(" · "))}</a>`).join("")}</div>` : ""}
     ${!ph.items.length && !ph.links.length ? `<p class="muted small" style="margin:0">No products found this time. The shop buttons above still search for it.</p>` : ""}
@@ -3782,18 +3794,31 @@ async function pageInfo(url) {
   } catch { return null; }
 }
 async function realPhotos(b) {
-  if (!aiReady()) return toast(NO_AI);
+  if (!productsOn() && !aiReady()) return toast("Real photos need a SerpApi key on the server (see Settings > Look) or an AI key.");
   const k = photoKey(b);
   if (state.disc.photos[k]?.busy) return;
   state.disc.photos[k] = { busy: true };
   if (view !== "add") render();
+  if (productsOn()) {
+    try {
+      await loadProducts(b);
+      const items = productsFor(b).slice(0, 6);
+      const st = tripStores(b);
+      const here = st ? items.filter((p) => atShops(p, st)).length : items.length;
+      state.disc.photos[k] = { items, links: [], note: st && !here && items.length ? `None of these are from the shops at ${state.trip.name.split(",")[0]}; similar products elsewhere:` : "" };
+      if (view !== "add") render();
+      return;
+    } catch (e) {
+      if (!aiReady()) { state.disc.photos[k] = { error: e.message }; if (view !== "add") render(); return; }
+    }
+  }
   try {
     let sources = [];
     const st = tripStores(b);
     const where = st?.length ? `Only products sold by: ${st.slice(0, 12).map((s) => s.name).join(", ")}.` : `The shopper lives in ${state.settings.city || "Europe"}; pick shops that deliver there.`;
     const text = await aiGenerate({
       system: "You find real clothes for sale online for a shopping app. Use Google Search. Plain text only, no markdown.",
-      text: `Find 4 different products for sale now that match: ${b.title} (search words: ${b.query}). ${where}\nOne line each: product name | shop | price with currency | product page URL`,
+      text: `Find 4 different products for ${shopperText()} for sale now that match: ${b.title} (search words: ${forWho(b.query, "en")}). ${where}\nOne line each: product name | shop | price with currency | product page URL`,
       search: true, maxTokens: 700, onSources: (w) => (sources = w),
     });
     const found = [];
@@ -3818,8 +3843,75 @@ async function realPhotos(b) {
   }
   if (view !== "add") render();
 }
-// A photo a shop won't let us show: drop its card.
-document.addEventListener("error", (e) => { if (e.target.matches?.("img.real-img")) e.target.closest(".real-card")?.remove(); }, true);
+// A photo a shop won't let us show: drop its card, or show the drawing under it.
+document.addEventListener("error", (e) => {
+  if (e.target.matches?.("img.real-img")) e.target.closest(".real-card")?.remove();
+  if (e.target.matches?.("img.prod-img")) e.target.remove();
+}, true);
+document.addEventListener("load", (e) => { if (e.target.matches?.("img.prod-img")) e.target.classList.add("ok"); }, true);
+
+/* ---- Product photos ---- */
+// With a SerpApi key on the server (SERPAPI_KEY, free plan: 250 searches a month), ideas
+// show a real product photo instead of the drawing, and "Real photos" lists the products of
+// the same search: no AI tokens. The server keeps each search for two weeks, so an idea
+// costs one search however often it's shown. Tiles only ask once they're on screen.
+const products = new Map(); // search key → { items } once loaded, or the pending Promise
+let productsDown = ""; // set when the server says searches can't run (none left this month…)
+const productsOn = () => !!state.serverKeys.products && !productsDown;
+function productSearch(b) {
+  const it = state.settings.region === "it";
+  return { q: forWho(b.query, it ? "it" : "en"), gl: it ? "it" : "us", hl: it ? "it" : "en" };
+}
+const productKey = (b) => { const { q, gl } = productSearch(b); return `${gl}|${q.toLowerCase()}`; };
+const atShops = (p, stores) => stores.some((s) => (p.shop || "").toLowerCase().includes(s.name.toLowerCase()) || (s.domain && (p.url || "").includes(s.domain)));
+// The products found, those from the shops on the trip (if one is on) first.
+function productsFor(b) {
+  const got = products.get(productKey(b));
+  if (!got?.items) return null;
+  const st = tripStores(b);
+  return st ? [...got.items.filter((p) => atShops(p, st)), ...got.items.filter((p) => !atShops(p, st))] : got.items;
+}
+function loadProducts(b) {
+  const key = productKey(b);
+  if (products.has(key)) return Promise.resolve(products.get(key));
+  const { q, gl, hl } = productSearch(b);
+  const job = fetch(`api/products?${new URLSearchParams({ q, gl, hl })}`)
+    .then(async (r) => {
+      const j = await r.json().catch(() => ({}));
+      if (!r.ok) throw new Error(j.error || `Product search failed (${r.status}).`);
+      return { items: j.items || [] };
+    })
+    .then((v) => { products.set(key, v); return v; }, (e) => {
+      products.delete(key);
+      if (/^SerpApi/.test(e.message)) { productsDown = e.message; if (view === "settings") render(); }
+      throw e;
+    });
+  products.set(key, job);
+  return job;
+}
+// Inside a picture tile: your own photo, a product photo, or the drawing.
+function tileInner(b) {
+  if (b.photo) return `<img src="${photoURL(b.photo)}" alt="">`;
+  const img = productsOn() && productsFor(b)?.[0]?.image;
+  // The drawing stays underneath, so a photo that won't load just goes away.
+  return garmentArt(b) + (img ? `<img class="prod-img" src="${esc(img)}" referrerpolicy="no-referrer" alt="">` : "");
+}
+const prodAttr = (b) => (productsOn() && !b.photo && !productsFor(b) ? ` data-prod="${esc(JSON.stringify({ title: b.title, query: b.query, cat: b.cat, color: b.color }))}"` : "");
+const tileWatch = "IntersectionObserver" in window
+  ? new IntersectionObserver((seen) => { for (const e of seen) if (e.isIntersecting) { tileWatch.unobserve(e.target); fillTile(e.target); } }, { rootMargin: "150px" })
+  : null;
+async function fillTile(el) {
+  const spec = el.dataset.prod;
+  if (!spec) return;
+  const b = JSON.parse(spec);
+  try { await loadProducts(b); } catch { return; }
+  for (const t of document.querySelectorAll("[data-prod]")) if (t.dataset.prod === spec) { t.innerHTML = tileInner(b); delete t.dataset.prod; }
+}
+function watchTiles() {
+  if (!productsOn()) return;
+  tileWatch?.disconnect();
+  for (const el of document.querySelectorAll("[data-prod]")) tileWatch ? tileWatch.observe(el) : fillTile(el);
+}
 
 /* ---------- Settings ---------- */
 function renderSettings() {
@@ -3908,6 +4000,11 @@ function renderSettings() {
         <h2 style="margin:0">Look</h2>
         <div class="chips">${[["auto", "Match system"], ["dark", "Dark"], ["light", "Light"]].map(([k, l]) => `<button class="chip" aria-pressed="${s.theme === k}" data-theme="${k}">${l}</button>`).join("")}</div>
         <div class="field"><label>Shops</label><div class="chips">${[["it", "Italy"], ["com", "International"]].map(([k, l]) => `<button class="chip" aria-pressed="${s.region === k}" data-region="${k}">${l}</button>`).join("")}</div></div>
+        <div class="field"><label>Shop for</label><div class="chips">${[["men", "Men"], ["women", "Women"]].map(([k, l]) => `<button class="chip" aria-pressed="${s.gender === k}" data-gender="${k}">${l}</button>`).join("")}</div><span class="muted small">Shopping ideas, shop links, product photos and new looks are for ${s.gender === "women" ? "women" : "men"}.</span></div>
+        <div class="field"><label>Product photos</label><span class="muted small">${productsOn()
+          ? "On: Discover shows real products from Google Shopping (through SerpApi, saved on your server). Each search is kept for two weeks, so the free 250 searches a month go a long way."
+          : state.serverKeys.products ? `Paused: ${esc(productsDown)} Discover shows drawings until it works again.`
+          : "Off: Discover shows drawings. For real product photos, add a free SerpApi key to the Worker as the SERPAPI_KEY secret (see the README, “Product photos”)."}</span></div>
       </section>
       <section class="card stack">
         <h2 style="margin:0">Data</h2>
@@ -4124,7 +4221,7 @@ async function ask(question, targetId = "ai-answer") {
     const c = conditions();
     const likes = tasteText();
     const cal = calendarText();
-    const context = `${state.event?.day === "tomorrow" ? "Tomorrow" : "Today"}: feels ${Math.round(c.feels)}°C${c.wet ? ", wet" : ""}. Occasion: ${OCCASIONS.find((o) => o.id === state.occasion).label}.${cal ? `\n${cal}` : ""}\nWardrobe (#number name; type; colours; brand; style; fit; warmth 1-5; wear):\n${wardrobeText() || "(empty)"}${likes ? `\nTaste (learnt from what the user wears, likes and skips):\n${likes}` : ""}`;
+    const context = `The user is ${shopperText()}.\n${state.event?.day === "tomorrow" ? "Tomorrow" : "Today"}: feels ${Math.round(c.feels)}°C${c.wet ? ", wet" : ""}. Occasion: ${OCCASIONS.find((o) => o.id === state.occasion).label}.${cal ? `\n${cal}` : ""}\nWardrobe (#number name; type; colours; brand; style; fit; warmth 1-5; wear):\n${wardrobeText() || "(empty)"}${likes ? `\nTaste (learnt from what the user wears, likes and skips):\n${likes}` : ""}`;
     const refs = state.items.map((i) => i.id);
     const show = (t) => { const el = document.getElementById(targetId); if (el) el.textContent = cleanRefs(t, refs); };
     const answer = { text: await aiGenerate({ system: STYLIST_SYSTEM + "\n\n" + context, text: question, maxTokens: 800, onText: show }), refs };
@@ -4132,6 +4229,7 @@ async function ask(question, targetId = "ai-answer") {
     if (targetId === "try-ai") state.disc.try.answer = answer;
     const el = document.getElementById(targetId);
     if (el) el.innerHTML = answerHTML(answer);
+    watchTiles();
   } catch (e) {
     const el = document.getElementById(targetId);
     if (el) el.textContent = e.message || "Something went wrong talking to the AI.";
@@ -4362,6 +4460,7 @@ document.addEventListener("click", async (e) => {
   if (ds.unit) { state.settings.unit = ds.unit; await saveSettings(); return render(); }
   if (ds.theme) { state.settings.theme = ds.theme; applyTheme(); await saveSettings(); return render(); }
   if (ds.region) { state.settings.region = ds.region; await saveSettings(); return render(); }
+  if (ds.gender) { state.settings.gender = ds.gender; await saveSettings(); return render(); }
   if (ds.city) {
     const [lat, lon, name] = JSON.parse(ds.city);
     Object.assign(state.settings, { lat, lon, city: name });

@@ -12,6 +12,7 @@
 //     POST /api/ai/gemini/<model>         Gemini generateContent with the GEMINI_KEY secret
 //     POST /api/ai/claude/v1/messages     Claude Messages API with the CLAUDE_KEY secret
 //     GET  /api/page?url=…                a shop's product page: {url, title, image, price, site}
+//     GET  /api/products?q=…&gl=it&hl=it  real products with photos (Google Shopping via SerpApi)
 //     POST /api/calendar                  {"url": "..."}: reads a calendar's private iCal link
 //
 // Settings (see README, "Putting it online"):
@@ -19,6 +20,7 @@
 //     APP_PASSWORD  secret: the password for the sign-in page. Without it nothing is served.
 //     GEMINI_KEY    optional secret
 //     CLAUDE_KEY    optional secret
+//     SERPAPI_KEY   optional secret: product photos in Discover (free plan, 250 searches a month)
 
 const COLS = new Set(["items", "log", "kv"]);
 const BLOB_KEY = /^[0-9a-z-]{4,80}\.(jpg|webp|png|bin)$/;
@@ -54,9 +56,10 @@ export async function handleApi(request, env) {
   try {
     if (path.startsWith("ai/")) return await ai(request, env, path.slice(3));
     if (path === "page" && method === "GET") return await productPage(new URL(request.url).searchParams.get("url"));
+    if (path === "products" && method === "GET") return await products(env, new URL(request.url).searchParams);
     if (path === "calendar" && method === "POST") return await calendar(request);
     if (path === "ping" && method === "GET") {
-      const keys = { gemini: !!env.GEMINI_KEY, claude: !!env.CLAUDE_KEY };
+      const keys = { gemini: !!env.GEMINI_KEY, claude: !!env.CLAUDE_KEY, products: !!env.SERPAPI_KEY };
       if (!env.DB) return json({ ok: true, sync: false, rev: 0, keys });
       return json({ ok: true, sync: true, rev: await currentRev(env.DB), keys });
     }
@@ -154,6 +157,7 @@ function ready(db) {
     db.prepare("CREATE INDEX IF NOT EXISTS records_rev ON records (rev)"),
     db.prepare("CREATE TABLE IF NOT EXISTS blobs (key TEXT PRIMARY KEY, type TEXT NOT NULL, body BLOB NOT NULL)"),
     db.prepare("CREATE TABLE IF NOT EXISTS login_fails (ip TEXT PRIMARY KEY, n INTEGER NOT NULL, at INTEGER NOT NULL)"),
+    db.prepare("CREATE TABLE IF NOT EXISTS products (q TEXT PRIMARY KEY, data TEXT NOT NULL, at INTEGER NOT NULL)"),
   ]).catch((e) => { schema = null; throw e; });
   return schema;
 }
@@ -376,4 +380,38 @@ function jsonLdProduct(html) {
     }
   }
   return null;
+}
+
+/* ---------- Products (Discover photos) ---------- */
+// Real products for a search, with photo, price and shop, from Google Shopping through
+// SerpApi. Its free plan has 250 searches a month, so each answer is kept in the database
+// for two weeks and shared by every device: the same idea never costs a second search.
+
+const PRODUCT_DAYS = 14;
+async function products(env, params) {
+  if (!env.SERPAPI_KEY) return fail(404, "No SERPAPI_KEY is saved on the server.");
+  const q = (params.get("q") || "").trim().replace(/\s+/g, " ").slice(0, 120);
+  if (!q) return fail(400, "What should be searched?");
+  const gl = /^[a-z]{2}$/.test(params.get("gl") || "") ? params.get("gl") : "us";
+  const hl = /^[a-z]{2}$/.test(params.get("hl") || "") ? params.get("hl") : "en";
+  const key = `${gl}|${hl}|${q.toLowerCase()}`;
+  if (env.DB) {
+    await ready(env.DB);
+    const row = await env.DB.prepare("SELECT data, at FROM products WHERE q = ?").bind(key).first();
+    if (row && Date.now() - row.at < PRODUCT_DAYS * 864e5) return json({ items: JSON.parse(row.data), cached: true });
+  }
+  const r = await fetch(`https://serpapi.com/search.json?${new URLSearchParams({ engine: "google_shopping", q, gl, hl, api_key: env.SERPAPI_KEY })}`, { signal: AbortSignal.timeout(20000) });
+  const j = await r.json().catch(() => ({}));
+  // "No results" is an answer worth keeping; anything else (no searches left, bad key) isn't.
+  if (j.error && !/hasn't returned any results/i.test(j.error)) return fail(502, `SerpApi: ${j.error}`);
+  if (!r.ok && !j.error) return fail(502, `SerpApi answered ${r.status}.`);
+  const items = (j.shopping_results || []).map((x) => ({
+    title: String(x.title || "").slice(0, 140),
+    price: x.price || "",
+    shop: x.source || "",
+    image: [x.thumbnails?.[0], x.serpapi_thumbnail, x.thumbnail].find((u) => /^https:\/\//.test(u || "")) || "",
+    url: [x.link, x.product_link].find((u) => /^https?:\/\//.test(u || "")) || "",
+  })).filter((x) => x.image && x.url).slice(0, 8);
+  if (env.DB) await env.DB.prepare("INSERT OR REPLACE INTO products (q, data, at) VALUES (?, ?, ?)").bind(key, JSON.stringify(items), Date.now()).run();
+  return json({ items, cached: false });
 }
