@@ -12,6 +12,7 @@
 //     POST /api/ai/gemini/<model>         Gemini generateContent with the GEMINI_KEY secret
 //     POST /api/ai/claude/v1/messages     Claude Messages API with the CLAUDE_KEY secret
 //     GET  /api/page?url=…                a shop's product page: {url, title, image, price, site}
+//     POST /api/calendar                  {"url": "..."}: reads a calendar's private iCal link
 //
 // Settings (see README, "Putting it online"):
 //     DB            D1 database binding, created on the first deploy (wrangler.jsonc)
@@ -53,6 +54,7 @@ export async function handleApi(request, env) {
   try {
     if (path.startsWith("ai/")) return await ai(request, env, path.slice(3));
     if (path === "page" && method === "GET") return await productPage(new URL(request.url).searchParams.get("url"));
+    if (path === "calendar" && method === "POST") return await calendar(request);
     if (path === "ping" && method === "GET") {
       const keys = { gemini: !!env.GEMINI_KEY, claude: !!env.CLAUDE_KEY };
       if (!env.DB) return json({ ok: true, sync: false, rev: 0, keys });
@@ -251,6 +253,30 @@ async function readJson(request) {
   } catch {
     throw Object.assign(new Error("Expected JSON"), { status: 400 });
   }
+}
+
+/* ---------- Calendar ---------- */
+
+// Browsers can't read a calendar feed from another site, so the Worker fetches it and passes
+// it on unchanged; the app reads the events itself. Only https addresses with a real host name.
+const MAX_CALENDAR = 15 * 1024 * 1024;
+async function calendar(request) {
+  const { url } = await readJson(request);
+  let u;
+  try { u = new URL(String(url || "").trim().replace(/^webcals?:\/\//i, "https://")); } catch { return fail(400, "That isn't a link."); }
+  const host = u.hostname.toLowerCase();
+  if (u.protocol !== "https:" || u.username || u.password || !host.includes(".") || /^[\d.]+$|:|localhost$|\.local$|\.internal$/.test(host) || host === new URL(request.url).hostname) {
+    return fail(400, "Use the calendar's https:// or webcal:// link.");
+  }
+  let r;
+  try {
+    r = await fetch(u, { headers: { Accept: "text/calendar, */*" }, redirect: "follow", signal: AbortSignal.timeout(20000) });
+  } catch {
+    return fail(502, "The calendar didn't answer.");
+  }
+  if (!r.ok) return fail(502, r.status === 404 || r.status === 403 ? "The calendar link doesn't work any more. Copy it again from your calendar's settings." : `The calendar answered ${r.status}.`);
+  if (Number(r.headers.get("Content-Length") || 0) > MAX_CALENDAR) return fail(413, "That calendar is too large.");
+  return new Response(r.body, { headers: { "Content-Type": "text/calendar; charset=utf-8", "Cache-Control": "no-store" } });
 }
 
 /* ---------- AI pass-through ---------- */
