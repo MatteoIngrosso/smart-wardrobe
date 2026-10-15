@@ -260,7 +260,15 @@ const state = {
   outfits: [],
   anchor: null, // id of a piece you picked to build today's ideas around
   aiAnswer: "",
-  find: { q: "", brand: "", fit: "", shown: null, answer: "" }, // Discover: something you'd like to buy
+  // Discover: the open tab, which version of each idea is picked, real photos found,
+  // "Try a piece", "New look" and the shop trip being planned.
+  disc: {
+    tab: "foryou", pick: {}, photos: {}, tripq: "", tripBusy: "",
+    try: { cat: "", color: "", fit: "", style: "", brand: "", text: "", occ: "", shown: null, answer: "", busy: false },
+    look: { season: "", style: "", occ: "casual", result: null, busy: false, seen: [] },
+  },
+  trip: null, // the mall or shop you're going to: { key, name, stores: [{ name, domain, sells, price }] }
+  trips: [], // places looked up before (kept on this device, so each costs one AI request)
 };
 
 async function loadAll() {
@@ -269,6 +277,8 @@ async function loadAll() {
   Object.assign(state.settings, (await store.get("kv", "settings")) || {});
   state.wishlist = (await store.get("kv", "wishlist")) || [];
   state.usage = (await store.get("kv", "usage")) || state.usage;
+  state.trips = (await store.get("kv", "trips")) || [];
+  state.trip = (await store.get("kv", "trip")) || null;
   Object.assign(brandCache, (await raw.get("kv", "brandCache")) || {});
   Object.assign(sync, (await raw.get("kv", SYNC_STATE)) || {});
   sync.dirty = new Set(sync.dirty);
@@ -1253,16 +1263,17 @@ function piecesByRole(occ) {
   if (gym) for (const [role, cats] of Object.entries(GYM_FALLBACK)) if (!by[role].length) by[role] = state.items.filter((i) => cats.includes(i.category));
   return by;
 }
-function ideaPool() {
-  const occ = OCCASIONS.find((o) => o.id === state.occasion);
+// `opts` lets Discover ask for ideas around a piece you don't own yet ({ anchor, occ, cond }).
+function ideaPool(opts = {}) {
+  const occ = opts.occ || OCCASIONS.find((o) => o.id === state.occasion);
   const by = piecesByRole(occ);
-  const cond = conditions();
+  const cond = opts.cond || conditions();
   const t = taste();
   const pick = (arr) => arr[Math.floor(Math.random() * arr.length)];
   const wantMid = cond.feels < 20 || by.base.length === 0;
   const wantOuter = cond.feels < 15 || cond.wet;
   // A piece you picked goes in every idea; the rest is built around it.
-  const anchor = state.items.find((i) => i.id === state.anchor && CORE.includes(roleOf(i)));
+  const anchor = opts.anchor || state.items.find((i) => i.id === state.anchor && CORE.includes(roleOf(i)));
 
   const seen = new Set();
   const cands = [];
@@ -1274,18 +1285,18 @@ function ideaPool() {
     const r = Math.random();
     if (by.base.length && (!by.mid.length || r < (wantMid ? 0.85 : 0.7))) o.base = pick(by.base);
     if (by.mid.length && (!o.base || wantMid || r < 0.15)) o.mid = pick(by.mid);
-    if (!o.base && !o.mid) continue;
     if (by.outer.length && wantOuter) o.outer = pick(by.outer);
     if (by.bottom.length) o.bottom = pick(by.bottom);
     if (by.shoes.length) o.shoes = pick(by.shoes);
     if (anchor) o[roleOf(anchor)] = anchor;
+    if (!o.base && !o.mid) continue;
     const key = outfitKey(Object.values(o));
     if (seen.has(key)) continue;
     seen.add(key);
     cands.push({ key, pieces: o, ...scoreOutfit(o, cond, occ, t), jitter: Math.random() * 0.6, blocked: t.blocked.has(key) });
   }
   cands.sort((a, b) => b.score + b.jitter - (a.score + a.jitter));
-  const missing = ["bottom", "shoes"].filter((s) => !by[s].length);
+  const missing = ["bottom", "shoes"].filter((s) => !by[s].length && roleOf(anchor || {}) !== s);
   if (!by.base.length && cond.feels >= 22) missing.unshift("base");
   return { occ, cond, cands, missing };
 }
@@ -1619,41 +1630,43 @@ function analyse() {
   const longBottoms = bySlot.bottom.filter((i) => i.category !== "shorts");
 
   const s = [];
-  const add = (prio, title, why, query) => s.push({ prio, title, why, query });
+  // `opt`: [type, what it is without a colour, colours to offer], so each idea comes in a few versions.
+  const add = (prio, title, why, query, [cat, noun, colors] = []) => s.push({ prio, title, why, query, cat, noun, colors });
   const mostlyDark = darkShare > 0.55;
 
   if (bySlot.bottom.length < 2) {
-    add("high", mostlyDark ? "Light-wash or grey straight jeans" : "Dark indigo straight jeans", `You have ${bySlot.bottom.length || "no"} bottoms saved, so every outfit is missing half. ${mostlyDark ? "Your tops are mostly dark, so a lighter jean adds contrast." : ""}`.trim(), mostlyDark ? "light wash straight jeans men" : "dark indigo straight jeans men");
-    add("high", "Black relaxed trousers or cargo pants", "Black bottoms pair with every hoodie and jacket you own.", "black relaxed cargo trousers men");
+    add("high", mostlyDark ? "Light-wash or grey straight jeans" : "Dark indigo straight jeans", `You have ${bySlot.bottom.length || "no"} bottoms saved, so every outfit is missing half. ${mostlyDark ? "Your tops are mostly dark, so a lighter jean adds contrast." : ""}`.trim(), mostlyDark ? "light wash straight jeans men" : "dark indigo straight jeans men",
+      ["jeans", "straight jeans", mostlyDark ? ["light-wash", "grey", "denim"] : ["indigo", "denim", "black"]]);
+    add("high", "Black relaxed trousers or cargo pants", "Black bottoms pair with every hoodie and jacket you own.", "black relaxed cargo trousers men", ["trousers", "relaxed cargo trousers", ["black", "olive", "beige"]]);
   } else if (bySlot.bottom.length < SLOT_TARGET.bottom) {
-    add("medium", "Beige or stone chinos", "A light neutral bottom widens your combinations.", "beige chinos men relaxed");
+    add("medium", "Beige or stone chinos", "A light neutral bottom widens your combinations.", "beige chinos men relaxed", ["trousers", "chinos", ["beige", "stone", "navy"]]);
   } else if (longBottoms.length && !items.some((i) => i.category === "trousers" && (i.formality || 1) >= 2)) {
-    add("medium", "Tailored trousers in grey or navy", "All your bottoms are denim, cargo or shorts. One pair of tailored trousers covers smart days with your knits and bombers.", "tailored pleated trousers men grey");
+    add("medium", "Tailored trousers in grey or navy", "All your bottoms are denim, cargo or shorts. One pair of tailored trousers covers smart days with your knits and bombers.", "tailored pleated trousers men grey", ["trousers", "tailored trousers", ["grey", "navy", "charcoal"]]);
   }
   if (bySlot.shoes.length < 2) {
-    add("high", "White leather sneakers", "Clean white sneakers lift dark outfits and go with every piece you have.", "white leather sneakers minimal");
-    if (avgFormality > 1.6 || bySlot.outer.length) add("medium", "Black leather boots or derbies", "For your knits and bomber jackets on smarter days.", "black leather chelsea boots men");
+    add("high", "White leather sneakers", "Clean white sneakers lift dark outfits and go with every piece you have.", "white leather sneakers minimal", ["sneakers", "leather sneakers", ["white", "cream", "black"]]);
+    if (avgFormality > 1.6 || bySlot.outer.length) add("medium", "Black leather boots or derbies", "For your knits and bomber jackets on smarter days.", "black leather chelsea boots men", ["boots", "leather Chelsea boots", ["black", "brown", "tan"]]);
   }
   if (bySlot.base.length < 3) {
-    add("high", "Heavyweight plain T-shirts (white, black, grey)", "Base layers to wear under hoodies and alone when it's warm. Plain ones balance graphic tops.", "heavyweight plain t-shirt pack");
+    add("high", "Heavyweight plain T-shirts (white, black, grey)", "Base layers to wear under hoodies and alone when it's warm. Plain ones balance graphic tops.", "heavyweight plain t-shirt pack", ["tshirt", "heavyweight plain T-shirt", ["white", "black", "grey"]]);
   }
   if (graphicShare > 0.4) {
-    add("medium", "A plain, quality knit or polo", `${Math.round(graphicShare * 100)}% of your pieces have prints or big logos; plain pieces make outfits calmer.`, "knit polo men merino");
+    add("medium", "A plain, quality knit or polo", `${Math.round(graphicShare * 100)}% of your pieces have prints or big logos; plain pieces make outfits calmer.`, "knit polo men merino", ["polo", "knitted polo", ["navy", "cream", "olive"]]);
   }
   if (smartShare < 0.25 && items.length > 5) {
-    add("medium", "An Oxford shirt in white or light blue", `Only ${Math.round(smartShare * 100)}% of your wardrobe works for smart occasions. An Oxford shirt goes under your knits and bombers.`, "oxford shirt men white");
+    add("medium", "An Oxford shirt in white or light blue", `Only ${Math.round(smartShare * 100)}% of your wardrobe works for smart occasions. An Oxford shirt goes under your knits and bombers.`, "oxford shirt men white", ["shirt", "Oxford shirt", ["white", "light blue", "navy"]]);
   }
   if (hoodieShare > 0.4 && !items.some((i) => i.category === "overshirt")) {
-    add("medium", "Overshirt or shacket", "Something between a hoodie and a jacket for smart-casual days.", "wool overshirt men");
+    add("medium", "Overshirt or shacket", "Something between a hoodie and a jacket for smart-casual days.", "wool overshirt men", ["overshirt", "wool overshirt", ["olive", "brown", "charcoal"]]);
   }
   if (!items.some((i) => i.category === "rain")) {
-    add("low", "Lightweight rain shell", "None of your outerwear is made for rain.", "lightweight rain jacket packable");
+    add("low", "Lightweight rain shell", "None of your outerwear is made for rain.", "lightweight rain jacket packable", ["rain", "lightweight rain jacket", ["black", "olive", "navy"]]);
   }
   if (bySlot.outer.length && !items.some((i) => i.category === "coat")) {
-    add("low", "Wool overcoat (camel or charcoal)", "A smart option for cold work days or evenings.", "wool overcoat men camel");
+    add("low", "Wool overcoat (camel or charcoal)", "A smart option for cold work days or evenings.", "wool overcoat men camel", ["coat", "wool overcoat", ["camel", "charcoal", "navy"]]);
   }
   if (darkShare > 0.6) {
-    add("low", "One colour piece in olive, forest green or rust", "Your palette is mostly black and dark tones; one earthy colour adds variety without clashing.", "olive green crewneck sweatshirt");
+    add("low", "One colour piece in olive, forest green or rust", "Your palette is mostly black and dark tones; one earthy colour adds variety without clashing.", "olive green crewneck sweatshirt", ["sweatshirt", "crewneck sweatshirt", ["olive", "forest green", "rust"]]);
   }
   return { bySlot, colorCount, styleCount, brandCount, darkShare, graphicShare, unworn, stale, suggestions: s };
 }
@@ -1728,7 +1741,9 @@ function toGeminiSchema(s) {
   }
   return out;
 }
-async function geminiGenerate({ system, text, image, schema, maxTokens }) {
+// `search`: let Gemini look things up with Google Search (shops in a mall, real products);
+// `onSources` then gets the web pages it used ({ uri, title }).
+async function geminiGenerate({ system, text, image, schema, maxTokens, search, onSources }) {
   const { geminiKey, geminiModel } = state.settings;
   const parts = [];
   if (image) parts.push({ inline_data: { mime_type: "image/jpeg", data: await blobToBase64(image) } });
@@ -1736,6 +1751,7 @@ async function geminiGenerate({ system, text, image, schema, maxTokens }) {
   const body = {
     system_instruction: { parts: [{ text: system }] },
     contents: [{ role: "user", parts }],
+    ...(search ? { tools: [{ google_search: {} }] } : {}),
     generationConfig: {
       maxOutputTokens: maxTokens,
       thinkingConfig: { thinkingBudget: 0 }, // no hidden "thinking" tokens for these short tasks
@@ -1763,6 +1779,7 @@ async function geminiGenerate({ system, text, image, schema, maxTokens }) {
   await trackUsage(u.promptTokenCount || 0, (u.candidatesTokenCount || 0) + (u.thoughtsTokenCount || 0));
   const out = (j.candidates?.[0]?.content?.parts || []).map((p) => p.text || "").join("").trim();
   if (!out) throw new Error("Gemini returned no answer. Try again.");
+  onSources?.((j.candidates[0].groundingMetadata?.groundingChunks || []).map((c) => c.web).filter((w) => w?.uri));
   return out;
 }
 
@@ -1973,10 +1990,12 @@ const kindIcon = (name) => `<svg class="kind" viewBox="0 0 24 24" aria-hidden="t
 function goesWith(title, n = 4) {
   const t = title.toLowerCase().replace(/\bgray\b/g, "grey");
   const { cat } = buyKind(t);
-  const color = Object.keys(COLORS).sort((a, b) => b.length - a.length).find((c) => new RegExp(`\\b${c}\\b`).test(t));
-  const ranked = pairingsFor({ id: "", category: cat, colors: color ? [color] : [], styles: CAT[cat]?.styles || [], tags: [] }, Infinity);
+  return goesWithPiece(asPiece({ cat, color: colourIn(t), title }), n);
+}
+// The best match per part of an outfit (top, layer, jacket, bottom, shoes).
+function goesWithPiece(piece, n = 4) {
   const picks = [];
-  for (const o of ranked) if (["base", "mid", "outer", "bottom", "shoes"].includes(roleOf(o)) && !picks.some((p) => roleOf(p) === roleOf(o))) picks.push(o);
+  for (const o of pairingsFor(piece, Infinity)) if (CORE.includes(roleOf(o)) && !picks.some((p) => roleOf(p) === roleOf(o))) picks.push(o);
   return picks.slice(0, n);
 }
 
@@ -2000,19 +2019,20 @@ function parseBuy(line, refs, named) {
   if (!pieces.length && title) pieces = goesWith(title);
   return { title: cap(cleanRefs(title, refs)), why: cleanRefs(whyText, refs).trim(), query: query.replace(/^["']|["']$/g, "") || title, with: pieces };
 }
-const buyTile = (b) => `<a class="piece buy" href="${shopLinks(b.query)[0][1]}" target="_blank" rel="noopener"><div class="ph">${kindIcon(buyKind(b.title).icon)}<small>${esc(b.title)}</small></div><span>To buy</span></a>`;
+const buyTile = (b) => `<a class="piece buy" href="${shopsFor(b)[0]?.[1] || shopLinks(b.query)[0][1]}" target="_blank" rel="noopener"><div class="art-tile">${garmentArt(b)}</div><span>To buy: ${esc(b.title)}</span></a>`;
 // A suggested buy with its picture, the pieces you own that it goes with, and shop links.
 function buyRow(b, { label = "To buy", shops = 4, extra = "" } = {}) {
   return `<div class="buy-row">
-    <a class="buy-ic" href="${shopLinks(b.query)[0][1]}" target="_blank" rel="noopener" aria-label="Search for ${esc(b.title)}">${kindIcon(buyKind(b.title).icon)}</a>
+    <a class="buy-ic art-tile" href="${shopsFor(b)[0]?.[1] || shopLinks(b.query)[0][1]}" target="_blank" rel="noopener" aria-label="Search for ${esc(b.title)}">${garmentArt(b)}</a>
     <div class="buy-body">
       ${label ? `<span class="prio">${label}</span>` : ""}<h3>${esc(b.title)}</h3>${b.why ? `<p>${esc(b.why)}</p>` : ""}
       ${b.with.length ? `<div class="goes-with"><span class="muted small">Goes with</span><div class="pieces mini">${b.with.map(pieceTile).join("")}</div></div>` : ""}
-      <div class="shops">${shopLinks(b.query).slice(0, shops).map(([n, u]) => `<a class="btn" href="${u}" target="_blank" rel="noopener">${n}</a>`).join("")}${extra}</div>
+      <div class="shops">${shopsFor(b).slice(0, state.trip ? 8 : shops).map(([n, u]) => `<a class="btn" href="${u}" target="_blank" rel="noopener">${esc(n)}</a>`).join("")}${realBtn(b)}${extra}</div>
+      ${photosHTML(b)}
     </div>
   </div>`;
 }
-const wishBtn = (b) => `<button class="btn" data-wishbuy="${esc(JSON.stringify({ prio: "medium", title: b.title, why: b.why, query: b.query }))}">${state.wishlist.some((w) => w.title === b.title) ? "♥ Saved" : "♡ Save"}</button>`;
+const wishBtn = (b) => `<button class="btn" data-wishbuy="${esc(JSON.stringify({ prio: "medium", title: b.title, why: b.why || "", query: b.query, cat: b.cat, color: b.color }))}">${state.wishlist.some((w) => w.title === b.title) ? "♥ Saved" : "♡ Save"}</button>`;
 
 const pieceTile = (p) => `<button class="piece" data-item="${p.id}"><img class="pic-bg" src="${photoURL(p.photos?.[0])}" alt=""><span>${esc(p.name)}</span></button>`;
 // Advice that isn't an outfit: each line with photos of the pieces it mentions; buys get their own row.
@@ -2332,23 +2352,24 @@ function confirmBox(message, okLabel) {
   });
 }
 
-function pairingsFor(item, limit = 6) {
-  // Rule-based: neutrals with anything, avoid a second accent colour, avoid two graphic pieces, prefer a shared style.
+// Rule-based: neutrals with anything, avoid a second accent colour, avoid two graphic pieces, prefer a shared style.
+function pairScore(item, o) {
   const c = item.colors?.[0];
   const accent = c && !COLORS[c]?.neutral;
   const graphic = (item.tags || []).some((t) => /graphic|statement/.test(t));
   const has = (x, st) => (x.styles || []).includes(st);
+  const oc = o.colors?.[0];
+  let s = COLORS[oc]?.neutral ? 2 : accent ? -2 : 1;
+  if (graphic && (o.tags || []).some((t) => /graphic|statement/.test(t))) s -= 1.5;
+  if (COLORS[oc]?.tone !== COLORS[c]?.tone) s += 0.7;
+  if ((o.styles || []).some((st) => has(item, st))) s += 1;
+  for (const [a, b] of STYLE_CLASH) if ((has(o, a) && has(item, b)) || (has(o, b) && has(item, a))) s -= 1.5;
+  return s;
+}
+function pairingsFor(item, limit = 6) {
   return state.items
     .filter((o) => o.id !== item.id && roleOf(o) !== roleOf(item) && slotOf(o) !== "under" && (slotOf(o) !== "gym" || slotOf(item) === "gym"))
-    .map((o) => {
-      const oc = o.colors?.[0];
-      let s = COLORS[oc]?.neutral ? 2 : accent ? -2 : 1;
-      if (graphic && (o.tags || []).some((t) => /graphic|statement/.test(t))) s -= 1.5;
-      if (COLORS[oc]?.tone !== COLORS[c]?.tone) s += 0.7;
-      if ((o.styles || []).some((st) => has(item, st))) s += 1;
-      for (const [a, b] of STYLE_CLASH) if ((has(o, a) && has(item, b)) || (has(o, b) && has(item, a))) s -= 1.5;
-      return { o, s };
-    })
+    .map((o) => ({ o, s: pairScore(item, o) }))
     .sort((a, b) => b.s - a.s)
     .slice(0, limit)
     .map((x) => x.o);
@@ -2698,6 +2719,9 @@ const TAG_LABEL_SCHEMA = {
 };
 const tagInput = Object.assign(document.createElement("input"), { type: "file", accept: "image/*", capture: "environment", hidden: true });
 document.body.append(tagInput);
+const tryInput = Object.assign(document.createElement("input"), { type: "file", accept: "image/*", capture: "environment", hidden: true });
+document.body.append(tryInput);
+tryInput.onchange = () => { const f = tryInput.files[0]; tryInput.value = ""; if (f) tryPhoto(f); };
 tagInput.onchange = () => { const f = tagInput.files[0]; tagInput.value = ""; if (f && draft) scanTag(draft, f); };
 async function scanTag(d, file) {
   d.scanningTag = true;
@@ -2875,7 +2899,141 @@ async function saveDraft(next = false) {
 }
 
 /* ---------- Discover / shop ---------- */
+// Four tabs: ideas for you (each in a few versions), "Try a piece" (something you'd like,
+// checked against your wardrobe), "Shop trip" (only what the shops in a mall or one shop
+// sell) and "New look" (a complete outfit of new pieces). Pieces you don't own yet are
+// drawn in their colour for free; "Real photos" looks up actual products when tapped.
+
+// Colours that shops use but the wardrobe doesn't, and the wardrobe colour they act like.
+const EXTRA_COLOURS = {
+  camel: ["#b5885a", "beige"], rust: ["#a0522d", "orange"], "forest green": ["#2e5539", "green"], stone: ["#c8bea9", "beige"],
+  khaki: ["#a39a6c", "olive"], tan: ["#b08458", "brown"], indigo: ["#283862", "navy"], "light-wash": ["#9db8d3", "denim"],
+  ecru: ["#ece3cf", "cream"], sand: ["#d8c6a1", "beige"],
+};
+const colourHex = (c) => COLORS[c]?.hex || EXTRA_COLOURS[c]?.[0] || "";
+const ALL_COLOURS = [...Object.keys(COLORS), ...Object.keys(EXTRA_COLOURS)].sort((a, b) => b.length - a.length);
+// The first colour named in a text: "Light blue Oxford shirt" → "light blue".
+function colourIn(text) {
+  const t = ` ${String(text || "").toLowerCase().replace(/\bgray\b/g, "grey").replace(/light[ -]wash/g, "light-wash")} `;
+  return ALL_COLOURS.find((c) => new RegExp(`[^a-z-]${escRe(c)}[^a-z-]`).test(t)) || "";
+}
+const CAT_ICON = {
+  tshirt: "tee", polo: "tee", shirt: "shirt", sweatshirt: "hoodie", hoodie: "hoodie", "zip-hoodie": "hoodie", sweater: "knit",
+  overshirt: "jacket", jacket: "jacket", rain: "jacket", coat: "coat", puffer: "coat", jeans: "trousers", trousers: "trousers",
+  joggers: "trousers", shorts: "shorts", skirt: "skirt", sneakers: "shoe", "dress-shoes": "shoe", boots: "boot",
+  cap: "cap", hat: "cap", "bucket-hat": "cap", beanie: "beanie", beret: "beanie", watch: "watch", sunglasses: "glasses",
+  bracelet: "jewel", necklace: "jewel", ring: "jewel", belt: "belt", bag: "bag", backpack: "bag", wallet: "wallet",
+  scarf: "scarf", tie: "tie", umbrella: "umbrella", socks: "socks", underwear: "underwear",
+  "gym-top": "tee", "tank-top": "tee", "long-sleeve-top": "tee", "sports-bra": "tee", "gym-hoodie": "hoodie", "track-jacket": "jacket",
+  "gym-shorts": "shorts", leggings: "trousers", "track-pants": "trousers", "training-shoes": "shoe", "gym-bag": "bag", "gym-gear": "dumbbell",
+};
+// A drawing of a piece you don't own, filled with its colour.
+function garmentArt(b) {
+  const c = b.color || colourIn(b.title);
+  const hex = colourHex(c) || "#d9d3ca";
+  const [r, g, bl] = [1, 3, 5].map((i) => parseInt(hex.slice(i, i + 2), 16));
+  const light = 0.299 * r + 0.587 * g + 0.114 * bl > 150;
+  const icon = CAT_ICON[b.cat] || buyKind(b.title || "").icon;
+  return `<svg class="art" viewBox="0 0 24 24" aria-hidden="true"><path d="${KIND_ICON[icon] || KIND_ICON.hanger}" style="fill:${hex};stroke:${light ? "#7d7468" : "#1b1712"};stroke-width:.45;stroke-linejoin:round;stroke-linecap:round"/></svg>`;
+}
+const artTile = (b) => `<div class="art-tile">${b.photo ? `<img src="${photoURL(b.photo)}" alt="">` : garmentArt(b)}</div>`;
+
+// Something to buy: { cat, color, title, query }. `men` keeps the search to menswear when
+// the idea came with it.
+function mkIdea({ cat, color = "", noun = "", brand = "", fit = "", men = false, title = "", why = "", styles }) {
+  const words = [brand, color, fit ? FITS[fit]?.label.toLowerCase() : "", noun || catLabel(cat).toLowerCase()].filter(Boolean).join(" ");
+  return { cat, color, brand, fit, styles, title: title || cap(words), query: (title ? [brand, title].filter(Boolean).join(" ") : words) + (men ? " men" : ""), why };
+}
+// The same idea as a wardrobe piece, so the outfit rules can try it with what you own.
+// It counts as worn ten days ago: no "never worn" bonus, no "worn yesterday" penalty.
+function asPiece(b) {
+  const styles = b.styles?.length ? b.styles : brandInfo(b.brand)?.styles?.length ? brandInfo(b.brand).styles : CAT[b.cat]?.styles || [];
+  const c = COLORS[b.color] ? b.color : EXTRA_COLOURS[b.color]?.[1];
+  return {
+    id: "new", isNew: true, name: b.title, category: b.cat, colors: c ? [c] : [], styles, formality: formalityOf(styles),
+    warmth: CAT[b.cat]?.warmth || 2, fit: b.fit || undefined, tags: [], photos: b.photo ? [b.photo] : [],
+    wearCount: 1, lastWorn: new Date(Date.now() - 10 * 864e5).toISOString().slice(0, 10), idea: b,
+  };
+}
+// Pieces you own that could be worn with it (other parts of an outfit) and those that go well.
+const wornWith = (piece) => state.items.filter((o) => CORE.includes(roleOf(o)) && roleOf(o) !== roleOf(piece) && (slotOf(o) === "gym") === (slotOf(piece) === "gym"));
+const matchesFor = (piece) => wornWith(piece).filter((o) => pairScore(piece, o) >= 2);
+const goesLine = (n) => (n ? `Goes with ${n} of your pieces` : "Hard to match with what you own");
+
+// The versions of a "Worth adding" idea, the one that goes with most of your pieces first.
+function variantsOf(s) {
+  if (!s.cat) return [{ ...s, cat: buyKind(s.title).cat, n: goesWith(s.title).length }];
+  const men = /\bmen\b/.test(s.query);
+  return s.colors.map((color, i) => {
+    const b = mkIdea({ cat: s.cat, color, noun: s.noun, men, why: s.why });
+    const piece = asPiece(b);
+    const fit = wornWith(piece).reduce((a, o) => a + pairScore(piece, o), 0);
+    return { ...b, n: matchesFor(piece).length, fit, i };
+  }).sort((a, b) => b.fit - a.fit || a.i - b.i);
+}
+
+/* Shop trip: what the shops sell, in a few groups the AI is asked to use. */
+const SELL_GROUPS = ["tops", "shirts", "knitwear", "jackets", "coats", "jeans", "trousers", "shorts", "sneakers", "boots", "smart shoes", "accessories", "sportswear"];
+const GROUP_OF = {
+  tshirt: "tops", polo: "tops", sweatshirt: "tops", hoodie: "tops", "zip-hoodie": "tops", shirt: "shirts", overshirt: "shirts",
+  sweater: "knitwear", jacket: "jackets", rain: "jackets", coat: "coats", puffer: "coats", jeans: "jeans", trousers: "trousers",
+  joggers: "trousers", skirt: "trousers", shorts: "shorts", sneakers: "sneakers", boots: "boots", "dress-shoes": "smart shoes",
+};
+const groupOf = (cat) => GROUP_OF[cat] || (CAT[cat]?.slot === "gym" ? "sportswear" : "accessories");
+const sellsIt = (store, b) => !store.sells?.length || store.sells.includes(groupOf(b.cat || buyKind(b.title || "").cat));
+// The shops on the trip that sell it, or null when no trip is planned.
+const tripStores = (b) => (state.trip ? state.trip.stores.filter((st) => sellsIt(st, b)) : null);
+// A search on the shop's own website, through Google: works for any shop in any country.
+const storeLink = (st, query) => `https://www.google.com/search?q=${encodeURIComponent(st.domain ? `${query} site:${st.domain}` : `${st.name} ${query}`)}`;
+function shopsFor(b) {
+  const st = tripStores(b);
+  // The shop a new look named for this piece comes first.
+  return st ? st.sort((x, y) => (y.name === b.store) - (x.name === b.store)).map((x) => [x.name, storeLink(x, b.query)]) : shopLinks(b.query);
+}
+const soldHere = (b) => !state.trip || tripStores(b).length > 0;
+
 function renderShop() {
+  const d = state.disc;
+  const tabs = [["foryou", "For you"], ["try", "Try a piece"], ["trip", "Shop trip"], ["look", "New look"]];
+  const sub = {
+    foryou: "What your wardrobe is missing, in a few versions each.",
+    try: "Thinking of buying something? See what it goes with first.",
+    trip: "Going to a mall or a shop? See only what you can buy there.",
+    look: "A complete outfit of new pieces for the season, style and occasion you pick.",
+  }[d.tab];
+  main.innerHTML = `
+    <div class="head"><div><h1>Discover</h1><p class="sub">${sub}</p></div></div>
+    <div class="chips disc-tabs" role="tablist">${tabs.map(([k, l]) => `<button class="chip" role="tab" aria-selected="${d.tab === k}" aria-pressed="${d.tab === k}" data-disc="${k}">${l}</button>`).join("")}</div>
+    ${state.trip && d.tab !== "trip" ? tripBar() : ""}
+    <div class="stack">${({ foryou: forYouTab, try: tryTab, trip: tripTab, look: lookTab })[d.tab]()}</div>`;
+}
+const tripBar = () => `<div class="card row trip-bar"><span>Showing only what you can buy at <b>${esc(state.trip.name.split(",")[0])}</b></span><button class="chip" data-disc="trip">Change</button><button class="chip" data-act="trip-clear">Show all shops</button></div>`;
+
+// One idea in a few versions: pick a version to see what it goes with, where to buy it and real photos.
+function ideaBlock(key, { label = "", title, why = "", options }) {
+  const sel = Math.min(state.disc.pick[key] || 0, options.length - 1);
+  const b = options[sel];
+  return `<div class="idea">
+    ${label ? `<span class="prio">${label}</span>` : ""}
+    <h3>${esc(title)}</h3>${why ? `<p class="muted">${esc(why)}</p>` : ""}
+    ${options.length > 1 ? `<div class="options">${options.map((o, i) => `<button class="option" data-pick="${esc(key)}:${i}" aria-pressed="${i === sel}">
+      ${artTile(o)}<b>${esc(o.color ? cap(o.color.replace("-", " ")) : o.title)}</b><span class="muted small">${goesLine(o.n)}</span>${i === 0 ? `<span class="badge">Best match</span>` : ""}
+    </button>`).join("")}</div>` : `<div class="options one">${artTile(b)}</div>`}
+    ${ideaDetail(b)}
+  </div>`;
+}
+function ideaDetail(b, { withPieces = true } = {}) {
+  const pieces = withPieces ? goesWithPiece(asPiece(b)) : [];
+  const shops = shopsFor(b);
+  return `<div class="idea-detail">
+    ${pieces.length ? `<div class="goes-with"><span class="muted small">${esc(b.title)} goes with</span><div class="pieces mini">${pieces.map(pieceTile).join("")}</div></div>` : ""}
+    <div class="shops">${shops.slice(0, state.trip ? 8 : 4).map(([n, u]) => `<a class="btn" href="${u}" target="_blank" rel="noopener">${esc(n)}</a>`).join("")}${realBtn(b)}${wishBtn(b)}</div>
+    ${photosHTML(b)}
+  </div>`;
+}
+
+/* ---- For you ---- */
+function forYouTab() {
   const a = analyse();
   const total = state.items.length || 1;
   const palette = Object.entries(a.colorCount).sort((x, y) => y[1] - x[1]);
@@ -2883,100 +3041,494 @@ function renderShop() {
   const brands = Object.entries(a.brandCount).sort((x, y) => y[1] - x[1]);
   const tiers = {};
   for (const i of state.items) { const t = brandInfo(i.brand)?.tier; if (t) tiers[t] = (tiers[t] || 0) + 1; }
-  main.innerHTML = `
-    <div class="head"><div><h1>Discover</h1><p class="sub">What your wardrobe has, what it's missing, and where to find it.</p></div></div>
-    <div class="stack">
-      ${findCard(brands.map(([b]) => b))}
-      <div class="stats">
-        <div class="stat"><b>${state.items.length}</b><span>pieces</span></div>
-        <div class="stat"><b>${brands.length}</b><span>brands</span></div>
-        <div class="stat"><b>${a.unworn.length}</b><span>never worn</span></div>
-        <div class="stat"><b>${styleMix[0] ? styleLabel(styleMix[0][0]) : "–"}</b><span>main style</span></div>
-        ${(() => {
-          const priced = state.items.filter((i) => i.price);
-          if (!priced.length) return "";
-          const cur = priced[0].currency, same = priced.every((i) => i.currency === cur);
-          return same ? `<div class="stat"><b>${fmtPrice(priced.reduce((a, i) => a + i.price, 0), cur)}</b><span>value of ${priced.length} priced piece${priced.length === 1 ? "" : "s"}</span></div>` : "";
-        })()}
-      </div>
-      <div class="two-col">
-        <section class="card">
-          <h2>Your style</h2>
-          <div class="stack" style="gap:12px">
-            ${styleMix.length ? styleMix.map(([s, n]) => `<button class="style-row" data-stylego="${esc(s)}"><span>${styleLabel(s)}</span><span class="muted">${Math.round((n / total) * 100)}%</span><span class="bar"><i style="width:${(n / total) * 100}%"></i></span></button>`).join("") : `<p class="muted">Add pieces to see your style mix.</p>`}
-          </div>
-        </section>
-        <section class="card">
-          <h2>Brands</h2>
-          ${brands.length ? `<div class="chips">${brands.map(([b, n]) => { const t = brandInfo(b)?.tier; return `<button class="chip" data-brandgo="${esc(b)}">${esc(b)}${n > 1 ? ` <span class="muted">×${n}</span>` : ""}${t ? ` <span class="tier">${t}</span>` : ""}</button>`; }).join("")}</div>` : `<p class="muted">No brands recorded yet.</p>`}
-          ${Object.keys(tiers).length ? `<p class="muted small" style="margin:14px 0 0">${Object.entries(tiers).map(([t, n]) => `${n} ${t}`).join(" · ")}</p>` : ""}
-          ${palette.length ? `<h2 style="margin-top:22px">Palette</h2><div class="chips">${palette.map(([c, n]) => `<span class="chip"><span class="dot" style="background:${COLORS[c]?.hex}"></span>${cap(c)} ${Math.round((n / total) * 100)}%</span>`).join("")}</div>` : ""}
-        </section>
-      </div>
+  const blocks = a.suggestions.map((s, k) => ({ s, k, options: variantsOf(s).filter(soldHere) })).filter((x) => x.options.length);
+  const notHere = a.suggestions.length - blocks.length;
+  const wish = state.wishlist.map((w, k) => [w, k]).filter(([w]) => soldHere(w));
+  return `
+    <section class="card">
+      <h2>Worth adding</h2>
+      <div class="sugg">${blocks.map(({ s, k, options }) => ideaBlock(`s${k}:${s.title}`, {
+        label: s.prio === "high" ? "Fills a gap" : s.prio === "medium" ? "Adds range" : "Nice to have", title: s.title, why: s.why, options,
+      })).join("") || `<p class="muted">${a.suggestions.length ? `None of these ideas are sold at ${esc(state.trip?.name)}.` : "Your wardrobe looks well balanced."}</p>`}</div>
+      ${notHere && blocks.length ? `<p class="muted small" style="margin:12px 0 0">${notHere} more idea${notHere > 1 ? "s aren't" : " isn't"} sold at ${esc(state.trip.name)}.</p>` : ""}
+    </section>
+    ${wish.length ? `<section class="card"><h2>Wishlist</h2><div class="sugg">${wish.map(([w, k]) => buyRow({ ...w, with: goesWith(w.title) }, {
+      label: "", shops: 2, extra: `<button class="btn ghost" data-unwish="${k}">Remove</button>`,
+    })).join("")}</div></section>` : ""}
+    <div class="stats">
+      <div class="stat"><b>${state.items.length}</b><span>pieces</span></div>
+      <div class="stat"><b>${brands.length}</b><span>brands</span></div>
+      <div class="stat"><b>${a.unworn.length}</b><span>never worn</span></div>
+      <div class="stat"><b>${styleMix[0] ? styleLabel(styleMix[0][0]) : "–"}</b><span>main style</span></div>
+      ${(() => {
+        const priced = state.items.filter((i) => i.price);
+        if (!priced.length) return "";
+        const cur = priced[0].currency, same = priced.every((i) => i.currency === cur);
+        return same ? `<div class="stat"><b>${fmtPrice(priced.reduce((a, i) => a + i.price, 0), cur)}</b><span>value of ${priced.length} priced piece${priced.length === 1 ? "" : "s"}</span></div>` : "";
+      })()}
+    </div>
+    <div class="two-col">
       <section class="card">
-        <h2>Balance</h2>
-        <div class="stack" style="gap:14px">
-          ${Object.entries(SLOTS).filter(([k]) => SLOT_TARGET[k]).map(([k, l]) => {
-            const n = a.bySlot[k].length, t = SLOT_TARGET[k];
-            return `<div><div class="row" style="justify-content:space-between"><span>${l}</span><span class="muted">${n} / ${t} suggested</span></div><div class="bar"><i style="width:${Math.min(100, (n / t) * 100)}%;${n === 0 ? "background:var(--warn);width:4%" : ""}"></i></div></div>`;
-          }).join("")}
+        <h2>Your style</h2>
+        <div class="stack" style="gap:12px">
+          ${styleMix.length ? styleMix.map(([s, n]) => `<button class="style-row" data-stylego="${esc(s)}"><span>${styleLabel(s)}</span><span class="muted">${Math.round((n / total) * 100)}%</span><span class="bar"><i style="width:${(n / total) * 100}%"></i></span></button>`).join("") : `<p class="muted">Add pieces to see your style mix.</p>`}
         </div>
       </section>
       <section class="card">
-        <h2>Worth adding</h2>
-        <div class="sugg">${a.suggestions.length ? a.suggestions.map((s, k) => buyRow({ ...s, with: goesWith(s.title) }, {
-          label: s.prio === "high" ? "Fills a gap" : s.prio === "medium" ? "Adds range" : "Nice to have",
-          extra: `<button class="btn" data-wish="${k}">${state.wishlist.some((w) => w.title === s.title) ? "♥ Saved" : "♡ Save"}</button>`,
-        })).join("") : `<p class="muted">Your wardrobe looks well balanced.</p>`}
-        </div>
+        <h2>Brands</h2>
+        ${brands.length ? `<div class="chips">${brands.map(([b, n]) => { const t = brandInfo(b)?.tier; return `<button class="chip" data-brandgo="${esc(b)}">${esc(b)}${n > 1 ? ` <span class="muted">×${n}</span>` : ""}${t ? ` <span class="tier">${t}</span>` : ""}</button>`; }).join("")}</div>` : `<p class="muted">No brands recorded yet.</p>`}
+        ${Object.keys(tiers).length ? `<p class="muted small" style="margin:14px 0 0">${Object.entries(tiers).map(([t, n]) => `${n} ${t}`).join(" · ")}</p>` : ""}
+        ${palette.length ? `<h2 style="margin-top:22px">Palette</h2><div class="chips">${palette.map(([c, n]) => `<span class="chip"><span class="dot" style="background:${COLORS[c]?.hex}"></span>${cap(c)} ${Math.round((n / total) * 100)}%</span>`).join("")}</div>` : ""}
       </section>
-      ${state.wishlist.length ? `<section class="card"><h2>Wishlist</h2><div class="sugg">${state.wishlist.map((w, k) => buyRow({ ...w, with: goesWith(w.title) }, {
-          label: "", shops: 2, extra: `<button class="btn ghost" data-unwish="${k}">Remove</button>`,
-        })).join("")}</div></section>` : ""}
-      ${a.unworn.length || a.stale.length ? `<section class="card"><h2>Forgotten pieces</h2><p class="muted small" style="margin-top:-6px">Wear them, or think about selling or donating.</p><div class="grid">${[...a.unworn, ...a.stale].slice(0, 8).map(itemTile).join("")}</div></section>` : ""}
-      <section class="card ai-box">
-        <h2 style="margin:0">Personal shopping advice</h2>
-        <p class="muted small" style="margin:0">${aiReady() ? `${aiName()} looks at your whole wardrobe and suggests the next few buys.` : "Add a Gemini or Claude API key in Settings for tailored shopping advice."}</p>
-        <div class="row"><button class="btn primary" data-ask="${esc(SHOP_QUESTION)}">What should I buy next?</button></div>
-        <div class="ai-answer" id="ai-answer">${answerHTML(state.aiAnswer)}</div>
-      </section>
-    </div>`;
+    </div>
+    <section class="card">
+      <h2>Balance</h2>
+      <div class="stack" style="gap:14px">
+        ${Object.entries(SLOTS).filter(([k]) => SLOT_TARGET[k]).map(([k, l]) => {
+          const n = a.bySlot[k].length, t = SLOT_TARGET[k];
+          return `<div><div class="row" style="justify-content:space-between"><span>${l}</span><span class="muted">${n} / ${t} suggested</span></div><div class="bar"><i style="width:${Math.min(100, (n / t) * 100)}%;${n === 0 ? "background:var(--warn);width:4%" : ""}"></i></div></div>`;
+        }).join("")}
+      </div>
+    </section>
+    ${a.unworn.length || a.stale.length ? `<section class="card"><h2>Forgotten pieces</h2><p class="muted small" style="margin-top:-6px">Wear them, or think about selling or donating.</p><div class="grid">${[...a.unworn, ...a.stale].slice(0, 8).map(itemTile).join("")}</div></section>` : ""}
+    <section class="card ai-box">
+      <h2 style="margin:0">Personal shopping advice</h2>
+      <p class="muted small" style="margin:0">${aiReady() ? `${aiName()} looks at your whole wardrobe and suggests the next few buys.` : "Add a Gemini or Claude API key in Settings for tailored shopping advice."}</p>
+      <div class="row"><button class="btn primary" data-ask="${esc(SHOP_QUESTION)}">What should I buy next?</button></div>
+      <div class="ai-answer" id="ai-answer">${answerHTML(state.aiAnswer)}</div>
+    </section>`;
 }
 
-// "Looking for something": type what you'd like, optionally a brand and fit; get shop links
-// for it, the pieces you own it would go with, and (on request) the stylist's opinion.
-function findCard(myBrands) {
-  const f = state.find;
-  const fits = Object.keys(FITS);
-  const b = f.shown;
-  return `<section class="card stack find">
-    <h2 style="margin:0">Looking for something?</h2>
-    <p class="muted small" style="margin:0">Type what you'd like to buy and, if you want, the brand. You get shop links and the pieces you own it would go with.</p>
-    <div class="find-fields">
-      <input class="input" data-input="findq" value="${esc(f.q)}" placeholder="e.g. white leather sneakers, black cargo trousers" aria-label="What you'd like to buy">
-      <input class="input" data-input="findbrand" value="${esc(f.brand)}" placeholder="Brand (optional)" list="find-brands" autocomplete="off" aria-label="Brand">
-      <datalist id="find-brands">${[...new Set([...myBrands, ...BRAND_LIST.map(([n]) => n)])].map((n) => `<option value="${esc(n)}"></option>`).join("")}</datalist>
-    </div>
-    ${myBrands.length ? `<div class="chips scroller"><span class="muted small" style="align-self:center;white-space:nowrap">Your brands</span>${myBrands.slice(0, 12).map((n) => `<button class="chip" aria-pressed="${f.brand === n}" data-findbrand="${esc(n)}">${esc(n)}</button>`).join("")}</div>` : ""}
-    <div class="chips scroller"><span class="muted small" style="align-self:center;white-space:nowrap">Fit</span>${fits.map((k) => `<button class="chip" aria-pressed="${f.fit === k}" data-findfit="${k}">${FITS[k].label}</button>`).join("")}</div>
-    <div class="row"><button class="btn primary" data-act="find">Find it</button>${b && aiReady() ? `<button class="btn" data-act="find-ai">Ask the stylist about it</button>` : ""}</div>
-    ${b ? `<div class="sugg">${buyRow({ ...b, with: goesWith(b.title) }, { label: b.brand ? `From ${esc(b.brand)}` : "", extra: wishBtn(b) })}</div>` : ""}
-    <div class="ai-answer" id="find-ai">${answerHTML(f.answer)}</div>
-  </section>`;
+/* ---- Try a piece ---- */
+const TRY_CATS = CATS.filter((c) => CORE.includes(c.slot));
+// The day an idea is shown for: a puffer on a cold day, shorts on a hot one.
+function tempFor(p) {
+  const w = p.warmth || 2, r = roleOf(p);
+  if (r === "outer") return [18, 17, 15, 11, 6, 1][w];
+  if (r === "mid") return w >= 3 ? 11 : 15;
+  if (p.category === "shorts") return 26;
+  if (r === "base") return 21;
+  if (p.category === "boots") return 8;
+  return Math.min(22, Math.max(8, conditions().feels));
 }
-function findIt() {
-  const f = state.find;
-  const what = f.q.trim().replace(/\s+/g, " ");
-  if (!what) return toast("Type what you're looking for first");
-  const brand = f.brand.trim();
-  // The fit only means something for tops and bottoms (not "slim sneakers").
-  const fitOk = f.fit && fitsFor({ category: buyKind(what.toLowerCase()).cat }).includes(f.fit) && !new RegExp(`\\b${f.fit}`, "i").test(what);
-  const fit = fitOk ? `${FITS[f.fit].label.toLowerCase()} ` : "";
-  const title = cap(`${brand ? brand + " " : ""}${fit}${what}`);
-  f.shown = { prio: "medium", title, why: "", query: title, brand };
-  f.answer = "";
+// The occasion a piece is made for: closest dressiness, and a style the occasion likes.
+function bestOcc(p) {
+  const gym = slotOf(p) === "gym";
+  return OCCASIONS.filter((o) => (o.id === "gym") === gym)
+    .map((o) => [Math.abs(o.target - (p.formality || 1)) - ((p.styles || []).some((s) => o.likes.includes(s)) ? 0.5 : 0), o])
+    .sort((a, b) => a[0] - b[0])[0][1];
+}
+function tryTab() {
+  const t = state.disc.try;
+  const fits = t.cat ? fitsFor({ category: t.cat }) : [];
+  const myBrands = Object.entries(analyse().brandCount).sort((x, y) => y[1] - x[1]).map(([b]) => b);
+  const chip = (attr, k, label, on, extra = "") => `<button class="chip" aria-pressed="${on}" data-${attr}="${esc(k)}">${extra}${esc(label)}</button>`;
+  return `
+    <section class="card stack find">
+      <h2 style="margin:0">What are you thinking of buying?</h2>
+      <p class="muted small" style="margin:0">Pick what it is and its colour${aiReady() ? ", or take a photo of it in the shop" : ""}. The app checks it against everything you own and builds outfits with it.</p>
+      <div class="field"><label>Type</label><div class="chips">${TRY_CATS.map((c) => chip("trycat", c.id, c.label, t.cat === c.id)).join("")}</div></div>
+      <div class="field"><label>Colour</label><div class="chips">${Object.keys(COLORS).map((c) => chip("trycolor", c, cap(c), t.color === c, `<span class="dot" style="background:${COLORS[c].hex}"></span>`)).join("")}</div></div>
+      ${fits.length ? `<div class="field"><label>Fit <span class="muted">(optional)</span></label><div class="chips">${fits.map((k) => chip("tryfit", k, FITS[k].label, t.fit === k)).join("")}</div></div>` : ""}
+      <div class="field"><label>Style <span class="muted">(optional)</span></label><div class="chips scroller">${Object.keys(STYLES).map((k) => chip("trystyle", k, styleLabel(k), t.style === k)).join("")}</div></div>
+      <div class="find-fields">
+        <input class="input" data-input="trytext" value="${esc(t.text)}" placeholder="Details, e.g. cargo, suede, striped (optional)" aria-label="Details">
+        <input class="input" data-input="trybrand" value="${esc(t.brand)}" placeholder="Brand (optional)" list="try-brands" autocomplete="off" aria-label="Brand">
+        <datalist id="try-brands">${[...new Set([...myBrands, ...BRAND_LIST.map(([n]) => n)])].map((n) => `<option value="${esc(n)}"></option>`).join("")}</datalist>
+      </div>
+      ${myBrands.length ? `<div class="chips scroller"><span class="muted small" style="align-self:center;white-space:nowrap">Your brands</span>${myBrands.slice(0, 12).map((n) => chip("trybrand", n, n, t.brand === n)).join("")}</div>` : ""}
+      <div class="row">
+        <button class="btn primary" data-act="try">Check my wardrobe</button>
+        ${aiReady() ? `<button class="btn" data-act="try-photo" ${t.busy ? "disabled" : ""}><svg viewBox="0 0 24 24"><path d="M4 8h3l2-3h6l2 3h3v11H4z"/><circle cx="12" cy="13" r="3.5"/></svg>${t.busy ? "Looking at the photo…" : "Take a photo of it"}</button>` : ""}
+      </div>
+    </section>
+    ${t.shown ? tryResult(t) : ""}`;
+}
+function tryIt() {
+  const t = state.disc.try;
+  const text = t.text.trim().replace(/\s+/g, " ");
+  const cat = t.cat || (text ? buyKind(text.toLowerCase()).cat : "");
+  if (!cat || !CORE.includes(roleOf({ category: cat }))) return toast("Pick what kind of piece it is first");
+  const color = t.color || colourIn(text);
+  // "cargo" with Trousers → "cargo trousers"; "white leather sneakers" stays as typed.
+  let noun = text.replace(new RegExp(`\\b${escRe(color)}\\b`, "i"), "").trim();
+  if (!noun || buyKind(noun.toLowerCase()).cat !== cat) noun = `${noun} ${catLabel(cat).toLowerCase()}`.trim();
+  const styles = t.style ? [t.style] : undefined;
+  t.shown = mkIdea({ cat, color, noun, brand: t.brand.trim(), fit: fitsFor({ category: cat }).includes(t.fit) ? t.fit : "", styles });
+  t.occ = "";
+  t.answer = "";
   render();
 }
+async function tryPhoto(file) {
+  const t = state.disc.try;
+  t.busy = true;
+  render();
+  try {
+    const blob = await resizeImage(file, 900);
+    const r = await aiTagPhoto(blob, null);
+    if (!CORE.includes(roleOf({ category: r.category }))) throw new Error("That doesn't look like a top, bottom, jacket or pair of shoes. Try another photo.");
+    Object.assign(t, { cat: r.category, color: r.colors?.[0] || "", fit: FITS[r.fit] ? r.fit : "", style: r.styles?.[0] || "", brand: r.brand || "", text: "", occ: "", answer: "" });
+    t.shown = { ...mkIdea({ cat: r.category, color: t.color, brand: t.brand, title: cap(r.name || catLabel(r.category)), fit: t.fit, styles: r.styles }), photo: blob };
+  } catch (e) {
+    toast(e.message || "Couldn't read that photo");
+  }
+  t.busy = false;
+  render();
+}
+function tryResult(t) {
+  const b = t.shown;
+  const piece = asPiece(b);
+  const could = wornWith(piece), matches = matchesFor(piece);
+  const share = could.length ? matches.length / could.length : 0;
+  const [verdict, line] = !could.length ? ["Nothing to compare yet", "Add pieces from other parts of an outfit to see how it fits in."]
+    : share >= 0.6 ? ["Easy to wear", `It goes with ${matches.length} of the ${could.length} pieces you'd wear it with.`]
+    : share >= 0.3 ? ["Works well", `It goes with ${matches.length} of the ${could.length} pieces you'd wear it with.`]
+    : ["Hard to match", `Only ${matches.length} of your ${could.length} pieces go with it. A more neutral colour would be easier to wear.`];
+  const similar = state.items.filter((o) => o.category === b.cat && o.colors?.[0] && o.colors[0] === piece.colors[0]);
+  const occ = OCCASIONS.find((o) => o.id === t.occ) || bestOcc(piece);
+  const cond = { feels: tempFor(piece), wet: false };
+  const ideas = could.length ? pickIdeas(ideaPool({ anchor: piece, occ, cond }), 3) : [];
+  const order = ["outer", "mid", "base", "bottom", "shoes"];
+  return `<section class="card stack">
+    <div class="try-head">
+      ${artTile(b)}
+      <div class="stack" style="gap:6px">
+        <span class="prio">${verdict}</span>
+        <h2 style="margin:0">${esc(b.title)}</h2>
+        <p class="muted" style="margin:0">${line}</p>
+        ${similar.length ? `<p style="margin:0">You already own ${similar.length === 1 ? "something similar" : `${similar.length} similar pieces`}:</p><div class="pieces mini">${similar.slice(0, 4).map(pieceTile).join("")}</div>` : ""}
+      </div>
+    </div>
+    ${ideas.length ? `<h2 style="margin:6px 0 0">Outfits with it</h2>
+      <div class="chips scroller">${OCCASIONS.filter((o) => (o.id === "gym") === (slotOf(piece) === "gym")).map((o) => `<button class="chip" aria-pressed="${o.id === occ.id}" data-tryocc="${o.id}">${o.label}</button>`).join("")}</div>
+      <p class="muted small" style="margin:0">From your wardrobe, for a ${fmtTemp(cond.feels)} day.</p>
+      <div class="looks try-looks">${ideas.map((c) => `<article class="look"><div class="pieces">${order.filter((k) => c.pieces[k]).map((k) => (c.pieces[k].isNew ? `<div class="piece new">${artTile(b)}<span>New: ${esc(b.title)}</span></div>` : pieceTile(c.pieces[k]))).join("")}</div>${c.reasons.length ? `<p class="why">${c.reasons.map(esc).join(" · ")}</p>` : ""}</article>`).join("")}</div>` : ""}
+    ${ideaDetail(b, { withPieces: false })}
+    ${aiReady() ? `<div class="row"><button class="btn" data-act="try-ai">Ask the stylist about it</button></div>` : ""}
+    <div class="ai-answer" id="try-ai">${answerHTML(t.answer)}</div>
+  </section>`;
+}
+
+/* ---- Shop trip ---- */
+const TRIP_SYSTEM =
+  "You help a shopper plan a trip to a shopping mall, outlet, shopping street or a single shop, anywhere in the world. " +
+  "Use Google Search to check which shops are really there now. Plain text, no markdown. " +
+  "Line 1: 'Place: <official name>, <city>, <country>', or 'Place: not found'. " +
+  "Then one line per shop that sells clothes, shoes or accessories (for a single shop, only that shop; at most 40 lines): " +
+  `<shop name> | <its website domain, e.g. zara.com> | <what it sells, comma-separated, only from: ${SELL_GROUPS.join(", ")}> | <price: budget, mid, premium or luxury>`;
+function parseTrip(text, key) {
+  let name = "";
+  const stores = [];
+  for (const raw of text.split("\n")) {
+    const line = raw.replace(/\*\*/g, "").replace(/^[\s*•·-]*(\d+[.)]\s+)?/, "").trim();
+    const place = line.match(/^place\s*:\s*(.+)$/i);
+    if (place) { name = /not found/i.test(place[1]) ? "" : place[1].trim(); continue; }
+    const p = line.split("|").map((x) => x.trim());
+    if (p.length < 3 || !p[0]) continue;
+    const domain = (p[1].toLowerCase().replace(/^https?:\/\//, "").replace(/^www\./, "").split(/[/\s]/)[0].match(/^[a-z0-9.-]+\.[a-z]{2,}$/) || [""])[0];
+    const sells = p[2].toLowerCase().split(/\s*,\s*/).flatMap((g) => (g === "shoes" ? ["sneakers", "boots", "smart shoes"] : SELL_GROUPS.includes(g) ? [g] : []));
+    if (!stores.some((s) => s.name.toLowerCase() === p[0].toLowerCase())) stores.push({ name: p[0], domain, sells: [...new Set(sells)], price: (p[3] || "").toLowerCase() });
+  }
+  return name && stores.length ? { key, name, stores, at: today() } : null;
+}
+async function setTrip(trip) {
+  state.trip = trip;
+  if (trip) {
+    state.trips = [trip, ...state.trips.filter((t) => t.key !== trip.key)].slice(0, 8);
+    await store.put("kv", state.trips, "trips");
+  }
+  await store.put("kv", trip, "trip");
+  render();
+}
+async function lookupTrip(raw) {
+  const place = String(raw || "").trim().replace(/\s+/g, " ");
+  if (!place) return toast("Type a mall or a shop first");
+  const key = fold(place);
+  const known = state.trips.find((t) => t.key === key);
+  if (known) return setTrip(known);
+  // A brand the app knows is one shop: no need to look anything up.
+  const brand = brandInfo(place);
+  if (brand) return setTrip({ key, name: brand.name, single: true, stores: [{ name: brand.name, domain: "", sells: [] }] });
+  if (!aiReady()) {
+    toast("Without an AI key the app can't look inside a mall, so it searches this name as one shop.");
+    return setTrip({ key, name: place, single: true, stores: [{ name: place, domain: "", sells: [] }] });
+  }
+  state.disc.tripBusy = place;
+  render();
+  try {
+    const text = await aiGenerate({ system: TRIP_SYSTEM, text: `Place: ${place}\nThe shopper lives in: ${state.settings.city || "unknown"}`, search: true, maxTokens: 1600 });
+    const trip = parseTrip(text, key);
+    state.disc.tripBusy = "";
+    if (!trip) { toast(`Couldn't find “${place}”. Try adding the city.`); return render(); }
+    return setTrip(trip);
+  } catch (e) {
+    state.disc.tripBusy = "";
+    toast(e.message || "Couldn't look that place up");
+    render();
+  }
+}
+function tripTab() {
+  const tr = state.trip, d = state.disc;
+  const a = analyse();
+  const blocks = tr ? a.suggestions.map((s, k) => ({ s, k, options: variantsOf(s).filter(soldHere) })).filter((x) => x.options.length) : [];
+  const wish = tr ? state.wishlist.map((w, k) => [w, k]).filter(([w]) => soldHere(w)) : [];
+  return `
+    <section class="card stack">
+      <h2 style="margin:0">Where are you going shopping?</h2>
+      <p class="muted small" style="margin:0">A mall, an outlet, a shopping street or a single shop, anywhere in the world. ${aiReady() ? `${aiName()} looks up which clothing shops are there (once per place), then every idea in Discover only shows those shops.` : "Add an AI key in Settings to look up the shops inside a mall; without it, the name is searched as one shop."}</p>
+      <div class="row"><input class="input" style="flex:1;min-width:0" data-input="tripq" value="${esc(d.tripq)}" placeholder="e.g. Westfield Milano, Il Centro Arese, Uniqlo" aria-label="Mall or shop"><button class="btn primary" data-act="trip" ${d.tripBusy ? "disabled" : ""}>Look it up</button></div>
+      ${state.trips.length ? `<div class="chips scroller"><span class="muted small" style="align-self:center;white-space:nowrap">Recent</span>${state.trips.map((t) => `<button class="chip" aria-pressed="${tr?.key === t.key}" data-tripgo="${esc(t.key)}">${esc(t.name.split(",")[0])}</button>`).join("")}</div>` : ""}
+      ${d.tripBusy ? `<div class="row"><div class="spinner"></div><span class="muted">Looking up the shops at ${esc(d.tripBusy)}…</span></div>` : ""}
+    </section>
+    ${tr ? `<section class="card stack">
+      <div class="row" style="justify-content:space-between"><div><h2 style="margin:0">${esc(tr.name)}</h2><p class="muted small" style="margin:4px 0 0">${tr.single ? "One shop" : `${tr.stores.length} shops with clothes, shoes or accessories`}</p></div><button class="btn ghost" data-act="trip-clear">Stop filtering</button></div>
+      <div class="chips">${tr.stores.map((st) => `<a class="chip" href="${st.domain ? `https://${esc(st.domain)}` : `https://www.google.com/search?q=${encodeURIComponent(st.name)}`}" target="_blank" rel="noopener">${esc(st.name)}${st.price ? ` <span class="tier">${esc(st.price)}</span>` : ""}</a>`).join("")}</div>
+      <p class="muted small" style="margin:0">Try a piece and New look also use only these shops while this trip is on.</p>
+    </section>
+    <section class="card">
+      <h2>What you could buy here</h2>
+      <div class="sugg">${blocks.map(({ s, k, options }) => ideaBlock(`s${k}:${s.title}`, { label: s.prio === "high" ? "Fills a gap" : s.prio === "medium" ? "Adds range" : "Nice to have", title: s.title, why: s.why, options })).join("") || `<p class="muted">None of the ideas for your wardrobe are sold here. Try a piece or New look to search these shops anyway.</p>`}</div>
+    </section>
+    ${wish.length ? `<section class="card"><h2>From your wishlist</h2><div class="sugg">${wish.map(([w, k]) => buyRow({ ...w, with: goesWith(w.title) }, { label: "", extra: `<button class="btn ghost" data-unwish="${k}">Remove</button>` })).join("")}</div></section>` : ""}` : ""}`;
+}
+
+/* ---- New look ---- */
+const SEASONS = { spring: { label: "Spring", feels: 16 }, summer: { label: "Summer", feels: 27 }, autumn: { label: "Autumn", feels: 12 }, winter: { label: "Winter", feels: 3 } };
+function seasonNow() {
+  const m = new Date().getMonth(), south = (state.settings.lat ?? 45) < 0;
+  const n = m >= 2 && m <= 4 ? "spring" : m >= 5 && m <= 7 ? "summer" : m >= 8 && m <= 10 ? "autumn" : "winter";
+  return south ? { spring: "autumn", summer: "winter", autumn: "spring", winter: "summer" }[n] : n;
+}
+// Built-in looks (no AI): pieces with how dressy (f) and warm (w) they are and the styles
+// they suit, and colour stories where every part already goes together.
+const LOOK_KIT = [
+  ["base", "tshirt", "heavyweight T-shirt", 1, 1, "casual streetwear minimal sporty vintage outdoor"],
+  ["base", "tshirt", "boxy graphic T-shirt", 1, 1, "streetwear"],
+  ["base", "polo", "knitted polo", 2.5, 1, "smart casual preppy minimal luxury"],
+  ["base", "polo", "piqué polo", 2, 1, "preppy smart casual casual sporty"],
+  ["base", "shirt", "Oxford shirt", 2.5, 1, "preppy smart casual smart casual"],
+  ["base", "shirt", "linen shirt", 2, 1, "smart casual minimal casual luxury"],
+  ["base", "shirt", "poplin shirt", 3.5, 1, "smart formal luxury"],
+  ["base", "shirt", "flannel shirt", 1.5, 2, "vintage outdoor casual"],
+  ["mid", "sweatshirt", "crewneck sweatshirt", 1, 2, "casual sporty vintage minimal"],
+  ["mid", "hoodie", "heavyweight hoodie", 1, 3, "streetwear casual sporty"],
+  ["mid", "sweater", "merino crewneck", 2.5, 2, "minimal smart casual smart preppy luxury"],
+  ["mid", "sweater", "cable-knit sweater", 2, 3, "preppy vintage smart casual outdoor"],
+  ["mid", "sweater", "roll-neck sweater", 3.2, 3, "smart luxury formal minimal"],
+  ["mid", "overshirt", "wool overshirt", 2, 2, "smart casual outdoor vintage minimal streetwear"],
+  ["mid", "zip-hoodie", "zip track top", 1, 2, "sporty streetwear"],
+  ["outer", "jacket", "denim jacket", 1, 2, "casual vintage streetwear"],
+  ["outer", "jacket", "bomber jacket", 1.5, 3, "streetwear casual minimal"],
+  ["outer", "jacket", "suede jacket", 2.5, 3, "smart casual vintage luxury"],
+  ["outer", "jacket", "unstructured blazer", 3, 2, "smart smart casual preppy luxury formal"],
+  ["outer", "jacket", "Harrington jacket", 2, 2, "preppy vintage smart casual"],
+  ["outer", "jacket", "leather jacket", 2, 3, "streetwear vintage luxury"],
+  ["outer", "jacket", "quilted jacket", 2, 3, "preppy outdoor smart casual"],
+  ["outer", "rain", "technical shell jacket", 1, 2, "outdoor sporty streetwear"],
+  ["outer", "coat", "trench coat", 3, 3, "smart preppy luxury minimal"],
+  ["outer", "coat", "wool overcoat", 3.3, 4, "smart luxury formal minimal smart casual"],
+  ["outer", "puffer", "puffer jacket", 1, 5, "streetwear outdoor casual sporty minimal"],
+  ["bottom", "jeans", "straight-leg jeans", 1.2, 2, "casual vintage minimal streetwear smart casual"],
+  ["bottom", "jeans", "baggy jeans", 1, 2, "streetwear"],
+  ["bottom", "trousers", "cargo trousers", 1, 2, "streetwear outdoor casual"],
+  ["bottom", "trousers", "chinos", 2, 2, "smart casual preppy casual"],
+  ["bottom", "trousers", "pleated wool trousers", 3.2, 2, "smart luxury formal minimal"],
+  ["bottom", "trousers", "linen trousers", 2.3, 1, "smart casual minimal luxury"],
+  ["bottom", "joggers", "joggers", 1, 2, "sporty streetwear"],
+  ["bottom", "shorts", "chino shorts", 1.5, 1, "casual preppy smart casual minimal"],
+  ["bottom", "shorts", "denim shorts", 1, 1, "casual streetwear vintage"],
+  ["bottom", "shorts", "training shorts", 1, 1, "sporty"],
+  ["shoes", "sneakers", "leather sneakers", 1.8, 2, "minimal smart casual casual luxury preppy"],
+  ["shoes", "sneakers", "retro running sneakers", 1, 2, "sporty streetwear casual vintage"],
+  ["shoes", "sneakers", "chunky sneakers", 1, 2, "streetwear"],
+  ["shoes", "sneakers", "canvas sneakers", 1, 2, "casual vintage"],
+  ["shoes", "boots", "suede Chelsea boots", 2.5, 4, "smart casual minimal smart vintage luxury"],
+  ["shoes", "boots", "leather work boots", 1.5, 4, "outdoor vintage casual streetwear"],
+  ["shoes", "dress-shoes", "leather loafers", 3, 2, "preppy smart luxury smart casual"],
+  ["shoes", "dress-shoes", "Derby shoes", 3.5, 2, "smart formal"],
+].map(([role, cat, noun, f, w, styles]) => ({ role, cat, noun, f, w, styles: parseStyles(styles) }));
+// Colours for [base, mid, outer, bottom, shoes]; jeans and denim keep their own colour.
+const LOOK_PALETTES = [
+  { name: "Monochrome", c: ["white", "grey", "black", "black", "white"], styles: "minimal streetwear smart sporty luxury" },
+  { name: "Navy and cream", c: ["white", "navy", "navy", "cream", "brown"], styles: "preppy smart casual smart minimal" },
+  { name: "Earth tones", c: ["cream", "olive", "brown", "beige", "brown"], styles: "vintage outdoor casual smart casual" },
+  { name: "Charcoal and white", c: ["white", "charcoal", "charcoal", "grey", "black"], styles: "smart formal luxury minimal" },
+  { name: "Camel and cream", c: ["cream", "beige", "camel", "cream", "brown"], styles: "luxury smart minimal smart casual" },
+  { name: "Black and olive", c: ["black", "black", "olive", "black", "black"], styles: "streetwear outdoor minimal" },
+  { name: "Burgundy accent", c: ["white", "burgundy", "navy", "charcoal", "white"], styles: "preppy smart casual casual vintage" },
+  { name: "Summer whites", c: ["white", "light blue", "beige", "beige", "white"], styles: "smart casual minimal casual preppy luxury" },
+  { name: "Grey marl", c: ["white", "grey", "navy", "grey", "white"], styles: "sporty casual minimal streetwear" },
+  { name: "Brown tonal", c: ["cream", "brown", "brown", "cream", "brown"], styles: "luxury minimal vintage smart casual" },
+].map((p) => ({ ...p, styles: parseStyles(p.styles) }));
+const ROLE_IDX = { base: 0, mid: 1, outer: 2, bottom: 3, shoes: 4 };
+function builtInLook(season, style, occ) {
+  const want = 0.6 * occ.target + 0.4 * (STYLES[style]?.f || 1.5);
+  const hot = season === "summer", cold = season === "winter";
+  const roles = ["base", "bottom", "shoes"];
+  if (!hot) roles.splice(1, 0, cold ? "mid" : Math.random() < 0.5 ? "mid" : "outer");
+  if (cold) roles.splice(2, 0, "outer");
+  if (hot && want >= 2.9) roles.splice(1, 0, "outer"); // a light blazer for work or an elegant evening
+  const fitsSeason = (k) => {
+    if (k.role === "outer") return hot ? k.noun === "unstructured blazer" : cold ? k.w >= 3 : k.w <= 3;
+    if (k.role === "mid") return !cold || k.w >= 2;
+    if (k.role === "bottom") return hot ? k.w <= 1 || k.cat === "jeans" && want < 2 : k.cat !== "shorts" && (cold ? k.w >= 2 : true);
+    if (k.role === "shoes") return hot ? k.cat !== "boots" : true;
+    return !hot || k.w <= 1;
+  };
+  const pal = LOOK_PALETTES.map((p) => [p.styles.includes(style) ? 2 + Math.random() : Math.random(), p]).sort((a, b) => b[0] - a[0])[0][1];
+  const pieces = roles.map((role) => {
+    const best = LOOK_KIT.filter((k) => k.role === role && fitsSeason(k))
+      .map((k) => [(k.styles.includes(style) ? 3 : 0) - Math.abs(k.f - want) * 1.5 + (cold && k.cat === "boots" ? 1 : 0) + Math.random() * 1.6, k])
+      .sort((a, b) => b[0] - a[0])[0]?.[1];
+    if (!best) return null;
+    let color = pal.c[ROLE_IDX[role]];
+    if (best.cat === "jeans") color = COLORS[color]?.tone === "light" ? "light-wash" : color === "black" ? "black" : "indigo";
+    if (best.noun === "denim jacket" || best.noun === "denim shorts") color = "denim";
+    return mkIdea({ cat: best.cat, color, noun: best.noun.replace(/^denim /, (m) => (color === "denim" ? "" : m)) });
+  }).filter(Boolean);
+  return { title: `${pal.name} ${SEASONS[season].label.toLowerCase()} look`, why: `${styleLabel(style)} pieces in a ${pal.name.toLowerCase()} colour story, dressed right for ${occ.label.toLowerCase()}.`, pieces };
+}
+const LOOK_CATS = CATS.filter((c) => !["under"].includes(c.slot)).map((c) => c.id);
+const LOOK_SCHEMA = {
+  type: "object", additionalProperties: false, required: ["title", "why", "pieces"],
+  properties: {
+    title: { type: "string", description: "A short name for the look" },
+    why: { type: "string", description: "One sentence on why it works" },
+    pieces: {
+      type: "array", description: "4 to 6 pieces: top, bottom and shoes, a layer or outerwear when the season needs it, at most one accessory",
+      items: {
+        type: "object", additionalProperties: false, required: ["name", "category", "color", "search", "store"],
+        properties: {
+          name: { type: "string", description: "Colour first, e.g. 'Ecru cable-knit sweater'" },
+          category: { type: "string", enum: LOOK_CATS },
+          color: { type: "string", enum: Object.keys(COLORS) },
+          search: { type: "string", description: "Words to paste into a shop's search box" },
+          store: { type: "string", description: "Which of the listed shops sells it; empty when no shops are listed" },
+        },
+      },
+    },
+  },
+};
+async function makeLook() {
+  const L = state.disc.look;
+  const season = L.season || seasonNow(), style = L.style || topStyle() || "casual", occ = OCCASIONS.find((o) => o.id === L.occ) || OCCASIONS[0];
+  if (!aiReady()) { L.result = builtInLook(season, style, occ); return render(); }
+  L.busy = true;
+  render();
+  try {
+    const a = analyse();
+    const palette = Object.entries(a.colorCount).sort((x, y) => y[1] - x[1]).slice(0, 4).map(([c]) => c).join(", ");
+    const brands = Object.entries(a.brandCount).sort((x, y) => y[1] - x[1]).slice(0, 4).map(([b]) => b).join(", ");
+    const shops = state.trip ? state.trip.stores.map((s) => s.name).slice(0, 30).join(", ") : "";
+    const text = await aiGenerate({
+      system: "You are a stylist in a wardrobe app. Design one complete outfit made only of new pieces the user can buy. Reply with JSON only.",
+      text: `Season: ${SEASONS[season].label}. Style: ${styleLabel(style)}. Occasion: ${occ.label}.` +
+        (palette ? ` Colours they usually wear: ${palette}.` : "") + (brands ? ` Brands they own: ${brands}.` : "") +
+        (shops ? ` Only use pieces sold by these shops and name the shop for each: ${shops}.` : "") +
+        ` Real, easy-to-find pieces; at most one accent colour.` + (L.seen.length ? ` Make it different from: ${L.seen.slice(-4).join("; ")}.` : ""),
+      schema: LOOK_SCHEMA,
+      maxTokens: 700,
+    });
+    const r = JSON.parse(text.replace(/^```(json)?|```$/g, "").trim());
+    const pieces = (r.pieces || []).filter((p) => CAT[p.category]).slice(0, 6).map((p) => {
+      const st = state.trip?.stores.find((s) => s.name.toLowerCase() === String(p.store || "").toLowerCase());
+      return { ...mkIdea({ cat: p.category, color: p.color, title: cap(p.name) }), query: p.search || p.name, store: st?.name || "" };
+    });
+    if (!pieces.length) throw new Error("The stylist didn't send any pieces. Try again.");
+    L.result = { title: r.title, why: r.why, pieces, ai: true };
+    L.seen.push(r.title);
+  } catch (e) {
+    toast(`${e.message || "Couldn't reach the stylist"} Showing a built-in look instead.`);
+    L.result = builtInLook(season, style, occ);
+  }
+  L.busy = false;
+  render();
+}
+const topStyle = () => Object.entries(analyse().styleCount).sort((x, y) => y[1] - x[1])[0]?.[0];
+function lookTab() {
+  const L = state.disc.look;
+  const season = L.season || seasonNow(), style = L.style || topStyle() || "casual";
+  const r = L.result;
+  return `
+    <section class="card stack">
+      <h2 style="margin:0">Build me a new look</h2>
+      <p class="muted small" style="margin:0">${aiReady() ? `${aiName()} designs it (one short request).` : "Built-in looks. Add an AI key in Settings for more variety."} Every piece is new, with shop links.</p>
+      <div class="field"><label>Season</label><div class="chips">${Object.entries(SEASONS).map(([k, s]) => `<button class="chip" aria-pressed="${season === k}" data-lookseason="${k}">${s.label}</button>`).join("")}</div></div>
+      <div class="field"><label>Style</label><div class="chips scroller">${Object.keys(STYLES).map((k) => `<button class="chip" aria-pressed="${style === k}" data-lookstyle="${esc(k)}">${styleLabel(k)}</button>`).join("")}</div></div>
+      <div class="field"><label>Occasion</label><div class="chips scroller">${OCCASIONS.map((o) => `<button class="chip" aria-pressed="${L.occ === o.id}" data-lookocc="${o.id}">${o.label}</button>`).join("")}</div></div>
+      <div class="row"><button class="btn primary" data-act="look" ${L.busy ? "disabled" : ""}>${r ? "Another look" : "Create a look"}</button>${L.busy ? `<div class="spinner"></div><span class="muted">Putting a look together…</span>` : ""}</div>
+    </section>
+    ${r ? `<section class="card stack">
+      <div><h2 style="margin:0">${esc(r.title)}</h2>${r.why ? `<p class="muted" style="margin:6px 0 0">${esc(r.why)}</p>` : ""}</div>
+      <div class="pieces look-row">${r.pieces.map((b) => `<div class="piece">${artTile(b)}<span>${esc(b.title)}</span></div>`).join("")}</div>
+      <div class="sugg">${r.pieces.map((b) => `<div class="look-piece"><div class="row" style="gap:10px">${artTile(b)}<div><h3 style="margin:0">${esc(b.title)}</h3>${b.store ? `<span class="muted small">At ${esc(b.store)}</span>` : state.trip && !soldHere(b) ? `<span class="muted small">Not sold at ${esc(state.trip.name)}</span>` : ""}</div></div>${ideaDetail(b, { withPieces: false })}</div>`).join("")}</div>
+    </section>` : ""}`;
+}
+
+/* ---- Real photos ---- */
+// Asked for one idea at a time: Gemini searches Google for real products, and the app's
+// server opens each page to read its product photo (shops don't let a browser do that).
+const photoKey = (b) => `${b.query}|${state.trip?.key || ""}`;
+const realBtn = (b) => `<button class="btn" data-real="${esc(JSON.stringify({ title: b.title, query: b.query, cat: b.cat, color: b.color }))}"><svg viewBox="0 0 24 24"><rect x="3" y="5" width="18" height="14" rx="2"/><circle cx="9" cy="10" r="1.6"/><path d="m21 16-5-5-8 8"/></svg>Real photos</button>`;
+function photosHTML(b) {
+  const ph = state.disc.photos[photoKey(b)];
+  if (!ph) return "";
+  if (ph.busy) return `<div class="row"><div class="spinner"></div><span class="muted">Searching the shops for ${esc(b.title)}…</span></div>`;
+  if (ph.error) return `<p class="muted small" style="margin:0">${esc(ph.error)}</p>`;
+  const safe = (u) => (/^https?:\/\//i.test(u || "") ? u : "");
+  return `<div class="real">
+    ${ph.items.map((p) => `<a class="real-card" href="${esc(safe(p.url))}" target="_blank" rel="noopener"><img class="real-img" src="${esc(safe(p.image))}" referrerpolicy="no-referrer" loading="lazy" alt=""><b>${esc(p.title)}</b><span class="muted small">${esc([p.shop, p.price].filter(Boolean).join(" · "))}</span></a>`).join("")}
+    ${!ph.items.length && ph.links.length ? `<div class="stack" style="gap:6px"><span class="muted small">${ph.noServer ? "Photos can only be loaded on the hosted app. Products found:" : "No photos could be loaded from these shops. Products found:"}</span>${ph.links.map((p) => `<a class="btn ghost" href="${esc(safe(p.url))}" target="_blank" rel="noopener">${esc([p.title, p.shop, p.price].filter(Boolean).join(" · "))}</a>`).join("")}</div>` : ""}
+    ${!ph.items.length && !ph.links.length ? `<p class="muted small" style="margin:0">No products found this time. The shop buttons above still search for it.</p>` : ""}
+  </div>`;
+}
+// What a product page shows: its photo, name and price (worker/api.js, GET /api/page).
+async function pageInfo(url) {
+  try {
+    const r = await fetch(`api/page?url=${encodeURIComponent(url)}`, AbortSignal.timeout ? { signal: AbortSignal.timeout(12000) } : {});
+    if (r.status === 404 && !(r.headers.get("Content-Type") || "").includes("json")) return { noServer: true };
+    return r.ok ? await r.json() : null;
+  } catch { return null; }
+}
+async function realPhotos(b) {
+  if (!aiReady()) return toast(NO_AI);
+  const k = photoKey(b);
+  if (state.disc.photos[k]?.busy) return;
+  state.disc.photos[k] = { busy: true };
+  if (view !== "add") render();
+  try {
+    let sources = [];
+    const st = tripStores(b);
+    const where = st?.length ? `Only products sold by: ${st.slice(0, 12).map((s) => s.name).join(", ")}.` : `The shopper lives in ${state.settings.city || "Europe"}; pick shops that deliver there.`;
+    const text = await aiGenerate({
+      system: "You find real clothes for sale online for a shopping app. Use Google Search. Plain text only, no markdown.",
+      text: `Find 4 different products for sale now that match: ${b.title} (search words: ${b.query}). ${where}\nOne line each: product name | shop | price with currency | product page URL`,
+      search: true, maxTokens: 700, onSources: (w) => (sources = w),
+    });
+    const found = [];
+    for (const line of text.split("\n")) {
+      const url = line.match(/https?:\/\/[^\s|)\]>"]+/)?.[0];
+      const p = line.split("|").map((x) => x.replace(/\*\*/g, "").trim());
+      if (url && p.length >= 3) found.push({ title: p[0].replace(/^[\s*•·-]*(\d+[.)]\s+)?/, ""), shop: p[1], price: /\d/.test(p[2]) ? p[2] : "", url });
+    }
+    for (const w of sources) if (found.length < 8 && !found.some((f) => f.url === w.uri)) found.push({ title: "", shop: w.title || "", price: "", url: w.uri, fromSearch: true });
+    const pages = await Promise.all(found.slice(0, 8).map(async (f) => ({ ...f, page: await pageInfo(f.url) })));
+    const items = [], seen = new Set();
+    for (const p of pages) {
+      const img = p.page?.image;
+      if (!img || seen.has(img) || items.length >= 4) continue;
+      seen.add(img);
+      items.push({ title: p.title || p.page.title || b.title, shop: p.shop || p.page.site || "", price: p.price || p.page.price || "", url: p.page.url || p.url, image: img });
+    }
+    const noServer = pages.some((p) => p.page?.noServer);
+    state.disc.photos[k] = { items, noServer, links: items.length ? [] : found.filter((f) => !f.fromSearch).slice(0, 4) };
+  } catch (e) {
+    state.disc.photos[k] = { error: e.message || "Couldn't search the shops right now." };
+  }
+  if (view !== "add") render();
+}
+// A photo a shop won't let us show: drop its card.
+document.addEventListener("error", (e) => { if (e.target.matches?.("img.real-img")) e.target.closest(".real-card")?.remove(); }, true);
 
 /* ---------- Settings ---------- */
 function renderSettings() {
@@ -3258,7 +3810,7 @@ async function ask(question, targetId = "ai-answer") {
     const show = (t) => { const el = document.getElementById(targetId); if (el) el.textContent = cleanRefs(t, refs); };
     const answer = { text: await aiGenerate({ system: STYLIST_SYSTEM + "\n\n" + context, text: question, maxTokens: 800, onText: show }), refs };
     if (targetId === "ai-answer") state.aiAnswer = answer;
-    if (targetId === "find-ai") state.find.answer = answer;
+    if (targetId === "try-ai") state.disc.try.answer = answer;
     const el = document.getElementById(targetId);
     if (el) el.innerHTML = answerHTML(answer);
   } catch (e) {
@@ -3425,13 +3977,24 @@ document.addEventListener("click", async (e) => {
     }
     return;
   }
-  if (ds.wish != null) {
-    const s = analyse().suggestions[+ds.wish];
-    if (!state.wishlist.some((w) => w.title === s.title)) { state.wishlist.push(s); await saveWishlist(); toast("Saved to wishlist"); }
-    return render();
+  // Discover
+  if (ds.disc) { state.disc.tab = ds.disc; render(); main.scrollTop = 0; return; }
+  if (ds.pick) { const at = ds.pick.lastIndexOf(":"); state.disc.pick[ds.pick.slice(0, at)] = +ds.pick.slice(at + 1); return render(); }
+  if (ds.real) return realPhotos(JSON.parse(ds.real));
+  {
+    const tr = state.disc.try;
+    const toggle = (k, v) => { tr[k] = tr[k] === v ? "" : v; if (k === "cat" && !fitsFor({ category: tr.cat }).includes(tr.fit)) tr.fit = ""; return tr.shown ? tryIt() : render(); };
+    if (ds.trycat) return toggle("cat", ds.trycat);
+    if (ds.trycolor) return toggle("color", ds.trycolor);
+    if (ds.tryfit) return toggle("fit", ds.tryfit);
+    if (ds.trystyle) return toggle("style", ds.trystyle);
+    if (ds.trybrand != null) return toggle("brand", ds.trybrand);
+    if (ds.tryocc) { tr.occ = ds.tryocc; return render(); }
   }
-  if (ds.findbrand != null) { state.find.brand = state.find.brand === ds.findbrand ? "" : ds.findbrand; return render(); }
-  if (ds.findfit) { state.find.fit = state.find.fit === ds.findfit ? "" : ds.findfit; return render(); }
+  if (ds.tripgo) return setTrip(state.trips.find((t) => t.key === ds.tripgo) || null);
+  if (ds.lookseason) { state.disc.look.season = ds.lookseason; return render(); }
+  if (ds.lookstyle) { state.disc.look.style = ds.lookstyle; return render(); }
+  if (ds.lookocc) { state.disc.look.occ = ds.lookocc; return render(); }
   if (ds.wishbuy) {
     const w = JSON.parse(ds.wishbuy);
     if (!state.wishlist.some((x) => x.title === w.title)) { state.wishlist.push(w); await saveWishlist(); toast("Saved to wishlist"); }
@@ -3480,11 +4043,15 @@ document.addEventListener("click", async (e) => {
     case "fit-all": return fitAll();
     case "anchor-pick": return openAnchorPicker();
     case "anchor-clear": return setAnchor(null);
-    case "find": return findIt();
-    case "find-ai": {
-      const b = state.find.shown;
-      return ask(`I'm thinking of buying: ${b.title}. Is it a good addition to my wardrobe? Which colour and version would work best with what I own, and what would I wear it with? If something else would suit me better, say so.`, "find-ai");
+    case "try": return tryIt();
+    case "try-photo": return tryInput.click();
+    case "try-ai": {
+      const b = state.disc.try.shown;
+      return ask(`I'm thinking of buying: ${b.title}. Is it a good addition to my wardrobe? Which colour and version would work best with what I own, and what would I wear it with? If something else would suit me better, say so.`, "try-ai");
     }
+    case "trip": return lookupTrip($('[data-input="tripq"]')?.value);
+    case "trip-clear": return setTrip(null);
+    case "look": return makeLook();
     case "forget-taste": {
       const learnt = state.log.filter((l) => logKind(l) !== "wear");
       if (!(await confirmBox(`Forget ${learnt.length} likes and skips? What you wore stays.`, "Forget them"))) return render();
@@ -3550,7 +4117,8 @@ document.addEventListener("input", (e) => {
     else render();
     return;
   }
-  if (k === "findq" || k === "findbrand") { state.find[k === "findq" ? "q" : "brand"] = v; return; }
+  if (k === "trytext" || k === "trybrand") { state.disc.try[k === "trytext" ? "text" : "brand"] = v; return; }
+  if (k === "tripq") { state.disc.tripq = v; return; }
   if (k === "temp") {
     state.manualTemp = +v;
     clearTimeout(e.target._t);
@@ -3570,7 +4138,8 @@ document.addEventListener("input", (e) => {
 document.addEventListener("keydown", (e) => {
   if (e.key === "Enter" && e.target.dataset.input === "ask") ask(e.target.value);
   if (e.key === "Enter" && e.target.dataset.input === "city") $('[data-act="city"]').click();
-  if (e.key === "Enter" && ["findq", "findbrand"].includes(e.target.dataset.input)) findIt();
+  if (e.key === "Enter" && ["trytext", "trybrand"].includes(e.target.dataset.input)) tryIt();
+  if (e.key === "Enter" && e.target.dataset.input === "tripq") lookupTrip(e.target.value);
   if (e.key === "Escape") { closeSheet(); if (cam.stream) { cam.shots = []; stopCamera(); } }
 });
 

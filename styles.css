@@ -324,3 +324,45 @@ img.pic-bg { object-fit: contain; background: var(--pic); }
 .anchor-bar { gap: 12px; padding: 10px 14px; }
 .anchor-bar img { width: 48px; aspect-ratio: 3/4; object-fit: cover; border-radius: 8px; }
 .anchor-grid .piece[aria-pressed="true"] img { outline: 3px solid var(--accent); outline-offset: 2px; }
+
+/* Discover: tabs, ideas in a few versions, drawings, real photos */
+.disc-tabs { margin-bottom: 18px; }
+.disc-tabs .chip { min-height: 54px; font-size: 17px; padding: 0 22px; }
+.trip-bar { gap: 10px; padding: 10px 14px; margin-bottom: 18px; }
+a.chip { text-decoration: none; }
+.art-tile { width: 100%; aspect-ratio: 3/4; border-radius: 12px; background: var(--pic); display: grid; place-items: center; overflow: hidden; }
+.art-tile svg.art { width: 80%; height: 80%; }
+.art-tile img { width: 100%; height: 100%; object-fit: contain; }
+.buy-ic.art-tile, .ai-rich .buy-ic.art-tile { border: 0; background: var(--pic); }
+.sugg > .idea { padding: 18px 0; border-top: 1px solid var(--line); }
+.sugg > .idea:first-child { border-top: 0; padding-top: 0; }
+.idea { display: grid; gap: 12px; }
+.idea h3 { margin: 0; font-size: 19px; }
+.idea > p { margin: 0; font-size: 15px; }
+.options { display: grid; grid-template-columns: repeat(3, minmax(0, 160px)); gap: 12px; }
+.options.one { grid-template-columns: 110px; }
+.option { position: relative; display: grid; gap: 4px; align-content: start; padding: 8px; border-radius: 16px; border: 2px solid transparent; background: var(--surface-2); color: inherit; font: inherit; text-align: left; }
+.option[aria-pressed="true"] { border-color: var(--accent); }
+.option b { font-size: 15px; }
+.option .small { line-height: 1.25; }
+.badge { position: absolute; top: 14px; left: 14px; font-size: 11px; font-weight: 700; padding: 3px 8px; border-radius: 999px; background: var(--accent); color: var(--accent-ink); }
+.idea-detail { display: grid; gap: 12px; }
+.real { display: grid; grid-template-columns: repeat(auto-fill, minmax(140px, 1fr)); gap: 12px; }
+.real-card { display: grid; gap: 4px; align-content: start; padding: 8px; border-radius: 14px; background: var(--surface-2); color: inherit; text-decoration: none; }
+.real-card img { width: 100%; aspect-ratio: 3/4; object-fit: contain; border-radius: 10px; background: #fff; }
+.real-card b { font-size: 14px; line-height: 1.25; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
+.try-head { display: grid; grid-template-columns: 150px minmax(0, 1fr); gap: 18px; align-items: start; }
+.piece.new .art-tile { outline: 2px dashed var(--accent); outline-offset: -2px; }
+.look-row { display: grid; grid-template-columns: repeat(auto-fill, minmax(96px, 1fr)); gap: 10px; }
+.look-piece { display: grid; gap: 10px; }
+.sugg > .look-piece { padding: 14px 0; border-top: 1px solid var(--line); }
+.sugg > .look-piece:first-child { border-top: 0; }
+.look-piece .row > .art-tile { width: 64px; flex: none; }
+@media (max-width: 480px) {
+  .try-head { grid-template-columns: 96px minmax(0, 1fr); gap: 12px; }
+  .options { grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 8px; }
+  .badge { top: 10px; left: 10px; font-size: 10px; }
+}
+.try-looks .look .pieces { display: grid; grid-template-columns: repeat(auto-fill, minmax(76px, 1fr)); gap: 8px; }
+.trip-bar { flex-wrap: wrap; }
+.trip-bar > span { flex: 1 1 240px; min-width: 0; }
