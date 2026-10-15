@@ -11,6 +11,7 @@
 //     HEAD/GET/PUT /api/blob/<key>        photos, stored once by content hash
 //     POST /api/ai/gemini/<model>         Gemini generateContent with the GEMINI_KEY secret
 //     POST /api/ai/claude/v1/messages     Claude Messages API with the CLAUDE_KEY secret
+//     GET  /api/page?url=…                a shop's product page: {url, title, image, price, site}
 //     POST /api/calendar                  {"url": "..."}: reads a calendar's private iCal link
 //
 // Settings (see README, "Putting it online"):
@@ -52,6 +53,7 @@ export async function handleApi(request, env) {
   const method = request.method;
   try {
     if (path.startsWith("ai/")) return await ai(request, env, path.slice(3));
+    if (path === "page" && method === "GET") return await productPage(new URL(request.url).searchParams.get("url"));
     if (path === "calendar" && method === "POST") return await calendar(request);
     if (path === "ping" && method === "GET") {
       const keys = { gemini: !!env.GEMINI_KEY, claude: !!env.CLAUDE_KEY };
@@ -299,4 +301,79 @@ async function ai(request, env, rest) {
     return new Response(r.body, { status: r.status, headers: { "Content-Type": r.headers.get("Content-Type") || "application/json" } });
   }
   return fail(404, "Not found");
+}
+
+/* ---------- Product pages (Discover, "Real photos") ---------- */
+// Opens a shop's product page and reads the photo, name and price it shares for link
+// previews (Open Graph tags, or schema.org Product data), so the app can show real
+// products. Browsers can't do this themselves: shops don't allow it from other sites.
+
+const PAGE_BYTES = 800_000;
+const BROWSER = {
+  "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/130.0 Safari/537.36",
+  Accept: "text/html,application/xhtml+xml",
+  "Accept-Language": "en;q=0.9,it;q=0.8,*;q=0.5",
+};
+const unescapeHtml = (s) => s.replace(/&(amp|quot|#39|#x27|#x2F|lt|gt);/gi, (m, e) => ({ amp: "&", quot: '"', "#39": "'", "#x27": "'", "#x2f": "/", lt: "<", gt: ">" })[e.toLowerCase()]);
+
+async function productPage(target) {
+  let url;
+  try { url = new URL(target); } catch { return fail(400, "Bad URL"); }
+  if (!/^https?:$/.test(url.protocol)) return fail(400, "Bad URL");
+  let r;
+  try {
+    r = await fetch(url, { headers: BROWSER, redirect: "follow", signal: AbortSignal.timeout(9000), cf: { cacheTtl: 86400, cacheEverything: true } });
+  } catch {
+    return fail(502, "The shop didn't answer.");
+  }
+  if (!r.ok || !(r.headers.get("Content-Type") || "").includes("html")) return fail(502, `The shop answered ${r.status}.`);
+  // The tags we need are near the top; don't read a whole 3 MB page.
+  const reader = r.body.getReader();
+  const dec = new TextDecoder();
+  let html = "";
+  while (html.length < PAGE_BYTES) {
+    const { done, value } = await reader.read();
+    if (done) break;
+    html += dec.decode(value, { stream: true });
+  }
+  reader.cancel().catch(() => {});
+  const page = new URL(r.url || url);
+  const meta = (...names) => {
+    for (const n of names) {
+      const tag = html.match(new RegExp(`<meta[^>]+(?:property|name|itemprop)=["']${n}["'][^>]*>`, "i"))?.[0];
+      const v = tag?.match(/content=(?:"([^"]*)"|'([^']*)')/i);
+      if (v && (v[1] || v[2])) return unescapeHtml((v[1] || v[2]).trim());
+    }
+    return "";
+  };
+  const product = jsonLdProduct(html);
+  const offer = [product?.offers].flat().flat().find((o) => o && (o.price || o.lowPrice));
+  const absolute = (u) => {
+    try { return u ? new URL(u, page).href.replace(/^http:/, "https:") : ""; } catch { return ""; }
+  };
+  const ldImage = [product?.image].flat().map((i) => (typeof i === "string" ? i : i?.url || i?.contentUrl)).find(Boolean);
+  const amount = meta("product:price:amount", "og:price:amount") || offer?.price || offer?.lowPrice || "";
+  const currency = meta("product:price:currency", "og:price:currency") || offer?.priceCurrency || "";
+  return json({
+    url: page.href,
+    title: (meta("og:title", "twitter:title") || product?.name || html.match(/<title[^>]*>([^<]*)/i)?.[1] || "").trim().slice(0, 140),
+    image: absolute(meta("og:image", "og:image:secure_url", "twitter:image", "image") || ldImage),
+    price: amount ? `${amount} ${currency}`.trim() : "",
+    site: meta("og:site_name") || page.hostname.replace(/^www\./, ""),
+  });
+}
+function jsonLdProduct(html) {
+  for (const m of html.matchAll(/<script[^>]+application\/ld\+json[^>]*>([\s\S]*?)<\/script>/gi)) {
+    let data;
+    try { data = JSON.parse(m[1].trim()); } catch { continue; }
+    const stack = [data];
+    while (stack.length) {
+      const d = stack.pop();
+      if (!d || typeof d !== "object") continue;
+      if (Array.isArray(d)) { stack.push(...d); continue; }
+      if ([d["@type"]].flat().includes("Product")) return d;
+      if (d["@graph"]) stack.push(d["@graph"]);
+    }
+  }
+  return null;
 }
