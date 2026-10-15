@@ -1,7 +1,7 @@
 """Build a single-page copy of the app for the Claude artifact preview.
 
 The preview serves one HTML page plus files next to it, so this inlines styles.css,
-sample/seed.js and app.js into dist/index.html and copies the sample photos.
+sample/seed.js and app.js (with calendar.js) into dist/index.html and copies the sample photos.
 
     python3 tools/build_preview.py [outdir]    # default: dist
 """
@@ -18,7 +18,9 @@ def read(name):
 
 body = re.search(r"<body>(.*)</body>", read("index.html"), re.S).group(1)
 body = body.replace('<script src="sample/seed.js"></script>', "<script>\n" + read("sample/seed.js") + "\n</script>")
-body = body.replace('<script type="module" src="app.js"></script>', '<script type="module">\n' + read("app.js").replace("</script", "<\\/script") + "\n</script>")
+# app.js imports calendar.js; inline it in place of the import, as plain declarations.
+app = re.sub(r'^import \{[^}]*\} from "\./calendar\.js";$', lambda m: re.sub(r"^export ", "", read("calendar.js"), flags=re.M), read("app.js"), count=1, flags=re.M)
+body = body.replace('<script type="module" src="app.js"></script>', '<script type="module">\n' + app.replace("</script", "<\\/script") + "\n</script>")
 page = f"<title>Smart Wardrobe</title>\n<style>\n{read('styles.css')}\n</style>\n{body}"
 
 os.makedirs(os.path.join(OUT, "sample", "cut"), exist_ok=True)

@@ -3,6 +3,7 @@
 // Token budget: background removal and daily outfit ideas run on the device and
 // cost nothing; the AI (Gemini or Claude) is only called to recognise a new photo
 // once, and when you ask the stylist something.
+import { parseICS, eventsBetween, guessOccasion, titleKey } from "./calendar.js";
 
 /* ======================================================================
    Reference data
@@ -247,7 +248,7 @@ const state = {
     city: "", lat: null, lon: null, unit: "C", theme: "auto",
     region: (navigator.language || "en").slice(0, 2) === "it" ? "it" : "com",
     aiProvider: "gemini", geminiKey: "", geminiModel: "gemini-flash-latest", apiKey: "",
-    autoCutout: true, aiAuto: true,
+    autoCutout: true, aiAuto: true, autoWash: true,
   },
   usage: { month: "", requests: 0, input: 0, output: 0 },
   wishlist: [],
@@ -259,6 +260,12 @@ const state = {
   weather: null,
   outfits: [],
   anchor: null, // id of a piece you picked to build today's ideas around
+  calendar: { links: [], occ: {} }, // shared: private iCal links, and the occasion you set for an event name
+  cal: { at: 0, from: 0, events: [], errors: {}, names: {}, loading: false }, // today's and tomorrow's events (this device)
+  event: null, // the calendar event the ideas dress for
+  occChosen: "", // the day you picked an occasion yourself, so the calendar leaves it alone
+  editingEvent: null, // key of the event whose occasion is being changed
+  plan: null, // shared: an outfit planned the evening before {date, itemIds, occasion, title}
   aiAnswer: "",
   find: { q: "", brand: "", fit: "", shown: null, answer: "" }, // Discover: something you'd like to buy
 };
@@ -267,7 +274,8 @@ async function loadAll() {
   state.items = (await store.all("items")) || [];
   state.log = (await store.all("log")) || [];
   Object.assign(state.settings, (await store.get("kv", "settings")) || {});
-  state.wishlist = (await store.get("kv", "wishlist")) || [];
+  for (const [k, empty] of Object.entries(SHARED_KV)) state[k] = (await store.get("kv", k)) ?? empty();
+  state.cal = { ...state.cal, ...((await raw.get("kv", "calEvents")) || {}), loading: false };
   state.usage = (await store.get("kv", "usage")) || state.usage;
   Object.assign(brandCache, (await raw.get("kv", "brandCache")) || {});
   Object.assign(sync, (await raw.get("kv", SYNC_STATE)) || {});
@@ -279,13 +287,16 @@ async function loadAll() {
 }
 const saveSettings = () => store.put("kv", state.settings, "settings");
 const saveWishlist = () => store.put("kv", state.wishlist, "wishlist");
+const saveCalendar = () => store.put("kv", state.calendar, "calendar");
+const savePlan = () => store.put("kv", state.plan, "plan");
 
 /* ======================================================================
    Sync: one shared wardrobe for every device (server.py)
    Each device keeps its full copy in IndexedDB, so it works offline. When the
    app is opened through server.py, changes go to the computer running it and
    come back to the other devices through a long-poll, within a second or two.
-   - pieces, the wear log and the wishlist are shared; settings and keys are not
+   - pieces, the wear log, the wishlist, calendar links and a planned outfit are shared;
+     settings and keys are not
    - the newest change to a record wins
    - photos are uploaded once, keyed by a hash of their bytes
    With no server (plain http.server, a static host, the Claude preview) the app
@@ -303,9 +314,11 @@ const sync = {
   pendingRender: false,
 };
 const SYNC_STATE = "sync";
+// Shared values kept under "kv", and what each is when there's nothing yet.
+const SHARED_KV = { wishlist: () => [], calendar: () => ({ links: [], occ: {} }), plan: () => null };
 function syncKey(s, k) {
   if (s === "items" || s === "log") return `${s}/${k}`;
-  return s === "kv" && k === "wishlist" ? "kv/wishlist" : null;
+  return s === "kv" && Object.hasOwn(SHARED_KV, k) ? `kv/${k}` : null;
 }
 const splitKey = (key) => { const i = key.indexOf("/"); return [key.slice(0, i), key.slice(i + 1)]; };
 const saveSyncState = () => raw.put("kv", { joined: sync.joined, rev: sync.rev, meta: sync.meta, dirty: [...sync.dirty], tombs: sync.tombs }, SYNC_STATE);
@@ -457,9 +470,11 @@ async function applyRecords(records) {
       const at = state.log.findIndex((l) => l.id === rec.id);
       if (rec.deleted) { await raw.del("log", rec.id); if (at >= 0) state.log.splice(at, 1); }
       else { await raw.put("log", rec.data); if (at >= 0) state.log[at] = rec.data; else state.log.push(rec.data); }
-    } else if (key === "kv/wishlist") {
-      state.wishlist = rec.deleted ? [] : rec.data || [];
-      await raw.put("kv", state.wishlist, "wishlist");
+    } else if (rec.col === "kv" && Object.hasOwn(SHARED_KV, rec.id)) {
+      state[rec.id] = (rec.deleted ? null : rec.data) ?? SHARED_KV[rec.id]();
+      await raw.put("kv", state[rec.id], rec.id);
+      if (rec.id === "calendar") state.cal.at = 0; // read the calendars again
+      if (rec.id === "plan") state.outfits = [];
     } else continue;
     sync.meta[key] = rec.updatedAt;
     sync.dirty.delete(key);
@@ -510,6 +525,16 @@ async function joinServer() {
     await raw.put("kv", state.wishlist, "wishlist");
     if (sw) sync.meta["kv/wishlist"] = sw.updatedAt;
     await syncTouch("kv/wishlist", false);
+  }
+  // Calendar links added on this device before it joined go to the others too.
+  const sc = onServer.get("kv/calendar");
+  const cal = sc && !sc.deleted && sc.data ? sc.data : SHARED_KV.calendar();
+  const newLinks = (state.calendar.links || []).filter((l) => !(cal.links || []).some((x) => x.url === l.url));
+  if (newLinks.length) {
+    state.calendar = { links: [...(cal.links || []), ...newLinks], occ: { ...state.calendar.occ, ...cal.occ } };
+    await raw.put("kv", state.calendar, "calendar");
+    if (sc) sync.meta["kv/calendar"] = sc.updatedAt;
+    await syncTouch("kv/calendar", false);
   }
   await applyRecords(records);
   state.outfits = [];
@@ -594,6 +619,10 @@ const $ = (sel, root = document) => root.querySelector(sel);
 const esc = (s) => String(s ?? "").replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
 const uid = () => (crypto.randomUUID ? crypto.randomUUID() : Date.now().toString(36) + Math.random().toString(36).slice(2));
 const today = () => new Date().toISOString().slice(0, 10);
+// The calendar day here (today() above is the UTC date, which the wear log has always used).
+const localDay = (n = 0) => { const d = new Date(); d.setDate(d.getDate() + n); return d.toLocaleDateString("sv"); };
+const startOfDay = (n = 0) => { const d = new Date(); return new Date(d.getFullYear(), d.getMonth(), d.getDate() + n).getTime(); };
+const fmtTime = (ms) => new Date(ms).toLocaleTimeString(undefined, { hour: "2-digit", minute: "2-digit" });
 const daysSince = (iso) => (iso ? Math.floor((Date.now() - new Date(iso).getTime()) / 864e5) : Infinity);
 const slotOf = (item) => CAT[item.category]?.slot || "acc";
 // Where a piece goes in an outfit: its section, or for gym pieces their role (top, bottom, shoes…).
@@ -635,13 +664,15 @@ function photoURL(blob) {
 const swatches = (colors = []) =>
   `<span class="swatches">${colors.map((c) => `<i style="background:${COLORS[c]?.hex || "#888"}" title="${esc(c)}"></i>`).join("")}</span>`;
 
-let toastTimer;
-function toast(msg) {
+let toastTimer, toastAction = null;
+// `action`: an optional button in the toast, e.g. { label: "Undo", run() {…} }.
+function toast(msg, action) {
   const t = $("#toast");
-  t.textContent = msg;
+  t.innerHTML = esc(msg) + (action ? `<button class="toast-act" data-toast="1">${esc(action.label)}</button>` : "");
+  toastAction = action?.run || null;
   t.hidden = false;
   clearTimeout(toastTimer);
-  toastTimer = setTimeout(() => (t.hidden = true), 2600);
+  toastTimer = setTimeout(() => { t.hidden = true; toastAction = null; }, action ? 6000 : 2600);
 }
 
 function applyTheme() {
@@ -1106,15 +1137,17 @@ async function loadWeather(force = false) {
   const { lat, lon } = state.settings;
   if (lat == null) return (state.weather = null);
   const cached = await store.get("kv", "weather");
-  const fresh = cached && !cached.typical && cached.lat === lat;
+  const fresh = cached && !cached.typical && cached.lat === lat && cached.hourly; // older copies had no hourly forecast
   if (!force && fresh && Date.now() - cached.at < 30 * 60e3) return (state.weather = cached);
   try {
-    const j = await getJSON(`https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lon}&current=temperature_2m,apparent_temperature,weather_code,wind_speed_10m,precipitation&daily=temperature_2m_max,temperature_2m_min,precipitation_probability_max&forecast_days=1&timezone=auto`);
+    const j = await getJSON(`https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lon}&current=temperature_2m,apparent_temperature,weather_code,wind_speed_10m,precipitation&hourly=apparent_temperature,precipitation_probability,weather_code&daily=temperature_2m_max,temperature_2m_min,precipitation_probability_max&forecast_days=2&timezone=auto`);
     const w = {
       at: Date.now(), lat,
       temp: j.current.temperature_2m, feels: j.current.apparent_temperature, code: j.current.weather_code,
       wind: j.current.wind_speed_10m, max: j.daily.temperature_2m_max[0], min: j.daily.temperature_2m_min[0],
       rainChance: j.daily.precipitation_probability_max[0] ?? 0,
+      // Hour by hour for today and tomorrow, for events later in the day (local times, "2026-10-15T19:00").
+      hourly: { time: j.hourly.time, feels: j.hourly.apparent_temperature, rain: j.hourly.precipitation_probability, code: j.hourly.weather_code },
     };
     await store.put("kv", w, "weather");
     return (state.weather = w);
@@ -1151,9 +1184,31 @@ function weatherSource() {
    ====================================================================== */
 function conditions() {
   const w = state.weather;
-  const feels = state.manualTemp ?? (w ? Math.min(w.feels, (w.min + w.max) / 2 + 1) : 15);
-  const wet = w ? isWet(w.code) || w.rainChance >= 55 : false;
-  return { feels, wet };
+  let feels = w ? Math.min(w.feels, (w.min + w.max) / 2 + 1) : 15;
+  let wet = w ? isWet(w.code) || w.rainChance >= 55 : false;
+  const at = state.event && eventWeather(state.event);
+  if (at) {
+    // Dressing now for something later today: warm enough for both. Tomorrow: for that time.
+    if (state.event.day === "tomorrow") ({ feels, wet } = at);
+    else { feels = Math.min(feels, at.feels); wet ||= at.wet; }
+  }
+  return { feels: state.manualTemp ?? feels, wet };
+}
+// How it will feel during an event (its first four hours), from the hourly forecast.
+// With only the usual temperatures for the month, evenings and mornings are cooler than midday.
+function eventWeather(ev) {
+  const w = state.weather;
+  if (!w || ev.allDay) return null;
+  const h = w.hourly;
+  if (!h) {
+    const hr = new Date(ev.start).getHours();
+    return hr >= 19 || hr < 9 ? { feels: (2 * w.min + w.max) / 3, wet: false } : null;
+  }
+  const to = Math.max(ev.start + 3600e3, Math.min(ev.end, ev.start + 4 * 3600e3));
+  const idx = h.time.map((t, k) => [new Date(t).getTime(), k]).filter(([t]) => t + 3600e3 > ev.start && t < to).map(([, k]) => k);
+  if (!idx.length) return null;
+  const feels = idx.reduce((a, k) => a + h.feels[k], 0) / idx.length;
+  return { feels, wet: idx.some((k) => isWet(h.code[k]) || (h.rain[k] ?? 0) >= 55) };
 }
 const CORE = ["base", "mid", "outer", "bottom", "shoes"];
 // Warmth points of the top layers, and how many the rule of thumb wants at a temperature.
@@ -1245,12 +1300,12 @@ function scoreOutfit(o, cond, occ, t = taste()) {
 }
 
 // Today's candidates, best first. Cheap enough to redo on every tap (900 tries).
-// The pieces that can fill each part of an outfit for an occasion.
+// The pieces that can fill each part of an outfit for an occasion (none that are in the wash).
 function piecesByRole(occ) {
   const gym = occ.id === "gym";
   const by = { base: [], mid: [], outer: [], bottom: [], shoes: [] };
-  for (const it of state.items) if (by[roleOf(it)] && (slotOf(it) === "gym") === gym) by[roleOf(it)].push(it);
-  if (gym) for (const [role, cats] of Object.entries(GYM_FALLBACK)) if (!by[role].length) by[role] = state.items.filter((i) => cats.includes(i.category));
+  for (const it of wearable()) if (by[roleOf(it)] && (slotOf(it) === "gym") === gym) by[roleOf(it)].push(it);
+  if (gym) for (const [role, cats] of Object.entries(GYM_FALLBACK)) if (!by[role].length) by[role] = wearable().filter((i) => cats.includes(i.category));
   return by;
 }
 function ideaPool() {
@@ -1262,7 +1317,7 @@ function ideaPool() {
   const wantMid = cond.feels < 20 || by.base.length === 0;
   const wantOuter = cond.feels < 15 || cond.wet;
   // A piece you picked goes in every idea; the rest is built around it.
-  const anchor = state.items.find((i) => i.id === state.anchor && CORE.includes(roleOf(i)));
+  const anchor = state.items.find((i) => i.id === state.anchor && CORE.includes(roleOf(i)) && !i.wash);
 
   const seen = new Set();
   const cands = [];
@@ -1327,9 +1382,30 @@ function generateOutfits(n = 3, avoid = []) {
   tasteMemo = null; // pieces may have changed (colours, fit) since it was worked out
   const pool = ideaPool();
   const used = new Set();
-  const picks = pickIdeas(pool, n, [], avoid);
-  if (picks.length < n) picks.push(...pickIdeas(pool, n - picks.length, picks)); // small wardrobe: repeats are fine
-  state.outfits = picks.map((c) => dressIdea(c, pool, used));
+  const plan = plannedIdea(pool);
+  if (plan) { n--; plan.extras.forEach((x) => used.add(x.id)); }
+  const keep = plan ? [plan] : [];
+  const picks = pickIdeas(pool, n, keep, avoid);
+  if (picks.length < n) picks.push(...pickIdeas(pool, n - picks.length, [...keep, ...picks])); // small wardrobe: repeats are fine
+  state.outfits = [...keep, ...picks.map((c) => dressIdea(c, pool, used))];
+}
+// The outfit you planned last night comes first today, while all of it is out of the wash.
+function plannedIdea(pool) {
+  const p = state.plan;
+  if (!p || p.date !== localDay() || state.event?.day === "tomorrow" || state.anchor) return null;
+  const items = (p.itemIds || []).map((id) => state.items.find((i) => i.id === id)).filter(Boolean);
+  if (!items.length || items.some((i) => i.wash)) return null;
+  const pieces = {}, extras = [];
+  for (const it of items) (CORE.includes(roleOf(it)) && !pieces[roleOf(it)] ? (pieces[roleOf(it)] = it) : extras.push(it));
+  if (!pieces.base && !pieces.mid) return null;
+  const key = outfitKey(items);
+  return { key, pieces, planned: p, missing: [], likedId: likedToday(key), ...scoreOutfit(pieces, pool.cond, pool.occ), extras, extrasWhy: [] };
+}
+async function planOutfit(o) {
+  const e = state.event;
+  state.plan = { date: localDay(1), itemIds: [...Object.values(o.pieces), ...(o.extras || [])].filter(Boolean).map((p) => p.id), occasion: state.occasion, title: e?.title || "", at: new Date().toISOString() };
+  await savePlan();
+  await addLog({ kind: "like", itemIds: Object.values(o.pieces).filter(Boolean).map((p) => p.id), ...outfitContext(), source: "plan" });
 }
 // Swapping one piece of an idea: the other pieces that could take its place, best fit with the
 // rest of the outfit first. A jacket, or one of two top layers, can also just be left off.
@@ -1552,7 +1628,7 @@ function extrasFor(pieces, cond, occ, used) {
   const accent = cols.find((c) => !COLORS[c]?.neutral);
   const extras = [], why = [];
   for (const [cats, reason] of needs) {
-    const options = state.items.filter((i) => cats.includes(i.category));
+    const options = wearable().filter((i) => cats.includes(i.category));
     if (!options.length) continue;
     const score = (i) => {
       const c = i.colors?.[0];
@@ -1573,14 +1649,48 @@ function extrasFor(pieces, cond, occ, used) {
 }
 
 // `ctx` (for whole outfits) records the occasion and how warm it felt, so ideas can learn from it.
+// Returns the pieces that went straight into the wash (see Laundry).
 async function wearOutfit(items, ctx) {
   const now = new Date().toISOString();
+  const washed = state.settings.autoWash ? items.filter((it) => washAfterWear(it) && !it.wash) : [];
   for (const it of items) {
     it.wearCount = (it.wearCount || 0) + 1;
     it.lastWorn = now;
+    if (washed.includes(it)) it.wash = now;
     await store.put("items", it);
   }
   await addLog({ itemIds: items.map((i) => i.id), ...(ctx && outfitContext()), ...ctx });
+  return washed;
+}
+// "Logged" with an Undo for the pieces that went in the wash, in case they didn't.
+function wornToast(msg, washed) {
+  if (!washed.length) return toast(msg);
+  const names = washed.length === 1 ? washed[0].name : `${washed.length} pieces`;
+  toast(`${msg} ${names} went in the wash.`, { label: "Undo", run: async () => { await setWash(washed, false); toast("Kept out of the wash"); refreshViews(); } });
+}
+// After a change from a toast: the screen, and the piece's page if it's open.
+function refreshViews() {
+  render();
+  const open = !$("#sheet").hidden && $(".sheet-panel [data-wash]")?.dataset.wash;
+  if (open) openItem(open);
+}
+
+/* ======================================================================
+   Laundry: a piece in the wash stays in your wardrobe but is left out of outfit
+   ideas, swaps, "Start from a piece" and the stylist's outfits until it's back.
+   ====================================================================== */
+// Worn once, then washed: T-shirts and shirts, underwear and socks, and gym clothes (not shoes or bags).
+const washAfterWear = (it) => ["base", "under"].includes(slotOf(it)) || (slotOf(it) === "gym" && ["base", "mid", "bottom"].includes(roleOf(it)));
+const wearable = () => state.items.filter((i) => !i.wash);
+const inWash = () => state.items.filter((i) => i.wash);
+async function setWash(items, on) {
+  const now = new Date().toISOString();
+  for (const it of items) {
+    if (on) it.wash = now; else delete it.wash;
+    await store.put("items", it);
+  }
+  if (on && items.some((i) => i.id === state.anchor)) state.anchor = null;
+  state.outfits = [];
 }
 // Likes and skips go in the wear log too (with a `kind`), so they reach every device and backups.
 async function addLog(fields) {
@@ -1593,7 +1703,141 @@ async function dropLog(id) {
   await store.del("log", id);
   state.log = state.log.filter((l) => l.id !== id);
 }
-const outfitContext = () => ({ occasion: state.occasion, feels: Math.round(conditions().feels) });
+const outfitContext = () => ({ occasion: state.occasion, feels: Math.round(conditions().feels), ...(state.event && { event: state.event.title }) });
+
+/* ======================================================================
+   Calendar: outfit ideas for what's on today (and tomorrow, in the evening)
+   Your calendar's private iCal link is read through your own server (browsers can't
+   read other sites' files) and the events are worked out here (calendar.js). Each event's
+   name says the occasion (dinner → Night out); fix one once and that name keeps it.
+   No AI tokens.
+   ====================================================================== */
+const CAL_FRESH = 30 * 60e3;
+async function fetchCalendar(url) {
+  let r;
+  try {
+    r = await fetch("api/calendar", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ url }), cache: "no-store" });
+  } catch { r = null; }
+  if (r?.ok) return r.text();
+  if (r && (r.headers.get("Content-Type") || "").includes("json") && r.status !== 404) throw new Error((await r.json()).error || `Error ${r.status}`);
+  // No calendar reader here (server.py, the preview): some calendars can still be read directly.
+  try {
+    const d = await fetch(url.replace(/^webcals?:\/\//i, "https://"), { cache: "no-store" });
+    if (d.ok) return d.text();
+  } catch {}
+  throw new Error("Calendars are read by the online app. Open it from its web address to see your events.");
+}
+// Read every calendar again if it's been a while (or `force`). True when the events changed.
+async function loadCalendar(force = false) {
+  const links = state.calendar.links || [];
+  const from = startOfDay(0), to = startOfDay(2);
+  if (!links.length) {
+    const had = state.cal.events.length;
+    state.cal = { ...state.cal, at: 0, events: [], errors: {} };
+    return had > 0;
+  }
+  if (state.cal.loading || (!force && state.cal.from === from && Date.now() - state.cal.at < CAL_FRESH)) return false;
+  state.cal.loading = true;
+  const events = [], errors = {}, names = {};
+  await Promise.all(links.map(async (l) => {
+    try {
+      const text = await fetchCalendar(l.url);
+      if (!/BEGIN:VCALENDAR/i.test(text.slice(0, 2000))) throw new Error("That link isn't a calendar (an .ics or iCal link).");
+      const cal = parseICS(text);
+      names[l.url] = cal.name;
+      for (const ev of eventsBetween(cal.events, from, to)) events.push({ ...ev, cal: l.url });
+    } catch (e) { errors[l.url] = e.message; }
+  }));
+  // The same event in two calendars (shared with you) shows once.
+  const seen = new Set();
+  const unique = events.sort((a, b) => a.start - b.start).filter((e) => { const k = `${titleKey(e.title)}|${e.start}`; return !seen.has(k) && seen.add(k); });
+  const before = JSON.stringify(state.cal.events);
+  state.cal = { at: Date.now(), from, events: unique, errors, names, loading: false };
+  await raw.put("kv", { at: state.cal.at, from, events: unique, errors, names }, "calEvents");
+  return JSON.stringify(unique) !== before;
+}
+// The occasion an event dresses for: the one you set for its name, else a guess from its words.
+// "skip" means it doesn't change what you wear. A whole-day entry is usually a reminder (a
+// birthday, a holiday), so it only counts when it's clearly an occasion, like a wedding.
+function eventOcc(e) {
+  const set = state.calendar.occ?.[titleKey(e.title)];
+  if (set) return set;
+  const guess = guessOccasion(e);
+  return e.allDay ? (guess === "event" ? guess : "skip") : guess || "casual";
+}
+const eventKey = (e) => `${e.start}|${titleKey(e.title)}`;
+// Today's events still to come, and after 6 pm tomorrow's too.
+function dayEvents() {
+  const now = Date.now(), mid = startOfDay(1);
+  const dress = (e, day) => ({ ...e, day, key: eventKey(e), occasion: eventOcc(e) });
+  return {
+    today: state.cal.events.filter((e) => e.end > now && e.start < mid).map((e) => dress(e, "today")),
+    tomorrow: new Date().getHours() >= 18 ? state.cal.events.filter((e) => e.start >= mid && e.start < startOfDay(2)).map((e) => dress(e, "tomorrow")) : [],
+  };
+}
+// Unless you've picked an occasion yourself today, the ideas dress for the smartest event still
+// to come today (a gym session is a change of clothes, so it's only picked if you tap it).
+function autoPickEvent() {
+  if (state.occChosen === localDay()) return;
+  const { today: list } = dayEvents();
+  const target = (e) => OCCASIONS.find((o) => o.id === e.occasion)?.target ?? 0;
+  const best = list.filter((e) => !["skip", "gym", "casual"].includes(e.occasion))
+    .sort((a, b) => target(b) - target(a) || a.start - b.start)[0];
+  if ((best?.key || null) === (state.event?.key || null)) return;
+  state.event = best || null;
+  state.occasion = best ? best.occasion : "casual";
+  state.outfits = [];
+}
+function pickEvent(key) {
+  const { today: t, tomorrow: tm } = dayEvents();
+  const e = [...t, ...tm].find((x) => x.key === key);
+  state.occChosen = localDay();
+  state.editingEvent = null;
+  if (!e || state.event?.key === key) state.event = null; // tapping it again: back to the day as it is now
+  else {
+    state.event = e;
+    if (e.occasion !== "skip") state.occasion = e.occasion;
+  }
+  generateOutfits();
+}
+async function setEventOcc(key, occ) {
+  const { today: t, tomorrow: tm } = dayEvents();
+  const e = [...t, ...tm].find((x) => x.key === key);
+  if (!e) return;
+  state.calendar.occ = { ...state.calendar.occ, [titleKey(e.title)]: occ };
+  await saveCalendar();
+  state.editingEvent = null;
+  if (state.event?.key === key) {
+    state.event = { ...state.event, occasion: occ };
+    if (occ !== "skip") state.occasion = occ;
+  }
+  if (state.occChosen !== localDay()) autoPickEvent();
+  generateOutfits();
+}
+const occLabel = (id) => (id === "skip" ? "Doesn't matter" : OCCASIONS.find((o) => o.id === id)?.label || id);
+// For the stylist: what's on, in a line or two.
+function calendarText() {
+  const { today: t, tomorrow: tm } = dayEvents();
+  const line = (e) => `${e.allDay ? "all day" : fmtTime(e.start)} ${e.title}${e.occasion !== "skip" ? ` (${occLabel(e.occasion)})` : ""}`;
+  const parts = [];
+  if (t.length) parts.push(`Calendar today: ${t.slice(0, 6).map(line).join("; ")}.`);
+  if (tm.length) parts.push(`Tomorrow: ${tm.slice(0, 6).map(line).join("; ")}.`);
+  if (state.event) parts.push(`Dressing for: ${state.event.title}${state.event.allDay ? "" : ` at ${fmtTime(state.event.start)}`}${state.event.day === "tomorrow" ? " tomorrow" : ""}.`);
+  return parts.join("\n");
+}
+async function addCalendar(url) {
+  url = url.trim().replace(/^webcals?:\/\//i, "https://");
+  if (!/^https:\/\/[^\s]+$/.test(url)) return toast("Paste the calendar's https:// or webcal:// link");
+  if (/calendar\.google\.com\/calendar\/(u\/\d\/)?(r|embed)/.test(url)) return toast("That's the page link. In Google Calendar's settings, copy the “Secret address in iCal format”.");
+  if (state.calendar.links.some((l) => l.url === url)) return toast("That calendar is already added");
+  state.calendar.links = [...state.calendar.links, { url, added: new Date().toISOString() }];
+  await saveCalendar();
+  toast("Reading your calendar…");
+  await loadCalendar(true);
+  const err = state.cal.errors[url];
+  if (!err) { autoPickEvent(); toast(`Calendar added: ${state.cal.events.filter((e) => e.cal === url).length} events today and tomorrow`); }
+  render();
+}
 
 /* ======================================================================
    Shopping / gap analysis
@@ -1851,6 +2095,7 @@ function wardrobeText() {
       i.brand ? i.brand + (b?.tier ? ` (${b.tier})` : "") : "",
       (i.styles || []).join("/"), FITS[i.fit] ? `${i.fit} fit` : "", `w${i.warmth}`,
       i.wearCount ? `worn ${i.wearCount}x${daysSince(i.lastWorn) <= 7 ? `, last ${daysSince(i.lastWorn)}d ago` : ""}` : "unworn",
+      i.wash ? "IN THE WASH" : "",
     ].filter(Boolean).join("; ");
   }).filter(Boolean).join("\n");
 }
@@ -1861,6 +2106,7 @@ const STYLIST_SYSTEM =
   "For anything the user doesn't own (a missing piece, a suggested buy), write its own line: 'To buy: <item> | search: <words to paste into a shop>'. " +
   "Dress for the temperature: add up the warmth of the top layers (about 1 when hot, 3-4 when mild, 6+ when cold). " +
   "Keep to one accent colour and one graphic piece per outfit, and balance proportions: roomy (oversized, baggy, wide) with slimmer pieces, unless it's a deliberate streetwear look. " +
+  "Never put a piece marked IN THE WASH in an outfit. " +
   "Follow the user's taste notes when given: build on pairings they wear and like, avoid what they turned down, and don't repeat pieces worn in the last 2 days unless asked. " +
   "Plain text, no markdown, at most 24 short lines.";
 const SHOP_QUESTION =
@@ -2114,7 +2360,7 @@ function renderToday() {
       ${emptyState("Your wardrobe is empty", "Add your first piece, or load the sample wardrobe from your photos.", `<button class="btn primary" data-go="add">Add clothes</button><button class="btn" data-act="seed">Load sample wardrobe</button>`)}`;
     return;
   }
-  if (!state.outfits.length) generateOutfits();
+  if (!state.outfits.length) { autoPickEvent(); generateOutfits(); }
 
   const weatherHtml = w?.typical
     ? `<div class="weather"><div class="temp">${fmtTemp(state.manualTemp ?? w.temp)}</div>
@@ -2139,12 +2385,46 @@ function renderToday() {
           <input id="temp-slider" type="range" min="-10" max="35" step="1" value="${Math.round(cond.feels)}" data-input="temp">
         </div>
       </div>
+      ${dayCard()}
       <div class="chips scroller">${OCCASIONS.map((o) => `<button class="chip" aria-pressed="${state.occasion === o.id}" data-occ="${o.id}">${o.label}</button>`).join("")}</div>
       ${anchorBar()}
       <div class="outfits">${state.outfits.map((o, i) => outfitCard(o, i)).join("") || `<p class="muted">Add a few more tops to get outfit ideas.</p>`}</div>
+      ${laundryLine()}
       <p class="muted small" style="margin:0">${esc(tasteLine())}</p>
       ${aiCard()}
     </div>`;
+}
+const ICON_CAL = `<svg viewBox="0 0 24 24"><rect x="3" y="5" width="18" height="16" rx="2"/><path d="M3 10h18M8 3v4M16 3v4"/></svg>`;
+// What's on today (and tomorrow, in the evening). Tap an event to dress for it; tap its
+// occasion to change it, which is remembered for that event name.
+function dayCard() {
+  if (!state.calendar.links?.length) return "";
+  const { today: t, tomorrow: tm } = dayEvents();
+  const errors = Object.values(state.cal.errors || {});
+  const row = (e) => {
+    const at = eventWeather(e);
+    const when = e.allDay ? "All day" : `${fmtTime(e.start)}–${fmtTime(e.end)}`;
+    return `<div class="event" aria-current="${state.event?.key === e.key}">
+      <button class="event-main" data-event="${esc(e.key)}"><b>${when}</b><span class="event-title">${esc(e.title)}</span>${at && !e.allDay ? `<span class="muted small">feels ${fmtTemp(at.feels)}${at.wet ? ", rain" : ""}</span>` : ""}</button>
+      <button class="chip" data-evocc="${esc(e.key)}" aria-pressed="${state.editingEvent === e.key}">${esc(occLabel(e.occasion))}</button>
+    </div>
+    ${state.editingEvent === e.key ? `<div class="chips event-occ"><span class="muted small">Dress for “${esc(e.title)}” as:</span>${[...OCCASIONS.map((o) => o.id), "skip"].map((id) => `<button class="chip" aria-pressed="${e.occasion === id}" data-setevocc="${esc(e.key)}|${id}">${esc(occLabel(id))}</button>`).join("")}</div>` : ""}`;
+  };
+  const block = (label, list) => (list.length ? `<div class="stack" style="gap:6px"><span class="muted small event-day">${label}</span>${list.map(row).join("")}</div>` : "");
+  const body = t.length || tm.length
+    ? block("Today", t) + block("Tomorrow", tm)
+    : `<span class="muted small">${state.cal.loading && !state.cal.at ? "Reading your calendar…" : "Nothing else in your calendar today."}</span>`;
+  return `<section class="card day-card stack" style="gap:10px">
+    <div class="row" style="justify-content:space-between"><h2 style="margin:0;display:flex;gap:8px;align-items:center">${ICON_CAL}Your day</h2>
+      ${state.event ? `<span class="muted small">Ideas for <b>${esc(state.event.title)}</b>${state.event.day === "tomorrow" ? " tomorrow" : ""}</span>` : ""}</div>
+    ${body}
+    ${errors.length ? `<p class="small" style="margin:0;color:var(--danger)">${esc(errors[0])}</p>` : ""}
+  </section>`;
+}
+function laundryLine() {
+  const n = inWash().length;
+  if (!n) return "";
+  return `<div class="row laundry-row"><span class="muted small">${n} piece${n === 1 ? " is" : "s are"} in the wash and left out of these ideas.</span><button class="chip" data-act="see-wash">See them</button><button class="chip" data-act="wash-done">Laundry done</button></div>`;
 }
 const ICON_HEART = `<svg viewBox="0 0 24 24"><path d="M12 20s-7.5-4.6-9.3-9.4C1.5 7.3 3.6 4 7 4c2.1 0 3.6 1.2 5 3 1.4-1.8 2.9-3 5-3 3.4 0 5.5 3.3 4.3 6.6C19.5 15.4 12 20 12 20z"/></svg>`;
 const ICON_SWAP = `<svg viewBox="0 0 24 24"><path d="M7 4 3 8l4 4M3 8h14M17 20l4-4-4-4M21 16H7"/></svg>`;
@@ -2197,7 +2477,7 @@ function outfitCard(o, i) {
   const order = ["outer", "mid", "base", "bottom", "shoes"];
   const ph = (o.missing || []).map((m) => `<button class="piece" data-go="shop"><div class="ph">${kindIcon(SLOT_ICON[m])}<small>No ${SLOTS[m].toLowerCase()} yet<br>tap to shop</small></div><span>${SLOTS[m]}</span></button>`).join("");
   return `<article class="card outfit">
-    <div class="row" style="justify-content:space-between"><h2 style="margin:0">${["Best match", "Option 2", "Option 3"][i] || "Option"}</h2>${i === 0 ? '<span class="score">Top pick</span>' : ""}</div>
+    <div class="row" style="justify-content:space-between"><h2 style="margin:0">${o.planned ? `Planned last night${o.planned.title ? `: ${esc(o.planned.title)}` : ""}` : ["Best match", "Option 2", "Option 3"][i] || "Option"}</h2>${o.planned ? '<span class="score">Your plan</span>' : i === 0 ? '<span class="score">Top pick</span>' : ""}</div>
     <div class="pieces">${order.filter((k) => o.pieces[k]).map((k) => `<div class="swap-wrap">${pieceTile(o.pieces[k])}<button class="swap-btn" data-swap="${i}:${k}" aria-pressed="${o.swapping === k}" aria-label="Swap the ${esc(o.pieces[k].name)}">${ICON_SWAP}</button></div>`).join("")}${ph}</div>
     ${o.swapping ? swapPicker(o, i) : ""}
     ${o.extras?.length ? `<div class="pieces extras">${o.extras.map(pieceTile).join("")}</div>` : ""}
@@ -2205,7 +2485,7 @@ function outfitCard(o, i) {
     ${o.asking
       ? `<div class="stack" style="gap:8px"><span class="muted small">What's off? The next ideas take it into account.</span><div class="chips">${SKIP_REASONS.map(([k, l]) => `<button class="chip" data-skipwhy="${i}:${k}">${l}</button>`).join("")}<button class="chip" data-skip="${i}" data-cancel="1">Cancel</button></div></div>`
       : `<div class="row outfit-actions">
-          <button class="btn primary" data-wear="${i}">Wear this today</button>
+          ${state.event?.day === "tomorrow" ? `<button class="btn primary" data-plan="${i}">Plan it for tomorrow</button>` : `<button class="btn primary" data-wear="${i}">Wear this today</button>`}
           <button class="btn icon-btn like" data-like="${i}" aria-pressed="${!!o.likedId}" aria-label="${o.likedId ? "Liked" : "Like this outfit"}">${ICON_HEART}</button>
           <button class="btn ghost" data-skip="${i}">Not for me</button>
         </div>`}
@@ -2228,7 +2508,7 @@ function filteredItems() {
   const { q, slot, cat, color, style, sort } = state.filters;
   const ql = q.trim().toLowerCase();
   const list = state.items.filter((i) =>
-    (slot === "all" || (slot === "fav" ? i.favorite : slotOf(i) === slot)) &&
+    (slot === "all" || (slot === "fav" ? i.favorite : slot === "wash" ? i.wash : slotOf(i) === slot)) &&
     (cat === "all" || i.category === cat) &&
     (color === "all" || (i.colors || []).includes(color)) &&
     (style === "all" || (i.styles || []).includes(style)) &&
@@ -2246,9 +2526,10 @@ function renderWardrobe() {
   const usedColors = [...new Set(state.items.flatMap((i) => i.colors || []))];
   const usedStyles = Object.keys(STYLES).filter((s) => state.items.some((i) => (i.styles || []).includes(s)));
   const f = state.filters;
+  const washing = inWash().length;
   main.innerHTML = `
     <div class="head">
-      <div><h1>Wardrobe</h1><p class="sub">${state.items.length} pieces</p></div>
+      <div><h1>Wardrobe</h1><p class="sub">${state.items.length} pieces${washing ? ` · ${washing} in the wash` : ""}</p></div>
       <div class="chips">${[["recent", "Newest"], ["most", "Most worn"], ["least", "Least worn"], ["name", "A–Z"]].map(([k, l]) => `<button class="chip" aria-pressed="${f.sort === k}" data-sort="${k}">${l}</button>`).join("")}</div>
     </div>
     <div class="toolbar">
@@ -2256,6 +2537,7 @@ function renderWardrobe() {
       <div class="chips scroller">
         <button class="chip" aria-pressed="${f.slot === "all"}" data-slot="all">All</button>
         <button class="chip" aria-pressed="${f.slot === "fav"}" data-slot="fav">★ Favourites</button>
+        ${washing || f.slot === "wash" ? `<button class="chip" aria-pressed="${f.slot === "wash"}" data-slot="wash">In the wash <span class="muted">${washing}</span></button>` : ""}
         ${Object.entries(SLOTS).map(([k, l]) => `<button class="chip" aria-pressed="${f.slot === k}" data-slot="${k}">${l}</button>`).join("")}
       </div>
       ${(() => {
@@ -2266,6 +2548,7 @@ function renderWardrobe() {
       ${usedStyles.length > 1 ? `<div class="chips scroller"><button class="chip" aria-pressed="${f.style === "all"}" data-style="all">Any style</button>${usedStyles.map((s) => `<button class="chip" aria-pressed="${f.style === s}" data-style="${esc(s)}">${styleLabel(s)}</button>`).join("")}</div>` : ""}
       ${usedColors.length > 1 ? `<div class="chips scroller"><button class="chip" aria-pressed="${f.color === "all"}" data-color="all">Any colour</button>${usedColors.map((c) => `<button class="chip" aria-pressed="${f.color === c}" data-color="${esc(c)}"><span class="dot" style="background:${COLORS[c]?.hex}"></span>${esc(cap(c))}</button>`).join("")}</div>` : ""}
     </div>
+    ${f.slot === "wash" ? `<div class="row laundry-row"><span class="muted small">${washing ? "These pieces are left out of outfit ideas until they're back." : "Nothing in the wash. Everything is back in your wardrobe."}</span>${washing ? `<button class="btn" data-act="wash-done">Laundry done: all ${washing} back</button>` : ""}</div>` : ""}
     ${list.length ? `<div class="grid" id="grid">${list.map(itemTile).join("")}</div>` :
       state.items.length ? `<p class="muted">Nothing matches these filters.</p>` :
       emptyState("No clothes yet", "Snap a photo of each piece to start your catalogue.", `<button class="btn primary" data-go="add">Add clothes</button><button class="btn" data-act="seed">Load sample wardrobe</button>`)}`;
@@ -2273,7 +2556,7 @@ function renderWardrobe() {
 function itemTile(i) {
   const sub = [i.brand, (i.styles || []).slice(0, 1).map(styleLabel)[0]].filter(Boolean).join(" · ") || catLabel(i.category);
   return `<button class="item" data-item="${i.id}">
-    <div class="pic"><img class="thumb pic-bg" loading="lazy" src="${photoURL(i.photos?.[0])}" alt="">${i.favorite ? '<span class="fav">★</span>' : ""}</div>
+    <div class="pic${i.wash ? " washing" : ""}"><img class="thumb pic-bg" loading="lazy" src="${photoURL(i.photos?.[0])}" alt="">${i.favorite ? '<span class="fav">★</span>' : ""}${i.wash ? '<span class="wash-badge">In the wash</span>' : ""}</div>
     <div class="meta"><span class="name">${esc(i.name)}</span><span class="info">${swatches(i.colors)} ${esc(sub)}</span></div>
   </button>`;
 }
@@ -2300,6 +2583,7 @@ function openItem(id, showOriginal = false) {
       <div><b>Colours</b>${swatches(i.colors)} ${esc((i.colors || []).join(", "))}</div>
       <div><b>Warmth</b>${"●".repeat(i.warmth || 1)}${"○".repeat(5 - (i.warmth || 1))}</div>
       <div><b>Worn</b>${i.wearCount ? i.wearCount + "×" : "Not yet"} ${i.lastWorn ? `· ${daysSince(i.lastWorn) === 0 ? "today" : daysSince(i.lastWorn) + " days ago"}` : ""}</div>
+      ${i.wash ? `<div><b>Laundry</b>In the wash since ${daysSince(i.wash) === 0 ? "today" : new Date(i.wash).toLocaleDateString(undefined, { weekday: "short", day: "numeric", month: "short" })}</div>` : ""}
       ${i.price ? `<div><b>Price</b>${fmtPrice(i.price, i.currency)}${i.wearCount ? ` · ${fmtPrice(i.price / i.wearCount, i.currency)} per wear` : ""}</div>` : ""}
       ${i.size ? `<div><b>Size</b>${esc(i.size)}</div>` : ""}
       ${i.material ? `<div><b>Material</b>${esc(i.material)}</div>` : ""}
@@ -2310,7 +2594,8 @@ function openItem(id, showOriginal = false) {
     <div class="row">
       <button class="btn primary" data-wear-item="${i.id}">Wearing it today</button>
       <button class="btn" data-fav="${i.id}">${i.favorite ? "★ Favourite" : "☆ Favourite"}</button>
-      ${CORE.includes(roleOf(i)) ? `<button class="btn" data-anchor="${i.id}">Build outfits with it</button>` : ""}
+      <button class="btn" data-wash="${i.id}" aria-pressed="${!!i.wash}">${i.wash ? "Back from the wash" : "In the wash"}</button>
+      ${CORE.includes(roleOf(i)) && !i.wash ? `<button class="btn" data-anchor="${i.id}">Build outfits with it</button>` : ""}
       <button class="btn" data-pair="${i.id}">What goes with it?</button>
       <button class="btn" data-edit="${i.id}">Edit</button>
       <button class="btn ghost danger" data-del="${i.id}">Delete</button>
@@ -3001,6 +3286,32 @@ function renderSettings() {
         <div class="field"><label>Units</label><div class="chips">${["C", "F"].map((x) => `<button class="chip" aria-pressed="${s.unit === x}" data-unit="${x}">°${x}</button>`).join("")}</div></div>
       </section>
       <section class="card stack">
+        <h2 style="margin:0">Calendar</h2>
+        <p class="muted small" style="margin:0">Outfit ideas follow your day: a dinner gets a night-out look, a meeting a work one, and an evening event the evening temperature. Paste your calendar's private iCal link; nothing else is needed and no AI is used.</p>
+        ${(state.calendar.links || []).map((l, k) => {
+          const err = state.cal.errors?.[l.url];
+          const n = state.cal.events.filter((e) => e.cal === l.url).length;
+          let host = "";
+          try { host = new URL(l.url).hostname.replace(/^www\./, ""); } catch {}
+          return `<div class="row cal-link"><span style="flex:1;min-width:0"><b>${esc(state.cal.names?.[l.url] || host || "Calendar")}</b><br><span class="muted small">${err ? `<span style="color:var(--danger)">${esc(err)}</span>` : state.cal.at ? `${n} event${n === 1 ? "" : "s"} today and tomorrow · read ${fmtTime(state.cal.at)}` : "Not read yet"}</span></span><button class="btn ghost danger" data-calrm="${k}">Remove</button></div>`;
+        }).join("")}
+        <div class="field"><label for="cal-input">${state.calendar.links?.length ? "Add another calendar" : "Calendar link"}</label>
+          <div class="row"><input id="cal-input" class="input" style="flex:1;min-width:0" data-input="cal" placeholder="https://calendar.google.com/calendar/ical/…/basic.ics" autocomplete="off"><button class="btn primary" data-act="cal-add">Add</button></div>
+        </div>
+        <details class="muted small"><summary>Where to find the link</summary>
+          <p style="margin:8px 0 0"><b>Google Calendar</b> (on a computer): Settings, pick your calendar on the left, then copy <b>Secret address in iCal format</b>.<br>
+          <b>Outlook</b>: Settings, Calendar, Shared calendars, Publish a calendar, then copy the <b>ICS</b> link.<br>
+          <b>iPhone (iCloud)</b>: in Calendar, tap ⓘ next to a calendar, turn on Public Calendar and copy the link.<br>
+          The link is kept in your wardrobe's database, so every device uses it. Anyone who has it can see your events, so keep it private.</p>
+        </details>
+        ${state.calendar.links?.length ? `<div class="row"><button class="btn" data-act="cal-refresh">Read calendars again</button></div>` : ""}
+      </section>
+      <section class="card stack">
+        <h2 style="margin:0">Laundry</h2>
+        ${toggle("autoWash", "Into the wash after one wear", "T-shirts, shirts, underwear, socks and gym clothes go in the wash when you log wearing them, with an Undo. Anything else you mark from its page.")}
+        ${inWash().length ? `<div class="row"><span class="muted small" style="flex:1">${inWash().length} in the wash now.</span><button class="btn" data-act="wash-done">Laundry done: all back</button></div>` : ""}
+      </section>
+      <section class="card stack">
         <h2 style="margin:0">Photos</h2>
         ${toggle("autoCutout", "Remove backgrounds automatically", "Runs on the tablet, no AI tokens. Downloads a 40 MB model once; offline it uses a quick colour-based cut-out.")}
         ${uncut ? `<div class="row"><button class="btn" data-act="cut-all">Remove background from ${uncut} older piece${uncut > 1 ? "s" : ""}</button></div>` : ""}
@@ -3180,7 +3491,7 @@ async function exportBackup() {
     photos: await Promise.all((i.photos || []).map(blobToDataURL)),
     originals: i.originals ? await Promise.all(i.originals.map(blobToDataURL)) : undefined,
   });
-  const blob = new Blob([JSON.stringify({ version: 2, exportedAt: new Date().toISOString(), items, log: state.log, wishlist: state.wishlist })], { type: "application/json" });
+  const blob = new Blob([JSON.stringify({ version: 2, exportedAt: new Date().toISOString(), items, log: state.log, wishlist: state.wishlist, calendar: state.calendar })], { type: "application/json" });
   const a = Object.assign(document.createElement("a"), { href: URL.createObjectURL(blob), download: `wardrobe-backup-${today()}.json` });
   a.click();
 }
@@ -3237,6 +3548,7 @@ async function importBackup() {
       }
       for (const l of data.log || []) { delete l.id; await store.put("log", l); }
       if (data.wishlist) { state.wishlist = data.wishlist; await saveWishlist(); }
+      if (data.calendar?.links) { state.calendar = data.calendar; await saveCalendar(); state.cal.at = 0; }
       await loadAll();
       state.outfits = [];
       toast(`Imported ${data.items?.length || 0} pieces`);
@@ -3253,7 +3565,8 @@ async function ask(question, targetId = "ai-answer") {
   try {
     const c = conditions();
     const likes = tasteText();
-    const context = `Today: feels ${Math.round(c.feels)}°C${c.wet ? ", wet" : ""}. Occasion: ${OCCASIONS.find((o) => o.id === state.occasion).label}.\nWardrobe (#number name; type; colours; brand; style; fit; warmth 1-5; wear):\n${wardrobeText() || "(empty)"}${likes ? `\nTaste (learnt from what the user wears, likes and skips):\n${likes}` : ""}`;
+    const cal = calendarText();
+    const context = `${state.event?.day === "tomorrow" ? "Tomorrow" : "Today"}: feels ${Math.round(c.feels)}°C${c.wet ? ", wet" : ""}. Occasion: ${OCCASIONS.find((o) => o.id === state.occasion).label}.${cal ? `\n${cal}` : ""}\nWardrobe (#number name; type; colours; brand; style; fit; warmth 1-5; wear):\n${wardrobeText() || "(empty)"}${likes ? `\nTaste (learnt from what the user wears, likes and skips):\n${likes}` : ""}`;
     const refs = state.items.map((i) => i.id);
     const show = (t) => { const el = document.getElementById(targetId); if (el) el.textContent = cleanRefs(t, refs); };
     const answer = { text: await aiGenerate({ system: STYLIST_SYSTEM + "\n\n" + context, text: question, maxTokens: 800, onText: show }), refs };
@@ -3273,6 +3586,7 @@ document.addEventListener("click", async (e) => {
   const ds = t.dataset;
 
   if (t.matches("[data-close]")) return closeSheet();
+  if (ds.toast) { const run = toastAction; toastAction = null; $("#toast").hidden = true; return run?.(); }
   if (ds.cam === "snap") return snap();
   if (ds.cam === "skip") return finishShooting();
   if (ds.cam === "close") { cam.shots = []; return stopCamera(); }
@@ -3280,7 +3594,36 @@ document.addEventListener("click", async (e) => {
   if (ds.go) { closeSheet(); return go(ds.go); }
   if (ds.item) return openItem(ds.item);
   if (ds.orig) return openItem(ds.orig, ds.show === "1");
-  if (ds.occ) { state.occasion = ds.occ; generateOutfits(); return render(); }
+  if (ds.occ) { state.occasion = ds.occ; state.occChosen = localDay(); state.event = null; generateOutfits(); return render(); }
+  if (ds.event) { pickEvent(ds.event); return render(); }
+  if (ds.evocc) { state.editingEvent = state.editingEvent === ds.evocc ? null : ds.evocc; return render(); }
+  if (ds.setevocc) {
+    const at = ds.setevocc.lastIndexOf("|");
+    await setEventOcc(ds.setevocc.slice(0, at), ds.setevocc.slice(at + 1));
+    return render();
+  }
+  if (ds.calrm != null) {
+    const l = state.calendar.links[+ds.calrm];
+    if (!l || !(await confirmBox("Remove this calendar? Outfit ideas stop following its events.", "Remove"))) return render();
+    state.calendar.links = state.calendar.links.filter((x) => x !== l);
+    await saveCalendar();
+    await loadCalendar(true);
+    if (state.event && state.event.cal === l.url) state.event = null;
+    state.outfits = [];
+    return render();
+  }
+  if (ds.wash) {
+    const it = state.items.find((i) => i.id === ds.wash);
+    await setWash([it], !it.wash);
+    toast(it.wash ? `${it.name} is in the wash` : `${it.name} is back`);
+    openItem(it.id);
+    return render();
+  }
+  if (ds.plan != null) {
+    await planOutfit(state.outfits[+ds.plan]);
+    toast("Planned. It'll be first on Today tomorrow morning.");
+    return render();
+  }
   if (ds.slot) { state.filters.slot = ds.slot; state.filters.cat = "all"; return render(); }
   if (ds.catf) { state.filters.cat = ds.catf; return render(); }
   if (ds.color) { state.filters.color = ds.color; return render(); }
@@ -3348,29 +3691,29 @@ document.addEventListener("click", async (e) => {
     const [i, reason] = ds.skipwhy.split(":");
     const o = state.outfits[+i];
     await addLog({ kind: "skip", reason, itemIds: Object.values(o.pieces).filter(Boolean).map((p) => p.id), ...outfitContext() });
+    if (o.planned) { state.plan = null; await savePlan(); }
     replaceOutfit(+i);
     toast(reason === "today" ? "Okay, here's another idea" : "Got it. Here's another idea");
     return render();
   }
   if (ds.wear != null) {
     const o = state.outfits[+ds.wear];
-    await wearOutfit([...Object.values(o.pieces), ...(o.extras || [])].filter(Boolean), { source: "idea" });
+    const washed = await wearOutfit([...Object.values(o.pieces), ...(o.extras || [])].filter(Boolean), { source: o.planned ? "plan" : "idea" });
+    if (o.planned) { state.plan = null; await savePlan(); }
     state.anchor = null;
-    toast("Logged. Enjoy your day!");
+    wornToast("Logged. Enjoy your day!", washed);
     generateOutfits();
     return render();
   }
   if (ds.wearids) {
     const items = ds.wearids.split(",").map((id) => state.items.find((i) => i.id === id)).filter(Boolean);
-    await wearOutfit(items, { source: "stylist" });
-    toast("Logged. Enjoy your day!");
+    wornToast("Logged. Enjoy your day!", await wearOutfit(items, { source: "stylist" }));
     state.outfits = [];
     return render();
   }
   if (ds.wearItem) {
     const it = state.items.find((i) => i.id === ds.wearItem);
-    await wearOutfit([it]);
-    toast(`Logged ${it.name}`);
+    wornToast(`Logged ${it.name}.`, await wearOutfit([it]));
     state.outfits = [];
     return openItem(it.id);
   }
@@ -3479,6 +3822,15 @@ document.addEventListener("click", async (e) => {
     case "recognise-all": return recogniseAll();
     case "fit-all": return fitAll();
     case "anchor-pick": return openAnchorPicker();
+    case "see-wash": Object.assign(state.filters, { slot: "wash", cat: "all", q: "", style: "all", color: "all" }); return go("wardrobe");
+    case "wash-done": {
+      const back = inWash();
+      await setWash(back, false);
+      toast(`${back.length} piece${back.length === 1 ? " is" : "s are"} back in your wardrobe`, { label: "Undo", run: async () => { await setWash(back, true); refreshViews(); } });
+      return render();
+    }
+    case "cal-add": return addCalendar($('[data-input="cal"]')?.value || "");
+    case "cal-refresh": await loadCalendar(true); toast(Object.keys(state.cal.errors).length ? "Some calendars couldn't be read" : "Calendars read"); return render();
     case "anchor-clear": return setAnchor(null);
     case "find": return findIt();
     case "find-ai": {
@@ -3570,6 +3922,7 @@ document.addEventListener("input", (e) => {
 document.addEventListener("keydown", (e) => {
   if (e.key === "Enter" && e.target.dataset.input === "ask") ask(e.target.value);
   if (e.key === "Enter" && e.target.dataset.input === "city") $('[data-act="city"]').click();
+  if (e.key === "Enter" && e.target.dataset.input === "cal") addCalendar(e.target.value);
   if (e.key === "Enter" && ["findq", "findbrand"].includes(e.target.dataset.input)) findIt();
   if (e.key === "Escape") { closeSheet(); if (cam.stream) { cam.shots = []; stopCamera(); } }
 });
@@ -3580,6 +3933,20 @@ document.addEventListener("keydown", (e) => {
 await loadAll();
 applyTheme();
 loadWeather().then(() => { if (view === "today") { state.outfits = []; render(); } });
+// Calendar events: now, when the app comes back to the front, and every half hour.
+async function refreshCalendar() {
+  const moved = await loadCalendar();
+  const was = state.event?.key;
+  if (state.event && !dayEvents().today.concat(dayEvents().tomorrow).some((e) => e.key === was)) state.event = null; // over, or deleted
+  autoPickEvent();
+  if (moved || state.event?.key !== was) {
+    if (state.event?.key !== was) state.outfits = [];
+    if (view === "today" && !document.activeElement?.matches("input, textarea")) render();
+  }
+}
+refreshCalendar();
+setInterval(refreshCalendar, CAL_FRESH);
+document.addEventListener("visibilitychange", () => { if (document.visibilityState === "visible") refreshCalendar(); });
 previewSample.then((f) => {
   if (!f) return;
   state.previewAI = true;
