@@ -55,6 +55,17 @@ python -m fashion search "how long should my tie be"
 python -m fashion stats
 ```
 
+### Without a Gemini key
+
+Another AI (or you) can do Gemini's reading instead, and the result is checked and saved the same way:
+
+```bat
+python -m fashion fetch https://www.youtube.com/watch?v=VIDEO_ID --out transcript.txt
+python -m fashion instructions
+:: read transcript.txt following those instructions, save the answer as answer.json, then:
+python -m fashion add answer.json --source https://www.youtube.com/watch?v=VIDEO_ID
+```
+
 ### Writing an outfit
 
 Pieces are separated by commas. Each piece is its type, then any colours, fit, styles and `+tags`:

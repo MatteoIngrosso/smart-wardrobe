@@ -2,6 +2,9 @@
 
   learn <link or file> [...]     read videos/articles with Gemini and save what they teach
   learn --list sources.txt       the same for every link in a file
+  fetch <link>                   save a video's transcript or an article's text, to read without Gemini
+  instructions                   what Gemini is told, to read a source yourself (or with another AI)
+  add <answer.json> --source <link>   save tips and outfits read that way
   train                          fit the model to all example outfits and write the bible
   check "<outfit>"               score an outfit and say why
   search "<question>"            the tips that answer a question
@@ -26,6 +29,17 @@ def main(argv=None):
     pl.add_argument("--key", help="Gemini API key (otherwise GEMINI_KEY or .env)")
     pl.add_argument("--model", default=None, help="Gemini model (default gemini-flash-latest)")
     pl.add_argument("--no-train", action="store_true", help="don't retrain after learning")
+
+    pf = sub.add_parser("fetch", help="save the text of a video or article, to read without Gemini")
+    pf.add_argument("source")
+    pf.add_argument("--out", help="file to write (default: print it)")
+
+    sub.add_parser("instructions", help="print what Gemini is told, to read a source yourself")
+
+    pa = sub.add_parser("add", help="save tips and outfits read without Gemini")
+    pa.add_argument("answer", help="a JSON file shaped as described by `instructions`")
+    pa.add_argument("--source", required=True, help="the link or file it was read from")
+    pa.add_argument("--no-train", action="store_true", help="don't retrain afterwards")
 
     sub.add_parser("train", help="train on all example outfits and write bible/fashion-bible.json")
 
@@ -71,6 +85,37 @@ def cmd_learn(a):
         print()
         cmd_train(a)
     return 0 if ok else 1
+
+
+def cmd_fetch(a):
+    from .sources import fetch
+    s = fetch(a.source)
+    text = f"Title: {s['title']}\nBy: {s['author']}\nLink: {s['url']}\n\n{s['text']}\n"
+    if a.out:
+        with open(a.out, "w", encoding="utf-8") as f:
+            f.write(text)
+        print(f"Saved {len(s['text']):,} characters to {a.out}")
+    else:
+        print(text)
+    return 0
+
+
+def cmd_instructions(a):
+    from .learn import instructions
+    print(instructions())
+    return 0
+
+
+def cmd_add(a):
+    import json
+    from .learn import add
+    with open(a.answer, encoding="utf-8") as f:
+        data = json.load(f)
+    add(a.source, data)
+    if not a.no_train:
+        print()
+        cmd_train(a)
+    return 0
 
 
 def cmd_train(a):
@@ -122,7 +167,7 @@ def cmd_stats(a):
     return 0
 
 
-COMMANDS = {"learn": cmd_learn, "train": cmd_train, "check": cmd_check, "search": cmd_search, "stats": cmd_stats}
+COMMANDS = {"learn": cmd_learn, "fetch": cmd_fetch, "instructions": cmd_instructions, "add": cmd_add, "train": cmd_train, "check": cmd_check, "search": cmd_search, "stats": cmd_stats}
 
 if __name__ == "__main__":
     sys.exit(main())

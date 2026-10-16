@@ -239,6 +239,25 @@ class Learning(unittest.TestCase):
         self.assertTrue((Path(self.tmp.name) / "bible" / "fashion-bible.md").exists())
 
 
+    def test_add_without_gemini(self):
+        answer = Path(self.tmp.name) / "answer.json"
+        answer.write_text(json.dumps(FAKE_ANSWER), encoding="utf-8")
+        with redirect_stdout(io.StringIO()):
+            self.assertEqual(cli.main(["add", str(answer), "--source", "https://youtu.be/dQw4w9WgXcQ", "--no-train"]), 0)
+        rec = json.loads((Path(self.tmp.name) / "learned" / "yt-dQw4w9WgXcQ.json").read_text(encoding="utf-8"))
+        self.assertEqual(rec["source"]["url"], "https://www.youtube.com/watch?v=dQw4w9WgXcQ")
+        self.assertEqual(rec["model"], "by hand")
+        self.assertEqual(len(rec["tips"]), 3)
+        self.assertEqual(rec["tips"][0]["same_as"], "bottom-button")
+        self.assertEqual(len(rec["outfits"]), 1)
+
+    def test_instructions_list_known_tips(self):
+        text = learn.instructions()
+        self.assertIn("KNOWN TIPS:", text)
+        self.assertIn("bottom-button:", text)
+        self.assertIn("dress-shoes", text)
+
+
 class CommandLine(unittest.TestCase):
     def run_cli(self, *args):
         out = io.StringIO()
