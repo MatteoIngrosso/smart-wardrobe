@@ -54,6 +54,11 @@ class Pieces(unittest.TestCase):
         self.assertEqual((b.category, b.fit), ("jacket", "slim"))
         self.assertIn("blazer", b.tags)
 
+    def test_multiword_tags_round_trip(self):
+        p = Piece.from_dict({"type": "jacket", "colour": "olive", "tags": ["field jacket"]})
+        self.assertEqual(str(p), "jacket olive smart casual +field-jacket")
+        self.assertEqual(Piece.parse(str(p)).tags, {"field jacket"})
+
     def test_outfit_roles(self):
         o = Outfit.parse("tshirt white, overshirt olive, jeans navy, sneakers white, watch silver")
         self.assertEqual(o.hero.category, "overshirt")
@@ -101,6 +106,13 @@ class Rules(unittest.TestCase):
     def test_proportions(self):
         self.assertEqual(scores("hoodie grey oversized, jeans navy slim")["proportions"], 1.0)
         self.assertEqual(scores("hoodie grey oversized, jeans grey baggy", occasion="work")["proportions"], -1.0)
+
+    def test_a_notch_overdressed_is_fine_underdressed_is_not(self):
+        smart_weekend = scores("jacket olive smart casual +waxed, sweater navy smart casual, jeans navy, boots brown", occasion="casual")
+        self.assertEqual(smart_weekend["occasion-formality"], 1.0)
+        self.assertGreater(smart_weekend["occasion-styles"], 0)
+        self.assertLess(scores("hoodie grey, joggers grey, sneakers white", occasion="work")["occasion-formality"], 0)
+        self.assertLess(scores("jacket black formal +suit, shirt white formal, trousers black formal +suit, tie black", occasion="casual")["occasion-styles"], 0)
 
     def test_occasion_only_rules_skip_other_days(self):
         self.assertNotIn("gym-kit", scores("tshirt white, jeans navy", occasion="casual"))

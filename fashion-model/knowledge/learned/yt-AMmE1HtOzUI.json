@@ -47,8 +47,7 @@
       "occasions": [
         "gym"
       ],
-      "strength": "tip",
-      "same_as": "gym-shoes"
+      "strength": "tip"
     },
     {
       "id": "yt-AMmE1HtOzUI-4",
@@ -115,13 +114,13 @@
       "why": "A clean retro runner as the everyday shoe."
     },
     {
-      "outfit": "jacket navy smart casual +suit, shirt white smart casual, trousers navy smart casual +suit, sneakers casual",
+      "outfit": "jacket navy formal +suit, shirt white formal, trousers navy formal +suit, sneakers casual",
       "occasion": "event",
       "verdict": "avoid",
       "why": "Sneakers at a wedding: own one dressy pair instead."
     },
     {
-      "outfit": "jacket navy smart casual +suit, shirt white smart casual, trousers navy smart casual +suit, dress-shoes brown formal +derby +leather",
+      "outfit": "jacket navy formal +suit, shirt white formal, trousers navy formal +suit, dress-shoes brown formal +derby +leather",
       "occasion": "event",
       "verdict": "good",
       "why": "Classic derbies dress a suit properly for a wedding."

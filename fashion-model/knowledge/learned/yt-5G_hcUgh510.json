@@ -32,7 +32,8 @@
         "proportions"
       ],
       "occasions": [],
-      "strength": "tip"
+      "strength": "tip",
+      "same_as": "yt-1usH3SOn4q0-4"
     },
     {
       "id": "yt-5G_hcUgh510-3",
@@ -45,7 +46,8 @@
         "casual",
         "smart"
       ],
-      "strength": "opinion"
+      "strength": "opinion",
+      "same_as": "yt-GE_NB4JGeJU-7"
     },
     {
       "id": "yt-5G_hcUgh510-4",
@@ -66,7 +68,8 @@
         "wardrobe"
       ],
       "occasions": [],
-      "strength": "tip"
+      "strength": "tip",
+      "same_as": "yt-1usH3SOn4q0-5"
     },
     {
       "id": "yt-5G_hcUgh510-6",
@@ -235,7 +238,8 @@
         "work",
         "event"
       ],
-      "strength": "tip"
+      "strength": "tip",
+      "same_as": "yt-vu-Zj7FWDwY-4"
     },
     {
       "id": "yt-5G_hcUgh510-19",
@@ -267,7 +271,7 @@
       ],
       "occasions": [],
       "strength": "tip",
-      "same_as": "watch-strap"
+      "same_as": "accessories-few"
     },
     {
       "id": "yt-5G_hcUgh510-22",

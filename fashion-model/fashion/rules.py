@@ -122,16 +122,19 @@ def formality_spread(o, ctx, limit=1.5):
 
 @check
 def occasion_formality(o, ctx):
-    """As dressy as the occasion: not under- or overdressed."""
+    """As dressy as the occasion. Better a notch overdressed than underdressed, so dressing up
+    is forgiven more than dressing down. Shoes are left out (they have their own rule)."""
     if ctx.occasion not in OCCASIONS or not o.core:
         return None, None
     label, target, _ = OCCASIONS[ctx.occasion]
-    avg = sum(p.formality for p in o.core) / len(o.core)
-    gap = avg - target
-    if abs(gap) <= 0.4:
+    worn = clothes(o) or o.core
+    gap = sum(p.formality for p in worn) / len(worn) - target
+    over = gap > 0
+    excess = abs(gap) - (0.9 if over else 0.4)
+    if excess <= 0:
         return 1.0, f"Right level of dressiness for {label.lower()}"
-    score = clamp(1 - (abs(gap) - 0.4) * 1.2)
-    return score, (("Underdressed" if gap < 0 else "Overdressed") + f" for {label.lower()}" if score < 0.3 else None)
+    score = clamp(1 - excess * (0.8 if over else 1.2))
+    return score, (("Overdressed" if over else "Underdressed") + f" for {label.lower()}" if score < 0.3 else None)
 
 
 @check
@@ -139,8 +142,15 @@ def occasion_styles(o, ctx):
     """Pieces whose style suits the occasion."""
     if ctx.occasion not in OCCASIONS or not o.core:
         return None, None
-    likes = OCCASIONS[ctx.occasion][2]
-    share = sum(any(s in likes for s in p.styles) for p in o.core) / len(o.core)
+    _, target, likes = OCCASIONS[ctx.occasion]
+
+    def suits(p):
+        if any(s in likes for s in p.styles):
+            return 1.0
+        # A notch dressier than the occasion still works (a knit and boots on an everyday walk).
+        return 0.75 if ctx.occasion != "gym" and 0 < p.formality - target <= 1.5 else 0.0
+
+    share = sum(suits(p) for p in o.core) / len(o.core)
     return clamp(share * 2 - 1), None
 
 

@@ -1,10 +1,10 @@
 {
  "name": "Fashion bible",
  "version": 1,
- "built_at": "2026-10-16T21:24:26+00:00",
+ "built_at": "2026-10-16T21:51:23+00:00",
  "about": "Menswear rules, tips and example outfits, in the Smart Wardrobe app's vocabulary (garment types, colours, styles, fits and occasions as in app.js). Score an outfit with: sigmoid(model.bias + sum(rule.weight * check(rule))).",
  "model": {
-  "bias": -3.44,
+  "bias": -3.949,
   "trained_on": {
    "outfits": 89,
    "rulebook": 42,
@@ -13,8 +13,8 @@
   },
   "accuracy": {
    "training": 0.843,
-   "unseen": 0.775,
-   "rulebook_only_unseen": 0.787
+   "unseen": 0.82,
+   "rulebook_only_unseen": 0.809
   }
  },
  "rules": [
@@ -26,7 +26,7 @@
    "params": {
     "limit": 1
    },
-   "weight": 1.466,
+   "weight": 1.436,
    "prior": 1.5,
    "topics": [
     "colour"
@@ -41,7 +41,7 @@
    "params": {
     "limit": 3
    },
-   "weight": 0.852,
+   "weight": 0.879,
    "prior": 0.8,
    "topics": [
     "colour"
@@ -54,7 +54,7 @@
    "why": "Contrast between top and bottom gives the outfit shape; all mid-tones look flat.",
    "check": "light_dark_contrast",
    "params": {},
-   "weight": 0.494,
+   "weight": 0.383,
    "prior": 0.6,
    "topics": [
     "colour"
@@ -67,7 +67,7 @@
    "why": "Shades of one colour from head to toe look calm and expensive.",
    "check": "tonal",
    "params": {},
-   "weight": 0.623,
+   "weight": 0.688,
    "prior": 0.6,
    "topics": [
     "colour"
@@ -195,7 +195,7 @@
      ]
     ]
    },
-   "weight": 0.847,
+   "weight": 0.97,
    "prior": 0.8,
    "topics": [
     "colour"
@@ -235,7 +235,7 @@
      ]
     ]
    },
-   "weight": 1.257,
+   "weight": 1.309,
    "prior": 1.2,
    "topics": [
     "colour"
@@ -250,7 +250,7 @@
    "params": {
     "limit": 1.5
    },
-   "weight": 1.521,
+   "weight": 1.575,
    "prior": 1.5,
    "topics": [
     "occasions",
@@ -264,7 +264,7 @@
    "why": "Being clearly under- or overdressed is the most noticed mistake; aim for the level of the room.",
    "check": "occasion_formality",
    "params": {},
-   "weight": 1.998,
+   "weight": 2.098,
    "prior": 2.0,
    "topics": [
     "occasions"
@@ -277,7 +277,7 @@
    "why": "Each occasion has its own vocabulary: tailoring for work, sportswear for the gym.",
    "check": "occasion_styles",
    "params": {},
-   "weight": 0.002,
+   "weight": 0.526,
    "prior": 0.8,
    "topics": [
     "occasions"
@@ -309,7 +309,7 @@
      ]
     ]
    },
-   "weight": 1.886,
+   "weight": 1.948,
    "prior": 1.8,
    "topics": [
     "occasions",
@@ -324,7 +324,7 @@
    "why": "When every piece shares a style the outfit reads as intentional.",
    "check": "consistent_style",
    "params": {},
-   "weight": 0.281,
+   "weight": 0.106,
    "prior": 0.6,
    "topics": [
     "wardrobe"
@@ -337,7 +337,7 @@
    "why": "A roomy top looks best over slimmer trousers and the other way round; roomy on roomy only works as a deliberate streetwear look.",
    "check": "proportions",
    "params": {},
-   "weight": 1.11,
+   "weight": 1.038,
    "prior": 1.2,
    "topics": [
     "proportions",
@@ -353,7 +353,7 @@
    "params": {
     "limit": 1
    },
-   "weight": 1.031,
+   "weight": 1.03,
    "prior": 1.0,
    "topics": [
     "streetwear",
@@ -367,7 +367,7 @@
    "why": "One pattern is easy. Two need clearly different scales (fine stripe with a large check), so most days keep it to one.",
    "check": "pattern_mixing",
    "params": {},
-   "weight": 0.924,
+   "weight": 1.131,
    "prior": 0.7,
    "topics": [
     "patterns"
@@ -380,7 +380,7 @@
    "why": "A denim top with jeans in the same wash reads as a uniform; pick clearly different washes or break it up.",
    "check": "denim_on_denim",
    "params": {},
-   "weight": 0.91,
+   "weight": 1.07,
    "prior": 0.8,
    "topics": [
     "denim"
@@ -393,7 +393,7 @@
    "why": "Shoes are read first: dress shoes with joggers or trainers with a tie break the look.",
    "check": "shoe_formality",
    "params": {},
-   "weight": 1.363,
+   "weight": 1.38,
    "prior": 1.6,
    "topics": [
     "shoes",
@@ -407,7 +407,7 @@
    "why": "With leather shoes, the belt is in the same colour family: black with black, brown with brown.",
    "check": "belt_matches_shoes",
    "params": {},
-   "weight": 1.202,
+   "weight": 1.42,
    "prior": 0.9,
    "topics": [
     "accessories",
@@ -421,7 +421,7 @@
    "why": "A tie only works with a collared shirt and tailored trousers, never with a hoodie or shorts.",
    "check": "tie_rules",
    "params": {},
-   "weight": 1.9,
+   "weight": 1.788,
    "prior": 2.0,
    "topics": [
     "accessories",
@@ -435,7 +435,7 @@
    "why": "A suit is the dressiest thing most men own; a T-shirt or trainers pull it down to casual.",
    "check": "suit_rules",
    "params": {},
-   "weight": 1.209,
+   "weight": 0.988,
    "prior": 1.5,
    "topics": [
     "suits",
@@ -449,7 +449,7 @@
    "why": "A puffer or rain shell over tailoring undoes it; an overcoat finishes a smart outfit.",
    "check": "outerwear_match",
    "params": {},
-   "weight": 0.982,
+   "weight": 1.035,
    "prior": 0.9,
    "topics": [
     "outerwear"
@@ -462,7 +462,7 @@
    "why": "Watch, rings and bracelet look tidier all gold or all silver.",
    "check": "metals",
    "params": {},
-   "weight": 0.411,
+   "weight": 0.412,
    "prior": 0.4,
    "topics": [
     "accessories"
@@ -475,7 +475,7 @@
    "why": "Too many layers is as uncomfortable as too few: about one warm layer above 24°C, three or four when mild, six or more when cold.",
    "check": "warmth_for_weather",
    "params": {},
-   "weight": 1.379,
+   "weight": 1.331,
    "prior": 1.5,
    "topics": [
     "weather",
@@ -489,7 +489,7 @@
    "why": "Shorts below about 17°C look out of season.",
    "check": "shorts_weather",
    "params": {},
-   "weight": 1.38,
+   "weight": 1.359,
    "prior": 1.4,
    "topics": [
     "weather",
@@ -503,7 +503,7 @@
    "why": "On wet days a jacket that sheds water and shoes that don't mind puddles; suede and white trainers suffer.",
    "check": "rain_ready",
    "params": {},
-   "weight": 0.911,
+   "weight": 1.008,
    "prior": 0.8,
    "topics": [
     "weather",
@@ -518,7 +518,7 @@
    "why": "Linen and seersucker for heat, tweed, flannel and corduroy for cold.",
    "check": "fabric_season",
    "params": {},
-   "weight": 1.001,
+   "weight": 1.176,
    "prior": 0.8,
    "topics": [
     "fabrics",
@@ -532,7 +532,7 @@
    "why": "At the gym, clothes made to move and breathe, and proper training shoes.",
    "check": "gym_kit",
    "params": {},
-   "weight": 1.567,
+   "weight": 1.637,
    "prior": 1.5,
    "topics": [
     "sportswear"
@@ -543,23 +543,6 @@
   }
  ],
  "tips": [
-  {
-   "id": "capsule",
-   "text": "A capsule wardrobe: a few pieces in neutral colours that all combine gives more outfits than many loud pieces.",
-   "why": "Every piece works with every other.",
-   "topics": [
-    "wardrobe",
-    "colour"
-   ],
-   "strength": "core",
-   "support": 4,
-   "sources": [
-    "rulebook",
-    "When the Mall Taught Men How to Dress: J.Crew, Banana Republic & Gap",
-    "James Bond Style Explained | How to Dress Like 007",
-    "A Man's Guide to '90s Minimalism"
-   ]
-  },
   {
    "id": "buy-less-better",
    "text": "Buy fewer, better pieces in natural fabrics; they last longer and look better as they age.",
@@ -596,41 +579,6 @@
    ]
   },
   {
-   "id": "tailor",
-   "text": "Budget for a tailor: shortening sleeves and trousers and taking in a waist costs little and makes clothes look made for you.",
-   "why": "Off-the-rack is cut for an average body.",
-   "topics": [
-    "fit",
-    "care",
-    "trousers"
-   ],
-   "strength": "core",
-   "support": 3,
-   "sources": [
-    "rulebook",
-    "James Bond Style Explained | How to Dress Like 007",
-    "Mi faccio creare un abito custom made da Suitsupply per Miami"
-   ]
-  },
-  {
-   "id": "trouser-break",
-   "text": "Trousers should have little or no break: the hem just touches the shoe. Slim trousers look best with no break at all.",
-   "why": "Fabric pooling at the ankle looks sloppy.",
-   "topics": [
-    "trousers",
-    "fit",
-    "suits",
-    "proportions"
-   ],
-   "strength": "core",
-   "support": 3,
-   "sources": [
-    "rulebook",
-    "Alain Delon Style Breakdown | Why Everything Worked",
-    "Mi faccio creare un abito custom made da Suitsupply per Miami"
-   ]
-  },
-  {
    "id": "oxford-shirt",
    "text": "A white or light blue oxford shirt works with suits, chinos and jeans alike.",
    "why": "It is the most versatile shirt a man can own.",
@@ -654,7 +602,8 @@
    "why": "Texture adds depth where colour doesn't.",
    "topics": [
     "colour",
-    "fabrics"
+    "fabrics",
+    "knitwear"
    ],
    "strength": "core",
    "support": 3,
@@ -681,19 +630,51 @@
    ]
   },
   {
-   "id": "jacket-shoulders",
-   "text": "A jacket must fit in the shoulders: the seam ends where your shoulder ends, with no dent or overhang.",
-   "why": "Shoulders are almost impossible to alter.",
+   "id": "capsule",
+   "text": "A capsule wardrobe: a few pieces in neutral colours that all combine gives more outfits than many loud pieces.",
+   "why": "Every piece works with every other.",
    "topics": [
-    "suits",
+    "wardrobe",
+    "colour"
+   ],
+   "strength": "core",
+   "support": 3,
+   "sources": [
+    "rulebook",
+    "James Bond Style Explained | How to Dress Like 007",
+    "A Man's Guide to '90s Minimalism"
+   ]
+  },
+  {
+   "id": "basics",
+   "text": "Core menswear basics: white and navy tees, an oxford shirt, a grey or navy knit, dark jeans, chinos, a navy blazer, an overcoat, white sneakers, brown leather shoes or boots.",
+   "why": "These combine into dozens of outfits.",
+   "topics": [
+    "wardrobe",
+    "casual",
+    "denim"
+   ],
+   "strength": "core",
+   "support": 3,
+   "sources": [
+    "rulebook",
+    "When the Mall Taught Men How to Dress: J.Crew, Banana Republic & Gap",
+    "Alain Delon Style Breakdown | Why Everything Worked"
+   ]
+  },
+  {
+   "id": "tailor",
+   "text": "Budget for a tailor: shortening sleeves and trousers and taking in a waist costs little and makes clothes look made for you.",
+   "why": "Off-the-rack is cut for an average body.",
+   "topics": [
     "fit",
-    "outerwear"
+    "care"
    ],
    "strength": "core",
    "support": 2,
    "sources": [
     "rulebook",
-    "Mi faccio creare un abito custom made da Suitsupply per Miami"
+    "James Bond Style Explained | How to Dress Like 007"
    ]
   },
   {
@@ -709,6 +690,23 @@
    "sources": [
     "rulebook",
     "TOM FORD | Project Upgrade | Full Version"
+   ]
+  },
+  {
+   "id": "trouser-break",
+   "text": "Trousers should have little or no break: the hem just touches the shoe. Slim trousers look best with no break at all.",
+   "why": "Fabric pooling at the ankle looks sloppy.",
+   "topics": [
+    "trousers",
+    "fit",
+    "suits",
+    "proportions"
+   ],
+   "strength": "core",
+   "support": 2,
+   "sources": [
+    "rulebook",
+    "Alain Delon Style Breakdown | Why Everything Worked"
    ]
   },
   {
@@ -779,32 +777,19 @@
    ]
   },
   {
-   "id": "shoes-quality",
-   "text": "Spend on shoes and keep them clean; scuffed shoes ruin a good outfit.",
-   "why": "Shoes are noticed more than most men think.",
+   "id": "sneakers-smart",
+   "text": "Minimal white leather sneakers can go with chinos or a casual blazer, but not with a business suit or a tie.",
+   "why": "They are smart casual, not formal.",
    "topics": [
     "shoes",
-    "care"
+    "smart casual",
+    "suits"
    ],
    "strength": "core",
    "support": 2,
    "sources": [
     "rulebook",
-    "11 Things You Only Need To Buy Once (they will last forever)"
-   ]
-  },
-  {
-   "id": "watch-strap",
-   "text": "A leather watch strap looks best roughly matching belt and shoes; a metal bracelet goes with anything.",
-   "why": "Leathers in the same family look put together.",
-   "topics": [
-    "accessories"
-   ],
-   "strength": "core",
-   "support": 2,
-   "sources": [
-    "rulebook",
-    "Alain Delon Style Breakdown | Why Everything Worked"
+    "How to Dress Like Tom Ford"
    ]
   },
   {
@@ -919,24 +904,6 @@
    ]
   },
   {
-   "id": "gym-shoes",
-   "text": "Train in proper training shoes and save fashion sneakers for the street.",
-   "why": "Support for the feet, and the sneakers last longer.",
-   "topics": [
-    "sportswear",
-    "shoes"
-   ],
-   "occasions": [
-    "gym"
-   ],
-   "strength": "core",
-   "support": 2,
-   "sources": [
-    "rulebook",
-    "The Only 5 Shoes Everyone Should Own"
-   ]
-  },
-  {
    "id": "polo",
    "text": "A polo dresses up a T-shirt outfit instantly; wear it with chinos or shorts, tucked or untucked if short.",
    "why": "The collar adds polish.",
@@ -984,19 +951,38 @@
    ]
   },
   {
-   "id": "basics",
-   "text": "Core menswear basics: white and navy tees, an oxford shirt, a grey or navy knit, dark jeans, chinos, a navy blazer, an overcoat, white sneakers, brown leather shoes or boots.",
-   "why": "These combine into dozens of outfits.",
+   "id": "care-shoes",
+   "text": "Rest leather shoes a day between wears and keep cedar shoe trees in them.",
+   "why": "They dry out and keep their shape.",
    "topics": [
-    "wardrobe",
-    "casual",
-    "denim"
+    "care",
+    "shoes"
    ],
    "strength": "core",
    "support": 2,
    "sources": [
     "rulebook",
-    "When the Mall Taught Men How to Dress: J.Crew, Banana Republic & Gap"
+    "Cody Rhodes Goes Sneaker Shopping With Complex"
+   ]
+  },
+  {
+   "id": "yt-vu-Zj7FWDwY-4",
+   "text": "A plain office suit such as a pinstripe stops looking dull when paired with a more interesting shirt and tie combination.",
+   "why": "Shirt and tie carry the personality of a conservative suit.",
+   "topics": [
+    "suits",
+    "patterns",
+    "shirts",
+    "accessories"
+   ],
+   "occasions": [
+    "work"
+   ],
+   "strength": "tip",
+   "support": 2,
+   "sources": [
+    "TOM FORD | Project Upgrade | Full Version",
+    "Alain Delon Style Breakdown | Why Everything Worked"
    ]
   },
   {
@@ -1018,18 +1004,42 @@
    ]
   },
   {
-   "id": "yt-vu-Zj7FWDwY-13",
-   "text": "Grooming finishes an outfit: keep a beard even with a clean neckline, trim long eyebrow hairs, moisturise lips and keep nails manicured.",
-   "why": "People notice faces and hands first.",
+   "id": "yt-1usH3SOn4q0-4",
+   "text": "Don't make everything skin tight: let jeans fall straight from the hip, chinos have room in the thigh and an oxford blouse slightly at the waist.",
+   "why": "A little ease looks more natural and current than vacuum-sealed slim fits.",
    "topics": [
-    "care"
+    "fit",
+    "proportions",
+    "trousers"
    ],
-   "occasions": [],
+   "occasions": [
+    "casual",
+    "smart"
+   ],
    "strength": "tip",
    "support": 2,
    "sources": [
-    "TOM FORD | Project Upgrade | Full Version",
-    "Tom Ford Gives a 30-Year-Old Man an Eyebrow Makeover | Project Upgrade | GQ"
+    "When the Mall Taught Men How to Dress: J.Crew, Banana Republic & Gap",
+    "Alain Delon Style Breakdown | Why Everything Worked"
+   ]
+  },
+  {
+   "id": "yt-GE_NB4JGeJU-11",
+   "text": "Mix rugged and refined: a good tweed jacket with faded jeans, corduroys with an inexpensive oxford.",
+   "why": "The contrast looks unpretentious.",
+   "topics": [
+    "smart casual",
+    "fabrics"
+   ],
+   "occasions": [
+    "casual",
+    "smart"
+   ],
+   "strength": "tip",
+   "support": 2,
+   "sources": [
+    "The 3 Ralph Lauren Aesthetics Every Man Can Wear This Fall",
+    "A Man's Guide to '90s Minimalism"
    ]
   },
   {
@@ -1046,6 +1056,21 @@
    "sources": [
     "PERCHÉ NON TUTTI I CAPI MADE IN ITALY SONO UGUALI con Mattia Berveglieri | Live Talk @ WHITE Milano",
     "Mi faccio creare un abito custom made da Suitsupply per Miami"
+   ]
+  },
+  {
+   "id": "jacket-shoulders",
+   "text": "A jacket must fit in the shoulders: the seam ends where your shoulder ends, with no dent or overhang.",
+   "why": "Shoulders are almost impossible to alter.",
+   "topics": [
+    "suits",
+    "fit",
+    "outerwear"
+   ],
+   "strength": "core",
+   "support": 1,
+   "sources": [
+    "rulebook"
    ]
   },
   {
@@ -1218,12 +1243,12 @@
    ]
   },
   {
-   "id": "shoe-formality-ladder",
-   "text": "From dressiest to most casual: black oxfords, brown oxfords, derbies and brogues, loafers, boots, clean leather sneakers, canvas or running shoes.",
-   "why": "Pick the shoe from the same rung as the rest of the outfit.",
+   "id": "shoes-quality",
+   "text": "Spend on shoes and keep them clean; scuffed shoes ruin a good outfit.",
+   "why": "Shoes are noticed more than most men think.",
    "topics": [
     "shoes",
-    "occasions"
+    "care"
    ],
    "strength": "core",
    "support": 1,
@@ -1232,12 +1257,12 @@
    ]
   },
   {
-   "id": "sneakers-smart",
-   "text": "Minimal white leather sneakers can go with chinos or a casual blazer, but not with a business suit or a tie.",
-   "why": "They are smart casual, not formal.",
+   "id": "shoe-formality-ladder",
+   "text": "From dressiest to most casual: black oxfords, brown oxfords, derbies and brogues, loafers, boots, clean leather sneakers, canvas or running shoes.",
+   "why": "Pick the shoe from the same rung as the rest of the outfit.",
    "topics": [
     "shoes",
-    "smart casual"
+    "occasions"
    ],
    "strength": "core",
    "support": 1,
@@ -1282,6 +1307,19 @@
     "shoes",
     "suits",
     "colour"
+   ],
+   "strength": "core",
+   "support": 1,
+   "sources": [
+    "rulebook"
+   ]
+  },
+  {
+   "id": "watch-strap",
+   "text": "A leather watch strap looks best roughly matching belt and shoes; a metal bracelet goes with anything.",
+   "why": "Leathers in the same family look put together.",
+   "topics": [
+    "accessories"
    ],
    "strength": "core",
    "support": 1,
@@ -1416,6 +1454,23 @@
    ]
   },
   {
+   "id": "gym-shoes",
+   "text": "Train in proper training shoes and save fashion sneakers for the street.",
+   "why": "Support for the feet, and the sneakers last longer.",
+   "topics": [
+    "sportswear",
+    "shoes"
+   ],
+   "occasions": [
+    "gym"
+   ],
+   "strength": "core",
+   "support": 1,
+   "sources": [
+    "rulebook"
+   ]
+  },
+  {
    "id": "tshirt-fit",
    "text": "A good T-shirt: sleeves end mid-bicep, shoulder seam on the shoulder, hem at the belt or just below.",
    "why": "Fit makes a basic tee look intentional.",
@@ -1492,20 +1547,6 @@
    "topics": [
     "care",
     "knitwear"
-   ],
-   "strength": "core",
-   "support": 1,
-   "sources": [
-    "rulebook"
-   ]
-  },
-  {
-   "id": "care-shoes",
-   "text": "Rest leather shoes a day between wears and keep cedar shoe trees in them.",
-   "why": "They dry out and keep their shape.",
-   "topics": [
-    "care",
-    "shoes"
    ],
    "strength": "core",
    "support": 1,
@@ -1638,6 +1679,22 @@
    ]
   },
   {
+   "id": "yt-GE_NB4JGeJU-7",
+   "text": "Don't make classic clothes look too perfect or bought together; a slightly careless, accumulated look reads more stylish.",
+   "why": "Clothes that look lived in seem effortless.",
+   "topics": [
+    "wardrobe"
+   ],
+   "occasions": [],
+   "strength": "opinion",
+   "support": 3,
+   "sources": [
+    "The 3 Ralph Lauren Aesthetics Every Man Can Wear This Fall",
+    "Alain Delon Style Breakdown | Why Everything Worked",
+    "A Man's Guide to '90s Minimalism"
+   ]
+  },
+  {
    "id": "yt-vu-Zj7FWDwY-1",
    "text": "Dress for the job and life you are aiming for, not the one you had at school; clothes signal whether people can trust you with responsibility.",
    "why": "People judge competence partly by appearance.",
@@ -1665,24 +1722,6 @@
    "occasions": [
     "work",
     "event"
-   ],
-   "strength": "tip",
-   "support": 1,
-   "sources": [
-    "TOM FORD | Project Upgrade | Full Version"
-   ]
-  },
-  {
-   "id": "yt-vu-Zj7FWDwY-4",
-   "text": "A plain office suit such as a pinstripe stops looking dull when paired with a more interesting shirt and tie combination.",
-   "why": "Shirt and tie carry the personality of a conservative suit.",
-   "topics": [
-    "suits",
-    "patterns",
-    "shirts"
-   ],
-   "occasions": [
-    "work"
    ],
    "strength": "tip",
    "support": 1,
@@ -1732,25 +1771,6 @@
    ],
    "occasions": [
     "casual"
-   ],
-   "strength": "tip",
-   "support": 1,
-   "sources": [
-    "When the Mall Taught Men How to Dress: J.Crew, Banana Republic & Gap"
-   ]
-  },
-  {
-   "id": "yt-1usH3SOn4q0-4",
-   "text": "Don't make everything skin tight: let jeans fall straight from the hip, chinos have room in the thigh and an oxford blouse slightly at the waist.",
-   "why": "A little ease looks more natural and current than vacuum-sealed slim fits.",
-   "topics": [
-    "fit",
-    "proportions",
-    "trousers"
-   ],
-   "occasions": [
-    "casual",
-    "smart"
    ],
    "strength": "tip",
    "support": 1,
@@ -2044,23 +2064,6 @@
    ]
   },
   {
-   "id": "yt-GE_NB4JGeJU-11",
-   "text": "Mix rugged and refined: a good tweed jacket with faded jeans, corduroys with an inexpensive oxford.",
-   "why": "The contrast looks unpretentious.",
-   "topics": [
-    "smart casual"
-   ],
-   "occasions": [
-    "casual",
-    "smart"
-   ],
-   "strength": "tip",
-   "support": 1,
-   "sources": [
-    "The 3 Ralph Lauren Aesthetics Every Man Can Wear This Fall"
-   ]
-  },
-  {
    "id": "yt-GE_NB4JGeJU-12",
    "text": "For a Western touch, take one or two rugged elements and set them in normal clothes; never wear every cowboy signifier at once.",
    "why": "One accent reads as style, the full set as fancy dress.",
@@ -2325,23 +2328,6 @@
    ]
   },
   {
-   "id": "yt-8yFRxH3hLXE-8",
-   "text": "A navy sweater with navy trousers can look flat; with dark denim and suede boots it comes alive.",
-   "why": "Contrasting materials break up one colour.",
-   "topics": [
-    "fabrics",
-    "knitwear"
-   ],
-   "occasions": [
-    "casual"
-   ],
-   "strength": "tip",
-   "support": 1,
-   "sources": [
-    "James Bond Style Explained | How to Dress Like 007"
-   ]
-  },
-  {
    "id": "yt-8yFRxH3hLXE-9",
    "text": "A Harrington, simple bomber or lightweight blouson over a polo and jeans makes a timeless urban casual look; the silhouette matters more than the label.",
    "why": "Clean short jackets suit everyday wear.",
@@ -2441,35 +2427,6 @@
    "topics": [
     "fit",
     "proportions"
-   ],
-   "occasions": [],
-   "strength": "tip",
-   "support": 1,
-   "sources": [
-    "Alain Delon Style Breakdown | Why Everything Worked"
-   ]
-  },
-  {
-   "id": "yt-5G_hcUgh510-2",
-   "text": "Looking sharp does not mean everything slim: let clothes have shape but also ease, with nothing too long, short, tight or heavy.",
-   "why": "Balanced proportions stay timeless.",
-   "topics": [
-    "fit",
-    "proportions"
-   ],
-   "occasions": [],
-   "strength": "tip",
-   "support": 1,
-   "sources": [
-    "Alain Delon Style Breakdown | Why Everything Worked"
-   ]
-  },
-  {
-   "id": "yt-5G_hcUgh510-5",
-   "text": "Ignore loud trends; wearing the same well-fitting basics properly beats chasing novelty.",
-   "why": "Simple clothes worn well never date.",
-   "topics": [
-    "wardrobe"
    ],
    "occasions": [],
    "strength": "tip",
@@ -2609,25 +2566,6 @@
    ]
   },
   {
-   "id": "yt-5G_hcUgh510-18",
-   "text": "A patterned tie can bring life to a plain suit; plain ties look more precise.",
-   "why": "The tie sets the suit's mood.",
-   "topics": [
-    "accessories",
-    "patterns",
-    "suits"
-   ],
-   "occasions": [
-    "work",
-    "event"
-   ],
-   "strength": "tip",
-   "support": 1,
-   "sources": [
-    "Alain Delon Style Breakdown | Why Everything Worked"
-   ]
-  },
-  {
    "id": "yt-5G_hcUgh510-20",
    "text": "Keep belts simple: plain black or brown leather with an understated buckle.",
    "why": "A belt should hold the outfit together, not distract.",
@@ -2747,8 +2685,7 @@
     "casual"
    ],
    "occasions": [
-    "casual",
-    "work"
+    "casual"
    ],
    "strength": "tip",
    "support": 1,
@@ -2879,6 +2816,21 @@
    ]
   },
   {
+   "id": "yt-eeczvhqC8GQ-2",
+   "text": "Choose Goodyear-welted (or Blake-stitched) leather boots and shoes; they can be resoled instead of thrown away.",
+   "why": "A glued sole that fails ends the shoe.",
+   "topics": [
+    "shoes",
+    "care"
+   ],
+   "occasions": [],
+   "strength": "tip",
+   "support": 1,
+   "sources": [
+    "11 Things You Only Need To Buy Once (they will last forever)"
+   ]
+  },
+  {
    "id": "yt-eeczvhqC8GQ-3",
    "text": "Good full-grain leather shoes mould to your feet over time and polish back up beautifully.",
    "why": "Quality leather gets more comfortable with wear.",
@@ -2962,6 +2914,23 @@
    ],
    "occasions": [
     "casual"
+   ],
+   "strength": "tip",
+   "support": 1,
+   "sources": [
+    "The Only 5 Shoes Everyone Should Own"
+   ]
+  },
+  {
+   "id": "yt-AMmE1HtOzUI-3",
+   "text": "Have one versatile training shoe for running, gym and general activity rather than many specialist pairs, unless you do one sport seriously.",
+   "why": "One good hybrid shoe handles most activity.",
+   "topics": [
+    "shoes",
+    "sportswear"
+   ],
+   "occasions": [
+    "gym"
    ],
    "strength": "tip",
    "support": 1,
@@ -3092,6 +3061,21 @@
    ]
   },
   {
+   "id": "yt-a8BB4Kb2GuI-8",
+   "text": "Choose shoulder construction to suit your posture and build: padded for structure, soft or Neapolitan for a relaxed look.",
+   "why": "The shoulder defines the silhouette.",
+   "topics": [
+    "suits",
+    "fit"
+   ],
+   "occasions": [],
+   "strength": "tip",
+   "support": 1,
+   "sources": [
+    "Mi faccio creare un abito custom made da Suitsupply per Miami"
+   ]
+  },
+  {
    "id": "yt-a8BB4Kb2GuI-9",
    "text": "Trousers worn with a double-breasted jacket look clean with side adjusters instead of belt loops, and a single pleat adds softness.",
    "why": "No belt keeps the line uninterrupted.",
@@ -3103,6 +3087,36 @@
     "event",
     "work"
    ],
+   "strength": "tip",
+   "support": 1,
+   "sources": [
+    "Mi faccio creare un abito custom made da Suitsupply per Miami"
+   ]
+  },
+  {
+   "id": "yt-a8BB4Kb2GuI-10",
+   "text": "For trousers meant to fall softly onto the shoe, skip the turn-up and set the final length after trying them with the shoes you'll wear.",
+   "why": "Hem length depends on the shoe.",
+   "topics": [
+    "trousers",
+    "fit"
+   ],
+   "occasions": [],
+   "strength": "tip",
+   "support": 1,
+   "sources": [
+    "Mi faccio creare un abito custom made da Suitsupply per Miami"
+   ]
+  },
+  {
+   "id": "yt-a8BB4Kb2GuI-11",
+   "text": "Have trousers made slightly roomy at the waist and hips; taking them in is easy, letting them out is barely possible.",
+   "why": "Seam allowance is usually only about a centimetre.",
+   "topics": [
+    "trousers",
+    "fit"
+   ],
+   "occasions": [],
    "strength": "tip",
    "support": 1,
    "sources": [
@@ -3140,6 +3154,21 @@
    ]
   },
   {
+   "id": "yt-a8BB4Kb2GuI-16",
+   "text": "A higher Super number means a finer, lighter, more delicate wool cloth.",
+   "why": "Super numbers grade how fine the wool fibre is; finer cloth feels lighter but is less hard-wearing.",
+   "topics": [
+    "fabrics",
+    "suits"
+   ],
+   "occasions": [],
+   "strength": "tip",
+   "support": 1,
+   "sources": [
+    "Mi faccio creare un abito custom made da Suitsupply per Miami"
+   ]
+  },
+  {
    "id": "yt-cQW_-flkkO0-1",
    "text": "Minimalism is about removing visual noise, not only wearing black: grey, brown, navy, cream, olive or burgundy work as long as pieces don't compete.",
    "why": "Silhouette, fabric and the wearer matter more than decoration.",
@@ -3148,24 +3177,6 @@
     "wardrobe"
    ],
    "occasions": [],
-   "strength": "tip",
-   "support": 1,
-   "sources": [
-    "A Man's Guide to '90s Minimalism"
-   ]
-  },
-  {
-   "id": "yt-cQW_-flkkO0-2",
-   "text": "Mix refined and worn-in: a pristine wool overcoat over a sweater and worn jeans, or a cashmere knit under an old leather jacket.",
-   "why": "The contrast keeps minimal outfits from looking sterile.",
-   "topics": [
-    "smart casual",
-    "fabrics"
-   ],
-   "occasions": [
-    "casual",
-    "smart"
-   ],
    "strength": "tip",
    "support": 1,
    "sources": [
@@ -3224,20 +3235,6 @@
    ]
   },
   {
-   "id": "yt-cQW_-flkkO0-7",
-   "text": "Don't buy everything from one shop; a mix of basics, a vintage coat and existing shirts looks lived-in rather than like a set.",
-   "why": "Coordinated collections look staged.",
-   "topics": [
-    "wardrobe"
-   ],
-   "occasions": [],
-   "strength": "tip",
-   "support": 1,
-   "sources": [
-    "A Man's Guide to '90s Minimalism"
-   ]
-  },
-  {
    "id": "yt-cQW_-flkkO0-8",
    "text": "Contrast soft and hard materials: wool trousers with leather shoes, knitwear under a leather jacket, a structured leather bag with relaxed clothes.",
    "why": "Hard materials stop minimalism looking bland.",
@@ -3265,6 +3262,45 @@
    "support": 1,
    "sources": [
     "A Man's Guide to '90s Minimalism"
+   ]
+  },
+  {
+   "id": "yt-vu-Zj7FWDwY-15",
+   "text": "For a special evening, a velvet dinner jacket in a rich colour such as deep blue is a stylish alternative to plain black.",
+   "why": "Velvet holds colour beautifully at night.",
+   "topics": [
+    "formal",
+    "fabrics",
+    "suits"
+   ],
+   "occasions": [
+    "event"
+   ],
+   "strength": "opinion",
+   "support": 2,
+   "sources": [
+    "TOM FORD | Project Upgrade | Full Version",
+    "Tom Ford Breaks Down 20 Looks From 1981 to Now | Life in Looks | Vogue"
+   ]
+  },
+  {
+   "id": "yt-srEM8hMRVgE-8",
+   "text": "A plain T-shirt under a suit can look great if you wear it with ease.",
+   "why": "Confidence and comfort sell the look.",
+   "topics": [
+    "suits",
+    "smart casual",
+    "weather"
+   ],
+   "occasions": [
+    "night",
+    "smart"
+   ],
+   "strength": "opinion",
+   "support": 2,
+   "sources": [
+    "A TAKE ON MODERN TAILORING | In Conversation with Mike Amiri & GQ Italia",
+    "Mi faccio creare un abito custom made da Suitsupply per Miami"
    ]
   },
   {
@@ -3309,37 +3345,6 @@
    ],
    "occasions": [
     "work"
-   ],
-   "strength": "opinion",
-   "support": 1,
-   "sources": [
-    "TOM FORD | Project Upgrade | Full Version"
-   ]
-  },
-  {
-   "id": "yt-vu-Zj7FWDwY-14",
-   "text": "Short sides with a long top is not a haircut that suits every face; choose a cut for your head shape.",
-   "why": "Proportions differ between faces.",
-   "topics": [
-    "care"
-   ],
-   "occasions": [],
-   "strength": "opinion",
-   "support": 1,
-   "sources": [
-    "TOM FORD | Project Upgrade | Full Version"
-   ]
-  },
-  {
-   "id": "yt-vu-Zj7FWDwY-15",
-   "text": "For a special evening, a velvet dinner jacket in a rich colour such as deep blue is a stylish alternative to plain black.",
-   "why": "Velvet holds colour beautifully at night.",
-   "topics": [
-    "formal",
-    "fabrics"
-   ],
-   "occasions": [
-    "event"
    ],
    "strength": "opinion",
    "support": 1,
@@ -3401,24 +3406,6 @@
    ]
   },
   {
-   "id": "yt-bnyn59yPeXs-7",
-   "text": "Skip sneakers with tailoring; leather shoes or boots keep a suit looking strong.",
-   "why": "Trainers weaken the look of a suit.",
-   "topics": [
-    "shoes",
-    "suits"
-   ],
-   "occasions": [
-    "work",
-    "event"
-   ],
-   "strength": "opinion",
-   "support": 1,
-   "sources": [
-    "How to Dress Like Tom Ford"
-   ]
-  },
-  {
    "id": "yt-bnyn59yPeXs-14",
    "text": "A personal uniform works for a public figure, but most men are better served by a variety of outfits for different occasions and moods.",
    "why": "Real life needs different clothes for different situations.",
@@ -3430,20 +3417,6 @@
    "support": 1,
    "sources": [
     "How to Dress Like Tom Ford"
-   ]
-  },
-  {
-   "id": "yt-GE_NB4JGeJU-7",
-   "text": "Don't make classic clothes look too perfect or bought together; a slightly careless, accumulated look reads more stylish.",
-   "why": "Clothes that look lived in seem effortless.",
-   "topics": [
-    "wardrobe"
-   ],
-   "occasions": [],
-   "strength": "opinion",
-   "support": 1,
-   "sources": [
-    "The 3 Ralph Lauren Aesthetics Every Man Can Wear This Fall"
    ]
   },
   {
@@ -3483,24 +3456,6 @@
    ]
   },
   {
-   "id": "yt-srEM8hMRVgE-8",
-   "text": "A plain T-shirt under a suit can look great if you wear it with ease.",
-   "why": "Confidence and comfort sell the look.",
-   "topics": [
-    "suits",
-    "smart casual"
-   ],
-   "occasions": [
-    "night",
-    "smart"
-   ],
-   "strength": "opinion",
-   "support": 1,
-   "sources": [
-    "A TAKE ON MODERN TAILORING | In Conversation with Mike Amiri & GQ Italia"
-   ]
-  },
-  {
    "id": "yt-4z3r5nIv-9g-5",
    "text": "A boxy T-shirt should fall at the waist with sleeves reaching below mid-upper-arm; very short sleeves look shrunken on a boxy cut.",
    "why": "Boxy proportions need length in the sleeve.",
@@ -3515,23 +3470,6 @@
    "support": 1,
    "sources": [
     "Rebuilding My Wardrobe with ONLY Cotton On..."
-   ]
-  },
-  {
-   "id": "yt-5G_hcUgh510-3",
-   "text": "Wear clothes with ease: an open collar and pushed-up sleeves look relaxed; an outfit that looks too perfectly arranged reads as trying too hard.",
-   "why": "Comfort in your clothes is what makes style convincing.",
-   "topics": [
-    "wardrobe"
-   ],
-   "occasions": [
-    "casual",
-    "smart"
-   ],
-   "strength": "opinion",
-   "support": 1,
-   "sources": [
-    "Alain Delon Style Breakdown | Why Everything Worked"
    ]
   },
   {
@@ -3577,23 +3515,6 @@
    "support": 1,
    "sources": [
     "Alain Delon Style Breakdown | Why Everything Worked"
-   ]
-  },
-  {
-   "id": "yt-i3Z8Spz-dds-2",
-   "text": "Rotate your sneakers instead of wearing the same pair day after day.",
-   "why": "Rotation keeps shoes fresh and lasting longer.",
-   "topics": [
-    "shoes",
-    "care"
-   ],
-   "occasions": [
-    "casual"
-   ],
-   "strength": "opinion",
-   "support": 1,
-   "sources": [
-    "Cody Rhodes Goes Sneaker Shopping With Complex"
    ]
   },
   {
@@ -3695,25 +3616,6 @@
    ]
   },
   {
-   "id": "yt-a8BB4Kb2GuI-15",
-   "text": "A summer suit in sand or brown worn with a fine short-sleeved knit or T-shirt, tonal or contrasting, makes a relaxed warm-weather look.",
-   "why": "Dropping the shirt and tie keeps tailoring casual in heat.",
-   "topics": [
-    "suits",
-    "smart casual",
-    "weather"
-   ],
-   "occasions": [
-    "smart",
-    "night"
-   ],
-   "strength": "opinion",
-   "support": 1,
-   "sources": [
-    "Mi faccio creare un abito custom made da Suitsupply per Miami"
-   ]
-  },
-  {
    "id": "yt-cQW_-flkkO0-12",
    "text": "Don't panic when an outfit feels simple; three very good pieces can be enough.",
    "why": "Adding more stops adding to the person.",
@@ -3733,24 +3635,7 @@
    "why": "Bold cloth demands the right setting.",
    "topics": [
     "suits",
-    "formal"
-   ],
-   "occasions": [
-    "event",
-    "night"
-   ],
-   "strength": "opinion",
-   "support": 1,
-   "sources": [
-    "Tom Ford Breaks Down 20 Looks From 1981 to Now | Life in Looks | Vogue"
-   ]
-  },
-  {
-   "id": "yt--KycKAj_bkg-2",
-   "text": "A red velvet suit can be a memorable evening look for someone who wants to stand out.",
-   "why": "Velvet carries rich colour well at night.",
-   "topics": [
-    "suits",
+    "formal",
     "fabrics"
    ],
    "occasions": [
@@ -3771,7 +3656,7 @@
    "title": "TOM FORD | Project Upgrade | Full Version",
    "author": "",
    "learned_at": "2026-10-16T21:18:33+00:00",
-   "tips": 15,
+   "tips": 13,
    "outfits": 5
   },
   {
@@ -3852,7 +3737,7 @@
    "title": "Tom Ford Gives a 30-Year-Old Man an Eyebrow Makeover | Project Upgrade | GQ",
    "author": "",
    "learned_at": "2026-10-16T21:21:28+00:00",
-   "tips": 4,
+   "tips": 3,
    "outfits": 0
   },
   {
@@ -3924,7 +3809,7 @@
    "title": "Mi faccio creare un abito custom made da Suitsupply per Miami",
    "author": "",
    "learned_at": "2026-10-16T21:23:50+00:00",
-   "tips": 15,
+   "tips": 16,
    "outfits": 2
   },
   {
@@ -4335,7 +4220,7 @@
    "source": "When the Mall Taught Men How to Dress: J.Crew, Banana Republic & Gap"
   },
   {
-   "outfit": "jacket olive smart casual +field jacket, shirt cream smart casual +linen, trousers beige smart casual +chinos, dress-shoes brown formal +loafers +suede",
+   "outfit": "jacket olive smart casual +field-jacket, shirt cream smart casual +linen, trousers beige smart casual +chinos, dress-shoes brown formal +loafers +suede",
    "occasion": "casual",
    "verdict": "good",
    "why": "Earth tones, linen and suede: worldly and understated.",
@@ -4377,21 +4262,21 @@
    "source": "The 3 Ralph Lauren Aesthetics Every Man Can Wear This Fall"
   },
   {
-   "outfit": "sweater green smart casual +fair isle, shirt light blue smart casual +oxford +stripes, trousers olive smart casual +corduroy, boots brown smart casual +suede",
+   "outfit": "sweater green smart casual +fair-isle, shirt light blue smart casual +oxford +stripes, trousers olive smart casual +corduroy, boots brown smart casual +suede",
    "occasion": "casual",
    "verdict": "good",
    "why": "Fair Isle over a striped oxford with cords: layered autumn texture.",
    "source": "The 3 Ralph Lauren Aesthetics Every Man Can Wear This Fall"
   },
   {
-   "outfit": "jacket olive smart casual +field jacket +waxed, sweater cream smart casual +cable, jeans navy casual, boots brown smart casual +leather",
+   "outfit": "jacket olive smart casual +field-jacket +waxed, sweater cream smart casual +cable, jeans navy casual, boots brown smart casual +leather",
    "occasion": "casual",
    "verdict": "good",
    "why": "English country: waxed jacket, cable knit, dark denim and sturdy boots.",
    "source": "The 3 Ralph Lauren Aesthetics Every Man Can Wear This Fall"
   },
   {
-   "outfit": "jacket brown smart casual +suede, shirt denim smart casual +western, jeans denim straight casual, boots brown smart casual +leather, belt brown smart casual +silver",
+   "outfit": "jacket brown smart casual +suede, shirt denim smart casual +western, jeans navy straight casual, boots brown smart casual +leather, belt brown smart casual +silver",
    "occasion": "casual",
    "verdict": "good",
    "why": "Rugged American West with just a hint of hardware.",
@@ -4552,14 +4437,14 @@
    "source": "The Only 5 Shoes Everyone Should Own"
   },
   {
-   "outfit": "jacket navy smart casual +suit, shirt white smart casual, trousers navy smart casual +suit, sneakers casual",
+   "outfit": "jacket navy formal +suit, shirt white formal, trousers navy formal +suit, sneakers casual",
    "occasion": "event",
    "verdict": "avoid",
    "why": "Sneakers at a wedding: own one dressy pair instead.",
    "source": "The Only 5 Shoes Everyone Should Own"
   },
   {
-   "outfit": "jacket navy smart casual +suit, shirt white smart casual, trousers navy smart casual +suit, dress-shoes brown formal +derby +leather",
+   "outfit": "jacket navy formal +suit, shirt white formal, trousers navy formal +suit, dress-shoes brown formal +derby +leather",
    "occasion": "event",
    "verdict": "good",
    "why": "Classic derbies dress a suit properly for a wedding.",
@@ -4615,5 +4500,5 @@
    "source": "A Man's Guide to '90s Minimalism"
   }
  ],
- "prompt": "Menswear rules, most important first:\n- Dress for the occasion.\n- A tie needs a collar and long trousers.\n- Don't mix gym kit with tailoring.\n- Sports clothes for training.\n- Keep pieces at one level of dressiness.\n- Neutrals first, one accent colour.\n- Shorts only when it's warm.\n- Dress for the temperature.\n- Shoes at the level of the outfit.\n- Colours that fight.\n- Suits want shirts and leather shoes.\n- Belt matches the shoes.\n- Balance volume.\n- One statement piece.\n- Fabrics for the season.\n- The coat matches the outfit.\n- Go easy on patterns.\n- Ready for rain.\n- Denim on denim needs contrast.\n- Three colours at most.\n- Classic colour pairings.\n- Tonal dressing works.\nTips:\n- A capsule wardrobe: a few pieces in neutral colours that all combine gives more outfits than many loud pieces.\n- Buy fewer, better pieces in natural fabrics; they last longer and look better as they age.\n- Fit matters more than brand or price: a cheap piece that fits beats an expensive one that doesn't.\n- Budget for a tailor: shortening sleeves and trousers and taking in a waist costs little and makes clothes look made for you.\n- Trousers should have little or no break: the hem just touches the shoe. Slim trousers look best with no break at all.\n- A white or light blue oxford shirt works with suits, chinos and jeans alike.\n- When wearing one colour head to toe, vary the textures (knit, cotton, wool) so it doesn't look flat.\n- Earth tones (olive, brown, beige, cream, rust) all mix easily with each other and with navy.\n- A jacket must fit in the shoulders: the seam ends where your shoulder ends, with no dent or overhang.\n- On a two- or three-button jacket, never fasten the bottom button. On a three-button, the top one is optional.\n- Match the width of the tie to the width of the lapels.\n- Knitwear should skim the body: hem at the belt, cuffs at the wrist bone.\n- A thin turtleneck under a blazer replaces shirt and tie for an elegant evening look.\n- Slim or straight jeans that sit on the hips without sagging work for nearly everyone.\n- Spend on shoes and keep them clean; scuffed shoes ruin a good outfit.\n- A leather watch strap looks best roughly matching belt and shoes; a metal bracelet goes with anything.\n- Keep accessories few and purposeful: a watch, a belt, maybe one bracelet or ring.\n- Pick sunglasses that contrast your face shape: angular frames for round faces, rounder frames for square faces."
+ "prompt": "Menswear rules, most important first:\n- Dress for the occasion.\n- Don't mix gym kit with tailoring.\n- A tie needs a collar and long trousers.\n- Sports clothes for training.\n- Keep pieces at one level of dressiness.\n- Neutrals first, one accent colour.\n- Belt matches the shoes.\n- Shoes at the level of the outfit.\n- Shorts only when it's warm.\n- Dress for the temperature.\n- Colours that fight.\n- Fabrics for the season.\n- Go easy on patterns.\n- Denim on denim needs contrast.\n- Balance volume.\n- The coat matches the outfit.\n- One statement piece.\n- Ready for rain.\n- Suits want shirts and leather shoes.\n- Classic colour pairings.\n- Three colours at most.\n- Tonal dressing works.\n- Styles that suit the occasion.\nTips:\n- Buy fewer, better pieces in natural fabrics; they last longer and look better as they age.\n- Fit matters more than brand or price: a cheap piece that fits beats an expensive one that doesn't.\n- A white or light blue oxford shirt works with suits, chinos and jeans alike.\n- When wearing one colour head to toe, vary the textures (knit, cotton, wool) so it doesn't look flat.\n- Earth tones (olive, brown, beige, cream, rust) all mix easily with each other and with navy.\n- A capsule wardrobe: a few pieces in neutral colours that all combine gives more outfits than many loud pieces.\n- Core menswear basics: white and navy tees, an oxford shirt, a grey or navy knit, dark jeans, chinos, a navy blazer, an overcoat, white sneakers, brown leather shoes or boots.\n- Budget for a tailor: shortening sleeves and trousers and taking in a waist costs little and makes clothes look made for you.\n- On a two- or three-button jacket, never fasten the bottom button. On a three-button, the top one is optional.\n- Trousers should have little or no break: the hem just touches the shoe. Slim trousers look best with no break at all.\n- Match the width of the tie to the width of the lapels.\n- Knitwear should skim the body: hem at the belt, cuffs at the wrist bone.\n- A thin turtleneck under a blazer replaces shirt and tie for an elegant evening look.\n- Slim or straight jeans that sit on the hips without sagging work for nearly everyone.\n- Minimal white leather sneakers can go with chinos or a casual blazer, but not with a business suit or a tie.\n- Keep accessories few and purposeful: a watch, a belt, maybe one bracelet or ring.\n- Pick sunglasses that contrast your face shape: angular frames for round faces, rounder frames for square faces."
 }

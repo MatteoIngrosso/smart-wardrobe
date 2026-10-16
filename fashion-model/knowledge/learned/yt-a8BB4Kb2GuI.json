@@ -29,7 +29,7 @@
     },
     {
       "id": "yt-a8BB4Kb2GuI-2",
-      "text": "Fresco and tropical wool suits breathe in the heat, so wool is fine in summer; a higher Super number means a finer, lighter, more delicate cloth.",
+      "text": "Fresco and tropical wool suits breathe in the heat, so wool is fine in summer.",
       "why": "Open-weave wool regulates temperature.",
       "topics": [
         "suits",
@@ -116,8 +116,7 @@
         "fit"
       ],
       "occasions": [],
-      "strength": "tip",
-      "same_as": "jacket-shoulders"
+      "strength": "tip"
     },
     {
       "id": "yt-a8BB4Kb2GuI-9",
@@ -142,8 +141,7 @@
         "fit"
       ],
       "occasions": [],
-      "strength": "tip",
-      "same_as": "trouser-break"
+      "strength": "tip"
     },
     {
       "id": "yt-a8BB4Kb2GuI-11",
@@ -154,8 +152,7 @@
         "fit"
       ],
       "occasions": [],
-      "strength": "tip",
-      "same_as": "tailor"
+      "strength": "tip"
     },
     {
       "id": "yt-a8BB4Kb2GuI-12",
@@ -203,7 +200,19 @@
         "smart",
         "night"
       ],
-      "strength": "opinion"
+      "strength": "opinion",
+      "same_as": "yt-srEM8hMRVgE-8"
+    },
+    {
+      "id": "yt-a8BB4Kb2GuI-16",
+      "text": "A higher Super number means a finer, lighter, more delicate wool cloth.",
+      "why": "Super numbers grade how fine the wool fibre is; finer cloth feels lighter but is less hard-wearing.",
+      "topics": [
+        "fabrics",
+        "suits"
+      ],
+      "occasions": [],
+      "strength": "tip"
     }
   ],
   "outfits": [

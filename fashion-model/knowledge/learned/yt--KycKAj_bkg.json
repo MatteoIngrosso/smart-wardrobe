@@ -18,7 +18,8 @@
       "why": "Bold cloth demands the right setting.",
       "topics": [
         "suits",
-        "formal"
+        "formal",
+        "fabrics"
       ],
       "occasions": [
         "event",
@@ -38,7 +39,8 @@
         "event",
         "night"
       ],
-      "strength": "opinion"
+      "strength": "opinion",
+      "same_as": "yt-vu-Zj7FWDwY-15"
     }
   ],
   "outfits": []

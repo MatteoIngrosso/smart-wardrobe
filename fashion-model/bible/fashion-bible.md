@@ -1,8 +1,8 @@
 # Fashion bible
 
-Built 2026-10-16 from 20 learnt sources, 26 rules, 201 tips and 89 example outfits.
+Built 2026-10-16 from 20 learnt sources, 26 rules, 194 tips and 89 example outfits.
 
-Model accuracy on outfits it hadn't seen: **78%** (rulebook weights alone: 79%).
+Model accuracy on outfits it hadn't seen: **82%** (rulebook weights alone: 81%).
 
 ## Rules
 
@@ -10,32 +10,32 @@ Checked automatically on every outfit. Weight is how much each one matters after
 
 | Rule | Weight | Why |
 |---|---|---|
-| Dress for the occasion | 2.00 (2.0) | Being clearly under- or overdressed is the most noticed mistake; aim for the level of the room. |
-| A tie needs a collar and long trousers | 1.90 (2.0) | A tie only works with a collared shirt and tailored trousers, never with a hoodie or shorts. |
-| Don't mix gym kit with tailoring | 1.89 (1.8) | Sportswear and formal pieces come from different worlds; together they look accidental. |
-| Sports clothes for training | 1.57 (1.5) | At the gym, clothes made to move and breathe, and proper training shoes. |
-| Keep pieces at one level of dressiness | 1.52 (1.5) | A very casual piece next to a very dressy one makes both look wrong; step at most one level apart. |
-| Neutrals first, one accent colour | 1.47 (1.5) | Navy, grey, white, beige, brown, olive and black all go together; one brighter colour on top of them looks chosen, two or three look random. |
-| Shorts only when it's warm | 1.38 (1.4) | Shorts below about 17°C look out of season. |
-| Dress for the temperature | 1.38 (1.5) | Too many layers is as uncomfortable as too few: about one warm layer above 24°C, three or four when mild, six or more when cold. |
-| Shoes at the level of the outfit | 1.36 (1.6) | Shoes are read first: dress shoes with joggers or trainers with a tie break the look. |
-| Colours that fight | 1.26 (1.2) | Two loud colours of similar strength compete instead of working together. |
-| Suits want shirts and leather shoes | 1.21 (1.5) | A suit is the dressiest thing most men own; a T-shirt or trainers pull it down to casual. |
-| Belt matches the shoes | 1.20 (0.9) | With leather shoes, the belt is in the same colour family: black with black, brown with brown. |
-| Balance volume | 1.11 (1.2) | A roomy top looks best over slimmer trousers and the other way round; roomy on roomy only works as a deliberate streetwear look. |
+| Dress for the occasion | 2.10 (2.0) | Being clearly under- or overdressed is the most noticed mistake; aim for the level of the room. |
+| Don't mix gym kit with tailoring | 1.95 (1.8) | Sportswear and formal pieces come from different worlds; together they look accidental. |
+| A tie needs a collar and long trousers | 1.79 (2.0) | A tie only works with a collared shirt and tailored trousers, never with a hoodie or shorts. |
+| Sports clothes for training | 1.64 (1.5) | At the gym, clothes made to move and breathe, and proper training shoes. |
+| Keep pieces at one level of dressiness | 1.57 (1.5) | A very casual piece next to a very dressy one makes both look wrong; step at most one level apart. |
+| Neutrals first, one accent colour | 1.44 (1.5) | Navy, grey, white, beige, brown, olive and black all go together; one brighter colour on top of them looks chosen, two or three look random. |
+| Belt matches the shoes | 1.42 (0.9) | With leather shoes, the belt is in the same colour family: black with black, brown with brown. |
+| Shoes at the level of the outfit | 1.38 (1.6) | Shoes are read first: dress shoes with joggers or trainers with a tie break the look. |
+| Shorts only when it's warm | 1.36 (1.4) | Shorts below about 17°C look out of season. |
+| Dress for the temperature | 1.33 (1.5) | Too many layers is as uncomfortable as too few: about one warm layer above 24°C, three or four when mild, six or more when cold. |
+| Colours that fight | 1.31 (1.2) | Two loud colours of similar strength compete instead of working together. |
+| Fabrics for the season | 1.18 (0.8) | Linen and seersucker for heat, tweed, flannel and corduroy for cold. |
+| Go easy on patterns | 1.13 (0.7) | One pattern is easy. Two need clearly different scales (fine stripe with a large check), so most days keep it to one. |
+| Denim on denim needs contrast | 1.07 (0.8) | A denim top with jeans in the same wash reads as a uniform; pick clearly different washes or break it up. |
+| Balance volume | 1.04 (1.2) | A roomy top looks best over slimmer trousers and the other way round; roomy on roomy only works as a deliberate streetwear look. |
+| The coat matches the outfit | 1.03 (0.9) | A puffer or rain shell over tailoring undoes it; an overcoat finishes a smart outfit. |
 | One statement piece | 1.03 (1.0) | A big graphic, logo or loud piece needs quiet pieces around it to stand out. |
-| Fabrics for the season | 1.00 (0.8) | Linen and seersucker for heat, tweed, flannel and corduroy for cold. |
-| The coat matches the outfit | 0.98 (0.9) | A puffer or rain shell over tailoring undoes it; an overcoat finishes a smart outfit. |
-| Go easy on patterns | 0.92 (0.7) | One pattern is easy. Two need clearly different scales (fine stripe with a large check), so most days keep it to one. |
-| Ready for rain | 0.91 (0.8) | On wet days a jacket that sheds water and shoes that don't mind puddles; suede and white trainers suffer. |
-| Denim on denim needs contrast | 0.91 (0.8) | A denim top with jeans in the same wash reads as a uniform; pick clearly different washes or break it up. |
-| Three colours at most | 0.85 (0.8) | Past three colours an outfit gets busy and the eye has nowhere to rest. |
-| Classic colour pairings | 0.85 (0.8) | Some top and bottom colours are proven together: navy and grey, white and denim, olive and cream. |
-| Tonal dressing works | 0.62 (0.6) | Shades of one colour from head to toe look calm and expensive. |
-| Mix light and dark | 0.49 (0.6) | Contrast between top and bottom gives the outfit shape; all mid-tones look flat. |
+| Ready for rain | 1.01 (0.8) | On wet days a jacket that sheds water and shoes that don't mind puddles; suede and white trainers suffer. |
+| Suits want shirts and leather shoes | 0.99 (1.5) | A suit is the dressiest thing most men own; a T-shirt or trainers pull it down to casual. |
+| Classic colour pairings | 0.97 (0.8) | Some top and bottom colours are proven together: navy and grey, white and denim, olive and cream. |
+| Three colours at most | 0.88 (0.8) | Past three colours an outfit gets busy and the eye has nowhere to rest. |
+| Tonal dressing works | 0.69 (0.6) | Shades of one colour from head to toe look calm and expensive. |
+| Styles that suit the occasion | 0.53 (0.8) | Each occasion has its own vocabulary: tailoring for work, sportswear for the gym. |
 | One metal for accessories | 0.41 (0.4) | Watch, rings and bracelet look tidier all gold or all silver. |
-| One story per outfit | 0.28 (0.6) | When every piece shares a style the outfit reads as intentional. |
-| Styles that suit the occasion | 0.00 (0.8) | Each occasion has its own vocabulary: tailoring for work, sportswear for the gym. |
+| Mix light and dark | 0.38 (0.6) | Contrast between top and bottom gives the outfit shape; all mid-tones look flat. |
+| One story per outfit | 0.11 (0.6) | When every piece shares a style the outfit reads as intentional. |
 
 ## Tips
 
@@ -50,7 +50,7 @@ Checked automatically on every outfit. Weight is how much each one matters after
 - A matching sweatsuit only works when top and bottom are truly the same shade; near-misses look accidental. _Slightly different tones of one colour clash._ (Everyday)
 - Think about colour before buying a layer: a brown zip-up goes with darker or bootcut jeans and a white tee more easily than with a busy graphic. _Check new pieces against what you will wear them with._ (Everyday)
 - Use contrast between shirt and trousers: a dark shirt with light trousers or a white shirt with dark trousers. _Contrast gives an outfit definition._
-- If you work behind the scenes or want to blend in, an all-black outfit of simple basics is practical and always looks put together. _Black basics are discreet and easy to combine._ (Everyday, Work / meeting)
+- If you work behind the scenes or want to blend in, an all-black outfit of simple basics is practical and always looks put together. _Black basics are discreet and easy to combine._ (Everyday)
 - Minimalism is about removing visual noise, not only wearing black: grey, brown, navy, cream, olive or burgundy work as long as pieces don't compete. _Silhouette, fabric and the wearer matter more than decoration._
 - Colours in the same family as your hair and skin tone, such as browns and olives on warm colouring, can look especially rich. _Tonal harmony with your colouring looks deliberate._ (opinion)
 - Light colours are fine in winter; a military-style coat keeps a pale outfit looking tough. _Season does not have to mean dark colours only._ (opinion; Everyday)
@@ -58,12 +58,11 @@ Checked automatically on every outfit. Weight is how much each one matters after
 ### Fit
 
 - Fit matters more than brand or price: a cheap piece that fits beats an expensive one that doesn't. _Fit is what people notice first._ (3 sources)
-- Budget for a tailor: shortening sleeves and trousers and taking in a waist costs little and makes clothes look made for you. _Off-the-rack is cut for an average body._ (3 sources)
+- Budget for a tailor: shortening sleeves and trousers and taking in a waist costs little and makes clothes look made for you. _Off-the-rack is cut for an average body._ (2 sources)
+- Don't make everything skin tight: let jeans fall straight from the hip, chinos have room in the thigh and an oxford blouse slightly at the waist. _A little ease looks more natural and current than vacuum-sealed slim fits._ (2 sources; Everyday, Smart casual)
 - A good T-shirt: sleeves end mid-bicep, shoulder seam on the shoulder, hem at the belt or just below. _Fit makes a basic tee look intentional._
-- Don't make everything skin tight: let jeans fall straight from the hip, chinos have room in the thigh and an oxford blouse slightly at the waist. _A little ease looks more natural and current than vacuum-sealed slim fits._ (Everyday, Smart casual)
 - Choose clothes for your own build rather than copying a celebrity's exact cut; slimmer, broader or shorter men need different proportions. _The goal is the effect, not someone else's measurements._
 - Know your measurements and what fits your body; a lean frame of average height looks best between tailored and relaxed, not skin tight. _Clothes with shape and some ease look natural rather than tense._
-- Looking sharp does not mean everything slim: let clothes have shape but also ease, with nothing too long, short, tight or heavy. _Balanced proportions stay timeless._
 - Tight all-black clothes such as skinny black jeans, a tight shirt and a cropped jacket miss the point of minimalism; the clothes need air around the body. _Colour alone doesn't make the look; silhouette does._
 - A boxy T-shirt should fall at the waist with sleeves reaching below mid-upper-arm; very short sleeves look shrunken on a boxy cut. _Boxy proportions need length in the sleeve._ (opinion; Everyday)
 
@@ -76,14 +75,14 @@ Checked automatically on every outfit. Weight is how much each one matters after
 
 ### Suits
 
-- A jacket must fit in the shoulders: the seam ends where your shoulder ends, with no dent or overhang. _Shoulders are almost impossible to alter._ (2 sources)
 - On a two- or three-button jacket, never fasten the bottom button. On a three-button, the top one is optional. _Jackets are cut to be worn that way._ (2 sources)
+- A plain office suit such as a pinstripe stops looking dull when paired with a more interesting shirt and tie combination. _Shirt and tie carry the personality of a conservative suit._ (2 sources; Work / meeting)
+- A jacket must fit in the shoulders: the seam ends where your shoulder ends, with no dent or overhang. _Shoulders are almost impossible to alter._
 - A suit or sport jacket should cover your seat, roughly to the knuckles of your relaxed hand. _Too short looks borrowed, too long looks dated._
 - Jacket sleeves end so about a centimetre of shirt cuff shows. _It frames the hands and protects the jacket cuff._
 - Unbutton your jacket when you sit down and button it again when you stand. _It stops the jacket pulling and creasing._
 - A black suit is traditionally evening wear; for daytime most men look better in navy or grey. _Black is harsh in daylight and unflattering on many._ (Work / meeting)
 - Have a suit jacket gently taken in at the waist and keep it buttoned when standing, so it shows a waist instead of hanging like a box. _A defined waist flatters every build._ (Work / meeting, Elegant)
-- A plain office suit such as a pinstripe stops looking dull when paired with a more interesting shirt and tie combination. _Shirt and tie carry the personality of a conservative suit._ (Work / meeting)
 - Start with silhouette: high-waisted trousers with a crease and a jacket with a defined shoulder give tailoring a strong frame. _Proportion is the foundation of good tailoring._ (Work / meeting, Night out)
 - For hot weather, choose half-canvas, light jackets with a light silk or open shirt so a suit can go from lunch to dinner. _Light construction keeps tailoring wearable in heat._ (Smart casual, Night out)
 - Choose suit cloth with enough weight to drape; in summer, wear lighter linen and cotton suits in pale colours. _The right fabric keeps a suit from looking flat or cheap._ (Elegant, Work / meeting)
@@ -92,16 +91,15 @@ Checked automatically on every outfit. Weight is how much each one matters after
 - Half-lined or unlined jackets are cooler and move more easily; unlined construction needs cleaner internal seams. _Less lining means more comfort in heat._
 - Prefer canvassed jackets over fused ones; a full canvas keeps its shape for years, while fused jackets lose structure over time. _Sewn canvas lets the cloth drape and last._
 - Flap pockets suit business suits, jetted pockets are more ceremonial, and patch pockets are the casual choice for blazers. _Pocket style sets a jacket's formality._ (Work / meeting, Elegant, Smart casual)
+- Choose shoulder construction to suit your posture and build: padded for structure, soft or Neapolitan for a relaxed look. _The shoulder defines the silhouette._
 - A suit should feel relaxed rather than tight, with no pulling across the back or at the armholes. _A suit that strains looks borrowed._
+- A plain T-shirt under a suit can look great if you wear it with ease. _Confidence and comfort sell the look._ (2 sources; opinion; Night out, Smart casual)
 - Wide lapels and a structured, padded shoulder give a suit a strong, sharp silhouette, especially on a tall slim frame. _Structure adds presence._ (opinion; Work / meeting, Elegant)
 - Pinstripe spacing changes the mood: wide and bold looks like a banker, very close looks slick. _Pattern scale sets formality._ (opinion; Work / meeting)
-- A plain T-shirt under a suit can look great if you wear it with ease. _Confidence and comfort sell the look._ (opinion; Night out, Smart casual)
 - Wear a suit like ordinary clothes and stay relaxed in it; don't let it make you stiff. _You should wear the suit, not the other way round._ (opinion)
 - A well-made custom suit does more for your wardrobe than a rare, expensive pair of sneakers. _Tailoring is useful far more often than a collector's shoe._ (opinion)
 - Double-breasted jackets look right with wide peak lapels and enough structure, ideally full canvas. _A DB needs structure to hold its shape._ (opinion; Elegant, Work / meeting)
-- A summer suit in sand or brown worn with a fine short-sleeved knit or T-shirt, tonal or contrasting, makes a relaxed warm-weather look. _Dropping the shirt and tie keeps tailoring casual in heat._ (opinion; Smart casual, Night out)
 - Statement suits in velvet, metallic or beaded fabrics are red-carpet pieces; they work only if you have the confidence and the occasion for them. _Bold cloth demands the right setting._ (opinion; Elegant, Night out)
-- A red velvet suit can be a memorable evening look for someone who wants to stand out. _Velvet carries rich colour well at night._ (opinion; Elegant, Night out)
 
 ### Shirts
 
@@ -135,11 +133,13 @@ Checked automatically on every outfit. Weight is how much each one matters after
 
 ### Trousers
 
-- Trousers should have little or no break: the hem just touches the shoe. Slim trousers look best with no break at all. _Fabric pooling at the ankle looks sloppy._ (3 sources)
+- Trousers should have little or no break: the hem just touches the shoe. Slim trousers look best with no break at all. _Fabric pooling at the ankle looks sloppy._ (2 sources)
 - Chinos in navy, beige or olive bridge the gap between jeans and suit trousers. _They go with everything from a T-shirt to a blazer._
 - Grey flannel trousers are the step up from chinos when an autumn outfit needs to be dressier. _Flannel is smart but soft and textured._ (Smart casual, Work / meeting)
 - Own trousers in several fabrics, such as cotton twill, linen, chinos and denim, mostly in neutral colours; the same few shapes look different each time. _Material variety multiplies outfits._
 - Trousers worn with a double-breasted jacket look clean with side adjusters instead of belt loops, and a single pleat adds softness. _No belt keeps the line uninterrupted._ (Elegant, Work / meeting)
+- For trousers meant to fall softly onto the shoe, skip the turn-up and set the final length after trying them with the shoes you'll wear. _Hem length depends on the shoe._
+- Have trousers made slightly roomy at the waist and hips; taking them in is easy, letting them out is barely possible. _Seam allowance is usually only about a centimetre._
 - Start a minimal wardrobe with trousers that have presence: pleated or flat-front charcoal wool that doesn't cling to thigh or calf. _Fuller trousers give simple tops shape._ (Smart casual, Work / meeting)
 - Pleated trousers in cream or khaki bring ease and a vintage touch to casual outfits. _Pleats add room and character._ (opinion; Everyday, Smart casual)
 
@@ -152,9 +152,9 @@ Checked automatically on every outfit. Weight is how much each one matters after
 
 ### Shoes
 
-- Spend on shoes and keep them clean; scuffed shoes ruin a good outfit. _Shoes are noticed more than most men think._ (2 sources)
+- Minimal white leather sneakers can go with chinos or a casual blazer, but not with a business suit or a tie. _They are smart casual, not formal._ (2 sources)
+- Spend on shoes and keep them clean; scuffed shoes ruin a good outfit. _Shoes are noticed more than most men think._
 - From dressiest to most casual: black oxfords, brown oxfords, derbies and brogues, loafers, boots, clean leather sneakers, canvas or running shoes. _Pick the shoe from the same rung as the rest of the outfit._
-- Minimal white leather sneakers can go with chinos or a casual blazer, but not with a business suit or a tie. _They are smart casual, not formal._
 - Socks match the trousers (or the shoes); with shorts or loafers in summer, invisible no-show socks. _It lengthens the leg and keeps the eye moving._
 - Suede shoes are less formal than polished leather and hate rain. _Texture lowers formality._
 - Brown shoes with a navy or grey suit are a classic; black shoes for the most formal settings and dark suits. _Brown is warmer and more versatile; black is stricter._
@@ -165,30 +165,29 @@ Checked automatically on every outfit. Weight is how much each one matters after
 - A few versatile shoes cover most needs: dark chukkas, dark leather boots, clean minimal sneakers and a pair of loafers. _Shoes that cross categories save money._
 - Loafers suit a relaxed Riviera style; espadrilles or moccasins can be worn without socks in summer. _Soft slip-ons fit warm-weather tailoring._ (Everyday, Smart casual)
 - If your feet get wider, pick sneaker models or low-tops that fit wide, or go up a size, rather than squeezing into your old size. _Shoes that fit are worn more and look better._ (Everyday)
+- Choose Goodyear-welted (or Blake-stitched) leather boots and shoes; they can be resoled instead of thrown away. _A glued sole that fails ends the shoe._
 - Good full-grain leather shoes mould to your feet over time and polish back up beautifully. _Quality leather gets more comfortable with wear._
 - Five shoes cover almost everything: a daily shoe, an active shoe, a dressy shoe, a beater for bad weather and chores, and a comfort shoe. _Each role gets covered without buying pairs you never wear._
 - Your daily shoe must be versatile, durable and comfortable; a retro runner in a clean colourway works with most casual outfits. _You wear it more than any other pair._ (Everyday)
+- Have one versatile training shoe for running, gym and general activity rather than many specialist pairs, unless you do one sport seriously. _One good hybrid shoe handles most activity._ (Gym)
 - For dress shoes, ignore trends like chunky or sneaker loafers and buy a timeless shape; plain derbies are the most versatile. _Rarely worn shoes should still match your style years later._ (Elegant, Smart casual, Work / meeting)
 - Keep a beater pair, such as an old daily shoe or a durable hiking shoe, for rain, mud and chores. _It saves your good shoes and lets them last for years._ (Everyday)
-- Skip sneakers with tailoring; leather shoes or boots keep a suit looking strong. _Trainers weaken the look of a suit._ (opinion; Work / meeting, Elegant)
-- Rotate your sneakers instead of wearing the same pair day after day. _Rotation keeps shoes fresh and lasting longer._ (opinion; Everyday)
 - A comfort shoe such as foam slides, a leather mule or a wide anatomical shoe is worth having for travel and errands. _Some days need maximum comfort._ (opinion; Everyday)
 
 ### Accessories
 
 - Match the width of the tie to the width of the lapels. _Matching widths keep the proportions in balance._ (2 sources)
-- A leather watch strap looks best roughly matching belt and shoes; a metal bracelet goes with anything. _Leathers in the same family look put together._ (2 sources)
 - Keep accessories few and purposeful: a watch, a belt, maybe one bracelet or ring. _Too many pieces compete with each other._ (2 sources)
 - Pick sunglasses that contrast your face shape: angular frames for round faces, rounder frames for square faces. _Contrast balances the face._ (2 sources)
 - The tip of the tie touches the top of the belt buckle. _Shorter or longer breaks the line of the body._
 - A pocket square should pick up a colour from the tie or shirt, not be the same fabric as the tie. _A matching set looks bought as a kit._
+- A leather watch strap looks best roughly matching belt and shoes; a metal bracelet goes with anything. _Leathers in the same family look put together._
 - Take a hat off indoors; caps and beanies are casual only. _Etiquette, and caps don't work with tailoring._
 - Tie the tie with a dimple under the knot; a black knit or silk tie keeps a monochrome outfit coherent. _A dimple looks finished._ (Work / meeting, Elegant)
 - A white pocket square in a simple straight fold is the most understated choice and goes with everything. _A glimpse of white looks elegant._ (Work / meeting, Elegant)
 - A good watch should be discovered rather than announced, and should suit the rest of the outfit. _Understated luxury looks more confident._
 - Clothes should amplify your personality, not wear you; one personal touch such as a belt buckle, a pin, necklaces or a vintage watch makes tailoring yours. _Wearing something comfortably is what makes it look good._
 - Plain socks without visible logos look tidier with clogs and sandals. _Branded socks distract._ (Everyday)
-- A patterned tie can bring life to a plain suit; plain ties look more precise. _The tie sets the suit's mood._ (Work / meeting, Elegant)
 - Keep belts simple: plain black or brown leather with an understated buckle. _A belt should hold the outfit together, not distract._
 - Merino wool socks are worth paying more for: comfortable, temperature regulating and long-lasting. _You wear socks every day._
 - Buy belts in single-piece full-grain leather; 'genuine leather' is often bonded scraps that split. _Full-grain leather lasts and ages well._
@@ -210,11 +209,11 @@ Checked automatically on every outfit. Weight is how much each one matters after
 - Lightweight (tropical) wool suits work in summer better than polyester ones. _Wool breathes, plastic doesn't._ (2 sources)
 - Linen creases; accept it as part of the summer look rather than fighting it. _Relaxed creases are the point of linen._
 - In cold months, texture matters most: swap light chinos for olive or tobacco corduroy and bring in tweed, flannel, suede, waxed cotton and Shetland wool. _Rich textures make simple outfits interesting._ (Everyday, Smart casual)
-- A navy sweater with navy trousers can look flat; with dark denim and suede boots it comes alive. _Contrasting materials break up one colour._ (Everyday)
 - Don't pay luxury prices for jackets made of polyurethane or other plastic coatings. _The material is cheap and ages badly whatever the label says._
 - For hoodies and sweatshirts, a heavy fleece of around 400 to 500 grams per square metre is a sign of quality. _Heavier fabric holds its shape and lasts longer._ (Everyday)
 - A plain T-shirt in premium cotton with careful stitching can justify a higher price; a very cheap tee usually cuts corners on fibre, dye or labour. _Good fabric and assembly cost money._
 - Before buying a coat sold as wool, check how much wool is really in it; a large share of polyester lowers its warmth and value. _Blends are often marketed as wool._
+- A higher Super number means a finer, lighter, more delicate wool cloth. _Super numbers grade how fine the wool fibre is; finer cloth feels lighter but is less hard-wearing._
 - Contrast soft and hard materials: wool trousers with leather shoes, knitwear under a leather jacket, a structured leather bag with relaxed clothes. _Hard materials stop minimalism looking bland._
 
 ### Patterns
@@ -234,15 +233,14 @@ Checked automatically on every outfit. Weight is how much each one matters after
 - Black tie means a black or midnight-navy dinner suit, white dress shirt, black bow tie and black patent or polished shoes. _It is a fixed dress code, not a suggestion._ (2 sources; Elegant)
 - Business formal: a dark suit in navy or charcoal, white or light blue shirt, a quiet tie, dark leather shoes. _Conservative colours read as serious._ (Work / meeting, Elegant)
 - When dressing formally, do it properly: a well-tailored oxford, quiet colours and everything buttoned as it should be. _There is a time and place for relaxed details._ (Work / meeting, Elegant)
-- For a special evening, a velvet dinner jacket in a rich colour such as deep blue is a stylish alternative to plain black. _Velvet holds colour beautifully at night._ (opinion; Elegant)
+- For a special evening, a velvet dinner jacket in a rich colour such as deep blue is a stylish alternative to plain black. _Velvet holds colour beautifully at night._ (2 sources; opinion; Elegant)
 
 ### Smart casual
 
 - Smart casual: one tailored element (a blazer, a crisp shirt or wool trousers) mixed with relaxed pieces like dark jeans or clean sneakers. _The mix is what makes it smart casual._ (2 sources; Smart casual, Night out)
+- Mix rugged and refined: a good tweed jacket with faded jeans, corduroys with an inexpensive oxford. _The contrast looks unpretentious._ (2 sources; Everyday, Smart casual)
 - Wear preppy clothes like a grown man who left university years ago: skip novelty varsity sweatshirts and build on an oxford, knitwear, chinos and a tweed jacket. _Adult prep looks refined; student prep looks like a costume._ (Smart casual, Everyday)
-- Mix rugged and refined: a good tweed jacket with faded jeans, corduroys with an inexpensive oxford. _The contrast looks unpretentious._ (Everyday, Smart casual)
 - A clean polo, chinos and loafers or suede shoes is the ideal middle ground between sloppy and formal. _Casual clothes held to formal standards of fit._ (Smart casual)
-- Mix refined and worn-in: a pristine wool overcoat over a sweater and worn jeans, or a cashmere knit under an old leather jacket. _The contrast keeps minimal outfits from looking sterile._ (Everyday, Smart casual)
 - You can look grown-up without a tie: a black crew neck loosely tucked into charcoal wool trousers, or a white tee under a dark blazer. _Maturity comes from proportion, restraint and materials._ (Smart casual, Work / meeting)
 - Relax classic preppy clothes: let an oxford wrinkle, push up sleeves, wear loafers with faded jeans or a sweatshirt under a blazer. _Good prep should look lived-in, not arranged._ (opinion; Everyday, Smart casual)
 - A statement tuxedo-style blazer can be dressed down with dark creased jeans and boots instead of matching trousers. _Mixing tailoring with denim makes a formal piece wearable._ (opinion; Night out, Smart casual)
@@ -265,15 +263,16 @@ Checked automatically on every outfit. Weight is how much each one matters after
 
 ### Sportswear
 
-- Train in proper training shoes and save fashion sneakers for the street. _Support for the feet, and the sneakers last longer._ (2 sources; Gym)
 - Joggers and hoodies outside the gym look best when they are clean, well fitting and in plain colours. _Sloppy sportswear looks like you just woke up._
+- Train in proper training shoes and save fashion sneakers for the street. _Support for the feet, and the sneakers last longer._ (Gym)
 
 ### Wardrobe
 
-- A capsule wardrobe: a few pieces in neutral colours that all combine gives more outfits than many loud pieces. _Every piece works with every other._ (4 sources)
 - Buy fewer, better pieces in natural fabrics; they last longer and look better as they age. _Cost per wear matters more than price._ (4 sources)
-- Core menswear basics: white and navy tees, an oxford shirt, a grey or navy knit, dark jeans, chinos, a navy blazer, an overcoat, white sneakers, brown leather shoes or boots. _These combine into dozens of outfits._ (2 sources)
+- A capsule wardrobe: a few pieces in neutral colours that all combine gives more outfits than many loud pieces. _Every piece works with every other._ (3 sources)
+- Core menswear basics: white and navy tees, an oxford shirt, a grey or navy knit, dark jeans, chinos, a navy blazer, an overcoat, white sneakers, brown leather shoes or boots. _These combine into dozens of outfits._ (3 sources)
 - A 'Made in Italy' label often only means the garment was sewn there; it doesn't guarantee Italian fabric or better quality than good makers elsewhere, such as in Portugal. _Judge the garment, not just the country on the tag._ (2 sources)
+- Don't make classic clothes look too perfect or bought together; a slightly careless, accumulated look reads more stylish. _Clothes that look lived in seem effortless._ (3 sources; opinion)
 - Dress for the job and life you are aiming for, not the one you had at school; clothes signal whether people can trust you with responsibility. _People judge competence partly by appearance._ (Work / meeting)
 - Choose pieces that get better with age: a suede jacket, a slightly rumpled linen shirt, an olive field jacket, brown loafers that have been walked in. _Clothes that acquire character look personal._ (Everyday)
 - Build a wardrobe slowly, one considered piece at a time, rather than in one big online order. _You learn what works and buy less._
@@ -285,18 +284,13 @@ Checked automatically on every outfit. Weight is how much each one matters after
 - Aim to look exceptionally well dressed while seeming barely to have tried: precise, understated clothes with no unnecessary details. _Restraint reads as confidence._
 - Spend selectively: more on a jacket, coat or boots you'll wear for years, less on basic T-shirts. _Quality matters most where wear is heaviest._
 - Don't wear every piece associated with a style icon at once; the result looks like cosplay. _Subtle inspiration looks stylish; a full copy looks like a costume._
-- Ignore loud trends; wearing the same well-fitting basics properly beats chasing novelty. _Simple clothes worn well never date._
-- Don't buy everything from one shop; a mix of basics, a vintage coat and existing shirts looks lived-in rather than like a set. _Coordinated collections look staged._
 - A personal uniform works for a public figure, but most men are better served by a variety of outfits for different occasions and moods. _Real life needs different clothes for different situations._ (opinion)
-- Don't make classic clothes look too perfect or bought together; a slightly careless, accumulated look reads more stylish. _Clothes that look lived in seem effortless._ (opinion)
-- Wear clothes with ease: an open collar and pushed-up sleeves look relaxed; an outfit that looks too perfectly arranged reads as trying too hard. _Comfort in your clothes is what makes style convincing._ (opinion; Everyday, Smart casual)
 - Don't panic when an outfit feels simple; three very good pieces can be enough. _Adding more stops adding to the person._ (opinion)
 
 ### Care
 
-- Grooming finishes an outfit: keep a beard even with a clean neckline, trim long eyebrow hairs, moisturise lips and keep nails manicured. _People notice faces and hands first._ (2 sources)
+- Rest leather shoes a day between wears and keep cedar shoe trees in them. _They dry out and keep their shape._ (2 sources)
 - Fold knitwear, never hang it; wash wool cold and dry it flat. _Hanging stretches the shoulders out of shape._
-- Rest leather shoes a day between wears and keep cedar shoe trees in them. _They dry out and keep their shape._
 - Wrinkled shirts and trousers look careless whatever their price; steam or iron before wearing. _Crisp fabric reads as effort._
 - Match fragrance to the season: light, fresh scents such as citrus for hot days, stronger sweet scents for cold weather and evenings. _Heavy scents overwhelm in heat; light ones vanish in the cold._
 - If you own only one fragrance, make it a fresh, not-too-loud one that suits every occasion. _Smelling fresh is never wrong; smelling very sweet often is._
@@ -306,7 +300,6 @@ Checked automatically on every outfit. Weight is how much each one matters after
 - Use an unscented deodorant so it doesn't clash with your fragrance. _Competing scents muddy each other._
 - EDT, EDP and extrait are concentrations; higher usually lasts longer, but versions with the same name often smell different, so test each. _The label doesn't guarantee the same scent._
 - Dry-clean a suit rarely, about once a season, and warn the cleaner about delicate buttons such as mother-of-pearl. _Frequent cleaning wears out the cloth._
-- Short sides with a long top is not a haircut that suits every face; choose a cut for your head shape. _Proportions differ between faces._ (opinion)
 - A hairstyle should match the mood of your clothes; work with your natural hair rather than against it. _Hair is part of the overall look._ (opinion)
 
 ## Example outfits
@@ -340,14 +333,14 @@ Checked automatically on every outfit. Weight is how much each one matters after
 - **Everyday**: jacket brown smart casual +suede, tshirt white casual, trousers brown smart casual, boots brown smart casual. Brown tones flatter warm colouring; the white tee stops it feeling heavy.
 - **Smart casual**: jacket navy smart casual +blazer, sweatshirt grey casual, jeans denim straight casual, dress-shoes brown formal +loafers. A sweatshirt under a blazer with jeans and loafers: relaxed prep.
 - **Everyday**: tshirt white casual, jeans denim straight casual, sneakers white casual. The simplest classic: straight jeans and a white tee.
-- **Everyday**: jacket olive smart casual +field jacket, shirt cream smart casual +linen, trousers beige smart casual +chinos, dress-shoes brown formal +loafers +suede. Earth tones, linen and suede: worldly and understated.
+- **Everyday**: jacket olive smart casual +field-jacket, shirt cream smart casual +linen, trousers beige smart casual +chinos, dress-shoes brown formal +loafers +suede. Earth tones, linen and suede: worldly and understated.
 - **Smart casual**: shirt light blue smart casual +oxford, trousers beige relaxed smart casual +chinos, dress-shoes brown formal +loafers. Oxford shirt and roomy chinos with loafers: classic American smart casual.
 - **Night out**: jacket black slim formal +suit, shirt white formal, trousers black slim formal +suit, tie black smart formal, dress-shoes black formal +leather +oxford. Black suit, white shirt, black tie and black shoes: a strong evening monochrome.
 - **Everyday**: jacket brown smart casual +suede, shirt denim smart casual +denim, jeans navy slim casual, boots brown smart casual +leather, scarf smart casual. Suede trucker, denim shirt, dark jeans and brown boots.
 - **Smart casual**: jacket brown smart casual +blazer +tweed, shirt light blue smart casual +oxford, jeans navy casual, dress-shoes brown formal +loafers. Tweed sport coat, oxford, jeans and brown loafers: ordinary clothes made Ralph Lauren.
-- **Everyday**: sweater green smart casual +fair isle, shirt light blue smart casual +oxford +stripes, trousers olive smart casual +corduroy, boots brown smart casual +suede. Fair Isle over a striped oxford with cords: layered autumn texture.
-- **Everyday**: jacket olive smart casual +field jacket +waxed, sweater cream smart casual +cable, jeans navy casual, boots brown smart casual +leather. English country: waxed jacket, cable knit, dark denim and sturdy boots.
-- **Everyday**: jacket brown smart casual +suede, shirt denim smart casual +western, jeans denim straight casual, boots brown smart casual +leather, belt brown smart casual +silver. Rugged American West with just a hint of hardware.
+- **Everyday**: sweater green smart casual +fair-isle, shirt light blue smart casual +oxford +stripes, trousers olive smart casual +corduroy, boots brown smart casual +suede. Fair Isle over a striped oxford with cords: layered autumn texture.
+- **Everyday**: jacket olive smart casual +field-jacket +waxed, sweater cream smart casual +cable, jeans navy casual, boots brown smart casual +leather. English country: waxed jacket, cable knit, dark denim and sturdy boots.
+- **Everyday**: jacket brown smart casual +suede, shirt denim smart casual +western, jeans navy straight casual, boots brown smart casual +leather, belt brown smart casual +silver. Rugged American West with just a hint of hardware.
 - **Smart casual**: coat charcoal smart +wool, sweater navy smart casual, trousers grey smart casual +flannel, boots brown smart casual +leather, belt brown smart casual. Grey flannels and a long wool coat with boots: refined meets rugged.
 - **Night out**: jacket black luxury +blazer +tuxedo, shirt white smart casual, jeans navy straight casual, boots black smart casual +leather +western. A tuxedo blazer as the hero piece, subverted with creased jeans and western boots.
 - **Night out**: jacket navy smart casual +stripes +suit, shirt white smart casual +polka, trousers navy smart casual +stripes +suit, boots black smart casual +western. Pinstripe suit with a polka-dot shirt and pointed boots: rock and roll meets business.
@@ -369,7 +362,7 @@ Checked automatically on every outfit. Weight is how much each one matters after
 - **Everyday**: tshirt black casual, trousers black smart casual, jacket black outdoor, sneakers casual. All-black basics: practical and tidy.
 - **Everyday**: jacket olive smart casual +waxed, sweater grey smart casual +wool, jeans navy casual, boots brown smart casual +leather, belt brown smart casual +leather, watch. Buy-for-life pieces: waxed jacket, welted leather boots, full-grain belt and a field watch.
 - **Everyday**: tshirt white casual, jeans denim casual, sneakers white sporty. A clean retro runner as the everyday shoe.
-- **Elegant**: jacket navy smart casual +suit, shirt white smart casual, trousers navy smart casual +suit, dress-shoes brown formal +derby +leather. Classic derbies dress a suit properly for a wedding.
+- **Elegant**: jacket navy formal +suit, shirt white formal, trousers navy formal +suit, dress-shoes brown formal +derby +leather. Classic derbies dress a suit properly for a wedding.
 - **Smart casual**: jacket beige relaxed smart casual +linen +silk +suit, tshirt cream casual +silk, trousers beige relaxed smart casual +linen +suit, dress-shoes brown formal +loafers. A relaxed double-breasted summer suit with a silk-cotton tee: Miami Vice without the banker.
 - **Smart casual**: jacket beige smart casual +blazer +linen, tshirt white casual, jeans denim casual, dress-shoes brown formal +loafers. The suit jacket worn as a separate over jeans and a tee.
 - **Smart casual**: sweater black smart casual, trousers charcoal relaxed smart casual +wool, dress-shoes black formal +leather +loafers, coat charcoal smart +wool. Black crew neck, full charcoal trousers, black loafers and a long charcoal coat.
@@ -403,12 +396,12 @@ Checked automatically on every outfit. Weight is how much each one matters after
 - **Work / meeting**: jacket blue smart casual +suit, shirt smart casual, trousers blue smart casual +suit, dress-shoes formal. A bright blue suit looks dated and loud.
 - **Work / meeting**: jacket black smart casual +suit, shirt white smart casual, trousers black smart casual +suit, sneakers white casual. Sneakers weaken a black suit.
 - **Everyday**: shirt slim smart casual, trousers wide smart casual, sneakers casual. A tight shirt with loose trousers mismatches the volume.
-- **Elegant**: jacket navy smart casual +suit, shirt white smart casual, trousers navy smart casual +suit, sneakers casual. Sneakers at a wedding: own one dressy pair instead.
+- **Elegant**: jacket navy formal +suit, shirt white formal, trousers navy formal +suit, sneakers casual. Sneakers at a wedding: own one dressy pair instead.
 - **Night out**: jacket black cropped smart casual, shirt black slim smart casual, jeans black slim casual, boots black smart casual. Tight all-black follows the colours but misses the relaxed silhouette.
 
 ## Sources
 
-- [TOM FORD | Project Upgrade | Full Version](https://www.youtube.com/watch?v=vu-Zj7FWDwY) : 15 tips, 5 outfits
+- [TOM FORD | Project Upgrade | Full Version](https://www.youtube.com/watch?v=vu-Zj7FWDwY) : 13 tips, 5 outfits
 - [When the Mall Taught Men How to Dress: J.Crew, Banana Republic & Gap](https://www.youtube.com/watch?v=1usH3SOn4q0) : 9 tips, 4 outfits
 - [How to Dress Like Tom Ford](https://www.youtube.com/watch?v=bnyn59yPeXs) : 15 tips, 3 outfits
 - [The 3 Ralph Lauren Aesthetics Every Man Can Wear This Fall](https://www.youtube.com/watch?v=GE_NB4JGeJU) : 16 tips, 5 outfits
@@ -417,7 +410,7 @@ Checked automatically on every outfit. Weight is how much each one matters after
 - [James Bond Style Explained | How to Dress Like 007](https://www.youtube.com/watch?v=8yFRxH3hLXE) : 15 tips, 5 outfits
 - [Gucci: The Tom Ford Years](https://www.youtube.com/watch?v=K3Gk2GJpapw) : 0 tips, 0 outfits
 - [Alain Delon Style Breakdown | Why Everything Worked](https://www.youtube.com/watch?v=5G_hcUgh510) : 24 tips, 6 outfits
-- [Tom Ford Gives a 30-Year-Old Man an Eyebrow Makeover | Project Upgrade | GQ](https://www.youtube.com/watch?v=IZevtYLdB4E) : 4 tips, 0 outfits
+- [Tom Ford Gives a 30-Year-Old Man an Eyebrow Makeover | Project Upgrade | GQ](https://www.youtube.com/watch?v=IZevtYLdB4E) : 3 tips, 0 outfits
 - [Marc Jacobs - Vogue Voices](https://www.youtube.com/watch?v=FZNrVYsw4Oc) : 0 tips, 0 outfits
 - [Cody Rhodes Goes Sneaker Shopping With Complex](https://www.youtube.com/watch?v=i3Z8Spz-dds) : 3 tips, 0 outfits
 - [PERCHÉ NON TUTTI I CAPI MADE IN ITALY SONO UGUALI con Mattia Berveglieri | Live Talk @ WHITE Milano](https://www.youtube.com/watch?v=hDKTb01rupA) : 6 tips, 0 outfits
@@ -425,6 +418,6 @@ Checked automatically on every outfit. Weight is how much each one matters after
 - [THE LAST Fragrance Guide You Will EVER Need](https://www.youtube.com/watch?v=_avmgbnyX0s) : 7 tips, 0 outfits
 - [11 Things You Only Need To Buy Once (they will last forever)](https://www.youtube.com/watch?v=eeczvhqC8GQ) : 7 tips, 1 outfits
 - [The Only 5 Shoes Everyone Should Own](https://www.youtube.com/watch?v=AMmE1HtOzUI) : 7 tips, 3 outfits
-- [Mi faccio creare un abito custom made da Suitsupply per Miami](https://www.youtube.com/watch?v=a8BB4Kb2GuI) : 15 tips, 2 outfits
+- [Mi faccio creare un abito custom made da Suitsupply per Miami](https://www.youtube.com/watch?v=a8BB4Kb2GuI) : 16 tips, 2 outfits
 - [A Man's Guide to '90s Minimalism](https://www.youtube.com/watch?v=cQW_-flkkO0) : 12 tips, 5 outfits
 - [Tom Ford Breaks Down 20 Looks From 1981 to Now | Life in Looks | Vogue](https://www.youtube.com/watch?v=-KycKAj_bkg) : 2 tips, 0 outfits

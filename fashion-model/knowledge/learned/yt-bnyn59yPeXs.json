@@ -106,7 +106,8 @@
         "work",
         "event"
       ],
-      "strength": "opinion"
+      "strength": "opinion",
+      "same_as": "sneakers-smart"
     },
     {
       "id": "yt-bnyn59yPeXs-8",
@@ -183,7 +184,8 @@
       "occasions": [
         "event"
       ],
-      "strength": "tip"
+      "strength": "tip",
+      "same_as": "tie-width"
     },
     {
       "id": "yt-bnyn59yPeXs-14",
