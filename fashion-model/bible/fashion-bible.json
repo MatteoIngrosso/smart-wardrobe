@@ -1,0 +1,1812 @@
+{
+ "name": "Fashion bible",
+ "version": 1,
+ "built_at": "2026-10-16T21:00:59+00:00",
+ "about": "Menswear rules, tips and example outfits, in the Smart Wardrobe app's vocabulary (garment types, colours, styles, fits and occasions as in app.js). Score an outfit with: sigmoid(model.bias + sum(rule.weight * check(rule))).",
+ "model": {
+  "bias": -5.88,
+  "trained_on": {
+   "outfits": 42,
+   "rulebook": 42,
+   "learnt": 0,
+   "sources": 0
+  },
+  "accuracy": {
+   "training": 0.929,
+   "unseen": 0.905,
+   "rulebook_only_unseen": 0.905
+  }
+ },
+ "rules": [
+  {
+   "id": "accent-colours",
+   "title": "Neutrals first, one accent colour",
+   "why": "Navy, grey, white, beige, brown, olive and black all go together; one brighter colour on top of them looks chosen, two or three look random.",
+   "check": "accent_colours",
+   "params": {
+    "limit": 1
+   },
+   "weight": 1.517,
+   "prior": 1.5,
+   "topics": [
+    "colour"
+   ],
+   "occasions": []
+  },
+  {
+   "id": "colour-count",
+   "title": "Three colours at most",
+   "why": "Past three colours an outfit gets busy and the eye has nowhere to rest.",
+   "check": "colour_count",
+   "params": {
+    "limit": 3
+   },
+   "weight": 0.761,
+   "prior": 0.8,
+   "topics": [
+    "colour"
+   ],
+   "occasions": []
+  },
+  {
+   "id": "contrast",
+   "title": "Mix light and dark",
+   "why": "Contrast between top and bottom gives the outfit shape; all mid-tones look flat.",
+   "check": "light_dark_contrast",
+   "params": {},
+   "weight": 0.529,
+   "prior": 0.6,
+   "topics": [
+    "colour"
+   ],
+   "occasions": []
+  },
+  {
+   "id": "tonal",
+   "title": "Tonal dressing works",
+   "why": "Shades of one colour from head to toe look calm and expensive.",
+   "check": "tonal",
+   "params": {},
+   "weight": 0.758,
+   "prior": 0.6,
+   "topics": [
+    "colour"
+   ],
+   "occasions": []
+  },
+  {
+   "id": "classic-pairs",
+   "title": "Classic colour pairings",
+   "why": "Some top and bottom colours are proven together: navy and grey, white and denim, olive and cream.",
+   "check": "classic_pairs",
+   "params": {
+    "pairs": [
+     [
+      "navy",
+      "grey"
+     ],
+     [
+      "navy",
+      "beige"
+     ],
+     [
+      "navy",
+      "white"
+     ],
+     [
+      "navy",
+      "cream"
+     ],
+     [
+      "white",
+      "denim"
+     ],
+     [
+      "grey",
+      "black"
+     ],
+     [
+      "black",
+      "white"
+     ],
+     [
+      "olive",
+      "cream"
+     ],
+     [
+      "olive",
+      "beige"
+     ],
+     [
+      "olive",
+      "navy"
+     ],
+     [
+      "brown",
+      "cream"
+     ],
+     [
+      "brown",
+      "beige"
+     ],
+     [
+      "light blue",
+      "navy"
+     ],
+     [
+      "light blue",
+      "grey"
+     ],
+     [
+      "light blue",
+      "beige"
+     ],
+     [
+      "burgundy",
+      "grey"
+     ],
+     [
+      "burgundy",
+      "navy"
+     ],
+     [
+      "burgundy",
+      "beige"
+     ],
+     [
+      "charcoal",
+      "white"
+     ],
+     [
+      "charcoal",
+      "light blue"
+     ],
+     [
+      "green",
+      "beige"
+     ],
+     [
+      "pink",
+      "navy"
+     ],
+     [
+      "pink",
+      "grey"
+     ],
+     [
+      "cream",
+      "denim"
+     ],
+     [
+      "grey",
+      "denim"
+     ],
+     [
+      "black",
+      "denim"
+     ],
+     [
+      "white",
+      "olive"
+     ],
+     [
+      "white",
+      "beige"
+     ]
+    ]
+   },
+   "weight": 0.865,
+   "prior": 0.8,
+   "topics": [
+    "colour"
+   ],
+   "occasions": []
+  },
+  {
+   "id": "clashing-pairs",
+   "title": "Colours that fight",
+   "why": "Two loud colours of similar strength compete instead of working together.",
+   "check": "clashing_pairs",
+   "params": {
+    "pairs": [
+     [
+      "red",
+      "pink"
+     ],
+     [
+      "red",
+      "orange"
+     ],
+     [
+      "orange",
+      "pink"
+     ],
+     [
+      "orange",
+      "purple"
+     ],
+     [
+      "green",
+      "red"
+     ],
+     [
+      "yellow",
+      "purple"
+     ]
+    ]
+   },
+   "weight": 1.221,
+   "prior": 1.2,
+   "topics": [
+    "colour"
+   ],
+   "occasions": []
+  },
+  {
+   "id": "formality-spread",
+   "title": "Keep pieces at one level of dressiness",
+   "why": "A very casual piece next to a very dressy one makes both look wrong; step at most one level apart.",
+   "check": "formality_spread",
+   "params": {
+    "limit": 1.5
+   },
+   "weight": 1.536,
+   "prior": 1.5,
+   "topics": [
+    "occasions",
+    "smart casual"
+   ],
+   "occasions": []
+  },
+  {
+   "id": "occasion-formality",
+   "title": "Dress for the occasion",
+   "why": "Being clearly under- or overdressed is the most noticed mistake; aim for the level of the room.",
+   "check": "occasion_formality",
+   "params": {},
+   "weight": 2.001,
+   "prior": 2.0,
+   "topics": [
+    "occasions"
+   ],
+   "occasions": []
+  },
+  {
+   "id": "occasion-styles",
+   "title": "Styles that suit the occasion",
+   "why": "Each occasion has its own vocabulary: tailoring for work, sportswear for the gym.",
+   "check": "occasion_styles",
+   "params": {},
+   "weight": 0.988,
+   "prior": 0.8,
+   "topics": [
+    "occasions"
+   ],
+   "occasions": []
+  },
+  {
+   "id": "style-clash",
+   "title": "Don't mix gym kit with tailoring",
+   "why": "Sportswear and formal pieces come from different worlds; together they look accidental.",
+   "check": "style_clash",
+   "params": {
+    "pairs": [
+     [
+      "sporty",
+      "formal"
+     ],
+     [
+      "outdoor",
+      "formal"
+     ],
+     [
+      "streetwear",
+      "formal"
+     ],
+     [
+      "sporty",
+      "smart"
+     ]
+    ]
+   },
+   "weight": 1.818,
+   "prior": 1.8,
+   "topics": [
+    "occasions",
+    "sportswear",
+    "formal"
+   ],
+   "occasions": []
+  },
+  {
+   "id": "consistent-style",
+   "title": "One story per outfit",
+   "why": "When every piece shares a style the outfit reads as intentional.",
+   "check": "consistent_style",
+   "params": {},
+   "weight": 0.698,
+   "prior": 0.6,
+   "topics": [
+    "wardrobe"
+   ],
+   "occasions": []
+  },
+  {
+   "id": "proportions",
+   "title": "Balance volume",
+   "why": "A roomy top looks best over slimmer trousers and the other way round; roomy on roomy only works as a deliberate streetwear look.",
+   "check": "proportions",
+   "params": {},
+   "weight": 1.348,
+   "prior": 1.2,
+   "topics": [
+    "proportions",
+    "fit"
+   ],
+   "occasions": []
+  },
+  {
+   "id": "statement-limit",
+   "title": "One statement piece",
+   "why": "A big graphic, logo or loud piece needs quiet pieces around it to stand out.",
+   "check": "statement_limit",
+   "params": {
+    "limit": 1
+   },
+   "weight": 1.014,
+   "prior": 1.0,
+   "topics": [
+    "streetwear",
+    "casual"
+   ],
+   "occasions": []
+  },
+  {
+   "id": "pattern-mixing",
+   "title": "Go easy on patterns",
+   "why": "One pattern is easy. Two need clearly different scales (fine stripe with a large check), so most days keep it to one.",
+   "check": "pattern_mixing",
+   "params": {},
+   "weight": 0.869,
+   "prior": 0.7,
+   "topics": [
+    "patterns"
+   ],
+   "occasions": []
+  },
+  {
+   "id": "denim-on-denim",
+   "title": "Denim on denim needs contrast",
+   "why": "A denim top with jeans in the same wash reads as a uniform; pick clearly different washes or break it up.",
+   "check": "denim_on_denim",
+   "params": {},
+   "weight": 0.923,
+   "prior": 0.8,
+   "topics": [
+    "denim"
+   ],
+   "occasions": []
+  },
+  {
+   "id": "shoe-formality",
+   "title": "Shoes at the level of the outfit",
+   "why": "Shoes are read first: dress shoes with joggers or trainers with a tie break the look.",
+   "check": "shoe_formality",
+   "params": {},
+   "weight": 1.375,
+   "prior": 1.6,
+   "topics": [
+    "shoes",
+    "occasions"
+   ],
+   "occasions": []
+  },
+  {
+   "id": "belt-shoes",
+   "title": "Belt matches the shoes",
+   "why": "With leather shoes, the belt is in the same colour family: black with black, brown with brown.",
+   "check": "belt_matches_shoes",
+   "params": {},
+   "weight": 1.073,
+   "prior": 0.9,
+   "topics": [
+    "accessories",
+    "shoes"
+   ],
+   "occasions": []
+  },
+  {
+   "id": "tie-rules",
+   "title": "A tie needs a collar and long trousers",
+   "why": "A tie only works with a collared shirt and tailored trousers, never with a hoodie or shorts.",
+   "check": "tie_rules",
+   "params": {},
+   "weight": 1.958,
+   "prior": 2.0,
+   "topics": [
+    "accessories",
+    "formal"
+   ],
+   "occasions": []
+  },
+  {
+   "id": "suit-rules",
+   "title": "Suits want shirts and leather shoes",
+   "why": "A suit is the dressiest thing most men own; a T-shirt or trainers pull it down to casual.",
+   "check": "suit_rules",
+   "params": {},
+   "weight": 1.433,
+   "prior": 1.5,
+   "topics": [
+    "suits",
+    "formal"
+   ],
+   "occasions": []
+  },
+  {
+   "id": "outerwear-match",
+   "title": "The coat matches the outfit",
+   "why": "A puffer or rain shell over tailoring undoes it; an overcoat finishes a smart outfit.",
+   "check": "outerwear_match",
+   "params": {},
+   "weight": 0.922,
+   "prior": 0.9,
+   "topics": [
+    "outerwear"
+   ],
+   "occasions": []
+  },
+  {
+   "id": "metals",
+   "title": "One metal for accessories",
+   "why": "Watch, rings and bracelet look tidier all gold or all silver.",
+   "check": "metals",
+   "params": {},
+   "weight": 0.4,
+   "prior": 0.4,
+   "topics": [
+    "accessories"
+   ],
+   "occasions": []
+  },
+  {
+   "id": "warmth",
+   "title": "Dress for the temperature",
+   "why": "Too many layers is as uncomfortable as too few: about one warm layer above 24°C, three or four when mild, six or more when cold.",
+   "check": "warmth_for_weather",
+   "params": {},
+   "weight": 1.55,
+   "prior": 1.5,
+   "topics": [
+    "weather",
+    "layering"
+   ],
+   "occasions": []
+  },
+  {
+   "id": "shorts-weather",
+   "title": "Shorts only when it's warm",
+   "why": "Shorts below about 17°C look out of season.",
+   "check": "shorts_weather",
+   "params": {},
+   "weight": 1.376,
+   "prior": 1.4,
+   "topics": [
+    "weather",
+    "casual"
+   ],
+   "occasions": []
+  },
+  {
+   "id": "rain-ready",
+   "title": "Ready for rain",
+   "why": "On wet days a jacket that sheds water and shoes that don't mind puddles; suede and white trainers suffer.",
+   "check": "rain_ready",
+   "params": {},
+   "weight": 0.873,
+   "prior": 0.8,
+   "topics": [
+    "weather",
+    "shoes",
+    "outerwear"
+   ],
+   "occasions": []
+  },
+  {
+   "id": "fabric-season",
+   "title": "Fabrics for the season",
+   "why": "Linen and seersucker for heat, tweed, flannel and corduroy for cold.",
+   "check": "fabric_season",
+   "params": {},
+   "weight": 0.865,
+   "prior": 0.8,
+   "topics": [
+    "fabrics",
+    "weather"
+   ],
+   "occasions": []
+  },
+  {
+   "id": "gym-kit",
+   "title": "Sports clothes for training",
+   "why": "At the gym, clothes made to move and breathe, and proper training shoes.",
+   "check": "gym_kit",
+   "params": {},
+   "weight": 1.642,
+   "prior": 1.5,
+   "topics": [
+    "sportswear"
+   ],
+   "occasions": [
+    "gym"
+   ]
+  }
+ ],
+ "tips": [
+  {
+   "id": "fit-first",
+   "text": "Fit matters more than brand or price: a cheap piece that fits beats an expensive one that doesn't.",
+   "why": "Fit is what people notice first.",
+   "topics": [
+    "fit",
+    "wardrobe"
+   ],
+   "strength": "core",
+   "support": 1,
+   "sources": [
+    "rulebook"
+   ]
+  },
+  {
+   "id": "tailor",
+   "text": "Budget for a tailor: shortening sleeves and trousers and taking in a waist costs little and makes clothes look made for you.",
+   "why": "Off-the-rack is cut for an average body.",
+   "topics": [
+    "fit",
+    "care"
+   ],
+   "strength": "core",
+   "support": 1,
+   "sources": [
+    "rulebook"
+   ]
+  },
+  {
+   "id": "jacket-shoulders",
+   "text": "A jacket must fit in the shoulders: the seam ends where your shoulder ends, with no dent or overhang.",
+   "why": "Shoulders are almost impossible to alter.",
+   "topics": [
+    "suits",
+    "fit",
+    "outerwear"
+   ],
+   "strength": "core",
+   "support": 1,
+   "sources": [
+    "rulebook"
+   ]
+  },
+  {
+   "id": "jacket-length",
+   "text": "A suit or sport jacket should cover your seat, roughly to the knuckles of your relaxed hand.",
+   "why": "Too short looks borrowed, too long looks dated.",
+   "topics": [
+    "suits",
+    "fit"
+   ],
+   "strength": "core",
+   "support": 1,
+   "sources": [
+    "rulebook"
+   ]
+  },
+  {
+   "id": "sleeve-length",
+   "text": "Jacket sleeves end so about a centimetre of shirt cuff shows.",
+   "why": "It frames the hands and protects the jacket cuff.",
+   "topics": [
+    "suits",
+    "shirts",
+    "fit"
+   ],
+   "strength": "core",
+   "support": 1,
+   "sources": [
+    "rulebook"
+   ]
+  },
+  {
+   "id": "bottom-button",
+   "text": "On a two- or three-button jacket, never fasten the bottom button. On a three-button, the top one is optional.",
+   "why": "Jackets are cut to be worn that way.",
+   "topics": [
+    "suits",
+    "formal"
+   ],
+   "strength": "core",
+   "support": 1,
+   "sources": [
+    "rulebook"
+   ]
+  },
+  {
+   "id": "unbutton-sitting",
+   "text": "Unbutton your jacket when you sit down and button it again when you stand.",
+   "why": "It stops the jacket pulling and creasing.",
+   "topics": [
+    "suits",
+    "formal"
+   ],
+   "strength": "core",
+   "support": 1,
+   "sources": [
+    "rulebook"
+   ]
+  },
+  {
+   "id": "trouser-break",
+   "text": "Trousers should have little or no break: the hem just touches the shoe. Slim trousers look best with no break at all.",
+   "why": "Fabric pooling at the ankle looks sloppy.",
+   "topics": [
+    "trousers",
+    "fit",
+    "suits"
+   ],
+   "strength": "core",
+   "support": 1,
+   "sources": [
+    "rulebook"
+   ]
+  },
+  {
+   "id": "tie-length",
+   "text": "The tip of the tie touches the top of the belt buckle.",
+   "why": "Shorter or longer breaks the line of the body.",
+   "topics": [
+    "accessories",
+    "formal"
+   ],
+   "strength": "core",
+   "support": 1,
+   "sources": [
+    "rulebook"
+   ]
+  },
+  {
+   "id": "tie-width",
+   "text": "Match the width of the tie to the width of the lapels.",
+   "why": "Matching widths keep the proportions in balance.",
+   "topics": [
+    "accessories",
+    "suits"
+   ],
+   "strength": "core",
+   "support": 1,
+   "sources": [
+    "rulebook"
+   ]
+  },
+  {
+   "id": "pocket-square",
+   "text": "A pocket square should pick up a colour from the tie or shirt, not be the same fabric as the tie.",
+   "why": "A matching set looks bought as a kit.",
+   "topics": [
+    "accessories",
+    "suits"
+   ],
+   "strength": "core",
+   "support": 1,
+   "sources": [
+    "rulebook"
+   ]
+  },
+  {
+   "id": "collar-fit",
+   "text": "A buttoned shirt collar leaves room for one finger, no more.",
+   "why": "Tight collars pinch, loose ones gape under a tie.",
+   "topics": [
+    "shirts",
+    "fit"
+   ],
+   "strength": "core",
+   "support": 1,
+   "sources": [
+    "rulebook"
+   ]
+  },
+  {
+   "id": "shirt-tuck",
+   "text": "Shirts with long curved tails get tucked in; short, straight-hemmed shirts can be worn out.",
+   "why": "The hem tells you how the shirt was meant to be worn.",
+   "topics": [
+    "shirts",
+    "smart casual"
+   ],
+   "strength": "core",
+   "support": 1,
+   "sources": [
+    "rulebook"
+   ]
+  },
+  {
+   "id": "oxford-shirt",
+   "text": "A white or light blue oxford shirt works with suits, chinos and jeans alike.",
+   "why": "It is the most versatile shirt a man can own.",
+   "topics": [
+    "shirts",
+    "wardrobe",
+    "smart casual"
+   ],
+   "strength": "core",
+   "support": 1,
+   "sources": [
+    "rulebook"
+   ]
+  },
+  {
+   "id": "undershirt",
+   "text": "Under a dress shirt, wear a grey or skin-tone V-neck undershirt, not a white crew neck.",
+   "why": "It doesn't show through or peek out at the collar.",
+   "topics": [
+    "shirts"
+   ],
+   "strength": "core",
+   "support": 1,
+   "sources": [
+    "rulebook"
+   ]
+  },
+  {
+   "id": "knit-over-shirt",
+   "text": "A fine knit over a collared shirt is a smart, easy layer; keep the knit thin so the collar sits flat.",
+   "why": "Bulky knits crush the collar.",
+   "topics": [
+    "knitwear",
+    "layering",
+    "smart casual"
+   ],
+   "strength": "core",
+   "support": 1,
+   "sources": [
+    "rulebook"
+   ]
+  },
+  {
+   "id": "knit-fit",
+   "text": "Knitwear should skim the body: hem at the belt, cuffs at the wrist bone.",
+   "why": "Too long or loose looks shapeless.",
+   "topics": [
+    "knitwear",
+    "fit"
+   ],
+   "strength": "core",
+   "support": 1,
+   "sources": [
+    "rulebook"
+   ]
+  },
+  {
+   "id": "turtleneck",
+   "text": "A thin turtleneck under a blazer replaces shirt and tie for an elegant evening look.",
+   "why": "Smart without being stiff.",
+   "topics": [
+    "knitwear",
+    "smart casual"
+   ],
+   "occasions": [
+    "night",
+    "smart"
+   ],
+   "strength": "core",
+   "support": 1,
+   "sources": [
+    "rulebook"
+   ]
+  },
+  {
+   "id": "layers-light-to-heavy",
+   "text": "Layer from thin to thick: tee or shirt, then knit or overshirt, then jacket, then coat.",
+   "why": "Thin inner layers keep the outer ones from bulging.",
+   "topics": [
+    "layering"
+   ],
+   "strength": "core",
+   "support": 1,
+   "sources": [
+    "rulebook"
+   ]
+  },
+  {
+   "id": "jeans-dark",
+   "text": "Dark, plain, unripped jeans are the dressiest and most versatile; light washes and rips are casual only.",
+   "why": "Dark denim can stand in for chinos.",
+   "topics": [
+    "denim",
+    "smart casual"
+   ],
+   "strength": "core",
+   "support": 1,
+   "sources": [
+    "rulebook"
+   ]
+  },
+  {
+   "id": "jeans-fit",
+   "text": "Slim or straight jeans that sit on the hips without sagging work for nearly everyone.",
+   "why": "They balance most tops and shoes.",
+   "topics": [
+    "denim",
+    "fit"
+   ],
+   "strength": "core",
+   "support": 1,
+   "sources": [
+    "rulebook"
+   ]
+  },
+  {
+   "id": "chinos",
+   "text": "Chinos in navy, beige or olive bridge the gap between jeans and suit trousers.",
+   "why": "They go with everything from a T-shirt to a blazer.",
+   "topics": [
+    "trousers",
+    "smart casual",
+    "wardrobe"
+   ],
+   "strength": "core",
+   "support": 1,
+   "sources": [
+    "rulebook"
+   ]
+  },
+  {
+   "id": "shoes-quality",
+   "text": "Spend on shoes and keep them clean; scuffed shoes ruin a good outfit.",
+   "why": "Shoes are noticed more than most men think.",
+   "topics": [
+    "shoes",
+    "care"
+   ],
+   "strength": "core",
+   "support": 1,
+   "sources": [
+    "rulebook"
+   ]
+  },
+  {
+   "id": "shoe-formality-ladder",
+   "text": "From dressiest to most casual: black oxfords, brown oxfords, derbies and brogues, loafers, boots, clean leather sneakers, canvas or running shoes.",
+   "why": "Pick the shoe from the same rung as the rest of the outfit.",
+   "topics": [
+    "shoes",
+    "occasions"
+   ],
+   "strength": "core",
+   "support": 1,
+   "sources": [
+    "rulebook"
+   ]
+  },
+  {
+   "id": "sneakers-smart",
+   "text": "Minimal white leather sneakers can go with chinos or a casual blazer, but not with a business suit or a tie.",
+   "why": "They are smart casual, not formal.",
+   "topics": [
+    "shoes",
+    "smart casual"
+   ],
+   "strength": "core",
+   "support": 1,
+   "sources": [
+    "rulebook"
+   ]
+  },
+  {
+   "id": "socks-match",
+   "text": "Socks match the trousers (or the shoes); with shorts or loafers in summer, invisible no-show socks.",
+   "why": "It lengthens the leg and keeps the eye moving.",
+   "topics": [
+    "shoes",
+    "accessories"
+   ],
+   "strength": "core",
+   "support": 1,
+   "sources": [
+    "rulebook"
+   ]
+  },
+  {
+   "id": "suede",
+   "text": "Suede shoes are less formal than polished leather and hate rain.",
+   "why": "Texture lowers formality.",
+   "topics": [
+    "shoes",
+    "fabrics",
+    "weather"
+   ],
+   "strength": "core",
+   "support": 1,
+   "sources": [
+    "rulebook"
+   ]
+  },
+  {
+   "id": "brown-shoes-navy",
+   "text": "Brown shoes with a navy or grey suit are a classic; black shoes for the most formal settings and dark suits.",
+   "why": "Brown is warmer and more versatile; black is stricter.",
+   "topics": [
+    "shoes",
+    "suits",
+    "colour"
+   ],
+   "strength": "core",
+   "support": 1,
+   "sources": [
+    "rulebook"
+   ]
+  },
+  {
+   "id": "watch-strap",
+   "text": "A leather watch strap looks best roughly matching belt and shoes; a metal bracelet goes with anything.",
+   "why": "Leathers in the same family look put together.",
+   "topics": [
+    "accessories"
+   ],
+   "strength": "core",
+   "support": 1,
+   "sources": [
+    "rulebook"
+   ]
+  },
+  {
+   "id": "accessories-few",
+   "text": "Keep accessories few and purposeful: a watch, a belt, maybe one bracelet or ring.",
+   "why": "Too many pieces compete with each other.",
+   "topics": [
+    "accessories"
+   ],
+   "strength": "core",
+   "support": 1,
+   "sources": [
+    "rulebook"
+   ]
+  },
+  {
+   "id": "sunglasses-face",
+   "text": "Pick sunglasses that contrast your face shape: angular frames for round faces, rounder frames for square faces.",
+   "why": "Contrast balances the face.",
+   "topics": [
+    "accessories"
+   ],
+   "strength": "core",
+   "support": 1,
+   "sources": [
+    "rulebook"
+   ]
+  },
+  {
+   "id": "colour-skin",
+   "text": "Colours with some contrast to your skin and hair usually flatter; colours too close to your skin tone can wash you out.",
+   "why": "Contrast frames the face.",
+   "topics": [
+    "colour"
+   ],
+   "strength": "core",
+   "support": 1,
+   "sources": [
+    "rulebook"
+   ]
+  },
+  {
+   "id": "60-30-10",
+   "text": "A simple colour split: about 60% a main neutral, 30% a second neutral, 10% accent.",
+   "why": "It keeps the accent special.",
+   "topics": [
+    "colour"
+   ],
+   "strength": "core",
+   "support": 1,
+   "sources": [
+    "rulebook"
+   ]
+  },
+  {
+   "id": "dark-bottom",
+   "text": "Darker trousers with a lighter top is the easiest, most flattering combination.",
+   "why": "It grounds the outfit and lengthens the legs.",
+   "topics": [
+    "colour",
+    "proportions"
+   ],
+   "strength": "core",
+   "support": 1,
+   "sources": [
+    "rulebook"
+   ]
+  },
+  {
+   "id": "monochrome-texture",
+   "text": "When wearing one colour head to toe, vary the textures (knit, cotton, wool) so it doesn't look flat.",
+   "why": "Texture adds depth where colour doesn't.",
+   "topics": [
+    "colour",
+    "fabrics"
+   ],
+   "strength": "core",
+   "support": 1,
+   "sources": [
+    "rulebook"
+   ]
+  },
+  {
+   "id": "earth-tones",
+   "text": "Earth tones (olive, brown, beige, cream, rust) all mix easily with each other and with navy.",
+   "why": "They share the same warm undertone.",
+   "topics": [
+    "colour"
+   ],
+   "strength": "core",
+   "support": 1,
+   "sources": [
+    "rulebook"
+   ]
+  },
+  {
+   "id": "black-tie",
+   "text": "Black tie means a black or midnight-navy dinner suit, white dress shirt, black bow tie and black patent or polished shoes.",
+   "why": "It is a fixed dress code, not a suggestion.",
+   "topics": [
+    "formal",
+    "occasions",
+    "suits"
+   ],
+   "occasions": [
+    "event"
+   ],
+   "strength": "core",
+   "support": 1,
+   "sources": [
+    "rulebook"
+   ]
+  },
+  {
+   "id": "business-formal",
+   "text": "Business formal: a dark suit in navy or charcoal, white or light blue shirt, a quiet tie, dark leather shoes.",
+   "why": "Conservative colours read as serious.",
+   "topics": [
+    "formal",
+    "occasions",
+    "suits"
+   ],
+   "occasions": [
+    "work",
+    "event"
+   ],
+   "strength": "core",
+   "support": 1,
+   "sources": [
+    "rulebook"
+   ]
+  },
+  {
+   "id": "business-casual",
+   "text": "Business casual: chinos or wool trousers, a collared shirt or fine knit, optional blazer, leather shoes or loafers. No tie needed.",
+   "why": "Polished but relaxed.",
+   "topics": [
+    "occasions",
+    "smart casual"
+   ],
+   "occasions": [
+    "work",
+    "smart"
+   ],
+   "strength": "core",
+   "support": 1,
+   "sources": [
+    "rulebook"
+   ]
+  },
+  {
+   "id": "smart-casual",
+   "text": "Smart casual: one tailored element (a blazer, a crisp shirt or wool trousers) mixed with relaxed pieces like dark jeans or clean sneakers.",
+   "why": "The mix is what makes it smart casual.",
+   "topics": [
+    "smart casual",
+    "occasions"
+   ],
+   "occasions": [
+    "smart",
+    "night"
+   ],
+   "strength": "core",
+   "support": 1,
+   "sources": [
+    "rulebook"
+   ]
+  },
+  {
+   "id": "wedding-guest",
+   "text": "As a wedding guest, never outshine the groom: avoid all-white, keep it a suit unless the invitation says otherwise.",
+   "why": "The day isn't about you.",
+   "topics": [
+    "occasions",
+    "formal"
+   ],
+   "occasions": [
+    "event"
+   ],
+   "strength": "core",
+   "support": 1,
+   "sources": [
+    "rulebook"
+   ]
+  },
+  {
+   "id": "date-night",
+   "text": "For a date or a night out, go one notch smarter than the venue: a good knit or shirt, dark trousers, clean leather shoes.",
+   "why": "It shows effort without trying too hard.",
+   "topics": [
+    "occasions",
+    "smart casual"
+   ],
+   "occasions": [
+    "night"
+   ],
+   "strength": "core",
+   "support": 1,
+   "sources": [
+    "rulebook"
+   ]
+  },
+  {
+   "id": "streetwear-base",
+   "text": "In streetwear, build around one hero piece (sneakers, a graphic hoodie, a jacket) and keep the rest plain.",
+   "why": "The hero piece needs space.",
+   "topics": [
+    "streetwear"
+   ],
+   "strength": "core",
+   "support": 1,
+   "sources": [
+    "rulebook"
+   ]
+  },
+  {
+   "id": "streetwear-proportions",
+   "text": "Oversized streetwear tops work with straight or tapered trousers; if both are baggy, keep the colours simple.",
+   "why": "Volume plus busy colours turns messy.",
+   "topics": [
+    "streetwear",
+    "proportions"
+   ],
+   "strength": "core",
+   "support": 1,
+   "sources": [
+    "rulebook"
+   ]
+  },
+  {
+   "id": "logos",
+   "text": "Big logos look young and loud; quieter pieces with small or no logos look more grown-up.",
+   "why": "Let the cut and colour speak.",
+   "topics": [
+    "streetwear",
+    "wardrobe"
+   ],
+   "strength": "core",
+   "support": 1,
+   "sources": [
+    "rulebook"
+   ]
+  },
+  {
+   "id": "athleisure",
+   "text": "Joggers and hoodies outside the gym look best when they are clean, well fitting and in plain colours.",
+   "why": "Sloppy sportswear looks like you just woke up.",
+   "topics": [
+    "sportswear",
+    "casual"
+   ],
+   "strength": "core",
+   "support": 1,
+   "sources": [
+    "rulebook"
+   ]
+  },
+  {
+   "id": "gym-shoes",
+   "text": "Train in proper training shoes and save fashion sneakers for the street.",
+   "why": "Support for the feet, and the sneakers last longer.",
+   "topics": [
+    "sportswear",
+    "shoes"
+   ],
+   "occasions": [
+    "gym"
+   ],
+   "strength": "core",
+   "support": 1,
+   "sources": [
+    "rulebook"
+   ]
+  },
+  {
+   "id": "tshirt-fit",
+   "text": "A good T-shirt: sleeves end mid-bicep, shoulder seam on the shoulder, hem at the belt or just below.",
+   "why": "Fit makes a basic tee look intentional.",
+   "topics": [
+    "fit",
+    "casual"
+   ],
+   "strength": "core",
+   "support": 1,
+   "sources": [
+    "rulebook"
+   ]
+  },
+  {
+   "id": "polo",
+   "text": "A polo dresses up a T-shirt outfit instantly; wear it with chinos or shorts, tucked or untucked if short.",
+   "why": "The collar adds polish.",
+   "topics": [
+    "casual",
+    "smart casual"
+   ],
+   "strength": "core",
+   "support": 1,
+   "sources": [
+    "rulebook"
+   ]
+  },
+  {
+   "id": "overshirt",
+   "text": "An overshirt is the easy layer for mild days: over a tee, open, with jeans or chinos.",
+   "why": "Warmer than a shirt, lighter than a jacket.",
+   "topics": [
+    "layering",
+    "outerwear",
+    "casual"
+   ],
+   "strength": "core",
+   "support": 1,
+   "sources": [
+    "rulebook"
+   ]
+  },
+  {
+   "id": "outerwear-length",
+   "text": "A coat should be longer than the jacket under it; a short jacket over a long blazer looks wrong.",
+   "why": "Layers stack from short (inside) to long (outside).",
+   "topics": [
+    "outerwear",
+    "layering"
+   ],
+   "strength": "core",
+   "support": 1,
+   "sources": [
+    "rulebook"
+   ]
+  },
+  {
+   "id": "overcoat",
+   "text": "A navy, camel or charcoal overcoat goes over everything from a suit to jeans and a knit.",
+   "why": "One good coat covers most of winter.",
+   "topics": [
+    "outerwear",
+    "wardrobe"
+   ],
+   "strength": "core",
+   "support": 1,
+   "sources": [
+    "rulebook"
+   ]
+  },
+  {
+   "id": "linen-creases",
+   "text": "Linen creases; accept it as part of the summer look rather than fighting it.",
+   "why": "Relaxed creases are the point of linen.",
+   "topics": [
+    "fabrics",
+    "weather"
+   ],
+   "strength": "core",
+   "support": 1,
+   "sources": [
+    "rulebook"
+   ]
+  },
+  {
+   "id": "wool-not-only-winter",
+   "text": "Lightweight (tropical) wool suits work in summer better than polyester ones.",
+   "why": "Wool breathes, plastic doesn't.",
+   "topics": [
+    "fabrics",
+    "suits"
+   ],
+   "strength": "core",
+   "support": 1,
+   "sources": [
+    "rulebook"
+   ]
+  },
+  {
+   "id": "patterns-scale",
+   "text": "When combining patterns, vary their scale: a fine pattern with a bold one, never two of the same size.",
+   "why": "Same-size patterns vibrate against each other.",
+   "topics": [
+    "patterns"
+   ],
+   "strength": "core",
+   "support": 1,
+   "sources": [
+    "rulebook"
+   ]
+  },
+  {
+   "id": "capsule",
+   "text": "A capsule wardrobe: a few pieces in neutral colours that all combine gives more outfits than many loud pieces.",
+   "why": "Every piece works with every other.",
+   "topics": [
+    "wardrobe"
+   ],
+   "strength": "core",
+   "support": 1,
+   "sources": [
+    "rulebook"
+   ]
+  },
+  {
+   "id": "basics",
+   "text": "Core menswear basics: white and navy tees, an oxford shirt, a grey or navy knit, dark jeans, chinos, a navy blazer, an overcoat, white sneakers, brown leather shoes or boots.",
+   "why": "These combine into dozens of outfits.",
+   "topics": [
+    "wardrobe"
+   ],
+   "strength": "core",
+   "support": 1,
+   "sources": [
+    "rulebook"
+   ]
+  },
+  {
+   "id": "buy-less-better",
+   "text": "Buy fewer, better pieces in natural fabrics; they last longer and look better as they age.",
+   "why": "Cost per wear matters more than price.",
+   "topics": [
+    "wardrobe",
+    "care"
+   ],
+   "strength": "core",
+   "support": 1,
+   "sources": [
+    "rulebook"
+   ]
+  },
+  {
+   "id": "care-knits",
+   "text": "Fold knitwear, never hang it; wash wool cold and dry it flat.",
+   "why": "Hanging stretches the shoulders out of shape.",
+   "topics": [
+    "care",
+    "knitwear"
+   ],
+   "strength": "core",
+   "support": 1,
+   "sources": [
+    "rulebook"
+   ]
+  },
+  {
+   "id": "care-shoes",
+   "text": "Rest leather shoes a day between wears and keep cedar shoe trees in them.",
+   "why": "They dry out and keep their shape.",
+   "topics": [
+    "care",
+    "shoes"
+   ],
+   "strength": "core",
+   "support": 1,
+   "sources": [
+    "rulebook"
+   ]
+  },
+  {
+   "id": "iron",
+   "text": "Wrinkled shirts and trousers look careless whatever their price; steam or iron before wearing.",
+   "why": "Crisp fabric reads as effort.",
+   "topics": [
+    "care",
+    "shirts"
+   ],
+   "strength": "core",
+   "support": 1,
+   "sources": [
+    "rulebook"
+   ]
+  },
+  {
+   "id": "dress-height",
+   "text": "To look taller: one colour from shoes to waist, no-break trousers, and fitted rather than baggy pieces.",
+   "why": "Unbroken lines lengthen the body.",
+   "topics": [
+    "proportions",
+    "fit"
+   ],
+   "strength": "core",
+   "support": 1,
+   "sources": [
+    "rulebook"
+   ]
+  },
+  {
+   "id": "dress-broad",
+   "text": "For a bigger frame: darker colours, vertical lines, structured jackets and plain fabrics rather than clingy or shiny ones.",
+   "why": "Structure and dark colours slim the outline.",
+   "topics": [
+    "proportions",
+    "fit"
+   ],
+   "strength": "core",
+   "support": 1,
+   "sources": [
+    "rulebook"
+   ]
+  },
+  {
+   "id": "hats",
+   "text": "Take a hat off indoors; caps and beanies are casual only.",
+   "why": "Etiquette, and caps don't work with tailoring.",
+   "topics": [
+    "accessories",
+    "casual"
+   ],
+   "strength": "core",
+   "support": 1,
+   "sources": [
+    "rulebook"
+   ]
+  }
+ ],
+ "sources": [],
+ "examples": [
+  {
+   "outfit": "jacket navy slim smart +blazer +wool, shirt light blue slim smart +oxford, trousers grey slim smart +wool, dress-shoes brown smart +leather, belt brown +leather",
+   "occasion": "work",
+   "feels": 14,
+   "verdict": "good",
+   "why": "Navy, light blue and grey with matching brown leathers: the classic business look.",
+   "source": "rulebook"
+  },
+  {
+   "outfit": "jacket charcoal slim formal +suit, shirt white slim formal, trousers charcoal slim formal +suit, dress-shoes black formal +leather, tie navy formal, belt black +leather",
+   "occasion": "event",
+   "feels": 16,
+   "verdict": "good",
+   "why": "A dark suit, white shirt and black shoes for a formal event.",
+   "source": "rulebook"
+  },
+  {
+   "outfit": "jacket navy formal +suit, shirt white formal, trousers navy formal +suit, dress-shoes brown formal +leather, tie burgundy formal, belt brown +leather",
+   "occasion": "event",
+   "feels": 18,
+   "verdict": "good",
+   "why": "Navy suit with brown shoes and a burgundy tie.",
+   "source": "rulebook"
+  },
+  {
+   "outfit": "sweater navy regular smart casual +merino, shirt white regular smart casual +oxford, chinos beige slim smart casual, loafers brown +suede",
+   "occasion": "smart",
+   "feels": 15,
+   "verdict": "good",
+   "why": "Knit over an oxford with chinos and loafers: easy smart casual.",
+   "source": "rulebook"
+  },
+  {
+   "outfit": "tshirt white regular minimal, jeans navy slim casual, sneakers white minimal +leather",
+   "occasion": "casual",
+   "feels": 22,
+   "verdict": "good",
+   "why": "White tee, dark jeans, white sneakers: the simplest outfit that always works.",
+   "source": "rulebook"
+  },
+  {
+   "outfit": "tshirt navy regular casual, shorts beige regular casual +chinos, sneakers white casual",
+   "occasion": "casual",
+   "feels": 27,
+   "verdict": "good",
+   "why": "Navy and beige for a hot day.",
+   "source": "rulebook"
+  },
+  {
+   "outfit": "shirt white relaxed smart casual +linen, shorts navy regular smart casual, loafers brown +suede",
+   "occasion": "smart",
+   "feels": 29,
+   "verdict": "good",
+   "why": "Linen shirt and tailored shorts for summer.",
+   "source": "rulebook"
+  },
+  {
+   "outfit": "hoodie grey oversized streetwear, joggers black slim streetwear, sneakers white streetwear",
+   "occasion": "casual",
+   "feels": 13,
+   "verdict": "good",
+   "why": "Oversized hoodie over slim joggers with clean sneakers.",
+   "source": "rulebook"
+  },
+  {
+   "outfit": "hoodie black oversized streetwear +graphic, jeans denim straight streetwear, sneakers white streetwear, cap black streetwear",
+   "occasion": "casual",
+   "feels": 15,
+   "verdict": "good",
+   "why": "One graphic hero piece with plain denim and sneakers.",
+   "source": "rulebook"
+  },
+  {
+   "outfit": "jacket olive regular casual +field-jacket, sweatshirt grey regular casual, jeans navy slim casual, boots brown casual +leather",
+   "occasion": "casual",
+   "feels": 9,
+   "verdict": "good",
+   "why": "Earth tones and layers for a cool day.",
+   "source": "rulebook"
+  },
+  {
+   "outfit": "coat camel regular smart +wool, sweater charcoal slim smart casual +turtleneck, trousers grey slim smart +flannel, chelsea brown +suede",
+   "occasion": "night",
+   "feels": 5,
+   "verdict": "good",
+   "why": "Overcoat, turtleneck and flannel for a winter evening.",
+   "source": "rulebook"
+  },
+  {
+   "outfit": "jacket black slim smart casual +leather, tshirt white regular minimal, jeans black slim casual, chelsea black +leather",
+   "occasion": "night",
+   "feels": 14,
+   "verdict": "good",
+   "why": "Leather jacket, white tee, black jeans: a night-out classic.",
+   "source": "rulebook"
+  },
+  {
+   "outfit": "blazer navy slim smart casual, tshirt white slim minimal, jeans navy slim casual, sneakers white minimal +leather",
+   "occasion": "smart",
+   "feels": 18,
+   "verdict": "good",
+   "why": "One tailored piece with relaxed ones: textbook smart casual.",
+   "source": "rulebook"
+  },
+  {
+   "outfit": "overshirt olive relaxed casual, tshirt cream regular casual, chinos beige straight casual, sneakers white casual",
+   "occasion": "casual",
+   "feels": 17,
+   "verdict": "good",
+   "why": "Tonal earth colours with an easy layer.",
+   "source": "rulebook"
+  },
+  {
+   "outfit": "polo navy slim preppy, chinos beige slim preppy, loafers brown preppy +suede, belt brown +leather",
+   "occasion": "smart",
+   "feels": 24,
+   "verdict": "good",
+   "why": "Polo and chinos with loafers.",
+   "source": "rulebook"
+  },
+  {
+   "outfit": "sweater burgundy regular smart casual, shirt light blue regular smart casual +oxford, trousers grey slim smart, dress-shoes brown +leather +brogue",
+   "occasion": "work",
+   "feels": 11,
+   "verdict": "good",
+   "why": "A single accent colour over a classic shirt and trousers.",
+   "source": "rulebook"
+  },
+  {
+   "outfit": "sweater cream relaxed smart casual +cashmere, trousers cream regular smart casual, loafers brown +suede",
+   "occasion": "smart",
+   "feels": 16,
+   "verdict": "good",
+   "why": "Tonal cream with a relaxed knit over straight trousers.",
+   "source": "rulebook"
+  },
+  {
+   "outfit": "puffer black regular outdoor, hoodie grey regular casual, joggers black regular casual, sneakers black casual",
+   "occasion": "casual",
+   "feels": 1,
+   "verdict": "good",
+   "why": "Warm and simple for a freezing day.",
+   "source": "rulebook"
+  },
+  {
+   "outfit": "rain navy regular outdoor +waterproof, sweater grey regular casual, jeans navy slim casual, boots brown casual +leather",
+   "occasion": "casual",
+   "feels": 10,
+   "wet": true,
+   "verdict": "good",
+   "why": "Rain shell and leather boots for a wet day.",
+   "source": "rulebook"
+  },
+  {
+   "outfit": "gym-top black regular sporty, gym-shorts black regular sporty, training-shoes grey sporty",
+   "occasion": "gym",
+   "feels": 18,
+   "verdict": "good",
+   "why": "Proper training kit.",
+   "source": "rulebook"
+  },
+  {
+   "outfit": "tank-top white sporty, gym-shorts navy sporty, training-shoes white sporty, track-jacket navy sporty",
+   "occasion": "gym",
+   "feels": 12,
+   "verdict": "good",
+   "why": "Training kit with a layer for the walk there.",
+   "source": "rulebook"
+  },
+  {
+   "outfit": "tshirt black oversized streetwear, trousers black wide streetwear +cargo, sneakers black streetwear",
+   "occasion": "night",
+   "feels": 20,
+   "verdict": "good",
+   "why": "Baggy on baggy kept all black: a deliberate streetwear look.",
+   "source": "rulebook"
+  },
+  {
+   "outfit": "jacket charcoal formal +suit, tshirt red casual +graphic, trousers charcoal formal +suit, sneakers white casual",
+   "occasion": "event",
+   "feels": 16,
+   "verdict": "avoid",
+   "why": "A graphic tee and sneakers pull a suit down at a formal event.",
+   "source": "rulebook"
+  },
+  {
+   "outfit": "hoodie black casual, shirt white smart, trousers grey smart, dress-shoes black formal, tie navy formal",
+   "occasion": "work",
+   "feels": 14,
+   "verdict": "avoid",
+   "why": "A tie under a hoodie.",
+   "source": "rulebook"
+  },
+  {
+   "outfit": "tshirt white casual, joggers grey sporty, dress-shoes black formal +leather",
+   "occasion": "casual",
+   "feels": 18,
+   "verdict": "avoid",
+   "why": "Dress shoes with joggers.",
+   "source": "rulebook"
+  },
+  {
+   "outfit": "shirt red smart casual, trousers green smart casual, sneakers orange casual",
+   "occasion": "smart",
+   "feels": 20,
+   "verdict": "avoid",
+   "why": "Three loud colours fighting each other.",
+   "source": "rulebook"
+  },
+  {
+   "outfit": "hoodie pink oversized casual, joggers orange baggy casual, sneakers purple casual",
+   "occasion": "casual",
+   "feels": 15,
+   "verdict": "avoid",
+   "why": "Clashing brights and shapeless proportions.",
+   "source": "rulebook"
+  },
+  {
+   "outfit": "jacket denim casual, shirt denim casual, jeans denim casual, sneakers white casual",
+   "occasion": "casual",
+   "feels": 18,
+   "verdict": "avoid",
+   "why": "Denim on denim on denim in one wash.",
+   "source": "rulebook"
+  },
+  {
+   "outfit": "hoodie grey oversized casual, jeans grey baggy casual, sneakers grey casual",
+   "occasion": "work",
+   "feels": 15,
+   "verdict": "avoid",
+   "why": "Baggy and casual for a work meeting.",
+   "source": "rulebook"
+  },
+  {
+   "outfit": "tshirt white casual, shorts navy casual, sneakers white casual",
+   "occasion": "casual",
+   "feels": 7,
+   "verdict": "avoid",
+   "why": "Shorts and a tee at 7°C.",
+   "source": "rulebook"
+  },
+  {
+   "outfit": "puffer black outdoor, sweater grey casual, shorts beige casual, sneakers white casual",
+   "occasion": "casual",
+   "feels": 26,
+   "verdict": "avoid",
+   "why": "A puffer and a knit in the heat.",
+   "source": "rulebook"
+  },
+  {
+   "outfit": "puffer red outdoor, jacket navy formal +suit, shirt white formal, trousers navy formal +suit, dress-shoes black formal, tie navy formal",
+   "occasion": "event",
+   "feels": 12,
+   "verdict": "avoid",
+   "why": "A sporty puffer over a suit.",
+   "source": "rulebook"
+  },
+  {
+   "outfit": "jacket navy smart +blazer, shirt white smart, trousers grey smart, dress-shoes black formal +leather, belt brown +leather",
+   "occasion": "work",
+   "feels": 15,
+   "verdict": "avoid",
+   "why": "Brown belt with black shoes.",
+   "source": "rulebook"
+  },
+  {
+   "outfit": "hoodie black streetwear +graphic, jacket green streetwear +logo, joggers red streetwear +graphic, sneakers yellow streetwear",
+   "occasion": "casual",
+   "feels": 12,
+   "verdict": "avoid",
+   "why": "Three statement pieces and four loud colours.",
+   "source": "rulebook"
+  },
+  {
+   "outfit": "shirt navy smart casual +check, trousers grey smart casual +stripes, jacket brown smart casual +blazer +houndstooth, dress-shoes brown +leather",
+   "occasion": "smart",
+   "feels": 14,
+   "verdict": "avoid",
+   "why": "Three patterns at once.",
+   "source": "rulebook"
+  },
+  {
+   "outfit": "gym-top black sporty, trousers grey formal +suit, training-shoes white sporty",
+   "occasion": "work",
+   "feels": 18,
+   "verdict": "avoid",
+   "why": "Gym top with suit trousers.",
+   "source": "rulebook"
+  },
+  {
+   "outfit": "jacket brown smart +tweed, sweater green smart casual, trousers brown smart +corduroy, boots brown +leather",
+   "occasion": "smart",
+   "feels": 30,
+   "verdict": "avoid",
+   "why": "Tweed and corduroy in 30°C heat.",
+   "source": "rulebook"
+  },
+  {
+   "outfit": "shirt white smart casual +linen, trousers beige smart casual +linen, loafers brown +suede",
+   "occasion": "smart",
+   "feels": 4,
+   "verdict": "avoid",
+   "why": "Linen and no layers near freezing.",
+   "source": "rulebook"
+  },
+  {
+   "outfit": "tshirt white casual, jeans navy slim casual, sneakers white casual",
+   "occasion": "event",
+   "feels": 18,
+   "verdict": "avoid",
+   "why": "Far too casual for an elegant event.",
+   "source": "rulebook"
+  },
+  {
+   "outfit": "jacket black formal +suit, shirt white formal, trousers black formal +suit, dress-shoes black formal, tie black formal",
+   "occasion": "casual",
+   "feels": 22,
+   "verdict": "avoid",
+   "why": "A full black suit and tie for an everyday outing.",
+   "source": "rulebook"
+  },
+  {
+   "outfit": "sneakers white casual +suede, jeans navy casual, tshirt grey casual",
+   "occasion": "casual",
+   "feels": 11,
+   "wet": true,
+   "verdict": "avoid",
+   "why": "White suede sneakers, no jacket, in the rain.",
+   "source": "rulebook"
+  },
+  {
+   "outfit": "sweater orange relaxed casual, trousers purple wide casual, boots brown casual",
+   "occasion": "smart",
+   "feels": 12,
+   "verdict": "avoid",
+   "why": "Orange and purple clash, and roomy on roomy.",
+   "source": "rulebook"
+  }
+ ],
+ "prompt": "Menswear rules, most important first:\n- Dress for the occasion.\n- A tie needs a collar and long trousers.\n- Don't mix gym kit with tailoring.\n- Sports clothes for training.\n- Dress for the temperature.\n- Keep pieces at one level of dressiness.\n- Neutrals first, one accent colour.\n- Suits want shirts and leather shoes.\n- Shorts only when it's warm.\n- Shoes at the level of the outfit.\n- Balance volume.\n- Colours that fight.\n- Belt matches the shoes.\n- One statement piece.\n- Styles that suit the occasion.\n- Denim on denim needs contrast.\n- The coat matches the outfit.\n- Ready for rain.\n- Go easy on patterns.\n- Classic colour pairings.\n- Fabrics for the season.\n- Three colours at most.\n- Tonal dressing works.\n- One story per outfit.\n- Mix light and dark.\nTips:\n- Fit matters more than brand or price: a cheap piece that fits beats an expensive one that doesn't.\n- Budget for a tailor: shortening sleeves and trousers and taking in a waist costs little and makes clothes look made for you.\n- A jacket must fit in the shoulders: the seam ends where your shoulder ends, with no dent or overhang.\n- A suit or sport jacket should cover your seat, roughly to the knuckles of your relaxed hand.\n- Jacket sleeves end so about a centimetre of shirt cuff shows.\n- On a two- or three-button jacket, never fasten the bottom button. On a three-button, the top one is optional.\n- Unbutton your jacket when you sit down and button it again when you stand.\n- Trousers should have little or no break: the hem just touches the shoe. Slim trousers look best with no break at all.\n- The tip of the tie touches the top of the belt buckle.\n- Match the width of the tie to the width of the lapels.\n- A pocket square should pick up a colour from the tie or shirt, not be the same fabric as the tie.\n- A buttoned shirt collar leaves room for one finger, no more.\n- Shirts with long curved tails get tucked in; short, straight-hemmed shirts can be worn out.\n- A white or light blue oxford shirt works with suits, chinos and jeans alike.\n- Under a dress shirt, wear a grey or skin-tone V-neck undershirt, not a white crew neck.\n- A fine knit over a collared shirt is a smart, easy layer; keep the knit thin so the collar sits flat.\n- Knitwear should skim the body: hem at the belt, cuffs at the wrist bone.\n- A thin turtleneck under a blazer replaces shirt and tie for an elegant evening look.\n- Layer from thin to thick: tee or shirt, then knit or overshirt, then jacket, then coat."
+}

@@ -1,0 +1,15 @@
+# Links to learn from, one per line: YouTube videos, articles, or paths to .txt files.
+# Lines starting with # are notes and are skipped. Anything after the link on a line is ignored,
+# so you can write a note there.
+# Then run:  python -m fashion learn --list
+# Sources already learnt are skipped, so you can keep adding links and run it again.
+#
+# Ideas for what to look for:
+#   - videos on menswear rules: suit fit, colour combinations, dress codes, proportions, shoes
+#   - magazine style guides (Vogue, GQ, Esquire...): how to wear a suit, smart casual, capsule wardrobe
+#   - a few streetwear and modern-casual sources too, so it doesn't learn only one taste
+#
+# Example of the format:
+# https://www.youtube.com/watch?v=VIDEO_ID   suit fit basics
+# https://www.example.com/style/how-to-dress-smart-casual
+# articles/vogue-capsule-wardrobe.txt
