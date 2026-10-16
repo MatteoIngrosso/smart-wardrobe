@@ -1,0 +1,232 @@
+{
+  "source": {
+    "kind": "video",
+    "url": "https://www.youtube.com/watch?v=a8BB4Kb2GuI",
+    "title": "Mi faccio creare un abito custom made da Suitsupply per Miami",
+    "author": ""
+  },
+  "learned_at": "2026-10-16T21:23:50+00:00",
+  "model": "by hand",
+  "tokens": {
+    "in": 0,
+    "out": 0
+  },
+  "tips": [
+    {
+      "id": "yt-a8BB4Kb2GuI-1",
+      "text": "For a summer suit that wrinkles less than pure linen, choose a linen-silk blend; the jacket and trousers also work as separates.",
+      "why": "Silk reduces creasing and the pieces can be reworn with jeans or a tee.",
+      "topics": [
+        "suits",
+        "fabrics",
+        "weather"
+      ],
+      "occasions": [
+        "event",
+        "smart"
+      ],
+      "strength": "tip"
+    },
+    {
+      "id": "yt-a8BB4Kb2GuI-2",
+      "text": "Fresco and tropical wool suits breathe in the heat, so wool is fine in summer.",
+      "why": "Open-weave wool regulates temperature.",
+      "topics": [
+        "suits",
+        "fabrics",
+        "weather"
+      ],
+      "occasions": [
+        "work",
+        "event"
+      ],
+      "strength": "tip",
+      "same_as": "wool-not-only-winter"
+    },
+    {
+      "id": "yt-a8BB4Kb2GuI-3",
+      "text": "Wool-mohair is a light, crisp suiting with a slight sheen, a good alternative to tropical wool for warm-weather events.",
+      "why": "Mohair adds lightness and resists creasing.",
+      "topics": [
+        "suits",
+        "fabrics"
+      ],
+      "occasions": [
+        "event",
+        "night"
+      ],
+      "strength": "tip"
+    },
+    {
+      "id": "yt-a8BB4Kb2GuI-4",
+      "text": "Half-lined or unlined jackets are cooler and move more easily; unlined construction needs cleaner internal seams.",
+      "why": "Less lining means more comfort in heat.",
+      "topics": [
+        "suits",
+        "weather"
+      ],
+      "occasions": [],
+      "strength": "tip"
+    },
+    {
+      "id": "yt-a8BB4Kb2GuI-5",
+      "text": "Prefer canvassed jackets over fused ones; a full canvas keeps its shape for years, while fused jackets lose structure over time.",
+      "why": "Sewn canvas lets the cloth drape and last.",
+      "topics": [
+        "suits",
+        "fabrics"
+      ],
+      "occasions": [],
+      "strength": "tip"
+    },
+    {
+      "id": "yt-a8BB4Kb2GuI-6",
+      "text": "Double-breasted jackets look right with wide peak lapels and enough structure, ideally full canvas.",
+      "why": "A DB needs structure to hold its shape.",
+      "topics": [
+        "suits",
+        "proportions"
+      ],
+      "occasions": [
+        "event",
+        "work"
+      ],
+      "strength": "opinion"
+    },
+    {
+      "id": "yt-a8BB4Kb2GuI-7",
+      "text": "Flap pockets suit business suits, jetted pockets are more ceremonial, and patch pockets are the casual choice for blazers.",
+      "why": "Pocket style sets a jacket's formality.",
+      "topics": [
+        "suits"
+      ],
+      "occasions": [
+        "work",
+        "event",
+        "smart"
+      ],
+      "strength": "tip"
+    },
+    {
+      "id": "yt-a8BB4Kb2GuI-8",
+      "text": "Choose shoulder construction to suit your posture and build: padded for structure, soft or Neapolitan for a relaxed look.",
+      "why": "The shoulder defines the silhouette.",
+      "topics": [
+        "suits",
+        "fit"
+      ],
+      "occasions": [],
+      "strength": "tip"
+    },
+    {
+      "id": "yt-a8BB4Kb2GuI-9",
+      "text": "Trousers worn with a double-breasted jacket look clean with side adjusters instead of belt loops, and a single pleat adds softness.",
+      "why": "No belt keeps the line uninterrupted.",
+      "topics": [
+        "trousers",
+        "suits"
+      ],
+      "occasions": [
+        "event",
+        "work"
+      ],
+      "strength": "tip"
+    },
+    {
+      "id": "yt-a8BB4Kb2GuI-10",
+      "text": "For trousers meant to fall softly onto the shoe, skip the turn-up and set the final length after trying them with the shoes you'll wear.",
+      "why": "Hem length depends on the shoe.",
+      "topics": [
+        "trousers",
+        "fit"
+      ],
+      "occasions": [],
+      "strength": "tip"
+    },
+    {
+      "id": "yt-a8BB4Kb2GuI-11",
+      "text": "Have trousers made slightly roomy at the waist and hips; taking them in is easy, letting them out is barely possible.",
+      "why": "Seam allowance is usually only about a centimetre.",
+      "topics": [
+        "trousers",
+        "fit"
+      ],
+      "occasions": [],
+      "strength": "tip"
+    },
+    {
+      "id": "yt-a8BB4Kb2GuI-12",
+      "text": "Dry-clean a suit rarely, about once a season, and warn the cleaner about delicate buttons such as mother-of-pearl.",
+      "why": "Frequent cleaning wears out the cloth.",
+      "topics": [
+        "care",
+        "suits"
+      ],
+      "occasions": [],
+      "strength": "tip"
+    },
+    {
+      "id": "yt-a8BB4Kb2GuI-13",
+      "text": "A suit should feel relaxed rather than tight, with no pulling across the back or at the armholes.",
+      "why": "A suit that strains looks borrowed.",
+      "topics": [
+        "suits",
+        "fit"
+      ],
+      "occasions": [],
+      "strength": "tip"
+    },
+    {
+      "id": "yt-a8BB4Kb2GuI-14",
+      "text": "A 'Made in China' label does not automatically mean poor quality; judge fabric and construction instead.",
+      "why": "Many factories abroad produce high-end garments.",
+      "topics": [
+        "wardrobe"
+      ],
+      "occasions": [],
+      "strength": "tip",
+      "same_as": "yt-hDKTb01rupA-5"
+    },
+    {
+      "id": "yt-a8BB4Kb2GuI-15",
+      "text": "A summer suit in sand or brown worn with a fine short-sleeved knit or T-shirt, tonal or contrasting, makes a relaxed warm-weather look.",
+      "why": "Dropping the shirt and tie keeps tailoring casual in heat.",
+      "topics": [
+        "suits",
+        "smart casual",
+        "weather"
+      ],
+      "occasions": [
+        "smart",
+        "night"
+      ],
+      "strength": "opinion",
+      "same_as": "yt-srEM8hMRVgE-8"
+    },
+    {
+      "id": "yt-a8BB4Kb2GuI-16",
+      "text": "A higher Super number means a finer, lighter, more delicate wool cloth.",
+      "why": "Super numbers grade how fine the wool fibre is; finer cloth feels lighter but is less hard-wearing.",
+      "topics": [
+        "fabrics",
+        "suits"
+      ],
+      "occasions": [],
+      "strength": "tip"
+    }
+  ],
+  "outfits": [
+    {
+      "outfit": "jacket beige relaxed smart casual +linen +silk +suit, tshirt cream casual +silk, trousers beige relaxed smart casual +linen +suit, dress-shoes brown formal +loafers",
+      "occasion": "smart",
+      "verdict": "good",
+      "why": "A relaxed double-breasted summer suit with a silk-cotton tee: Miami Vice without the banker."
+    },
+    {
+      "outfit": "jacket beige smart casual +blazer +linen, tshirt white casual, jeans denim casual, dress-shoes brown formal +loafers",
+      "occasion": "smart",
+      "verdict": "good",
+      "why": "The suit jacket worn as a separate over jeans and a tee."
+    }
+  ]
+}

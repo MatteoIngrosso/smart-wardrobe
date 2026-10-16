@@ -1,0 +1,258 @@
+{
+  "source": {
+    "kind": "video",
+    "url": "https://www.youtube.com/watch?v=GE_NB4JGeJU",
+    "title": "The 3 Ralph Lauren Aesthetics Every Man Can Wear This Fall",
+    "author": ""
+  },
+  "learned_at": "2026-10-16T21:19:27+00:00",
+  "model": "by hand",
+  "tokens": {
+    "in": 0,
+    "out": 0
+  },
+  "tips": [
+    {
+      "id": "yt-GE_NB4JGeJU-1",
+      "text": "Wear preppy clothes like a grown man who left university years ago: skip novelty varsity sweatshirts and build on an oxford, knitwear, chinos and a tweed jacket.",
+      "why": "Adult prep looks refined; student prep looks like a costume.",
+      "topics": [
+        "smart casual",
+        "wardrobe"
+      ],
+      "occasions": [
+        "smart",
+        "casual"
+      ],
+      "strength": "tip"
+    },
+    {
+      "id": "yt-GE_NB4JGeJU-2",
+      "text": "A blue oxford button-down is the easiest base for an autumn preppy wardrobe.",
+      "why": "It goes under knits, blazers and tweed alike.",
+      "topics": [
+        "shirts"
+      ],
+      "occasions": [
+        "smart",
+        "casual",
+        "work"
+      ],
+      "strength": "tip",
+      "same_as": "oxford-shirt"
+    },
+    {
+      "id": "yt-GE_NB4JGeJU-3",
+      "text": "For autumn knitwear, collect cream, oatmeal, burgundy, forest green and navy; they all combine with khaki, olive and stone chinos.",
+      "why": "A coherent palette makes everything mix.",
+      "topics": [
+        "knitwear",
+        "colour"
+      ],
+      "occasions": [
+        "casual",
+        "smart"
+      ],
+      "strength": "tip"
+    },
+    {
+      "id": "yt-GE_NB4JGeJU-4",
+      "text": "A brown herringbone tweed sport coat over an oxford with jeans and brown loafers instantly lifts ordinary clothes.",
+      "why": "One textured tailored piece changes the character of the outfit.",
+      "topics": [
+        "smart casual",
+        "fabrics"
+      ],
+      "occasions": [
+        "smart"
+      ],
+      "strength": "tip",
+      "same_as": "smart-casual"
+    },
+    {
+      "id": "yt-GE_NB4JGeJU-5",
+      "text": "Grey flannel trousers are the step up from chinos when an autumn outfit needs to be dressier.",
+      "why": "Flannel is smart but soft and textured.",
+      "topics": [
+        "trousers",
+        "fabrics"
+      ],
+      "occasions": [
+        "smart",
+        "work"
+      ],
+      "strength": "tip"
+    },
+    {
+      "id": "yt-GE_NB4JGeJU-6",
+      "text": "Autumn lets you layer patterns: a striped oxford under a Fair Isle sweater, a tartan scarf over a camel coat, a striped tie under a cardigan.",
+      "why": "Heavier textures make pattern mixing look natural.",
+      "topics": [
+        "patterns",
+        "layering"
+      ],
+      "occasions": [
+        "casual",
+        "smart"
+      ],
+      "strength": "tip"
+    },
+    {
+      "id": "yt-GE_NB4JGeJU-7",
+      "text": "Don't make classic clothes look too perfect or bought together; a slightly careless, accumulated look reads more stylish.",
+      "why": "Clothes that look lived in seem effortless.",
+      "topics": [
+        "wardrobe"
+      ],
+      "occasions": [],
+      "strength": "opinion"
+    },
+    {
+      "id": "yt-GE_NB4JGeJU-8",
+      "text": "Shop for specific ingredients, such as a brown herringbone sport coat or a navy lambswool crew neck, rather than a brand or logo; second-hand is fine.",
+      "why": "The look comes from the pieces, not the label.",
+      "topics": [
+        "wardrobe"
+      ],
+      "occasions": [],
+      "strength": "tip"
+    },
+    {
+      "id": "yt-GE_NB4JGeJU-9",
+      "text": "In cold months, texture matters most: swap light chinos for olive or tobacco corduroy and bring in tweed, flannel, suede, waxed cotton and Shetland wool.",
+      "why": "Rich textures make simple outfits interesting.",
+      "topics": [
+        "fabrics",
+        "trousers",
+        "weather"
+      ],
+      "occasions": [
+        "casual",
+        "smart"
+      ],
+      "strength": "tip"
+    },
+    {
+      "id": "yt-GE_NB4JGeJU-10",
+      "text": "Country-style outerwear such as a waxed field jacket, quilted jacket, barn coat or brown wool overcoat pairs with grounded shoes: suede chukkas, country derbies or leather boots.",
+      "why": "Rugged pieces need sturdy footwear.",
+      "topics": [
+        "outerwear",
+        "shoes"
+      ],
+      "occasions": [
+        "casual"
+      ],
+      "strength": "tip"
+    },
+    {
+      "id": "yt-GE_NB4JGeJU-11",
+      "text": "Mix rugged and refined: a good tweed jacket with faded jeans, corduroys with an inexpensive oxford.",
+      "why": "The contrast looks unpretentious.",
+      "topics": [
+        "smart casual"
+      ],
+      "occasions": [
+        "casual",
+        "smart"
+      ],
+      "strength": "tip"
+    },
+    {
+      "id": "yt-GE_NB4JGeJU-12",
+      "text": "For a Western touch, take one or two rugged elements and set them in normal clothes; never wear every cowboy signifier at once.",
+      "why": "One accent reads as style, the full set as fancy dress.",
+      "topics": [
+        "casual",
+        "accessories"
+      ],
+      "occasions": [
+        "casual"
+      ],
+      "strength": "tip"
+    },
+    {
+      "id": "yt-GE_NB4JGeJU-13",
+      "text": "Straight-leg blue jeans that are neither skinny nor heavily distressed are the base of rugged Americana.",
+      "why": "They age naturally and go with everything.",
+      "topics": [
+        "denim"
+      ],
+      "occasions": [
+        "casual"
+      ],
+      "strength": "tip",
+      "same_as": "jeans-fit"
+    },
+    {
+      "id": "yt-GE_NB4JGeJU-14",
+      "text": "Rugged outerwear options: a suede trucker, a shearling-lined coat, a worn leather bomber or a denim ranch jacket.",
+      "why": "Outerwear carries this look the most.",
+      "topics": [
+        "outerwear"
+      ],
+      "occasions": [
+        "casual"
+      ],
+      "strength": "tip"
+    },
+    {
+      "id": "yt-GE_NB4JGeJU-15",
+      "text": "Let colours follow the landscape: indigo, tobacco brown, rust, cream, forest green, charcoal and tan, with only small hits of pattern or silver hardware.",
+      "why": "Natural colours combine without effort.",
+      "topics": [
+        "colour"
+      ],
+      "occasions": [
+        "casual"
+      ],
+      "strength": "tip",
+      "same_as": "earth-tones"
+    },
+    {
+      "id": "yt-GE_NB4JGeJU-16",
+      "text": "Old leather and suede jackets bought second-hand already have the patina brands charge extra to fake.",
+      "why": "Wear adds character for free.",
+      "topics": [
+        "outerwear",
+        "wardrobe"
+      ],
+      "occasions": [
+        "casual"
+      ],
+      "strength": "tip"
+    }
+  ],
+  "outfits": [
+    {
+      "outfit": "jacket brown smart casual +blazer +tweed, shirt light blue smart casual +oxford, jeans navy casual, dress-shoes brown formal +loafers",
+      "occasion": "smart",
+      "verdict": "good",
+      "why": "Tweed sport coat, oxford, jeans and brown loafers: ordinary clothes made Ralph Lauren."
+    },
+    {
+      "outfit": "sweater green smart casual +fair-isle, shirt light blue smart casual +oxford +stripes, trousers olive smart casual +corduroy, boots brown smart casual +suede",
+      "occasion": "casual",
+      "verdict": "good",
+      "why": "Fair Isle over a striped oxford with cords: layered autumn texture."
+    },
+    {
+      "outfit": "jacket olive smart casual +field-jacket +waxed, sweater cream smart casual +cable, jeans navy casual, boots brown smart casual +leather",
+      "occasion": "casual",
+      "verdict": "good",
+      "why": "English country: waxed jacket, cable knit, dark denim and sturdy boots."
+    },
+    {
+      "outfit": "jacket brown smart casual +suede, shirt denim smart casual +western, jeans navy straight casual, boots brown smart casual +leather, belt brown smart casual +silver",
+      "occasion": "casual",
+      "verdict": "good",
+      "why": "Rugged American West with just a hint of hardware."
+    },
+    {
+      "outfit": "coat charcoal smart +wool, sweater navy smart casual, trousers grey smart casual +flannel, boots brown smart casual +leather, belt brown smart casual",
+      "occasion": "smart",
+      "verdict": "good",
+      "why": "Grey flannels and a long wool coat with boots: refined meets rugged."
+    }
+  ]
+}

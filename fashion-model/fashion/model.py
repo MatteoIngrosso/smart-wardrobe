@@ -54,7 +54,7 @@ class Model:
         return sigmoid(self.logit(x))
 
     @classmethod
-    def train(cls, rows, prior, pull=2.0, lr=0.05, steps=3000, fixed=False):
+    def train(cls, rows, prior, pull=1.0, lr=0.05, steps=3000, fixed=False):
         """Gradient descent on weighted log-loss + pull * sum((w - prior)^2).
         fixed=True keeps the rulebook's weights and fits only the bias (to compare against)."""
         w, bias = dict(prior), 0.0

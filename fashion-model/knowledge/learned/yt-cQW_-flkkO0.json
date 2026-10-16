@@ -1,0 +1,194 @@
+{
+  "source": {
+    "kind": "video",
+    "url": "https://www.youtube.com/watch?v=cQW_-flkkO0",
+    "title": "A Man's Guide to '90s Minimalism",
+    "author": ""
+  },
+  "learned_at": "2026-10-16T21:24:22+00:00",
+  "model": "by hand",
+  "tokens": {
+    "in": 0,
+    "out": 0
+  },
+  "tips": [
+    {
+      "id": "yt-cQW_-flkkO0-1",
+      "text": "Minimalism is about removing visual noise, not only wearing black: grey, brown, navy, cream, olive or burgundy work as long as pieces don't compete.",
+      "why": "Silhouette, fabric and the wearer matter more than decoration.",
+      "topics": [
+        "colour",
+        "wardrobe"
+      ],
+      "occasions": [],
+      "strength": "tip"
+    },
+    {
+      "id": "yt-cQW_-flkkO0-2",
+      "text": "Mix refined and worn-in: a pristine wool overcoat over a sweater and worn jeans, or a cashmere knit under an old leather jacket.",
+      "why": "The contrast keeps minimal outfits from looking sterile.",
+      "topics": [
+        "smart casual",
+        "fabrics"
+      ],
+      "occasions": [
+        "casual",
+        "smart"
+      ],
+      "strength": "tip",
+      "same_as": "yt-GE_NB4JGeJU-11"
+    },
+    {
+      "id": "yt-cQW_-flkkO0-3",
+      "text": "Choose controlled volume: trousers with room through the hip that taper gently, and relaxed jackets that still follow the body.",
+      "why": "It sits between 2010s skinny and today's oversized extremes.",
+      "topics": [
+        "proportions",
+        "fit",
+        "trousers"
+      ],
+      "occasions": [],
+      "strength": "tip"
+    },
+    {
+      "id": "yt-cQW_-flkkO0-4",
+      "text": "You can look grown-up without a tie: a black crew neck loosely tucked into charcoal wool trousers, or a white tee under a dark blazer.",
+      "why": "Maturity comes from proportion, restraint and materials.",
+      "topics": [
+        "smart casual",
+        "knitwear"
+      ],
+      "occasions": [
+        "smart",
+        "work"
+      ],
+      "strength": "tip"
+    },
+    {
+      "id": "yt-cQW_-flkkO0-5",
+      "text": "Start a minimal wardrobe with trousers that have presence: pleated or flat-front charcoal wool that doesn't cling to thigh or calf.",
+      "why": "Fuller trousers give simple tops shape.",
+      "topics": [
+        "trousers"
+      ],
+      "occasions": [
+        "smart",
+        "work"
+      ],
+      "strength": "tip"
+    },
+    {
+      "id": "yt-cQW_-flkkO0-6",
+      "text": "A long coat creates a vertical line that makes almost anything underneath look more elegant, even jeans and a tee.",
+      "why": "Length elongates the silhouette.",
+      "topics": [
+        "outerwear",
+        "proportions"
+      ],
+      "occasions": [
+        "smart",
+        "casual"
+      ],
+      "strength": "tip",
+      "same_as": "overcoat"
+    },
+    {
+      "id": "yt-cQW_-flkkO0-7",
+      "text": "Don't buy everything from one shop; a mix of basics, a vintage coat and existing shirts looks lived-in rather than like a set.",
+      "why": "Coordinated collections look staged.",
+      "topics": [
+        "wardrobe"
+      ],
+      "occasions": [],
+      "strength": "tip",
+      "same_as": "yt-GE_NB4JGeJU-7"
+    },
+    {
+      "id": "yt-cQW_-flkkO0-8",
+      "text": "Contrast soft and hard materials: wool trousers with leather shoes, knitwear under a leather jacket, a structured leather bag with relaxed clothes.",
+      "why": "Hard materials stop minimalism looking bland.",
+      "topics": [
+        "fabrics"
+      ],
+      "occasions": [],
+      "strength": "tip"
+    },
+    {
+      "id": "yt-cQW_-flkkO0-9",
+      "text": "A minimal wardrobe: a white shirt, a couple of crew necks, a dark turtleneck, a soft dark blazer, charcoal and one other pair of trousers, straight dark jeans, a long coat, a leather jacket, simple sneakers or loafers.",
+      "why": "Unremarkable pieces combine endlessly.",
+      "topics": [
+        "wardrobe"
+      ],
+      "occasions": [],
+      "strength": "tip",
+      "same_as": "capsule"
+    },
+    {
+      "id": "yt-cQW_-flkkO0-10",
+      "text": "Tight all-black clothes such as skinny black jeans, a tight shirt and a cropped jacket miss the point of minimalism; the clothes need air around the body.",
+      "why": "Colour alone doesn't make the look; silhouette does.",
+      "topics": [
+        "fit",
+        "proportions",
+        "colour"
+      ],
+      "occasions": [],
+      "strength": "tip"
+    },
+    {
+      "id": "yt-cQW_-flkkO0-11",
+      "text": "In a charcoal, black and grey outfit, let texture do the work that pattern would normally do.",
+      "why": "Texture gives depth up close.",
+      "topics": [
+        "fabrics",
+        "colour"
+      ],
+      "occasions": [],
+      "strength": "tip",
+      "same_as": "monochrome-texture"
+    },
+    {
+      "id": "yt-cQW_-flkkO0-12",
+      "text": "Don't panic when an outfit feels simple; three very good pieces can be enough.",
+      "why": "Adding more stops adding to the person.",
+      "topics": [
+        "wardrobe"
+      ],
+      "occasions": [],
+      "strength": "opinion"
+    }
+  ],
+  "outfits": [
+    {
+      "outfit": "sweater black smart casual, trousers charcoal relaxed smart casual +wool, dress-shoes black formal +leather +loafers, coat charcoal smart +wool",
+      "occasion": "smart",
+      "verdict": "good",
+      "why": "Black crew neck, full charcoal trousers, black loafers and a long charcoal coat."
+    },
+    {
+      "outfit": "jacket black smart casual +leather, sweater grey smart casual +cashmere, jeans navy straight casual, sneakers white casual",
+      "occasion": "casual",
+      "verdict": "good",
+      "why": "Cashmere under an old leather jacket: refinement meets normality."
+    },
+    {
+      "outfit": "jacket navy relaxed smart casual +blazer, tshirt white casual, trousers charcoal smart casual +wool, dress-shoes black formal +loafers",
+      "occasion": "work",
+      "verdict": "good",
+      "why": "A white tee under a soft dark blazer: adult without a tie."
+    },
+    {
+      "outfit": "coat charcoal smart +wool, tshirt white casual, jeans navy straight casual, dress-shoes black formal +loafers",
+      "occasion": "casual",
+      "verdict": "good",
+      "why": "A long wool coat makes jeans and a tee look intentional."
+    },
+    {
+      "outfit": "jacket black cropped smart casual, shirt black slim smart casual, jeans black slim casual, boots black smart casual",
+      "occasion": "night",
+      "verdict": "avoid",
+      "why": "Tight all-black follows the colours but misses the relaxed silhouette."
+    }
+  ]
+}

@@ -1,0 +1,217 @@
+{
+  "source": {
+    "kind": "video",
+    "url": "https://www.youtube.com/watch?v=vu-Zj7FWDwY",
+    "title": "TOM FORD | Project Upgrade | Full Version",
+    "author": ""
+  },
+  "learned_at": "2026-10-16T21:18:33+00:00",
+  "model": "by hand",
+  "tokens": {
+    "in": 0,
+    "out": 0
+  },
+  "tips": [
+    {
+      "id": "yt-vu-Zj7FWDwY-1",
+      "text": "Dress for the job and life you are aiming for, not the one you had at school; clothes signal whether people can trust you with responsibility.",
+      "why": "People judge competence partly by appearance.",
+      "topics": [
+        "wardrobe",
+        "occasions"
+      ],
+      "occasions": [
+        "work"
+      ],
+      "strength": "tip"
+    },
+    {
+      "id": "yt-vu-Zj7FWDwY-2",
+      "text": "Leave the bottom button of a suit jacket undone and fasten the middle one.",
+      "why": "Jackets are cut to be worn that way.",
+      "topics": [
+        "suits"
+      ],
+      "occasions": [
+        "work",
+        "event"
+      ],
+      "strength": "rule",
+      "same_as": "bottom-button"
+    },
+    {
+      "id": "yt-vu-Zj7FWDwY-3",
+      "text": "Have a suit jacket gently taken in at the waist and keep it buttoned when standing, so it shows a waist instead of hanging like a box.",
+      "why": "A defined waist flatters every build.",
+      "topics": [
+        "suits",
+        "fit"
+      ],
+      "occasions": [
+        "work",
+        "event"
+      ],
+      "strength": "tip"
+    },
+    {
+      "id": "yt-vu-Zj7FWDwY-4",
+      "text": "A plain office suit such as a pinstripe stops looking dull when paired with a more interesting shirt and tie combination.",
+      "why": "Shirt and tie carry the personality of a conservative suit.",
+      "topics": [
+        "suits",
+        "patterns",
+        "shirts"
+      ],
+      "occasions": [
+        "work"
+      ],
+      "strength": "tip"
+    },
+    {
+      "id": "yt-vu-Zj7FWDwY-5",
+      "text": "Wearing one rich dark colour such as brown head to toe can feel heavy; add a white or light piece to lift it.",
+      "why": "A light element breaks up a dense block of colour.",
+      "topics": [
+        "colour"
+      ],
+      "occasions": [],
+      "strength": "tip"
+    },
+    {
+      "id": "yt-vu-Zj7FWDwY-6",
+      "text": "Colours in the same family as your hair and skin tone, such as browns and olives on warm colouring, can look especially rich.",
+      "why": "Tonal harmony with your colouring looks deliberate.",
+      "topics": [
+        "colour"
+      ],
+      "occasions": [],
+      "strength": "opinion"
+    },
+    {
+      "id": "yt-vu-Zj7FWDwY-7",
+      "text": "Light colours are fine in winter; a military-style coat keeps a pale outfit looking tough.",
+      "why": "Season does not have to mean dark colours only.",
+      "topics": [
+        "colour",
+        "outerwear",
+        "weather"
+      ],
+      "occasions": [
+        "casual"
+      ],
+      "strength": "opinion"
+    },
+    {
+      "id": "yt-vu-Zj7FWDwY-8",
+      "text": "Build a real weekend wardrobe instead of wearing your work suit minus the tie.",
+      "why": "A suit without a tie still reads as office clothes.",
+      "topics": [
+        "casual",
+        "wardrobe"
+      ],
+      "occasions": [
+        "casual"
+      ],
+      "strength": "tip"
+    },
+    {
+      "id": "yt-vu-Zj7FWDwY-9",
+      "text": "Spending a little more on better quality pays off: clothes look better, feel better and last longer.",
+      "why": "Quality ages well.",
+      "topics": [
+        "wardrobe"
+      ],
+      "occasions": [],
+      "strength": "tip",
+      "same_as": "buy-less-better"
+    },
+    {
+      "id": "yt-vu-Zj7FWDwY-10",
+      "text": "A turtleneck under a tailored jacket or topcoat makes a casual look feel luxurious without a shirt and tie.",
+      "why": "It is polished yet relaxed.",
+      "topics": [
+        "knitwear",
+        "layering",
+        "smart casual"
+      ],
+      "occasions": [
+        "smart",
+        "night"
+      ],
+      "strength": "tip",
+      "same_as": "turtleneck"
+    },
+    {
+      "id": "yt-vu-Zj7FWDwY-11",
+      "text": "A big man with a short neck looks slimmer in a narrower tie, which visually lengthens the neck.",
+      "why": "The proportion of the tie changes how the neck reads.",
+      "topics": [
+        "accessories",
+        "proportions"
+      ],
+      "occasions": [
+        "work"
+      ],
+      "strength": "opinion"
+    },
+    {
+      "id": "yt-vu-Zj7FWDwY-12",
+      "text": "Jeans should not be so short that they leave a gap above the shoe, and laced shoes should be laced properly.",
+      "why": "Small details make an outfit look careless.",
+      "topics": [
+        "denim",
+        "fit",
+        "shoes"
+      ],
+      "occasions": [
+        "casual"
+      ],
+      "strength": "tip"
+    },
+    {
+      "id": "yt-vu-Zj7FWDwY-15",
+      "text": "For a special evening, a velvet dinner jacket in a rich colour such as deep blue is a stylish alternative to plain black.",
+      "why": "Velvet holds colour beautifully at night.",
+      "topics": [
+        "formal",
+        "fabrics"
+      ],
+      "occasions": [
+        "event"
+      ],
+      "strength": "opinion"
+    }
+  ],
+  "outfits": [
+    {
+      "outfit": "jacket navy slim formal +stripes +suit, shirt light blue smart, trousers navy slim formal +stripes +suit, tie burgundy smart formal, dress-shoes black formal +leather",
+      "occasion": "work",
+      "verdict": "good",
+      "why": "Peak-lapel pinstripe suit with the waist nipped, livened up by the shirt and tie."
+    },
+    {
+      "outfit": "coat charcoal luxury, sweater black smart casual +turtleneck, trousers charcoal smart casual +wool, boots black smart casual +leather",
+      "occasion": "smart",
+      "verdict": "good",
+      "why": "A topcoat over a turtleneck: casual in spirit but a luxe upgrade."
+    },
+    {
+      "outfit": "jacket brown smart casual +suede, tshirt white casual, trousers brown smart casual, boots brown smart casual",
+      "occasion": "casual",
+      "verdict": "good",
+      "why": "Brown tones flatter warm colouring; the white tee stops it feeling heavy."
+    },
+    {
+      "outfit": "sweatshirt casual +graphic, joggers baggy sporty, sneakers casual",
+      "occasion": "work",
+      "verdict": "avoid",
+      "why": "A printed sweatshirt and baggy sweatpants don't say business owner."
+    },
+    {
+      "outfit": "jacket blue smart casual +suit, shirt smart casual, trousers blue smart casual +suit, dress-shoes formal",
+      "occasion": "work",
+      "verdict": "avoid",
+      "why": "A bright blue suit looks dated and loud."
+    }
+  ]
+}

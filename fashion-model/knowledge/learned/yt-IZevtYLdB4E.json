@@ -1,0 +1,56 @@
+{
+  "source": {
+    "kind": "video",
+    "url": "https://www.youtube.com/watch?v=IZevtYLdB4E",
+    "title": "Tom Ford Gives a 30-Year-Old Man an Eyebrow Makeover | Project Upgrade | GQ",
+    "author": ""
+  },
+  "learned_at": "2026-10-16T21:21:28+00:00",
+  "model": "by hand",
+  "tokens": {
+    "in": 0,
+    "out": 0
+  },
+  "tips": [
+    {
+      "id": "yt-IZevtYLdB4E-1",
+      "text": "Have a real weekend wardrobe: don't just wear your work suit without the tie, or jump straight from suit to gym clothes.",
+      "why": "A suit minus tie is still a work uniform.",
+      "topics": [
+        "casual",
+        "wardrobe"
+      ],
+      "occasions": [
+        "casual"
+      ],
+      "strength": "tip",
+      "same_as": "yt-vu-Zj7FWDwY-8"
+    },
+    {
+      "id": "yt-IZevtYLdB4E-2",
+      "text": "Spend a bit more for better quality; clothes look better, feel better and last longer.",
+      "why": "Quality pays back in wear.",
+      "topics": [
+        "wardrobe"
+      ],
+      "occasions": [],
+      "strength": "tip",
+      "same_as": "buy-less-better"
+    },
+    {
+      "id": "yt-IZevtYLdB4E-4",
+      "text": "A badly fitting suit ages you; fit matters more than having a slim cut.",
+      "why": "Poor fit makes you look older and generic.",
+      "topics": [
+        "suits",
+        "fit"
+      ],
+      "occasions": [
+        "work"
+      ],
+      "strength": "tip",
+      "same_as": "fit-first"
+    }
+  ],
+  "outfits": []
+}

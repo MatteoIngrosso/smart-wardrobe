@@ -1,0 +1,352 @@
+{
+  "source": {
+    "kind": "video",
+    "url": "https://www.youtube.com/watch?v=5G_hcUgh510",
+    "title": "Alain Delon Style Breakdown | Why Everything Worked",
+    "author": ""
+  },
+  "learned_at": "2026-10-16T21:21:27+00:00",
+  "model": "by hand",
+  "tokens": {
+    "in": 0,
+    "out": 0
+  },
+  "tips": [
+    {
+      "id": "yt-5G_hcUgh510-1",
+      "text": "Know your measurements and what fits your body; a lean frame of average height looks best between tailored and relaxed, not skin tight.",
+      "why": "Clothes with shape and some ease look natural rather than tense.",
+      "topics": [
+        "fit",
+        "proportions"
+      ],
+      "occasions": [],
+      "strength": "tip"
+    },
+    {
+      "id": "yt-5G_hcUgh510-2",
+      "text": "Looking sharp does not mean everything slim: let clothes have shape but also ease, with nothing too long, short, tight or heavy.",
+      "why": "Balanced proportions stay timeless.",
+      "topics": [
+        "fit",
+        "proportions"
+      ],
+      "occasions": [],
+      "strength": "tip",
+      "same_as": "yt-1usH3SOn4q0-4"
+    },
+    {
+      "id": "yt-5G_hcUgh510-3",
+      "text": "Wear clothes with ease: an open collar and pushed-up sleeves look relaxed; an outfit that looks too perfectly arranged reads as trying too hard.",
+      "why": "Comfort in your clothes is what makes style convincing.",
+      "topics": [
+        "wardrobe"
+      ],
+      "occasions": [
+        "casual",
+        "smart"
+      ],
+      "strength": "opinion",
+      "same_as": "yt-GE_NB4JGeJU-7"
+    },
+    {
+      "id": "yt-5G_hcUgh510-4",
+      "text": "Keep accessories few and give each a purpose; don't bury simple clothes under extra details.",
+      "why": "Restraint makes an outfit look powerful.",
+      "topics": [
+        "accessories"
+      ],
+      "occasions": [],
+      "strength": "tip",
+      "same_as": "accessories-few"
+    },
+    {
+      "id": "yt-5G_hcUgh510-5",
+      "text": "Ignore loud trends; wearing the same well-fitting basics properly beats chasing novelty.",
+      "why": "Simple clothes worn well never date.",
+      "topics": [
+        "wardrobe"
+      ],
+      "occasions": [],
+      "strength": "tip",
+      "same_as": "yt-1usH3SOn4q0-5"
+    },
+    {
+      "id": "yt-5G_hcUgh510-6",
+      "text": "A plain light-coloured button-up shirt is the most versatile base layer; pick shades like light blue that flatter your eyes and skin.",
+      "why": "It goes with everything and frames the face.",
+      "topics": [
+        "shirts",
+        "colour"
+      ],
+      "occasions": [
+        "casual",
+        "smart"
+      ],
+      "strength": "tip",
+      "same_as": "oxford-shirt"
+    },
+    {
+      "id": "yt-5G_hcUgh510-7",
+      "text": "Smooth cotton shirts look sharper and keep the collar in shape; linen shirts look relaxed and sunny.",
+      "why": "The fabric sets the mood of the outfit.",
+      "topics": [
+        "shirts",
+        "fabrics"
+      ],
+      "occasions": [
+        "casual",
+        "smart"
+      ],
+      "strength": "tip"
+    },
+    {
+      "id": "yt-5G_hcUgh510-8",
+      "text": "When dressing formally, do it properly: a well-tailored oxford, quiet colours and everything buttoned as it should be.",
+      "why": "There is a time and place for relaxed details.",
+      "topics": [
+        "formal",
+        "shirts"
+      ],
+      "occasions": [
+        "work",
+        "event"
+      ],
+      "strength": "tip"
+    },
+    {
+      "id": "yt-5G_hcUgh510-9",
+      "text": "Match the looseness of top and bottom: don't pair loose trousers with a tight shirt or the other way round.",
+      "why": "Consistent volume keeps the silhouette coherent.",
+      "topics": [
+        "proportions",
+        "fit"
+      ],
+      "occasions": [],
+      "strength": "tip"
+    },
+    {
+      "id": "yt-5G_hcUgh510-10",
+      "text": "Higher-waisted trousers with a slight taper and the hem just reaching the shoe keep the leg line long and clean.",
+      "why": "Well-falling trousers make the whole outfit look more expensive.",
+      "topics": [
+        "trousers",
+        "fit",
+        "proportions"
+      ],
+      "occasions": [
+        "smart",
+        "work"
+      ],
+      "strength": "tip",
+      "same_as": "trouser-break"
+    },
+    {
+      "id": "yt-5G_hcUgh510-11",
+      "text": "Own trousers in several fabrics, such as cotton twill, linen, chinos and denim, mostly in neutral colours; the same few shapes look different each time.",
+      "why": "Material variety multiplies outfits.",
+      "topics": [
+        "trousers",
+        "fabrics",
+        "wardrobe"
+      ],
+      "occasions": [],
+      "strength": "tip"
+    },
+    {
+      "id": "yt-5G_hcUgh510-12",
+      "text": "Use contrast between shirt and trousers: a dark shirt with light trousers or a white shirt with dark trousers.",
+      "why": "Contrast gives an outfit definition.",
+      "topics": [
+        "colour"
+      ],
+      "occasions": [],
+      "strength": "tip"
+    },
+    {
+      "id": "yt-5G_hcUgh510-13",
+      "text": "Jackets should be structured but not stiff, with clean shoulders and a length that frames the body; not so long it swallows you, not cropped for fashion's sake.",
+      "why": "A balanced jacket supports the outfit instead of dominating it.",
+      "topics": [
+        "outerwear",
+        "fit"
+      ],
+      "occasions": [],
+      "strength": "tip"
+    },
+    {
+      "id": "yt-5G_hcUgh510-14",
+      "text": "Fine-gauge knits that follow the body without clinging dress an outfit down while keeping it classy; avoid very chunky, oversized or clingy knits for this look.",
+      "why": "A clean knit keeps the standard high.",
+      "topics": [
+        "knitwear",
+        "fit"
+      ],
+      "occasions": [
+        "smart",
+        "casual"
+      ],
+      "strength": "tip",
+      "same_as": "knit-fit"
+    },
+    {
+      "id": "yt-5G_hcUgh510-15",
+      "text": "Pick knitwear colours that contrast with the shirts you own: dark charcoal, black or grey knits over white and light blue shirts.",
+      "why": "Without contrast the outfit looks dull.",
+      "topics": [
+        "knitwear",
+        "colour"
+      ],
+      "occasions": [],
+      "strength": "tip"
+    },
+    {
+      "id": "yt-5G_hcUgh510-16",
+      "text": "Choose suit cloth with enough weight to drape; in summer, wear lighter linen and cotton suits in pale colours.",
+      "why": "The right fabric keeps a suit from looking flat or cheap.",
+      "topics": [
+        "suits",
+        "fabrics",
+        "weather"
+      ],
+      "occasions": [
+        "event",
+        "work"
+      ],
+      "strength": "tip"
+    },
+    {
+      "id": "yt-5G_hcUgh510-17",
+      "text": "Wear a suit like ordinary clothes and stay relaxed in it; don't let it make you stiff.",
+      "why": "You should wear the suit, not the other way round.",
+      "topics": [
+        "suits"
+      ],
+      "occasions": [],
+      "strength": "opinion"
+    },
+    {
+      "id": "yt-5G_hcUgh510-18",
+      "text": "A patterned tie can bring life to a plain suit; plain ties look more precise.",
+      "why": "The tie sets the suit's mood.",
+      "topics": [
+        "accessories",
+        "patterns",
+        "suits"
+      ],
+      "occasions": [
+        "work",
+        "event"
+      ],
+      "strength": "tip",
+      "same_as": "yt-vu-Zj7FWDwY-4"
+    },
+    {
+      "id": "yt-5G_hcUgh510-19",
+      "text": "Find one pair of sunglasses that suits your face shape and style and wear it often.",
+      "why": "The right frame becomes a signature.",
+      "topics": [
+        "accessories"
+      ],
+      "occasions": [],
+      "strength": "tip",
+      "same_as": "sunglasses-face"
+    },
+    {
+      "id": "yt-5G_hcUgh510-20",
+      "text": "Keep belts simple: plain black or brown leather with an understated buckle.",
+      "why": "A belt should hold the outfit together, not distract.",
+      "topics": [
+        "accessories"
+      ],
+      "occasions": [],
+      "strength": "tip"
+    },
+    {
+      "id": "yt-5G_hcUgh510-21",
+      "text": "Keep jewellery subtle and in one metal, and wear one simple watch on a leather strap.",
+      "why": "Understated details look classier.",
+      "topics": [
+        "accessories"
+      ],
+      "occasions": [],
+      "strength": "tip",
+      "same_as": "accessories-few"
+    },
+    {
+      "id": "yt-5G_hcUgh510-22",
+      "text": "Loafers suit a relaxed Riviera style; espadrilles or moccasins can be worn without socks in summer.",
+      "why": "Soft slip-ons fit warm-weather tailoring.",
+      "topics": [
+        "shoes",
+        "weather"
+      ],
+      "occasions": [
+        "casual",
+        "smart"
+      ],
+      "strength": "tip"
+    },
+    {
+      "id": "yt-5G_hcUgh510-23",
+      "text": "Swim shorts look classiest fitted and fairly short, around a 15 cm inseam, plain or simply striped; throw an open linen shirt over them.",
+      "why": "Plain, well-fitting swimwear keeps style at the beach.",
+      "topics": [
+        "casual",
+        "weather"
+      ],
+      "occasions": [
+        "casual"
+      ],
+      "strength": "opinion"
+    },
+    {
+      "id": "yt-5G_hcUgh510-24",
+      "text": "A hairstyle should match the mood of your clothes; work with your natural hair rather than against it.",
+      "why": "Hair is part of the overall look.",
+      "topics": [
+        "care"
+      ],
+      "occasions": [],
+      "strength": "opinion"
+    }
+  ],
+  "outfits": [
+    {
+      "outfit": "shirt white relaxed smart casual +linen, trousers beige smart casual +linen, dress-shoes brown formal +leather +loafers",
+      "occasion": "casual",
+      "verdict": "good",
+      "why": "Riviera ease: open linen shirt, light trousers and loafers."
+    },
+    {
+      "outfit": "sweater charcoal slim smart casual, shirt light blue smart casual, trousers grey smart casual +wool, dress-shoes black formal +leather",
+      "occasion": "smart",
+      "verdict": "good",
+      "why": "A dark fine knit over a light shirt gives contrast."
+    },
+    {
+      "outfit": "coat beige smart +trench, jacket charcoal smart casual +suit, shirt white smart casual, trousers charcoal smart casual +suit, tie smart formal +print, dress-shoes black formal",
+      "occasion": "work",
+      "verdict": "good",
+      "why": "A tailored dark suit with a patterned tie and a trench coat of the right length."
+    },
+    {
+      "outfit": "shirt navy smart casual, trousers cream smart casual +cotton, dress-shoes brown formal +loafers +suede, belt brown smart casual +leather",
+      "occasion": "smart",
+      "verdict": "good",
+      "why": "Dark shirt on light trousers: contrast done simply."
+    },
+    {
+      "outfit": "sweater black smart casual, jeans denim casual, dress-shoes black formal +loafers",
+      "occasion": "casual",
+      "verdict": "good",
+      "why": "A plain crew neck with jeans still looks sharp and intentional."
+    },
+    {
+      "outfit": "shirt slim smart casual, trousers wide smart casual, sneakers casual",
+      "occasion": "casual",
+      "verdict": "avoid",
+      "why": "A tight shirt with loose trousers mismatches the volume."
+    }
+  ]
+}

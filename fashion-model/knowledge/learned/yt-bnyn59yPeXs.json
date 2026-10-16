@@ -1,0 +1,231 @@
+{
+  "source": {
+    "kind": "video",
+    "url": "https://www.youtube.com/watch?v=bnyn59yPeXs",
+    "title": "How to Dress Like Tom Ford",
+    "author": ""
+  },
+  "learned_at": "2026-10-16T21:18:34+00:00",
+  "model": "by hand",
+  "tokens": {
+    "in": 0,
+    "out": 0
+  },
+  "tips": [
+    {
+      "id": "yt-bnyn59yPeXs-1",
+      "text": "Wide lapels and a structured, padded shoulder give a suit a strong, sharp silhouette, especially on a tall slim frame.",
+      "why": "Structure adds presence.",
+      "topics": [
+        "suits",
+        "proportions"
+      ],
+      "occasions": [
+        "work",
+        "event"
+      ],
+      "strength": "opinion"
+    },
+    {
+      "id": "yt-bnyn59yPeXs-2",
+      "text": "A black suit is traditionally evening wear; for daytime most men look better in navy or grey.",
+      "why": "Black is harsh in daylight and unflattering on many.",
+      "topics": [
+        "suits",
+        "colour"
+      ],
+      "occasions": [
+        "work"
+      ],
+      "strength": "rule"
+    },
+    {
+      "id": "yt-bnyn59yPeXs-3",
+      "text": "With a black suit, wear black shoes: plain oxfords, derbies or sleek chelsea boots.",
+      "why": "Brown breaks the sharp monochrome look.",
+      "topics": [
+        "shoes",
+        "suits"
+      ],
+      "occasions": [
+        "event",
+        "night"
+      ],
+      "strength": "rule"
+    },
+    {
+      "id": "yt-bnyn59yPeXs-4",
+      "text": "A crisp white shirt gives the strongest contrast with a dark suit.",
+      "why": "High contrast looks sharp and clean.",
+      "topics": [
+        "shirts",
+        "suits",
+        "colour"
+      ],
+      "occasions": [
+        "work",
+        "event"
+      ],
+      "strength": "tip"
+    },
+    {
+      "id": "yt-bnyn59yPeXs-5",
+      "text": "French cuffs with cufflinks are one of the few pieces of jewellery a classic dresser can wear.",
+      "why": "They add detail without looking flashy.",
+      "topics": [
+        "shirts",
+        "accessories"
+      ],
+      "occasions": [
+        "event"
+      ],
+      "strength": "tip"
+    },
+    {
+      "id": "yt-bnyn59yPeXs-6",
+      "text": "Leaving a shirt open three buttons deep is a fashion-world look; in normal settings one or two open buttons is enough.",
+      "why": "Too much chest looks out of place at work.",
+      "topics": [
+        "shirts"
+      ],
+      "occasions": [
+        "work",
+        "night"
+      ],
+      "strength": "tip"
+    },
+    {
+      "id": "yt-bnyn59yPeXs-7",
+      "text": "Skip sneakers with tailoring; leather shoes or boots keep a suit looking strong.",
+      "why": "Trainers weaken the look of a suit.",
+      "topics": [
+        "shoes",
+        "suits"
+      ],
+      "occasions": [
+        "work",
+        "event"
+      ],
+      "strength": "opinion",
+      "same_as": "sneakers-smart"
+    },
+    {
+      "id": "yt-bnyn59yPeXs-8",
+      "text": "Tie the tie with a dimple under the knot; a black knit or silk tie keeps a monochrome outfit coherent.",
+      "why": "A dimple looks finished.",
+      "topics": [
+        "accessories"
+      ],
+      "occasions": [
+        "work",
+        "event"
+      ],
+      "strength": "tip"
+    },
+    {
+      "id": "yt-bnyn59yPeXs-9",
+      "text": "A white pocket square in a simple straight fold is the most understated choice and goes with everything.",
+      "why": "A glimpse of white looks elegant.",
+      "topics": [
+        "accessories",
+        "suits"
+      ],
+      "occasions": [
+        "work",
+        "event"
+      ],
+      "strength": "tip"
+    },
+    {
+      "id": "yt-bnyn59yPeXs-10",
+      "text": "A good watch should be discovered rather than announced, and should suit the rest of the outfit.",
+      "why": "Understated luxury looks more confident.",
+      "topics": [
+        "accessories"
+      ],
+      "occasions": [],
+      "strength": "tip"
+    },
+    {
+      "id": "yt-bnyn59yPeXs-11",
+      "text": "For a rugged casual look, pair slim dark jeans and brown leather boots with a denim shirt and a suede trucker jacket.",
+      "why": "Rugged textures and earth tones dress down well.",
+      "topics": [
+        "casual",
+        "denim"
+      ],
+      "occasions": [
+        "casual"
+      ],
+      "strength": "tip"
+    },
+    {
+      "id": "yt-bnyn59yPeXs-12",
+      "text": "When a dress code says black tie, follow it properly; a midnight navy dinner suit is a valid alternative to black.",
+      "why": "Respecting the dress code is part of dressing well.",
+      "topics": [
+        "formal"
+      ],
+      "occasions": [
+        "event"
+      ],
+      "strength": "rule",
+      "same_as": "black-tie"
+    },
+    {
+      "id": "yt-bnyn59yPeXs-13",
+      "text": "Match the size of a bow tie to the width of your lapels.",
+      "why": "Proportions should agree.",
+      "topics": [
+        "formal",
+        "proportions",
+        "accessories"
+      ],
+      "occasions": [
+        "event"
+      ],
+      "strength": "tip",
+      "same_as": "tie-width"
+    },
+    {
+      "id": "yt-bnyn59yPeXs-14",
+      "text": "A personal uniform works for a public figure, but most men are better served by a variety of outfits for different occasions and moods.",
+      "why": "Real life needs different clothes for different situations.",
+      "topics": [
+        "wardrobe"
+      ],
+      "occasions": [],
+      "strength": "opinion"
+    },
+    {
+      "id": "yt-bnyn59yPeXs-15",
+      "text": "Breaking rules works only when you know them; whatever you wear, put deliberate thought into it.",
+      "why": "Intent is what makes an outfit look stylish.",
+      "topics": [
+        "wardrobe"
+      ],
+      "occasions": [],
+      "strength": "tip"
+    }
+  ],
+  "outfits": [
+    {
+      "outfit": "jacket black slim formal +suit, shirt white formal, trousers black slim formal +suit, tie black smart formal, dress-shoes black formal +leather +oxford",
+      "occasion": "night",
+      "verdict": "good",
+      "why": "Black suit, white shirt, black tie and black shoes: a strong evening monochrome."
+    },
+    {
+      "outfit": "jacket brown smart casual +suede, shirt denim smart casual +denim, jeans navy slim casual, boots brown smart casual +leather, scarf smart casual",
+      "occasion": "casual",
+      "verdict": "good",
+      "why": "Suede trucker, denim shirt, dark jeans and brown boots."
+    },
+    {
+      "outfit": "jacket black smart casual +suit, shirt white smart casual, trousers black smart casual +suit, sneakers white casual",
+      "occasion": "work",
+      "verdict": "avoid",
+      "why": "Sneakers weaken a black suit."
+    }
+  ]
+}

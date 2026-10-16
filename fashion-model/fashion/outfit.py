@@ -69,7 +69,7 @@ class Piece:
         return any(t in self.tags for t in tags)
 
     def __str__(self):
-        words = [self.category, *self.colors, self.fit, *self.styles, *(f"+{t}" for t in sorted(self.tags))]
+        words = [self.category, *self.colors, self.fit, *self.styles, *(f"+{t.replace(' ', '-')}" for t in sorted(self.tags))]
         return " ".join(w for w in words if w)
 
     @classmethod

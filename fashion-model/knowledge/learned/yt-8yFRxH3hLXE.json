@@ -1,0 +1,227 @@
+{
+  "source": {
+    "kind": "video",
+    "url": "https://www.youtube.com/watch?v=8yFRxH3hLXE",
+    "title": "James Bond Style Explained | How to Dress Like 007",
+    "author": ""
+  },
+  "learned_at": "2026-10-16T21:20:35+00:00",
+  "model": "by hand",
+  "tokens": {
+    "in": 0,
+    "out": 0
+  },
+  "tips": [
+    {
+      "id": "yt-8yFRxH3hLXE-1",
+      "text": "Aim to look exceptionally well dressed while seeming barely to have tried: precise, understated clothes with no unnecessary details.",
+      "why": "Restraint reads as confidence.",
+      "topics": [
+        "wardrobe"
+      ],
+      "occasions": [],
+      "strength": "tip"
+    },
+    {
+      "id": "yt-8yFRxH3hLXE-2",
+      "text": "A navy polo with a substantial collar, minimal branding and a fit that follows the body without clinging is one of the most useful casual pieces.",
+      "why": "It sits between a tee and a shirt and goes with chinos, grey trousers or dark denim.",
+      "topics": [
+        "casual",
+        "smart casual"
+      ],
+      "occasions": [
+        "casual",
+        "smart"
+      ],
+      "strength": "tip",
+      "same_as": "polo"
+    },
+    {
+      "id": "yt-8yFRxH3hLXE-3",
+      "text": "A cheap piece that fits beautifully beats an expensive one that fits badly.",
+      "why": "Fit makes far more visual difference than price.",
+      "topics": [
+        "fit"
+      ],
+      "occasions": [],
+      "strength": "rule",
+      "same_as": "fit-first"
+    },
+    {
+      "id": "yt-8yFRxH3hLXE-4",
+      "text": "Stick to a restrained palette of navy, grey, black and camel or other earthy neutrals so nearly everything combines.",
+      "why": "A limited palette multiplies outfits without adding clothes.",
+      "topics": [
+        "colour",
+        "wardrobe"
+      ],
+      "occasions": [],
+      "strength": "tip",
+      "same_as": "capsule"
+    },
+    {
+      "id": "yt-8yFRxH3hLXE-5",
+      "text": "Choose clothes for your own build rather than copying a celebrity's exact cut; slimmer, broader or shorter men need different proportions.",
+      "why": "The goal is the effect, not someone else's measurements.",
+      "topics": [
+        "fit",
+        "proportions"
+      ],
+      "occasions": [],
+      "strength": "tip"
+    },
+    {
+      "id": "yt-8yFRxH3hLXE-6",
+      "text": "Hemming trousers and correcting sleeve lengths makes inexpensive clothes look more expensive than untouched designer pieces.",
+      "why": "Tailoring transforms the silhouette.",
+      "topics": [
+        "fit"
+      ],
+      "occasions": [],
+      "strength": "tip",
+      "same_as": "tailor"
+    },
+    {
+      "id": "yt-8yFRxH3hLXE-7",
+      "text": "With a muted palette, keep outfits interesting through texture: waxed cotton, wool, suede, leather, denim and cashmere together.",
+      "why": "Mixed materials add depth without loud colour.",
+      "topics": [
+        "fabrics",
+        "colour"
+      ],
+      "occasions": [
+        "casual",
+        "smart"
+      ],
+      "strength": "tip",
+      "same_as": "monochrome-texture"
+    },
+    {
+      "id": "yt-8yFRxH3hLXE-8",
+      "text": "A navy sweater with navy trousers can look flat; with dark denim and suede boots it comes alive.",
+      "why": "Contrasting materials break up one colour.",
+      "topics": [
+        "fabrics",
+        "knitwear"
+      ],
+      "occasions": [
+        "casual"
+      ],
+      "strength": "tip",
+      "same_as": "monochrome-texture"
+    },
+    {
+      "id": "yt-8yFRxH3hLXE-9",
+      "text": "A Harrington, simple bomber or lightweight blouson over a polo and jeans makes a timeless urban casual look; the silhouette matters more than the label.",
+      "why": "Clean short jackets suit everyday wear.",
+      "topics": [
+        "outerwear",
+        "casual"
+      ],
+      "occasions": [
+        "casual"
+      ],
+      "strength": "tip"
+    },
+    {
+      "id": "yt-8yFRxH3hLXE-10",
+      "text": "Dress for the setting: a rugged knit in the countryside, a polo and light trousers in the heat, a linen shirt in summer.",
+      "why": "Clothes that suit the place look intentional.",
+      "topics": [
+        "weather",
+        "occasions"
+      ],
+      "occasions": [],
+      "strength": "rule"
+    },
+    {
+      "id": "yt-8yFRxH3hLXE-11",
+      "text": "A clean polo, chinos and loafers or suede shoes is the ideal middle ground between sloppy and formal.",
+      "why": "Casual clothes held to formal standards of fit.",
+      "topics": [
+        "smart casual"
+      ],
+      "occasions": [
+        "smart"
+      ],
+      "strength": "tip"
+    },
+    {
+      "id": "yt-8yFRxH3hLXE-12",
+      "text": "Suede chukkas bridge rugged and refined: smarter than sneakers, less formal than dress shoes, and they go with almost any trousers.",
+      "why": "Versatile shoes cover more outfits.",
+      "topics": [
+        "shoes"
+      ],
+      "occasions": [
+        "casual",
+        "smart"
+      ],
+      "strength": "tip"
+    },
+    {
+      "id": "yt-8yFRxH3hLXE-13",
+      "text": "A few versatile shoes cover most needs: dark chukkas, dark leather boots, clean minimal sneakers and a pair of loafers.",
+      "why": "Shoes that cross categories save money.",
+      "topics": [
+        "shoes",
+        "wardrobe"
+      ],
+      "occasions": [],
+      "strength": "tip"
+    },
+    {
+      "id": "yt-8yFRxH3hLXE-14",
+      "text": "Spend selectively: more on a jacket, coat or boots you'll wear for years, less on basic T-shirts.",
+      "why": "Quality matters most where wear is heaviest.",
+      "topics": [
+        "wardrobe"
+      ],
+      "occasions": [],
+      "strength": "tip"
+    },
+    {
+      "id": "yt-8yFRxH3hLXE-15",
+      "text": "Don't wear every piece associated with a style icon at once; the result looks like cosplay.",
+      "why": "Subtle inspiration looks stylish; a full copy looks like a costume.",
+      "topics": [
+        "wardrobe"
+      ],
+      "occasions": [],
+      "strength": "tip"
+    }
+  ],
+  "outfits": [
+    {
+      "outfit": "polo navy slim smart casual preppy, jeans navy casual, boots brown smart casual +leather, watch",
+      "occasion": "casual",
+      "verdict": "good",
+      "why": "Navy polo, dark jeans and brown boots: understated and masculine."
+    },
+    {
+      "outfit": "jacket navy smart casual +harrington, polo navy smart casual preppy, jeans navy casual, boots brown smart casual +suede",
+      "occasion": "casual",
+      "verdict": "good",
+      "why": "The Harrington, polo and jeans look."
+    },
+    {
+      "outfit": "jacket olive smart casual +waxed, sweater navy smart casual +wool, jeans navy casual, boots brown smart casual +leather",
+      "occasion": "casual",
+      "verdict": "good",
+      "why": "Waxed cotton, knitwear, denim and leather: muted colours, rich textures."
+    },
+    {
+      "outfit": "polo navy smart casual preppy, trousers beige smart casual +chinos, dress-shoes brown formal +loafers +suede",
+      "occasion": "smart",
+      "verdict": "good",
+      "why": "The middle ground: polo, chinos and suede loafers."
+    },
+    {
+      "outfit": "jacket brown smart casual +suede, shirt white smart casual, trousers grey smart casual, boots brown smart casual +chukka +suede",
+      "occasion": "smart",
+      "verdict": "good",
+      "why": "A brown suede jacket over a white shirt with grey trousers and chukkas."
+    }
+  ]
+}

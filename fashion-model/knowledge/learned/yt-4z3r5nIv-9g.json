@@ -1,0 +1,147 @@
+{
+  "source": {
+    "kind": "video",
+    "url": "https://www.youtube.com/watch?v=4z3r5nIv-9g",
+    "title": "Rebuilding My Wardrobe with ONLY Cotton On...",
+    "author": ""
+  },
+  "learned_at": "2026-10-16T21:19:58+00:00",
+  "model": "by hand",
+  "tokens": {
+    "in": 0,
+    "out": 0
+  },
+  "tips": [
+    {
+      "id": "yt-4z3r5nIv-9g-1",
+      "text": "When building a wardrobe from scratch, balance categories: a few bottoms, a few tops, a layer and one pair of shoes, rather than many of one thing.",
+      "why": "A balanced set makes more outfits.",
+      "topics": [
+        "wardrobe"
+      ],
+      "occasions": [
+        "casual"
+      ],
+      "strength": "tip"
+    },
+    {
+      "id": "yt-4z3r5nIv-9g-2",
+      "text": "Skip colours you already own several of; add pieces that expand your rotation instead.",
+      "why": "Duplicates add little new outfit potential.",
+      "topics": [
+        "wardrobe"
+      ],
+      "occasions": [],
+      "strength": "tip"
+    },
+    {
+      "id": "yt-4z3r5nIv-9g-3",
+      "text": "A matching sweatsuit only works when top and bottom are truly the same shade; near-misses look accidental.",
+      "why": "Slightly different tones of one colour clash.",
+      "topics": [
+        "colour",
+        "streetwear"
+      ],
+      "occasions": [
+        "casual"
+      ],
+      "strength": "tip"
+    },
+    {
+      "id": "yt-4z3r5nIv-9g-4",
+      "text": "Avoid wearing a colour almost identical to your skin tone head to toe; it washes you out.",
+      "why": "You need some contrast with your skin.",
+      "topics": [
+        "colour"
+      ],
+      "occasions": [],
+      "strength": "tip",
+      "same_as": "colour-skin"
+    },
+    {
+      "id": "yt-4z3r5nIv-9g-5",
+      "text": "A boxy T-shirt should fall at the waist with sleeves reaching below mid-upper-arm; very short sleeves look shrunken on a boxy cut.",
+      "why": "Boxy proportions need length in the sleeve.",
+      "topics": [
+        "fit",
+        "streetwear"
+      ],
+      "occasions": [
+        "casual"
+      ],
+      "strength": "opinion"
+    },
+    {
+      "id": "yt-4z3r5nIv-9g-6",
+      "text": "A subtle print on the back of a tee with little or nothing on the front looks cleaner than a loud front graphic.",
+      "why": "Quiet graphics look more considered.",
+      "topics": [
+        "streetwear"
+      ],
+      "occasions": [
+        "casual"
+      ],
+      "strength": "opinion",
+      "same_as": "logos"
+    },
+    {
+      "id": "yt-4z3r5nIv-9g-7",
+      "text": "Plain socks without visible logos look tidier with clogs and sandals.",
+      "why": "Branded socks distract.",
+      "topics": [
+        "accessories",
+        "shoes"
+      ],
+      "occasions": [
+        "casual"
+      ],
+      "strength": "tip"
+    },
+    {
+      "id": "yt-4z3r5nIv-9g-8",
+      "text": "Baggy bootcut jeans pair naturally with boots; their flare sits over the shoe.",
+      "why": "The cut was made for boots.",
+      "topics": [
+        "denim",
+        "shoes"
+      ],
+      "occasions": [
+        "casual"
+      ],
+      "strength": "tip"
+    },
+    {
+      "id": "yt-4z3r5nIv-9g-9",
+      "text": "Think about colour before buying a layer: a brown zip-up goes with darker or bootcut jeans and a white tee more easily than with a busy graphic.",
+      "why": "Check new pieces against what you will wear them with.",
+      "topics": [
+        "colour",
+        "layering"
+      ],
+      "occasions": [
+        "casual"
+      ],
+      "strength": "tip"
+    }
+  ],
+  "outfits": [
+    {
+      "outfit": "tshirt black oversized vintage +graphic, jeans denim baggy casual, zip-hoodie grey casual, sneakers casual",
+      "occasion": "casual",
+      "verdict": "good",
+      "why": "Vintage-look band tee, baggy faded jeans and an open grey zip-up for autumn."
+    },
+    {
+      "outfit": "tshirt white oversized casual, zip-hoodie brown casual, jeans denim wide casual +bootcut, boots brown smart casual",
+      "occasion": "casual",
+      "verdict": "good",
+      "why": "Bootcut jeans with boots, a white tee and a brown zip-up."
+    },
+    {
+      "outfit": "tshirt white oversized casual, joggers navy baggy sporty, sneakers casual",
+      "occasion": "casual",
+      "verdict": "good",
+      "why": "Comfortable lounge outfit: boxy tee and baggy sweatpants."
+    }
+  ]
+}

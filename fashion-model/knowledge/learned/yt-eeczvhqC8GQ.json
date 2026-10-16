@@ -1,0 +1,102 @@
+{
+  "source": {
+    "kind": "video",
+    "url": "https://www.youtube.com/watch?v=eeczvhqC8GQ",
+    "title": "11 Things You Only Need To Buy Once (they will last forever)",
+    "author": ""
+  },
+  "learned_at": "2026-10-16T21:23:17+00:00",
+  "model": "by hand",
+  "tokens": {
+    "in": 0,
+    "out": 0
+  },
+  "tips": [
+    {
+      "id": "yt-eeczvhqC8GQ-1",
+      "text": "A waxed cotton or canvas jacket is a buy-for-life piece: hard-wearing, easy to repair and re-waxable when it loses its water resistance.",
+      "why": "Unlike plastic-coated jackets, it can be renewed and gains patina.",
+      "topics": [
+        "outerwear",
+        "fabrics",
+        "weather"
+      ],
+      "occasions": [
+        "casual"
+      ],
+      "strength": "tip"
+    },
+    {
+      "id": "yt-eeczvhqC8GQ-2",
+      "text": "Choose Goodyear-welted (or Blake-stitched) leather boots and shoes; they can be resoled instead of thrown away.",
+      "why": "A glued sole that fails ends the shoe.",
+      "topics": [
+        "shoes",
+        "care"
+      ],
+      "occasions": [],
+      "strength": "tip"
+    },
+    {
+      "id": "yt-eeczvhqC8GQ-3",
+      "text": "Good full-grain leather shoes mould to your feet over time and polish back up beautifully.",
+      "why": "Quality leather gets more comfortable with wear.",
+      "topics": [
+        "shoes",
+        "care"
+      ],
+      "occasions": [],
+      "strength": "tip"
+    },
+    {
+      "id": "yt-eeczvhqC8GQ-4",
+      "text": "Merino wool socks are worth paying more for: comfortable, temperature regulating and long-lasting.",
+      "why": "You wear socks every day.",
+      "topics": [
+        "accessories",
+        "fabrics"
+      ],
+      "occasions": [],
+      "strength": "tip"
+    },
+    {
+      "id": "yt-eeczvhqC8GQ-5",
+      "text": "Buy belts in single-piece full-grain leather; 'genuine leather' is often bonded scraps that split.",
+      "why": "Full-grain leather lasts and ages well.",
+      "topics": [
+        "accessories",
+        "fabrics"
+      ],
+      "occasions": [],
+      "strength": "tip"
+    },
+    {
+      "id": "yt-eeczvhqC8GQ-6",
+      "text": "A mechanical watch in a timeless design, such as a field watch, outlasts a smartwatch; swap a fabric strap for steel to dress it up.",
+      "why": "It keeps working for decades with care.",
+      "topics": [
+        "accessories"
+      ],
+      "occasions": [],
+      "strength": "tip"
+    },
+    {
+      "id": "yt-eeczvhqC8GQ-7",
+      "text": "A full-grain leather duffel is a smart, durable travel bag that is easy to style.",
+      "why": "Good leather looks better with age.",
+      "topics": [
+        "accessories"
+      ],
+      "occasions": [],
+      "strength": "opinion"
+    }
+  ],
+  "outfits": [
+    {
+      "outfit": "jacket olive smart casual +waxed, sweater grey smart casual +wool, jeans navy casual, boots brown smart casual +leather, belt brown smart casual +leather, watch",
+      "occasion": "casual",
+      "verdict": "good",
+      "why": "Buy-for-life pieces: waxed jacket, welted leather boots, full-grain belt and a field watch."
+    }
+  ]
+}
