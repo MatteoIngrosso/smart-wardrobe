@@ -150,6 +150,7 @@ Settings shows how many requests and tokens were used this month.
 - `sample/`: resized copies of your photos (`*.jpg`), their cut-outs (`cut/*.webp`) and `seed.js`, which holds the catalogue data for them
 - `manifest.webmanifest`, `icon.svg`: let you install the app on the home screen
 - `tools/build_preview.py`: builds a one-page copy in `dist/` for the Claude preview
+- `fashion-model/`: a Python menswear model that learns from videos, magazines and styling rules and builds the "fashion bible" for the app (not used by the app yet, never served; see its README)
 
 ## How changes are made
 `main` always holds the working app. Every update goes on its own branch (for example `update/weather-offline`) with a pull request describing what changed, and is merged into `main` once it's checked.
