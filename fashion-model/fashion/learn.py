@@ -99,9 +99,27 @@ def learn(src, key=None, model=DEFAULT_MODEL, force=False, log=print):
     known = known_tips()
     system = SYSTEM + "\n\nKNOWN TIPS:\n" + "\n".join(f"{t['id']}: {t['text'][:90]}" for t in known)
     data, usage = generate_json(system, f"Title: {s['title']}\nBy: {s['author']}\n\n{s['text']}", SCHEMA, key=key, model=model)
-    tips, outfits = clean_tips(data.get("tips", []), {t["id"] for t in known}), clean_outfits(data.get("outfits", []))
+    return save(src, s, data, {t["id"] for t in known}, model, usage, log)
+
+
+def add(src, data, log=print):
+    """Learn from a source read some other way (by you, or by another AI): `data` has the same
+    shape as Gemini's answer ({title, tips, outfits}, see `instructions()`). Checked and saved
+    exactly like a Gemini answer."""
+    from .sources import youtube_id
+    vid = youtube_id(src)
+    kind = "video" if vid else "article" if src.startswith(("http://", "https://")) else "file"
+    url = f"https://www.youtube.com/watch?v={vid}" if vid else src
+    meta = {"kind": kind, "url": url, "title": data.get("title") or url, "author": data.get("author", "")}
+    return save(src, meta, data, {t["id"] for t in merged_tips()}, "by hand", None, log)
+
+
+def save(src, meta, data, known_ids, model, usage=None, log=print):
+    path = learnt_path(src)
+    usage = usage or {"in": 0, "out": 0}
+    tips, outfits = clean_tips(data.get("tips", []), known_ids), clean_outfits(data.get("outfits", []))
     record = {
-        "source": {"kind": s["kind"], "url": s["url"], "title": data.get("title") or s["title"], "author": s["author"]},
+        "source": {"kind": meta["kind"], "url": meta["url"], "title": data.get("title") or meta["title"], "author": meta.get("author", "")},
         "learned_at": datetime.now(timezone.utc).isoformat(timespec="seconds"),
         "model": model,
         "tokens": usage,
@@ -110,8 +128,30 @@ def learn(src, key=None, model=DEFAULT_MODEL, force=False, log=print):
     }
     LEARNED.mkdir(parents=True, exist_ok=True)
     path.write_text(json.dumps(record, indent=2, ensure_ascii=False) + "\n", encoding="utf-8")
-    log(f"  learnt {len(tips)} tips and {len(outfits)} outfits ({usage['in']:,} tokens in, {usage['out']:,} out) -> {path.name}")
+    spent = f" ({usage['in']:,} tokens in, {usage['out']:,} out)" if usage["in"] else ""
+    log(f"  learnt {len(tips)} tips and {len(outfits)} outfits{spent} -> {path.name}")
     return path
+
+
+def instructions():
+    """What Gemini is told, as text, for reading a source without Gemini and saving it with `add`."""
+    known = known_tips()
+    return "\n".join([
+        SYSTEM, "",
+        "Answer with JSON only, shaped like this:",
+        '{"title": "...", "tips": [{"text": "...", "why": "...", "topics": ["..."], "occasions": ["..."], '
+        '"strength": "rule|tip|opinion", "same_as": "known tip id, or leave out"}], '
+        '"outfits": [{"pieces": [{"type": "...", "colour": "...", "fit": "...", "style": "...", "tags": ["..."]}], '
+        '"occasion": "...", "verdict": "good|avoid", "why": "..."}]}',
+        "Allowed values:",
+        f"- topics: {', '.join(TOPICS)}",
+        f"- occasions: {', '.join(OCCASIONS)}",
+        f"- type: {', '.join(CATS)} (also: blazer, chinos, loafers, chelsea, oxfords, cardigan, turtleneck, parka...)",
+        f"- colour: {', '.join(COLORS)}",
+        f"- fit: {', '.join(FITS)}",
+        f"- style: {', '.join(STYLES)}",
+        "", "KNOWN TIPS:", *(f"{t['id']}: {t['text'][:90]}" for t in known),
+    ])
 
 
 def known_tips(limit=150):
