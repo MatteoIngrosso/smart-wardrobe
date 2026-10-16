@@ -1,0 +1,157 @@
+{
+  "source": {
+    "kind": "video",
+    "url": "https://www.youtube.com/watch?v=srEM8hMRVgE",
+    "title": "A TAKE ON MODERN TAILORING | In Conversation with Mike Amiri & GQ Italia",
+    "author": ""
+  },
+  "learned_at": "2026-10-16T21:19:28+00:00",
+  "model": "by hand",
+  "tokens": {
+    "in": 0,
+    "out": 0
+  },
+  "tips": [
+    {
+      "id": "yt-srEM8hMRVgE-1",
+      "text": "Build a look around one hero piece and keep the rest supporting it; stop before it turns into a costume.",
+      "why": "Too many statements make an outfit feel unreal.",
+      "topics": [
+        "wardrobe",
+        "streetwear"
+      ],
+      "occasions": [],
+      "strength": "tip",
+      "same_as": "streetwear-base"
+    },
+    {
+      "id": "yt-srEM8hMRVgE-2",
+      "text": "A statement tuxedo-style blazer can be dressed down with dark creased jeans and boots instead of matching trousers.",
+      "why": "Mixing tailoring with denim makes a formal piece wearable.",
+      "topics": [
+        "smart casual",
+        "denim",
+        "suits"
+      ],
+      "occasions": [
+        "night",
+        "smart"
+      ],
+      "strength": "opinion"
+    },
+    {
+      "id": "yt-srEM8hMRVgE-3",
+      "text": "Start with silhouette: high-waisted trousers with a crease and a jacket with a defined shoulder give tailoring a strong frame.",
+      "why": "Proportion is the foundation of good tailoring.",
+      "topics": [
+        "suits",
+        "proportions",
+        "trousers"
+      ],
+      "occasions": [
+        "work",
+        "night"
+      ],
+      "strength": "tip"
+    },
+    {
+      "id": "yt-srEM8hMRVgE-4",
+      "text": "When mixing a bold patterned shirt with tailoring, choose muted colours that blend with the suit rather than loud ones.",
+      "why": "Toned-down patterns stay believable and wearable.",
+      "topics": [
+        "patterns",
+        "shirts"
+      ],
+      "occasions": [
+        "night"
+      ],
+      "strength": "tip"
+    },
+    {
+      "id": "yt-srEM8hMRVgE-5",
+      "text": "Pinstripe spacing changes the mood: wide and bold looks like a banker, very close looks slick.",
+      "why": "Pattern scale sets formality.",
+      "topics": [
+        "suits",
+        "patterns"
+      ],
+      "occasions": [
+        "work"
+      ],
+      "strength": "opinion"
+    },
+    {
+      "id": "yt-srEM8hMRVgE-6",
+      "text": "Pointed boots under creased trousers extend the line of the leg; with a higher waist they make legs look longer.",
+      "why": "An unbroken vertical line adds height.",
+      "topics": [
+        "shoes",
+        "proportions"
+      ],
+      "occasions": [
+        "night"
+      ],
+      "strength": "tip"
+    },
+    {
+      "id": "yt-srEM8hMRVgE-7",
+      "text": "Clothes should amplify your personality, not wear you; one personal touch such as a belt buckle, a pin, necklaces or a vintage watch makes tailoring yours.",
+      "why": "Wearing something comfortably is what makes it look good.",
+      "topics": [
+        "accessories",
+        "wardrobe"
+      ],
+      "occasions": [],
+      "strength": "tip"
+    },
+    {
+      "id": "yt-srEM8hMRVgE-8",
+      "text": "A plain T-shirt under a suit can look great if you wear it with ease.",
+      "why": "Confidence and comfort sell the look.",
+      "topics": [
+        "suits",
+        "smart casual"
+      ],
+      "occasions": [
+        "night",
+        "smart"
+      ],
+      "strength": "opinion"
+    },
+    {
+      "id": "yt-srEM8hMRVgE-9",
+      "text": "For hot weather, choose half-canvas, light jackets with a light silk or open shirt so a suit can go from lunch to dinner.",
+      "why": "Light construction keeps tailoring wearable in heat.",
+      "topics": [
+        "suits",
+        "weather",
+        "fabrics"
+      ],
+      "occasions": [
+        "smart",
+        "night"
+      ],
+      "strength": "tip"
+    }
+  ],
+  "outfits": [
+    {
+      "outfit": "jacket black luxury +blazer +tuxedo, shirt white smart casual, jeans navy straight casual, boots black smart casual +leather +western",
+      "occasion": "night",
+      "verdict": "good",
+      "why": "A tuxedo blazer as the hero piece, subverted with creased jeans and western boots."
+    },
+    {
+      "outfit": "jacket navy smart casual +stripes +suit, shirt white smart casual +polka, trousers navy smart casual +stripes +suit, boots black smart casual +western",
+      "occasion": "night",
+      "verdict": "good",
+      "why": "Pinstripe suit with a polka-dot shirt and pointed boots: rock and roll meets business."
+    },
+    {
+      "outfit": "jacket charcoal smart casual +suit, tshirt white casual, trousers charcoal smart casual +suit, dress-shoes black formal",
+      "occasion": "night",
+      "verdict": "good",
+      "why": "A white tee under a suit, worn with ease."
+    }
+  ]
+}

@@ -1,0 +1,86 @@
+{
+  "source": {
+    "kind": "video",
+    "url": "https://www.youtube.com/watch?v=hDKTb01rupA",
+    "title": "PERCHÉ NON TUTTI I CAPI MADE IN ITALY SONO UGUALI con Mattia Berveglieri | Live Talk @ WHITE Milano",
+    "author": ""
+  },
+  "learned_at": "2026-10-16T21:22:12+00:00",
+  "model": "by hand",
+  "tokens": {
+    "in": 0,
+    "out": 0
+  },
+  "tips": [
+    {
+      "id": "yt-hDKTb01rupA-1",
+      "text": "Read the composition label before buying: favour natural fibres such as cotton, wool and cashmere over polyester and other plastics.",
+      "why": "Fibre content says more about quality than brand or price.",
+      "topics": [
+        "fabrics",
+        "wardrobe"
+      ],
+      "occasions": [],
+      "strength": "tip",
+      "same_as": "buy-less-better"
+    },
+    {
+      "id": "yt-hDKTb01rupA-2",
+      "text": "Don't pay luxury prices for jackets made of polyurethane or other plastic coatings.",
+      "why": "The material is cheap and ages badly whatever the label says.",
+      "topics": [
+        "fabrics",
+        "outerwear"
+      ],
+      "occasions": [],
+      "strength": "tip"
+    },
+    {
+      "id": "yt-hDKTb01rupA-3",
+      "text": "For hoodies and sweatshirts, a heavy fleece of around 400 to 500 grams per square metre is a sign of quality.",
+      "why": "Heavier fabric holds its shape and lasts longer.",
+      "topics": [
+        "fabrics",
+        "casual"
+      ],
+      "occasions": [
+        "casual"
+      ],
+      "strength": "tip"
+    },
+    {
+      "id": "yt-hDKTb01rupA-4",
+      "text": "A plain T-shirt in premium cotton with careful stitching can justify a higher price; a very cheap tee usually cuts corners on fibre, dye or labour.",
+      "why": "Good fabric and assembly cost money.",
+      "topics": [
+        "fabrics",
+        "wardrobe"
+      ],
+      "occasions": [],
+      "strength": "tip"
+    },
+    {
+      "id": "yt-hDKTb01rupA-5",
+      "text": "A 'Made in Italy' label often only means the garment was sewn there; it doesn't guarantee Italian fabric or better quality than good makers elsewhere, such as in Portugal.",
+      "why": "Judge the garment, not just the country on the tag.",
+      "topics": [
+        "wardrobe",
+        "fabrics"
+      ],
+      "occasions": [],
+      "strength": "tip"
+    },
+    {
+      "id": "yt-hDKTb01rupA-6",
+      "text": "Before buying a coat sold as wool, check how much wool is really in it; a large share of polyester lowers its warmth and value.",
+      "why": "Blends are often marketed as wool.",
+      "topics": [
+        "fabrics",
+        "outerwear"
+      ],
+      "occasions": [],
+      "strength": "tip"
+    }
+  ],
+  "outfits": []
+}

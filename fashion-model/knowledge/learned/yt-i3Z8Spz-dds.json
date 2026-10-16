@@ -1,0 +1,54 @@
+{
+  "source": {
+    "kind": "video",
+    "url": "https://www.youtube.com/watch?v=i3Z8Spz-dds",
+    "title": "Cody Rhodes Goes Sneaker Shopping With Complex",
+    "author": ""
+  },
+  "learned_at": "2026-10-16T21:21:49+00:00",
+  "model": "by hand",
+  "tokens": {
+    "in": 0,
+    "out": 0
+  },
+  "tips": [
+    {
+      "id": "yt-i3Z8Spz-dds-1",
+      "text": "If your feet get wider, pick sneaker models or low-tops that fit wide, or go up a size, rather than squeezing into your old size.",
+      "why": "Shoes that fit are worn more and look better.",
+      "topics": [
+        "shoes",
+        "fit"
+      ],
+      "occasions": [
+        "casual"
+      ],
+      "strength": "tip"
+    },
+    {
+      "id": "yt-i3Z8Spz-dds-2",
+      "text": "Rotate your sneakers instead of wearing the same pair day after day.",
+      "why": "Rotation keeps shoes fresh and lasting longer.",
+      "topics": [
+        "shoes",
+        "care"
+      ],
+      "occasions": [
+        "casual"
+      ],
+      "strength": "opinion"
+    },
+    {
+      "id": "yt-i3Z8Spz-dds-3",
+      "text": "A well-made custom suit does more for your wardrobe than a rare, expensive pair of sneakers.",
+      "why": "Tailoring is useful far more often than a collector's shoe.",
+      "topics": [
+        "suits",
+        "wardrobe"
+      ],
+      "occasions": [],
+      "strength": "opinion"
+    }
+  ],
+  "outfits": []
+}

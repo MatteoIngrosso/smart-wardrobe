@@ -1,0 +1,45 @@
+{
+  "source": {
+    "kind": "video",
+    "url": "https://www.youtube.com/watch?v=-KycKAj_bkg",
+    "title": "Tom Ford Breaks Down 20 Looks From 1981 to Now | Life in Looks | Vogue",
+    "author": ""
+  },
+  "learned_at": "2026-10-16T21:24:23+00:00",
+  "model": "by hand",
+  "tokens": {
+    "in": 0,
+    "out": 0
+  },
+  "tips": [
+    {
+      "id": "yt--KycKAj_bkg-1",
+      "text": "Statement suits in velvet, metallic or beaded fabrics are red-carpet pieces; they work only if you have the confidence and the occasion for them.",
+      "why": "Bold cloth demands the right setting.",
+      "topics": [
+        "suits",
+        "formal"
+      ],
+      "occasions": [
+        "event",
+        "night"
+      ],
+      "strength": "opinion"
+    },
+    {
+      "id": "yt--KycKAj_bkg-2",
+      "text": "A red velvet suit can be a memorable evening look for someone who wants to stand out.",
+      "why": "Velvet carries rich colour well at night.",
+      "topics": [
+        "suits",
+        "fabrics"
+      ],
+      "occasions": [
+        "event",
+        "night"
+      ],
+      "strength": "opinion"
+    }
+  ],
+  "outfits": []
+}

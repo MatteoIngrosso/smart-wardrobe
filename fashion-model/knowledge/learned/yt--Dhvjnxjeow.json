@@ -1,0 +1,70 @@
+{
+  "source": {
+    "kind": "video",
+    "url": "https://www.youtube.com/watch?v=-Dhvjnxjeow",
+    "title": "What Are People Wearing in Tokyo? (Fashion Trends 2026 Street Style Ep.207)",
+    "author": ""
+  },
+  "learned_at": "2026-10-16T21:22:44+00:00",
+  "model": "by hand",
+  "tokens": {
+    "in": 0,
+    "out": 0
+  },
+  "tips": [
+    {
+      "id": "yt--Dhvjnxjeow-1",
+      "text": "Mix second-hand and vintage finds, such as a 90s puffer or old denim, with newer pieces; thrifted items make a street outfit personal.",
+      "why": "Unique vintage pieces stop an outfit looking bought off one rack.",
+      "topics": [
+        "streetwear",
+        "wardrobe"
+      ],
+      "occasions": [
+        "casual"
+      ],
+      "strength": "opinion"
+    },
+    {
+      "id": "yt--Dhvjnxjeow-2",
+      "text": "A head-to-toe workwear look, such as a canvas work jacket with work trousers and chunky sneakers, is an easy streetwear uniform.",
+      "why": "Sturdy, plain workwear reads cool without effort.",
+      "topics": [
+        "streetwear",
+        "casual"
+      ],
+      "occasions": [
+        "casual"
+      ],
+      "strength": "opinion"
+    },
+    {
+      "id": "yt--Dhvjnxjeow-3",
+      "text": "If you work behind the scenes or want to blend in, an all-black outfit of simple basics is practical and always looks put together.",
+      "why": "Black basics are discreet and easy to combine.",
+      "topics": [
+        "colour",
+        "casual"
+      ],
+      "occasions": [
+        "casual",
+        "work"
+      ],
+      "strength": "tip"
+    }
+  ],
+  "outfits": [
+    {
+      "outfit": "jacket brown streetwear +canvas, hoodie grey casual, trousers brown baggy streetwear, sneakers black casual",
+      "occasion": "casual",
+      "verdict": "good",
+      "why": "Workwear jacket and work trousers with chunky sneakers."
+    },
+    {
+      "outfit": "tshirt black casual, trousers black smart casual, jacket black outdoor, sneakers casual",
+      "occasion": "casual",
+      "verdict": "good",
+      "why": "All-black basics: practical and tidy."
+    }
+  ]
+}

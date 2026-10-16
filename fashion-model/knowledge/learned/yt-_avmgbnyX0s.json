@@ -1,0 +1,93 @@
+{
+  "source": {
+    "kind": "video",
+    "url": "https://www.youtube.com/watch?v=_avmgbnyX0s",
+    "title": "THE LAST Fragrance Guide You Will EVER Need",
+    "author": ""
+  },
+  "learned_at": "2026-10-16T21:22:45+00:00",
+  "model": "by hand",
+  "tokens": {
+    "in": 0,
+    "out": 0
+  },
+  "tips": [
+    {
+      "id": "yt-_avmgbnyX0s-1",
+      "text": "Match fragrance to the season: light, fresh scents such as citrus for hot days, stronger sweet scents for cold weather and evenings.",
+      "why": "Heavy scents overwhelm in heat; light ones vanish in the cold.",
+      "topics": [
+        "care",
+        "weather"
+      ],
+      "occasions": [],
+      "strength": "tip"
+    },
+    {
+      "id": "yt-_avmgbnyX0s-2",
+      "text": "If you own only one fragrance, make it a fresh, not-too-loud one that suits every occasion.",
+      "why": "Smelling fresh is never wrong; smelling very sweet often is.",
+      "topics": [
+        "care"
+      ],
+      "occasions": [],
+      "strength": "tip"
+    },
+    {
+      "id": "yt-_avmgbnyX0s-3",
+      "text": "Add a sweeter, warmer fragrance as your second, for evenings, dates and winter.",
+      "why": "Two scents cover day and night.",
+      "topics": [
+        "care"
+      ],
+      "occasions": [
+        "night"
+      ],
+      "strength": "tip"
+    },
+    {
+      "id": "yt-_avmgbnyX0s-4",
+      "text": "Don't wear a heavy sweet fragrance to the gym or in close quiet places like a library.",
+      "why": "Strong scent in the wrong place bothers people around you.",
+      "topics": [
+        "care",
+        "occasions"
+      ],
+      "occasions": [
+        "gym"
+      ],
+      "strength": "tip"
+    },
+    {
+      "id": "yt-_avmgbnyX0s-5",
+      "text": "Spray strong scents about three times (sides of the neck and a wrist), lighter fresh scents about five, and adjust to each fragrance.",
+      "why": "Concentration varies, so dose accordingly.",
+      "topics": [
+        "care"
+      ],
+      "occasions": [],
+      "strength": "tip"
+    },
+    {
+      "id": "yt-_avmgbnyX0s-6",
+      "text": "Use an unscented deodorant so it doesn't clash with your fragrance.",
+      "why": "Competing scents muddy each other.",
+      "topics": [
+        "care"
+      ],
+      "occasions": [],
+      "strength": "tip"
+    },
+    {
+      "id": "yt-_avmgbnyX0s-7",
+      "text": "EDT, EDP and extrait are concentrations; higher usually lasts longer, but versions with the same name often smell different, so test each.",
+      "why": "The label doesn't guarantee the same scent.",
+      "topics": [
+        "care"
+      ],
+      "occasions": [],
+      "strength": "tip"
+    }
+  ],
+  "outfits": []
+}

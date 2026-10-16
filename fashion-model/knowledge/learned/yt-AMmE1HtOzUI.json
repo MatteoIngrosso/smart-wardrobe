@@ -1,0 +1,130 @@
+{
+  "source": {
+    "kind": "video",
+    "url": "https://www.youtube.com/watch?v=AMmE1HtOzUI",
+    "title": "The Only 5 Shoes Everyone Should Own",
+    "author": ""
+  },
+  "learned_at": "2026-10-16T21:23:18+00:00",
+  "model": "by hand",
+  "tokens": {
+    "in": 0,
+    "out": 0
+  },
+  "tips": [
+    {
+      "id": "yt-AMmE1HtOzUI-1",
+      "text": "Five shoes cover almost everything: a daily shoe, an active shoe, a dressy shoe, a beater for bad weather and chores, and a comfort shoe.",
+      "why": "Each role gets covered without buying pairs you never wear.",
+      "topics": [
+        "shoes",
+        "wardrobe"
+      ],
+      "occasions": [],
+      "strength": "tip"
+    },
+    {
+      "id": "yt-AMmE1HtOzUI-2",
+      "text": "Your daily shoe must be versatile, durable and comfortable; a retro runner in a clean colourway works with most casual outfits.",
+      "why": "You wear it more than any other pair.",
+      "topics": [
+        "shoes",
+        "casual"
+      ],
+      "occasions": [
+        "casual"
+      ],
+      "strength": "tip"
+    },
+    {
+      "id": "yt-AMmE1HtOzUI-3",
+      "text": "Have one versatile training shoe for running, gym and general activity rather than many specialist pairs, unless you do one sport seriously.",
+      "why": "One good hybrid shoe handles most activity.",
+      "topics": [
+        "shoes",
+        "sportswear"
+      ],
+      "occasions": [
+        "gym"
+      ],
+      "strength": "tip",
+      "same_as": "gym-shoes"
+    },
+    {
+      "id": "yt-AMmE1HtOzUI-4",
+      "text": "Always own one dressy pair, such as derbies, loafers or chelsea boots, so you're never stuck in sneakers at a wedding or formal event.",
+      "why": "Turning up underdressed is worse than rarely wearing a pair.",
+      "topics": [
+        "shoes",
+        "formal"
+      ],
+      "occasions": [
+        "event",
+        "smart"
+      ],
+      "strength": "rule"
+    },
+    {
+      "id": "yt-AMmE1HtOzUI-5",
+      "text": "For dress shoes, ignore trends like chunky or sneaker loafers and buy a timeless shape; plain derbies are the most versatile.",
+      "why": "Rarely worn shoes should still match your style years later.",
+      "topics": [
+        "shoes",
+        "formal"
+      ],
+      "occasions": [
+        "event",
+        "smart",
+        "work"
+      ],
+      "strength": "tip"
+    },
+    {
+      "id": "yt-AMmE1HtOzUI-6",
+      "text": "Keep a beater pair, such as an old daily shoe or a durable hiking shoe, for rain, mud and chores.",
+      "why": "It saves your good shoes and lets them last for years.",
+      "topics": [
+        "shoes",
+        "weather",
+        "care"
+      ],
+      "occasions": [
+        "casual"
+      ],
+      "strength": "tip"
+    },
+    {
+      "id": "yt-AMmE1HtOzUI-7",
+      "text": "A comfort shoe such as foam slides, a leather mule or a wide anatomical shoe is worth having for travel and errands.",
+      "why": "Some days need maximum comfort.",
+      "topics": [
+        "shoes",
+        "casual"
+      ],
+      "occasions": [
+        "casual"
+      ],
+      "strength": "opinion"
+    }
+  ],
+  "outfits": [
+    {
+      "outfit": "tshirt white casual, jeans denim casual, sneakers white sporty",
+      "occasion": "casual",
+      "verdict": "good",
+      "why": "A clean retro runner as the everyday shoe."
+    },
+    {
+      "outfit": "jacket navy smart casual +suit, shirt white smart casual, trousers navy smart casual +suit, sneakers casual",
+      "occasion": "event",
+      "verdict": "avoid",
+      "why": "Sneakers at a wedding: own one dressy pair instead."
+    },
+    {
+      "outfit": "jacket navy smart casual +suit, shirt white smart casual, trousers navy smart casual +suit, dress-shoes brown formal +derby +leather",
+      "occasion": "event",
+      "verdict": "good",
+      "why": "Classic derbies dress a suit properly for a wedding."
+    }
+  ]
+}

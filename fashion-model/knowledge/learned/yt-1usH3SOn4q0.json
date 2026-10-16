@@ -1,0 +1,160 @@
+{
+  "source": {
+    "kind": "video",
+    "url": "https://www.youtube.com/watch?v=1usH3SOn4q0",
+    "title": "When the Mall Taught Men How to Dress: J.Crew, Banana Republic & Gap",
+    "author": ""
+  },
+  "learned_at": "2026-10-16T21:18:34+00:00",
+  "model": "by hand",
+  "tokens": {
+    "in": 0,
+    "out": 0
+  },
+  "tips": [
+    {
+      "id": "yt-1usH3SOn4q0-1",
+      "text": "Relax classic preppy clothes: let an oxford wrinkle, push up sleeves, wear loafers with faded jeans or a sweatshirt under a blazer.",
+      "why": "Good prep should look lived-in, not arranged.",
+      "topics": [
+        "smart casual",
+        "casual"
+      ],
+      "occasions": [
+        "casual",
+        "smart"
+      ],
+      "strength": "opinion"
+    },
+    {
+      "id": "yt-1usH3SOn4q0-2",
+      "text": "Choose pieces that get better with age: a suede jacket, a slightly rumpled linen shirt, an olive field jacket, brown loafers that have been walked in.",
+      "why": "Clothes that acquire character look personal.",
+      "topics": [
+        "wardrobe",
+        "fabrics"
+      ],
+      "occasions": [
+        "casual"
+      ],
+      "strength": "tip"
+    },
+    {
+      "id": "yt-1usH3SOn4q0-3",
+      "text": "Straight blue jeans, a white tee, a grey sweatshirt and simple sneakers take most men a long way if the proportions are right.",
+      "why": "Simple basics work when they fit well.",
+      "topics": [
+        "casual",
+        "wardrobe",
+        "denim"
+      ],
+      "occasions": [
+        "casual"
+      ],
+      "strength": "tip",
+      "same_as": "basics"
+    },
+    {
+      "id": "yt-1usH3SOn4q0-4",
+      "text": "Don't make everything skin tight: let jeans fall straight from the hip, chinos have room in the thigh and an oxford blouse slightly at the waist.",
+      "why": "A little ease looks more natural and current than vacuum-sealed slim fits.",
+      "topics": [
+        "fit",
+        "proportions",
+        "trousers"
+      ],
+      "occasions": [
+        "casual",
+        "smart"
+      ],
+      "strength": "tip"
+    },
+    {
+      "id": "yt-1usH3SOn4q0-5",
+      "text": "Start with pieces that survive every trend: good jeans, chinos, an oxford shirt, knitwear, a casual jacket and simple shoes, then add one or two personal pieces.",
+      "why": "A solid base plus a bit of personality beats chasing trends.",
+      "topics": [
+        "wardrobe"
+      ],
+      "occasions": [],
+      "strength": "tip",
+      "same_as": "capsule"
+    },
+    {
+      "id": "yt-1usH3SOn4q0-6",
+      "text": "Build a wardrobe slowly, one considered piece at a time, rather than in one big online order.",
+      "why": "You learn what works and buy less.",
+      "topics": [
+        "wardrobe"
+      ],
+      "occasions": [],
+      "strength": "tip"
+    },
+    {
+      "id": "yt-1usH3SOn4q0-7",
+      "text": "When buying vintage or second-hand, check the garment's measurements rather than the size on the label, and favour natural fabrics.",
+      "why": "Sizing changes over the years; natural fibres last.",
+      "topics": [
+        "wardrobe",
+        "fit",
+        "fabrics"
+      ],
+      "occasions": [],
+      "strength": "tip"
+    },
+    {
+      "id": "yt-1usH3SOn4q0-8",
+      "text": "An earthy palette of tobacco, olive, cream, khaki and brown, with linen and suede, gives a worldly, understated look.",
+      "why": "These tones all mix and look quietly expensive.",
+      "topics": [
+        "colour",
+        "fabrics"
+      ],
+      "occasions": [
+        "casual",
+        "smart"
+      ],
+      "strength": "tip",
+      "same_as": "earth-tones"
+    },
+    {
+      "id": "yt-1usH3SOn4q0-9",
+      "text": "Pleated trousers in cream or khaki bring ease and a vintage touch to casual outfits.",
+      "why": "Pleats add room and character.",
+      "topics": [
+        "trousers"
+      ],
+      "occasions": [
+        "casual",
+        "smart"
+      ],
+      "strength": "opinion"
+    }
+  ],
+  "outfits": [
+    {
+      "outfit": "jacket navy smart casual +blazer, sweatshirt grey casual, jeans denim straight casual, dress-shoes brown formal +loafers",
+      "occasion": "smart",
+      "verdict": "good",
+      "why": "A sweatshirt under a blazer with jeans and loafers: relaxed prep."
+    },
+    {
+      "outfit": "tshirt white casual, jeans denim straight casual, sneakers white casual",
+      "occasion": "casual",
+      "verdict": "good",
+      "why": "The simplest classic: straight jeans and a white tee."
+    },
+    {
+      "outfit": "jacket olive smart casual +field jacket, shirt cream smart casual +linen, trousers beige smart casual +chinos, dress-shoes brown formal +loafers +suede",
+      "occasion": "casual",
+      "verdict": "good",
+      "why": "Earth tones, linen and suede: worldly and understated."
+    },
+    {
+      "outfit": "shirt light blue smart casual +oxford, trousers beige relaxed smart casual +chinos, dress-shoes brown formal +loafers",
+      "occasion": "smart",
+      "verdict": "good",
+      "why": "Oxford shirt and roomy chinos with loafers: classic American smart casual."
+    }
+  ]
+}
