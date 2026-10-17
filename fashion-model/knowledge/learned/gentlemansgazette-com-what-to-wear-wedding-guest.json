@@ -1,0 +1,275 @@
+{
+  "source": {
+    "kind": "article",
+    "url": "https://www.gentlemansgazette.com/what-to-wear-wedding-guest/",
+    "title": "What to Wear as a Wedding Guest",
+    "author": "Gentleman's Gazette"
+  },
+  "learned_at": "2026-10-17T18:33:03+00:00",
+  "model": "by hand",
+  "tokens": {
+    "in": 0,
+    "out": 0
+  },
+  "tips": [
+    {
+      "id": "gentlemansgazette-com-what-to-wear-wedding-guest-1",
+      "text": "As a wedding guest, don't upstage the couple: stick to sober colours and simple patterns unless the invitation encourages more.",
+      "why": "Attention belongs to the couple and the wedding party.",
+      "topics": [
+        "occasions",
+        "colour",
+        "patterns"
+      ],
+      "occasions": [
+        "event"
+      ],
+      "strength": "rule",
+      "same_as": "wedding-guest"
+    },
+    {
+      "id": "gentlemansgazette-com-what-to-wear-wedding-guest-2",
+      "text": "Avoid an all-black suit, shirt and tie combination at a wedding.",
+      "why": "The monochrome look is dated and grabs attention.",
+      "topics": [
+        "occasions",
+        "colour"
+      ],
+      "occasions": [
+        "event"
+      ],
+      "strength": "tip"
+    },
+    {
+      "id": "gentlemansgazette-com-what-to-wear-wedding-guest-3",
+      "text": "Leave top hats, ascots, gloves and showy boutonnieres to the wedding party unless you're asked to wear them.",
+      "why": "Those pieces signal a special role in the ceremony.",
+      "topics": [
+        "occasions",
+        "accessories"
+      ],
+      "occasions": [
+        "event"
+      ],
+      "strength": "tip"
+    },
+    {
+      "id": "gentlemansgazette-com-what-to-wear-wedding-guest-4",
+      "text": "Follow the wedding invitation's dress code exactly, neither under- nor overdressing.",
+      "why": "Ignoring it is rude, and dressing above it can upstage the groom.",
+      "topics": [
+        "occasions",
+        "formal"
+      ],
+      "occasions": [
+        "event"
+      ],
+      "strength": "rule"
+    },
+    {
+      "id": "gentlemansgazette-com-what-to-wear-wedding-guest-5",
+      "text": "Start planning a wedding-guest outfit at least a month before the date.",
+      "why": "It leaves time to find pieces and get alterations done.",
+      "topics": [
+        "occasions",
+        "fit"
+      ],
+      "occasions": [
+        "event"
+      ],
+      "strength": "tip"
+    },
+    {
+      "id": "gentlemansgazette-com-what-to-wear-wedding-guest-6",
+      "text": "Unless the invitation allows it, don't wear sandals, flip-flops, shorts, T-shirts, hoodies, trainers or casual jeans to a wedding.",
+      "why": "They are far too casual for the occasion.",
+      "topics": [
+        "occasions",
+        "casual"
+      ],
+      "occasions": [
+        "event"
+      ],
+      "strength": "rule"
+    },
+    {
+      "id": "gentlemansgazette-com-what-to-wear-wedding-guest-7",
+      "text": "If ceremony and reception have different dress codes and there's no time to change, dress for the more formal one.",
+      "why": "Being slightly overdressed at the party beats being underdressed at the ceremony.",
+      "topics": [
+        "occasions",
+        "formal"
+      ],
+      "occasions": [
+        "event"
+      ],
+      "strength": "tip"
+    },
+    {
+      "id": "gentlemansgazette-com-what-to-wear-wedding-guest-8",
+      "text": "Daytime, warm-weather and outdoor weddings allow lighter, more relaxed clothes; weddings in places of worship call for more formality.",
+      "why": "Time, season and venue shift how formal the day is.",
+      "topics": [
+        "occasions",
+        "weather"
+      ],
+      "occasions": [
+        "event"
+      ],
+      "strength": "tip"
+    },
+    {
+      "id": "gentlemansgazette-com-what-to-wear-wedding-guest-9",
+      "text": "Navy and charcoal suits are the most versatile wedding-guest choices, in lighter or heavier wool depending on the season.",
+      "why": "Sober dark colours fit almost any dress code.",
+      "topics": [
+        "suits",
+        "occasions",
+        "fabrics"
+      ],
+      "occasions": [
+        "event"
+      ],
+      "strength": "tip"
+    },
+    {
+      "id": "gentlemansgazette-com-what-to-wear-wedding-guest-10",
+      "text": "At a wedding, wear dark brown oxfords or derbies by day and black ones in the evening.",
+      "why": "Black reads more formal and suits evening events.",
+      "topics": [
+        "shoes",
+        "occasions"
+      ],
+      "occasions": [
+        "event"
+      ],
+      "strength": "tip"
+    },
+    {
+      "id": "gentlemansgazette-com-what-to-wear-wedding-guest-11",
+      "text": "A necktie suits most wedding dress codes; save bow ties for formal evening events.",
+      "why": "A bow tie with a day suit can look whimsical.",
+      "topics": [
+        "accessories",
+        "occasions"
+      ],
+      "occasions": [
+        "event"
+      ],
+      "strength": "tip"
+    },
+    {
+      "id": "gentlemansgazette-com-what-to-wear-wedding-guest-12",
+      "text": "For a cocktail-attire wedding, wear a dark grey or navy suit with a white or light blue shirt, or dark brown for an outdoor daytime event.",
+      "why": "Dark suits meet the code without straying into black tie.",
+      "topics": [
+        "suits",
+        "occasions",
+        "formal"
+      ],
+      "occasions": [
+        "event"
+      ],
+      "strength": "tip"
+    },
+    {
+      "id": "gentlemansgazette-com-what-to-wear-wedding-guest-13",
+      "text": "For black tie optional, a plain dark grey or dark blue suit with a white shirt and black plain-toe oxfords is the right alternative to a tuxedo.",
+      "why": "It matches the formality without a dinner suit.",
+      "topics": [
+        "formal",
+        "suits",
+        "occasions"
+      ],
+      "occasions": [
+        "event"
+      ],
+      "strength": "tip"
+    },
+    {
+      "id": "gentlemansgazette-com-what-to-wear-wedding-guest-14",
+      "text": "A tuxedo should be black or midnight blue, not a brighter blue.",
+      "why": "Other colours break the black-tie code.",
+      "topics": [
+        "formal",
+        "colour"
+      ],
+      "occasions": [
+        "event"
+      ],
+      "strength": "rule"
+    },
+    {
+      "id": "gentlemansgazette-com-what-to-wear-wedding-guest-15",
+      "text": "Add personality with a pocket square and a small boutonniere in a harmonising colour, balanced so neither overpowers the other.",
+      "why": "Small accents show care without stealing attention.",
+      "topics": [
+        "accessories"
+      ],
+      "occasions": [
+        "event"
+      ],
+      "strength": "tip"
+    },
+    {
+      "id": "gentlemansgazette-com-what-to-wear-wedding-guest-16",
+      "text": "The more formal the wedding, the more restrained your accessories should be.",
+      "why": "Formal dress codes leave less room for flourishes.",
+      "topics": [
+        "accessories",
+        "formal"
+      ],
+      "occasions": [
+        "event"
+      ],
+      "strength": "tip"
+    },
+    {
+      "id": "gentlemansgazette-com-what-to-wear-wedding-guest-17",
+      "text": "For outdoor summer weddings, linen or seersucker suits are good choices.",
+      "why": "They keep you cool and suit warm daytime settings.",
+      "topics": [
+        "fabrics",
+        "weather",
+        "suits"
+      ],
+      "occasions": [
+        "event"
+      ],
+      "strength": "tip"
+    },
+    {
+      "id": "gentlemansgazette-com-what-to-wear-wedding-guest-18",
+      "text": "Avoid white clothing that could compete with the bride.",
+      "why": "White is traditionally reserved for her.",
+      "topics": [
+        "occasions",
+        "colour"
+      ],
+      "occasions": [
+        "event"
+      ],
+      "strength": "rule"
+    }
+  ],
+  "outfits": [
+    {
+      "outfit": "jacket navy smart +suit, shirt white smart, trousers navy smart +suit, dress-shoes black formal +oxford",
+      "occasion": "event",
+      "verdict": "good",
+      "why": "A navy suit, white shirt and black oxfords meets an evening cocktail-attire wedding."
+    },
+    {
+      "outfit": "jacket charcoal formal +suit, shirt white formal, trousers charcoal formal +suit, dress-shoes black formal +oxford +plain-toe",
+      "occasion": "event",
+      "verdict": "good",
+      "why": "A solid dark grey suit with a white shirt and black plain-toe oxfords is the right answer to black tie optional."
+    },
+    {
+      "outfit": "jacket black smart +suit, shirt black smart, trousers black smart +suit, tie black smart",
+      "occasion": "event",
+      "verdict": "avoid",
+      "why": "Head-to-toe black suit, shirt and tie is dated and draws attention at a wedding."
+    }
+  ]
+}

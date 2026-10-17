@@ -1,0 +1,180 @@
+{
+  "source": {
+    "kind": "article",
+    "url": "https://www.apetogentleman.com/outfit-colour-combinations/",
+    "title": "8 Outfit Colour Matching Combinations That Always Work",
+    "author": "Ape to Gentleman"
+  },
+  "learned_at": "2026-10-17T18:28:51+00:00",
+  "model": "by hand",
+  "tokens": {
+    "in": 0,
+    "out": 0
+  },
+  "tips": [
+    {
+      "id": "apetogentleman-com-outfit-colour-combinations-1",
+      "text": "Build colour pairings on contrast between a light shade and a dark one.",
+      "why": "Light-dark contrast is what most reliable combinations have in common.",
+      "topics": [
+        "colour"
+      ],
+      "occasions": [],
+      "strength": "rule"
+    },
+    {
+      "id": "apetogentleman-com-outfit-colour-combinations-2",
+      "text": "In a black and white outfit, aim for about 70/30: one piece in one colour and the rest in the other, rather than alternating pieces head to toe.",
+      "why": "Alternating black and white items looks like zebra stripes.",
+      "topics": [
+        "colour"
+      ],
+      "occasions": [],
+      "strength": "tip"
+    },
+    {
+      "id": "apetogentleman-com-outfit-colour-combinations-3",
+      "text": "Try navy with cream for smart casual outfits, such as an unstructured navy blazer with cream chinos.",
+      "why": "It has the contrast of black and white but feels softer.",
+      "topics": [
+        "colour",
+        "smart casual"
+      ],
+      "occasions": [
+        "smart",
+        "work"
+      ],
+      "strength": "tip"
+    },
+    {
+      "id": "apetogentleman-com-outfit-colour-combinations-4",
+      "text": "For autumn and winter, wear brown with beige as a tonal pairing, such as brown outerwear over beige trousers.",
+      "why": "The two shades sit together naturally in the colder months.",
+      "topics": [
+        "colour",
+        "weather"
+      ],
+      "occasions": [
+        "casual"
+      ],
+      "strength": "tip"
+    },
+    {
+      "id": "apetogentleman-com-outfit-colour-combinations-5",
+      "text": "Break up a brown and beige outfit with white, or a touch of muted green or burnt orange.",
+      "why": "A small contrast stops a tonal look from going flat.",
+      "topics": [
+        "colour"
+      ],
+      "occasions": [
+        "casual"
+      ],
+      "strength": "tip"
+    },
+    {
+      "id": "apetogentleman-com-outfit-colour-combinations-6",
+      "text": "Pair dark green with black, especially in tailoring, for example a green blazer over a black roll neck for cocktail attire.",
+      "why": "Two dark colours together look rich and evening-appropriate.",
+      "topics": [
+        "colour",
+        "formal"
+      ],
+      "occasions": [
+        "night",
+        "event"
+      ],
+      "strength": "tip"
+    },
+    {
+      "id": "apetogentleman-com-outfit-colour-combinations-7",
+      "text": "Use olive with white in summer, dressed up with tailoring or down with a tee and cargo trousers.",
+      "why": "The pairing is fresh and works at both ends of the formality scale.",
+      "topics": [
+        "colour",
+        "weather"
+      ],
+      "occasions": [
+        "casual",
+        "event"
+      ],
+      "strength": "tip"
+    },
+    {
+      "id": "apetogentleman-com-outfit-colour-combinations-8",
+      "text": "When combining brown and green, add white accents such as white sneakers.",
+      "why": "Without some white the earthy pairing can look dull and dated.",
+      "topics": [
+        "colour"
+      ],
+      "occasions": [
+        "casual"
+      ],
+      "strength": "tip"
+    },
+    {
+      "id": "apetogentleman-com-outfit-colour-combinations-9",
+      "text": "For an easy low-risk outfit, mix different shades of grey, starting with dark charcoal against light grey.",
+      "why": "Greys always sit together; the shade difference keeps it interesting.",
+      "topics": [
+        "colour"
+      ],
+      "occasions": [
+        "casual",
+        "smart",
+        "work"
+      ],
+      "strength": "tip"
+    },
+    {
+      "id": "apetogentleman-com-outfit-colour-combinations-10",
+      "text": "Wear pink with blue in pale or pastel shades for casual spring and summer looks, not in the most saturated tones.",
+      "why": "Bright versions of the two colours tend to clash.",
+      "topics": [
+        "colour",
+        "weather"
+      ],
+      "occasions": [
+        "casual"
+      ],
+      "strength": "tip"
+    }
+  ],
+  "outfits": [
+    {
+      "outfit": "jacket black smart casual, tshirt white casual, trousers black smart casual",
+      "occasion": "smart",
+      "verdict": "good",
+      "why": "A mostly black outfit with one crisp white piece follows the 70/30 split."
+    },
+    {
+      "outfit": "jacket brown smart casual, shirt white smart casual, trousers beige smart casual, sneakers white casual",
+      "occasion": "casual",
+      "verdict": "good",
+      "why": "Tonal brown and beige for autumn, lifted by white."
+    },
+    {
+      "outfit": "jacket olive smart +blazer +tailored, shirt beige smart casual +linen, trousers white smart casual",
+      "occasion": "event",
+      "verdict": "good",
+      "why": "Olive and white suit a summer wedding."
+    },
+    {
+      "outfit": "tshirt white casual, trousers olive smart casual +cargo, sneakers white casual +canvas",
+      "occasion": "casual",
+      "verdict": "good",
+      "why": "The casual summer version of olive and white."
+    },
+    {
+      "outfit": "coat brown smart, hoodie green casual, jeans navy casual, sneakers white casual",
+      "occasion": "casual",
+      "verdict": "good",
+      "why": "Brown and green for autumn, with white sneakers to keep it from looking dull."
+    },
+    {
+      "outfit": "shirt pink smart casual +linen, shorts light blue casual",
+      "occasion": "casual",
+      "verdict": "good",
+      "why": "Pale pink and pale blue make a soft summer pairing that doesn't clash."
+    }
+  ]
+}

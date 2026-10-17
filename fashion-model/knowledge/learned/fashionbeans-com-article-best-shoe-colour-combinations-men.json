@@ -1,0 +1,267 @@
+{
+  "source": {
+    "kind": "article",
+    "url": "https://www.fashionbeans.com/article/best-shoe-colour-combinations-men/",
+    "title": "How To Match Clothes and Shoes For Guys: Outfit Color Guide",
+    "author": "FashionBeans"
+  },
+  "learned_at": "2026-10-17T18:33:22+00:00",
+  "model": "by hand",
+  "tokens": {
+    "in": 0,
+    "out": 0
+  },
+  "tips": [
+    {
+      "id": "fashionbeans-com-article-best-shoe-colour-combinations-men-1",
+      "text": "Choose solid-coloured shoes over multicoloured ones when you want to look smart.",
+      "why": "A single colour reads cleaner and more formal.",
+      "topics": [
+        "shoes",
+        "colour"
+      ],
+      "occasions": [
+        "work",
+        "smart"
+      ],
+      "strength": "rule"
+    },
+    {
+      "id": "fashionbeans-com-article-best-shoe-colour-combinations-men-2",
+      "text": "Darker shoes are dressier and more versatile than lighter ones.",
+      "why": "Dark leather pairs with more outfits and formal settings.",
+      "topics": [
+        "shoes",
+        "colour"
+      ],
+      "occasions": [],
+      "strength": "rule"
+    },
+    {
+      "id": "fashionbeans-com-article-best-shoe-colour-combinations-men-3",
+      "text": "Judge a shoe's formality by shape and decoration as well as colour: a sleek chocolate oxford can be dressier than a plain black derby.",
+      "why": "Broguing and chunky shapes relax a shoe; sleek closed lacing dresses it up.",
+      "topics": [
+        "shoes",
+        "formal"
+      ],
+      "occasions": [],
+      "strength": "tip"
+    },
+    {
+      "id": "fashionbeans-com-article-best-shoe-colour-combinations-men-4",
+      "text": "Treat trainers by their own rules: white trainers suit nearly everything, while white dress shoes look odd.",
+      "why": "Sneaker conventions differ from those of leather dress shoes.",
+      "topics": [
+        "shoes",
+        "colour"
+      ],
+      "occasions": [
+        "casual"
+      ],
+      "strength": "tip"
+    },
+    {
+      "id": "fashionbeans-com-article-best-shoe-colour-combinations-men-5",
+      "text": "Keep leather shoes polished with a matching or neutral polish; scuffs spoil any colour.",
+      "why": "Worn-looking shoes drag down the whole outfit.",
+      "topics": [
+        "shoes",
+        "care"
+      ],
+      "occasions": [],
+      "strength": "rule",
+      "same_as": "shoes-quality"
+    },
+    {
+      "id": "fashionbeans-com-article-best-shoe-colour-combinations-men-6",
+      "text": "Let bright or colourful shoes be the loudest thing you wear, keeping the rest of the outfit neutral.",
+      "why": "Several strong colours compete and look messy.",
+      "topics": [
+        "shoes",
+        "colour"
+      ],
+      "occasions": [
+        "casual"
+      ],
+      "strength": "tip"
+    },
+    {
+      "id": "fashionbeans-com-article-best-shoe-colour-combinations-men-7",
+      "text": "Wear black shoes with black suits and tuxedos, and with grey or charcoal suits in formal offices.",
+      "why": "Black is the most formal shoe colour.",
+      "topics": [
+        "shoes",
+        "suits",
+        "formal"
+      ],
+      "occasions": [
+        "work",
+        "event"
+      ],
+      "strength": "rule"
+    },
+    {
+      "id": "fashionbeans-com-article-best-shoe-colour-combinations-men-8",
+      "text": "With jeans, choose black derbies or Chelsea boots rather than black oxfords.",
+      "why": "Oxfords are too dressy for denim and casual trousers.",
+      "topics": [
+        "shoes",
+        "denim"
+      ],
+      "occasions": [
+        "casual",
+        "smart"
+      ],
+      "strength": "tip"
+    },
+    {
+      "id": "fashionbeans-com-article-best-shoe-colour-combinations-men-9",
+      "text": "Don't wear black leather shoes with shorts.",
+      "why": "The combination looks like a school uniform.",
+      "topics": [
+        "shoes",
+        "casual"
+      ],
+      "occasions": [
+        "casual"
+      ],
+      "strength": "tip"
+    },
+    {
+      "id": "fashionbeans-com-article-best-shoe-colour-combinations-men-10",
+      "text": "With colourful chinos, soften black shoes by choosing loafers, cuffing the hem and skipping socks.",
+      "why": "Formal black lace-ups look heavy against bright casual trousers.",
+      "topics": [
+        "shoes",
+        "trousers",
+        "colour"
+      ],
+      "occasions": [
+        "casual",
+        "smart"
+      ],
+      "strength": "opinion"
+    },
+    {
+      "id": "fashionbeans-com-article-best-shoe-colour-combinations-men-11",
+      "text": "Brown shoes suit almost everything except black suits and the most formal offices.",
+      "why": "Brown is less formal than black but far more versatile.",
+      "topics": [
+        "shoes",
+        "colour",
+        "suits"
+      ],
+      "occasions": [],
+      "strength": "rule"
+    },
+    {
+      "id": "fashionbeans-com-article-best-shoe-colour-combinations-men-12",
+      "text": "Keep brown shoes a couple of shades away from brown trousers instead of matching them closely.",
+      "why": "A near-match looks accidental; a clear contrast looks intended.",
+      "topics": [
+        "shoes",
+        "colour",
+        "trousers"
+      ],
+      "occasions": [],
+      "strength": "tip"
+    },
+    {
+      "id": "fashionbeans-com-article-best-shoe-colour-combinations-men-13",
+      "text": "Brown shoes with black jeans are risky; if you try it, choose a very dark brown or boots.",
+      "why": "Mid-brown clashes with black denim.",
+      "topics": [
+        "shoes",
+        "denim",
+        "colour"
+      ],
+      "occasions": [
+        "casual"
+      ],
+      "strength": "opinion"
+    },
+    {
+      "id": "fashionbeans-com-article-best-shoe-colour-combinations-men-14",
+      "text": "Use oxblood shoes like brown ones for more personality: derbies are the most versatile, penny loafers suit summer.",
+      "why": "Oxblood goes with navy, jeans and chinos but stands out more.",
+      "topics": [
+        "shoes",
+        "colour"
+      ],
+      "occasions": [
+        "smart",
+        "casual"
+      ],
+      "strength": "opinion"
+    },
+    {
+      "id": "fashionbeans-com-article-best-shoe-colour-combinations-men-15",
+      "text": "Treat tan as the most casual brown: best in brogues, boots and suede with jeans and chinos.",
+      "why": "Light brown reads relaxed and lightens an outfit.",
+      "topics": [
+        "shoes",
+        "colour",
+        "casual"
+      ],
+      "occasions": [
+        "casual",
+        "smart"
+      ],
+      "strength": "tip"
+    },
+    {
+      "id": "fashionbeans-com-article-best-shoe-colour-combinations-men-16",
+      "text": "With shorts, wear laceless or suede shoes such as loafers rather than lace-up leather.",
+      "why": "They match the relaxed feel of shorts.",
+      "topics": [
+        "shoes",
+        "casual",
+        "weather"
+      ],
+      "occasions": [
+        "casual"
+      ],
+      "strength": "tip"
+    },
+    {
+      "id": "fashionbeans-com-article-best-shoe-colour-combinations-men-17",
+      "text": "Avoid shiny blue leather shoes; blue works in suede or nubuck, such as navy chukkas with jeans.",
+      "why": "Glossy blue looks try-hard, while blue suede looks relaxed.",
+      "topics": [
+        "shoes",
+        "colour"
+      ],
+      "occasions": [
+        "casual"
+      ],
+      "strength": "opinion"
+    },
+    {
+      "id": "fashionbeans-com-article-best-shoe-colour-combinations-men-18",
+      "text": "Clean, logo-free white leather trainers can work with a suit if you swap the shirt and tie for a roll-neck or polo.",
+      "why": "Dressing down the top matches the casual shoe.",
+      "topics": [
+        "shoes",
+        "suits",
+        "smart casual"
+      ],
+      "occasions": [
+        "smart"
+      ],
+      "strength": "opinion"
+    },
+    {
+      "id": "fashionbeans-com-article-best-shoe-colour-combinations-men-19",
+      "text": "Keep white trainers spotless with protective spray and wipes, and never wear battered trainers with tailoring.",
+      "why": "Their appeal depends on looking clean.",
+      "topics": [
+        "shoes",
+        "care"
+      ],
+      "occasions": [],
+      "strength": "tip"
+    }
+  ],
+  "outfits": []
+}

@@ -1,0 +1,249 @@
+{
+  "source": {
+    "kind": "article",
+    "url": "https://www.aol.com/pants-fit-now-145200956.html",
+    "title": "How Your Pants Should Fit Now",
+    "author": "Esquire"
+  },
+  "learned_at": "2026-10-17T18:34:18+00:00",
+  "model": "by hand",
+  "tokens": {
+    "in": 0,
+    "out": 0
+  },
+  "tips": [
+    {
+      "id": "aol-com-pants-fit-now-145200956-html-1",
+      "text": "Choose straight-leg jeans with a medium to medium-high rise.",
+      "why": "The cut suits most builds and has lasted about a century.",
+      "topics": [
+        "denim",
+        "fit"
+      ],
+      "occasions": [
+        "casual"
+      ],
+      "strength": "tip"
+    },
+    {
+      "id": "aol-com-pants-fit-now-145200956-html-2",
+      "text": "Avoid extreme skinny or extreme baggy jeans; stay near the middle.",
+      "why": "Extreme cuts date quickly.",
+      "topics": [
+        "denim",
+        "fit"
+      ],
+      "occasions": [
+        "casual"
+      ],
+      "strength": "tip"
+    },
+    {
+      "id": "aol-com-pants-fit-now-145200956-html-3",
+      "text": "Stick to timeless jean colours: indigo is always versatile and white is underrated.",
+      "why": "Classic colours outlast trendy ones.",
+      "topics": [
+        "denim",
+        "colour"
+      ],
+      "occasions": [
+        "casual"
+      ],
+      "strength": "tip"
+    },
+    {
+      "id": "aol-com-pants-fit-now-145200956-html-4",
+      "text": "Pick jeans with a realistic wash and minimal distressing.",
+      "why": "Heavy fake wear looks dated.",
+      "topics": [
+        "denim"
+      ],
+      "occasions": [
+        "casual"
+      ],
+      "strength": "tip"
+    },
+    {
+      "id": "aol-com-pants-fit-now-145200956-html-5",
+      "text": "Dark straight-leg jeans look sharp with loafers.",
+      "why": "The clean leg and smart shoe dress denim up.",
+      "topics": [
+        "denim",
+        "shoes",
+        "smart casual"
+      ],
+      "occasions": [
+        "casual",
+        "smart"
+      ],
+      "strength": "opinion"
+    },
+    {
+      "id": "aol-com-pants-fit-now-145200956-html-6",
+      "text": "Skip ultra-slim stretch chinos; choose crisp, heavier cotton with a wider leg and higher rise.",
+      "why": "Mid-century cuts look fresher, and crisp cotton ages better than techy fabrics.",
+      "topics": [
+        "trousers",
+        "fit",
+        "fabrics"
+      ],
+      "occasions": [
+        "casual",
+        "smart"
+      ],
+      "strength": "opinion"
+    },
+    {
+      "id": "aol-com-pants-fit-now-145200956-html-7",
+      "text": "Own chinos in classic khaki, olive or navy; pleated fronts are fine.",
+      "why": "These colours work with nearly everything.",
+      "topics": [
+        "trousers",
+        "colour"
+      ],
+      "occasions": [
+        "casual",
+        "smart"
+      ],
+      "strength": "tip"
+    },
+    {
+      "id": "aol-com-pants-fit-now-145200956-html-8",
+      "text": "Washed black chinos work well in casual outfits.",
+      "why": "A faded black is relaxed yet versatile.",
+      "topics": [
+        "trousers",
+        "colour",
+        "casual"
+      ],
+      "occasions": [
+        "casual"
+      ],
+      "strength": "opinion"
+    },
+    {
+      "id": "aol-com-pants-fit-now-145200956-html-9",
+      "text": "Avoid chinos with small embroidered motifs unless you fully commit to a preppy style.",
+      "why": "They look out of place in other wardrobes.",
+      "topics": [
+        "trousers",
+        "casual"
+      ],
+      "occasions": [
+        "casual"
+      ],
+      "strength": "opinion"
+    },
+    {
+      "id": "aol-com-pants-fit-now-145200956-html-10",
+      "text": "Avoid skinny trousers.",
+      "why": "Tight legs pull, bunch and distort lines, especially in patterned cloth.",
+      "topics": [
+        "trousers",
+        "fit"
+      ],
+      "occasions": [],
+      "strength": "tip"
+    },
+    {
+      "id": "aol-com-pants-fit-now-145200956-html-11",
+      "text": "Never size down trousers just to get a slimmer leg.",
+      "why": "It ruins the fit at the waist, seat and crotch.",
+      "topics": [
+        "trousers",
+        "fit"
+      ],
+      "occasions": [],
+      "strength": "rule",
+      "same_as": "putthison-com-a-practical-guide-to-getting-started-4"
+    },
+    {
+      "id": "aol-com-pants-fit-now-145200956-html-12",
+      "text": "A fuller leg and higher rise flatter most men.",
+      "why": "They lengthen the silhouette.",
+      "topics": [
+        "trousers",
+        "proportions"
+      ],
+      "occasions": [],
+      "strength": "opinion"
+    },
+    {
+      "id": "aol-com-pants-fit-now-145200956-html-13",
+      "text": "Hem trousers with a light to full break, the front meeting the top of the shoe; looser legs can sit slightly longer.",
+      "why": "It suits today's fuller trouser shapes.",
+      "topics": [
+        "trousers",
+        "fit"
+      ],
+      "occasions": [],
+      "strength": "opinion"
+    },
+    {
+      "id": "aol-com-pants-fit-now-145200956-html-14",
+      "text": "Choose trouser cloth with enough weight to drape; avoid ultralight technical fabrics and very thin wools.",
+      "why": "Flimsy cloth wrinkles and puckers.",
+      "topics": [
+        "trousers",
+        "fabrics"
+      ],
+      "occasions": [
+        "work",
+        "smart"
+      ],
+      "strength": "tip"
+    },
+    {
+      "id": "aol-com-pants-fit-now-145200956-html-15",
+      "text": "Mid-grey trousers suit tailored outfits, while navy and black lean casual or fashion-forward.",
+      "why": "Each colour sets a different tone.",
+      "topics": [
+        "trousers",
+        "colour"
+      ],
+      "occasions": [
+        "smart",
+        "work"
+      ],
+      "strength": "opinion"
+    },
+    {
+      "id": "aol-com-pants-fit-now-145200956-html-16",
+      "text": "If you're new to tailored trousers, skip loud colours and prints.",
+      "why": "Plain trousers are easier to wear well.",
+      "topics": [
+        "trousers",
+        "patterns"
+      ],
+      "occasions": [],
+      "strength": "tip"
+    },
+    {
+      "id": "aol-com-pants-fit-now-145200956-html-17",
+      "text": "Leave room to move and a rise high enough that the seat doesn't sag.",
+      "why": "Comfort and a clean line go together.",
+      "topics": [
+        "trousers",
+        "fit"
+      ],
+      "occasions": [],
+      "strength": "tip"
+    },
+    {
+      "id": "aol-com-pants-fit-now-145200956-html-18",
+      "text": "Match suit trousers to the jacket's volume: a slim jacket takes slimmer trousers, and a bulky jacket shouldn't sit over tight ones.",
+      "why": "Mismatched volumes create a box-on-toothpicks shape.",
+      "topics": [
+        "suits",
+        "proportions"
+      ],
+      "occasions": [
+        "work",
+        "event"
+      ],
+      "strength": "tip",
+      "same_as": "yt-5G_hcUgh510-9"
+    }
+  ],
+  "outfits": []
+}

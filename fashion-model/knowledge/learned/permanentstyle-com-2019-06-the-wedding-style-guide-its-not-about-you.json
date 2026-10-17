@@ -1,0 +1,160 @@
+{
+  "source": {
+    "kind": "article",
+    "url": "https://www.permanentstyle.com/2019/06/the-wedding-style-guide-its-not-about-you",
+    "title": "The Wedding Style Guide: It's not about you",
+    "author": "Permanent Style"
+  },
+  "learned_at": "2026-10-17T18:33:03+00:00",
+  "model": "by hand",
+  "tokens": {
+    "in": 0,
+    "out": 0
+  },
+  "tips": [
+    {
+      "id": "permanentstyle-com-2019-06-the-wedding-style-guide-its-not-about-you-1",
+      "text": "Treat a wedding as a chance to dress formally: a three-piece or double-breasted suit, a pocket square and a buttonhole.",
+      "why": "As business dress relaxes, weddings are one of the last natural homes for the suit.",
+      "topics": [
+        "suits",
+        "formal",
+        "occasions"
+      ],
+      "occasions": [
+        "event"
+      ],
+      "strength": "opinion"
+    },
+    {
+      "id": "permanentstyle-com-2019-06-the-wedding-style-guide-its-not-about-you-2",
+      "text": "At a wedding in a hot country, keep the tie but switch to a linen suit, and add a hat rather than resort to flip-flops.",
+      "why": "You stay smart while respecting the climate.",
+      "topics": [
+        "weather",
+        "fabrics",
+        "occasions"
+      ],
+      "occasions": [
+        "event"
+      ],
+      "strength": "tip"
+    },
+    {
+      "id": "permanentstyle-com-2019-06-the-wedding-style-guide-its-not-about-you-3",
+      "text": "Avoid bright suits, loud ties and socks, and tan shoes at a wedding.",
+      "why": "Elegance comes from cut, texture and restrained colour, not loudness.",
+      "topics": [
+        "colour",
+        "occasions"
+      ],
+      "occasions": [
+        "event"
+      ],
+      "strength": "opinion"
+    },
+    {
+      "id": "permanentstyle-com-2019-06-the-wedding-style-guide-its-not-about-you-4",
+      "text": "Choose a wedding suit that looks less like business wear, such as light grey or double-breasted.",
+      "why": "It marks the day as a special occasion.",
+      "topics": [
+        "suits",
+        "occasions"
+      ],
+      "occasions": [
+        "event"
+      ],
+      "strength": "tip"
+    },
+    {
+      "id": "permanentstyle-com-2019-06-the-wedding-style-guide-its-not-about-you-5",
+      "text": "A navy suit looks less like office wear when it is double-breasted or in a textured cloth such as herringbone.",
+      "why": "Cut and texture take it away from the business uniform.",
+      "topics": [
+        "suits",
+        "fabrics"
+      ],
+      "occasions": [
+        "event"
+      ],
+      "strength": "tip"
+    },
+    {
+      "id": "permanentstyle-com-2019-06-the-wedding-style-guide-its-not-about-you-6",
+      "text": "Put a wedding outfit's colour into the pocket square and buttonhole rather than the tie or socks.",
+      "why": "Small accents add cheer while the core stays elegant.",
+      "topics": [
+        "accessories",
+        "colour"
+      ],
+      "occasions": [
+        "event"
+      ],
+      "strength": "tip"
+    },
+    {
+      "id": "permanentstyle-com-2019-06-the-wedding-style-guide-its-not-about-you-7",
+      "text": "Skip anachronistic extras like tie bars and pocket watches with formal wedding wear.",
+      "why": "They look like dressing up rather than dressing well.",
+      "topics": [
+        "accessories",
+        "formal"
+      ],
+      "occasions": [
+        "event"
+      ],
+      "strength": "opinion"
+    },
+    {
+      "id": "permanentstyle-com-2019-06-the-wedding-style-guide-its-not-about-you-8",
+      "text": "Gauge a wedding's formality from the invitation, what you know of the hosts, or someone close to them; if in doubt, dress smartly.",
+      "why": "It's the hosts' event, and their expectations set the level.",
+      "topics": [
+        "occasions"
+      ],
+      "occasions": [
+        "event"
+      ],
+      "strength": "tip"
+    },
+    {
+      "id": "permanentstyle-com-2019-06-the-wedding-style-guide-its-not-about-you-9",
+      "text": "As a wedding guest, aim to fit in, not stand out; if people notice your outfit, you've probably misjudged it.",
+      "why": "Your job is to honour the hosts, not to be looked at.",
+      "topics": [
+        "occasions"
+      ],
+      "occasions": [
+        "event"
+      ],
+      "strength": "rule",
+      "same_as": "wedding-guest"
+    },
+    {
+      "id": "permanentstyle-com-2019-06-the-wedding-style-guide-its-not-about-you-10",
+      "text": "Follow a wedding's dress code even when it's unusual, such as black tie in the daytime or beachwear.",
+      "why": "Respecting the hosts' wishes matters more than convention.",
+      "topics": [
+        "occasions",
+        "formal"
+      ],
+      "occasions": [
+        "event"
+      ],
+      "strength": "tip"
+    },
+    {
+      "id": "permanentstyle-com-2019-06-the-wedding-style-guide-its-not-about-you-11",
+      "text": "When accompanying a partner to a wedding, dress to complement her outfit rather than compete with it.",
+      "why": "Neither of you should outshine the bride.",
+      "topics": [
+        "occasions"
+      ],
+      "occasions": [
+        "event"
+      ],
+      "strength": "opinion"
+    }
+  ],
+  "outfits": []
+}

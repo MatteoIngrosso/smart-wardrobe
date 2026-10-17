@@ -1,0 +1,167 @@
+{
+  "source": {
+    "kind": "article",
+    "url": "https://www.mrporter.com/en-ie/journal/fashion/summer-party-25296840",
+    "title": "How To Crack Every Summer Party Dress Code",
+    "author": "MR PORTER"
+  },
+  "learned_at": "2026-10-17T18:33:03+00:00",
+  "model": "by hand",
+  "tokens": {
+    "in": 0,
+    "out": 0
+  },
+  "tips": [
+    {
+      "id": "mrporter-com-en-ie-journal-fashion-summer-party-25296840-1",
+      "text": "Plan your outfits ahead for a busy summer social calendar.",
+      "why": "Packed weeks of events are easy when the right clothes are ready.",
+      "topics": [
+        "wardrobe",
+        "occasions"
+      ],
+      "occasions": [
+        "event"
+      ],
+      "strength": "tip"
+    },
+    {
+      "id": "mrporter-com-en-ie-journal-fashion-summer-party-25296840-2",
+      "text": "At a hot destination wedding, choose light, flowing fabrics and easy layers over a heavy suit.",
+      "why": "Heat and several outfit changes make heavy tailoring impractical.",
+      "topics": [
+        "weather",
+        "fabrics",
+        "occasions"
+      ],
+      "occasions": [
+        "event"
+      ],
+      "strength": "tip"
+    },
+    {
+      "id": "mrporter-com-en-ie-journal-fashion-summer-party-25296840-3",
+      "text": "When a summer wedding's dress code is relaxed, a camp-collar shirt with trousers and leather loafers can stand in for a suit.",
+      "why": "It stays dressed-up while keeping you cool.",
+      "topics": [
+        "occasions",
+        "shirts"
+      ],
+      "occasions": [
+        "event"
+      ],
+      "strength": "opinion"
+    },
+    {
+      "id": "mrporter-com-en-ie-journal-fashion-summer-party-25296840-4",
+      "text": "Cut summer trousers wide enough to let air through and long enough to rest on the shoe.",
+      "why": "Roomy legs keep you cool and the full length keeps them smart.",
+      "topics": [
+        "trousers",
+        "fit",
+        "weather"
+      ],
+      "occasions": [
+        "event",
+        "smart"
+      ],
+      "strength": "tip"
+    },
+    {
+      "id": "mrporter-com-en-ie-journal-fashion-summer-party-25296840-5",
+      "text": "Bring colour to a wedding outfit through a patterned tie or a bright pocket square.",
+      "why": "Accessories add personality without overwhelming the tailoring.",
+      "topics": [
+        "accessories",
+        "occasions"
+      ],
+      "occasions": [
+        "event"
+      ],
+      "strength": "tip"
+    },
+    {
+      "id": "mrporter-com-en-ie-journal-fashion-summer-party-25296840-6",
+      "text": "At summer spectator sport such as tennis, racing or cricket, wear a light unstructured beige blazer, livened up with a colourful shirt or club tie.",
+      "why": "A pale, light jacket handles heat and suits the daytime setting.",
+      "topics": [
+        "occasions",
+        "weather",
+        "outerwear"
+      ],
+      "occasions": [
+        "smart",
+        "event"
+      ],
+      "strength": "tip"
+    },
+    {
+      "id": "mrporter-com-en-ie-journal-fashion-summer-party-25296840-7",
+      "text": "As a spectator at a summer tennis event, tennis whites (white polo, white trousers, loafers) are a fitting, practical look.",
+      "why": "All-white is cool in the heat and nods to the occasion.",
+      "topics": [
+        "occasions",
+        "colour"
+      ],
+      "occasions": [
+        "smart"
+      ],
+      "strength": "opinion"
+    },
+    {
+      "id": "mrporter-com-en-ie-journal-fashion-summer-party-25296840-8",
+      "text": "At an art-gallery party, look well put-together without tipping into overdressed, for example a knitted polo with suit trousers and a soft blazer.",
+      "why": "Creative events reward effort that doesn't look stiff.",
+      "topics": [
+        "smart casual",
+        "occasions"
+      ],
+      "occasions": [
+        "night",
+        "smart"
+      ],
+      "strength": "opinion"
+    },
+    {
+      "id": "mrporter-com-en-ie-journal-fashion-summer-party-25296840-9",
+      "text": "At a summer work party, skip the tie unless one is requested and avoid stiff collars.",
+      "why": "The event should feel relaxed, not like another day at the desk.",
+      "topics": [
+        "occasions",
+        "shirts"
+      ],
+      "occasions": [
+        "work"
+      ],
+      "strength": "tip"
+    },
+    {
+      "id": "mrporter-com-en-ie-journal-fashion-summer-party-25296840-10",
+      "text": "At a summer work party, wear a blazer only if it is very informal, and choose a low-key shirt over a vest or tank top.",
+      "why": "Relaxed but never showy or too bare in front of colleagues.",
+      "topics": [
+        "occasions",
+        "smart casual"
+      ],
+      "occasions": [
+        "work"
+      ],
+      "strength": "tip"
+    },
+    {
+      "id": "mrporter-com-en-ie-journal-fashion-summer-party-25296840-11",
+      "text": "For a summer country-house weekend, go preppy: a button-down linen shirt, pleated trousers or shorts, and loafers.",
+      "why": "Relaxed classic pieces suit the setting.",
+      "topics": [
+        "occasions",
+        "smart casual"
+      ],
+      "occasions": [
+        "casual",
+        "smart"
+      ],
+      "strength": "opinion"
+    }
+  ],
+  "outfits": []
+}

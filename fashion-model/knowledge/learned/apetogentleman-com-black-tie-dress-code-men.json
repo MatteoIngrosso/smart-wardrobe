@@ -1,0 +1,224 @@
+{
+  "source": {
+    "kind": "article",
+    "url": "https://www.apetogentleman.com/black-tie-dress-code-men/",
+    "title": "Black Tie Dress Code: A Modern Man's Guide For 2026",
+    "author": "Ape to Gentleman"
+  },
+  "learned_at": "2026-10-17T18:33:03+00:00",
+  "model": "by hand",
+  "tokens": {
+    "in": 0,
+    "out": 0
+  },
+  "tips": [
+    {
+      "id": "apetogentleman-com-black-tie-dress-code-men-1",
+      "text": "At a black-tie event, dress to blend in rather than to stand out.",
+      "why": "Black tie is a shared uniform that honours the host and keeps attention on the occasion.",
+      "topics": [
+        "formal",
+        "occasions"
+      ],
+      "occasions": [
+        "event"
+      ],
+      "strength": "rule"
+    },
+    {
+      "id": "apetogentleman-com-black-tie-dress-code-men-2",
+      "text": "Black tie means a black or midnight-blue dinner suit, a white shirt, a black bow tie and plain polished black shoes.",
+      "why": "It is a fixed code with little room for change.",
+      "topics": [
+        "formal",
+        "suits",
+        "occasions"
+      ],
+      "occasions": [
+        "event"
+      ],
+      "strength": "rule",
+      "same_as": "black-tie"
+    },
+    {
+      "id": "apetogentleman-com-black-tie-dress-code-men-3",
+      "text": "Choose a ventless wool dinner jacket with satin-faced lapels and trousers with a braid down the outer seam.",
+      "why": "These details separate a dinner suit from an ordinary suit.",
+      "topics": [
+        "formal",
+        "suits"
+      ],
+      "occasions": [
+        "event"
+      ],
+      "strength": "rule"
+    },
+    {
+      "id": "apetogentleman-com-black-tie-dress-code-men-4",
+      "text": "Hold dinner-suit trousers up with plain braces, never a belt.",
+      "why": "A belt breaks the clean line at the waist and isn't traditional.",
+      "topics": [
+        "formal",
+        "accessories"
+      ],
+      "occasions": [
+        "event"
+      ],
+      "strength": "rule"
+    },
+    {
+      "id": "apetogentleman-com-black-tie-dress-code-men-5",
+      "text": "Patent oxfords are the classic black-tie shoe, but plain, highly polished black calf oxfords are acceptable and easier to wear again.",
+      "why": "Both keep the shoe sleek and plain.",
+      "topics": [
+        "formal",
+        "shoes"
+      ],
+      "occasions": [
+        "event"
+      ],
+      "strength": "tip"
+    },
+    {
+      "id": "apetogentleman-com-black-tie-dress-code-men-6",
+      "text": "With a dinner suit, choose a turn-down collar shirt over a wing collar; a pleated or bib front is optional.",
+      "why": "Wing collars belong with white tie and look dated with a dinner suit.",
+      "topics": [
+        "formal",
+        "shirts"
+      ],
+      "occasions": [
+        "event"
+      ],
+      "strength": "tip"
+    },
+    {
+      "id": "apetogentleman-com-black-tie-dress-code-men-7",
+      "text": "Wear cufflinks with a dinner shirt.",
+      "why": "A black-tie shirt is not complete without them.",
+      "topics": [
+        "formal",
+        "accessories"
+      ],
+      "occasions": [
+        "event"
+      ],
+      "strength": "rule"
+    },
+    {
+      "id": "apetogentleman-com-black-tie-dress-code-men-8",
+      "text": "Tie your own bow tie instead of wearing a clip-on or pre-tied one.",
+      "why": "Pre-tied bows look like costume.",
+      "topics": [
+        "formal",
+        "accessories"
+      ],
+      "occasions": [
+        "event"
+      ],
+      "strength": "tip"
+    },
+    {
+      "id": "apetogentleman-com-black-tie-dress-code-men-9",
+      "text": "If you wear a cummerbund, make it black; coloured ones, especially red, look dated.",
+      "why": "Black keeps the outfit uniform.",
+      "topics": [
+        "formal",
+        "accessories"
+      ],
+      "occasions": [
+        "event"
+      ],
+      "strength": "tip"
+    },
+    {
+      "id": "apetogentleman-com-black-tie-dress-code-men-10",
+      "text": "Avoid trendy cuts such as very skinny lapels or cropped trousers on a dinner suit.",
+      "why": "You will wear it for years, and fashion details date fast.",
+      "topics": [
+        "formal",
+        "suits",
+        "fit"
+      ],
+      "occasions": [
+        "event"
+      ],
+      "strength": "tip"
+    },
+    {
+      "id": "apetogentleman-com-black-tie-dress-code-men-11",
+      "text": "Keep black-tie accessories minimal: a slim dress watch in the same metal as your cufflinks and a simply folded white pocket square.",
+      "why": "Restraint looks elegant in a formal uniform.",
+      "topics": [
+        "formal",
+        "accessories"
+      ],
+      "occasions": [
+        "event"
+      ],
+      "strength": "tip"
+    },
+    {
+      "id": "apetogentleman-com-black-tie-dress-code-men-12",
+      "text": "Own and tailor your dinner suit rather than renting, with moderate lapels and precisely hemmed trousers.",
+      "why": "Ill-fitting polyester rental suits undermine the whole look.",
+      "topics": [
+        "formal",
+        "fit",
+        "suits"
+      ],
+      "occasions": [
+        "event"
+      ],
+      "strength": "tip"
+    },
+    {
+      "id": "apetogentleman-com-black-tie-dress-code-men-13",
+      "text": "For a twist on black tie, a velvet smoking jacket in a muted shade such as black, deep green or burnt orange beats bright colours.",
+      "why": "Rich, quiet colours look luxurious rather than costume-like.",
+      "topics": [
+        "formal",
+        "colour",
+        "fabrics"
+      ],
+      "occasions": [
+        "event"
+      ],
+      "strength": "opinion"
+    },
+    {
+      "id": "apetogentleman-com-black-tie-dress-code-men-14",
+      "text": "Break black-tie rules only when the invitation allows it; a roll neck or black tee instead of shirt and bow tie suits 'eveningwear' invitations only.",
+      "why": "Creative swaps at a strict black-tie event look disrespectful.",
+      "topics": [
+        "formal",
+        "occasions"
+      ],
+      "occasions": [
+        "event"
+      ],
+      "strength": "tip"
+    },
+    {
+      "id": "apetogentleman-com-black-tie-dress-code-men-15",
+      "text": "Never substitute a black business suit with a long tie, a black shirt or novelties like sequins or cowboy boots for black tie.",
+      "why": "They miss the code and look like you didn't understand it.",
+      "topics": [
+        "formal",
+        "occasions"
+      ],
+      "occasions": [
+        "event"
+      ],
+      "strength": "rule"
+    }
+  ],
+  "outfits": [
+    {
+      "outfit": "jacket black formal +dinner-suit +satin-lapels +suit +wool, shirt white formal +turn-down-collar, trousers black formal +braid +dinner-suit +suit, tie black formal +bow-tie, dress-shoes black formal +oxford +patent",
+      "occasion": "event",
+      "verdict": "good",
+      "why": "The classic black-tie uniform: tailored black dinner suit, white turn-down shirt, black bow tie and black patent oxfords."
+    }
+  ]
+}

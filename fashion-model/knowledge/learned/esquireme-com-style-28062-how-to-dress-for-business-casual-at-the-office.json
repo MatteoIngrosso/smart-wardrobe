@@ -1,0 +1,166 @@
+{
+  "source": {
+    "kind": "article",
+    "url": "https://www.esquireme.com/style/28062-how-to-dress-for-business-casual-at-the-office",
+    "title": "How to dress for business casual at the office",
+    "author": "Esquire Middle East"
+  },
+  "learned_at": "2026-10-17T18:33:02+00:00",
+  "model": "by hand",
+  "tokens": {
+    "in": 0,
+    "out": 0
+  },
+  "tips": [
+    {
+      "id": "esquireme-com-style-28062-how-to-dress-for-business-casual-at-the-office-1",
+      "text": "For a business-casual office, choose jeans that are slim but not skinny, mostly in a dark wash such as raw indigo or black.",
+      "why": "Dark, neat denim is the smartest version of jeans.",
+      "topics": [
+        "denim",
+        "occasions"
+      ],
+      "occasions": [
+        "work"
+      ],
+      "strength": "tip"
+    },
+    {
+      "id": "esquireme-com-style-28062-how-to-dress-for-business-casual-at-the-office-2",
+      "text": "Balance office jeans with a crisp oxford shirt or a blazer.",
+      "why": "It stops the outfit sliding into weekend casual.",
+      "topics": [
+        "denim",
+        "smart casual"
+      ],
+      "occasions": [
+        "work"
+      ],
+      "strength": "tip"
+    },
+    {
+      "id": "esquireme-com-style-28062-how-to-dress-for-business-casual-at-the-office-3",
+      "text": "Light-wash jeans can work at the office only if they are slim and rip-free; dress them up with a white oxford and a navy or khaki blazer.",
+      "why": "A light wash already reads casual, so the rest must be sharper.",
+      "topics": [
+        "denim",
+        "occasions"
+      ],
+      "occasions": [
+        "work"
+      ],
+      "strength": "tip"
+    },
+    {
+      "id": "esquireme-com-style-28062-how-to-dress-for-business-casual-at-the-office-4",
+      "text": "With light-wash jeans at work, wear loafers or Chelsea boots rather than sneakers.",
+      "why": "Sneakers would push an already casual wash too far.",
+      "topics": [
+        "shoes",
+        "denim"
+      ],
+      "occasions": [
+        "work"
+      ],
+      "strength": "tip"
+    },
+    {
+      "id": "esquireme-com-style-28062-how-to-dress-for-business-casual-at-the-office-5",
+      "text": "Office sneakers should be minimal and streamlined; keep bold, loud pairs for off-duty hours.",
+      "why": "Plain sneakers blend with tailoring, statement pairs don't.",
+      "topics": [
+        "shoes",
+        "occasions"
+      ],
+      "occasions": [
+        "work"
+      ],
+      "strength": "tip"
+    },
+    {
+      "id": "esquireme-com-style-28062-how-to-dress-for-business-casual-at-the-office-6",
+      "text": "Keep office accessories sparing; a simple watch is the best way to add interest.",
+      "why": "A few considered accessories look professional.",
+      "topics": [
+        "accessories"
+      ],
+      "occasions": [
+        "work"
+      ],
+      "strength": "tip",
+      "same_as": "accessories-few"
+    },
+    {
+      "id": "esquireme-com-style-28062-how-to-dress-for-business-casual-at-the-office-7",
+      "text": "Carry a quality leather backpack rather than a bulky sports backpack or a rigid old-fashioned briefcase.",
+      "why": "It sits between too casual and too stuffy and still looks professional.",
+      "topics": [
+        "accessories"
+      ],
+      "occasions": [
+        "work"
+      ],
+      "strength": "opinion"
+    },
+    {
+      "id": "esquireme-com-style-28062-how-to-dress-for-business-casual-at-the-office-8",
+      "text": "Rely on oxford shirts to keep business casual buttoned-up; white is the safest colour, alone or under a blazer.",
+      "why": "A collared oxford holds the outfit above casual.",
+      "topics": [
+        "shirts",
+        "occasions"
+      ],
+      "occasions": [
+        "work"
+      ],
+      "strength": "tip"
+    },
+    {
+      "id": "esquireme-com-style-28062-how-to-dress-for-business-casual-at-the-office-9",
+      "text": "Make a navy blazer, structured or unstructured, the staple of a business-casual wardrobe.",
+      "why": "It goes with almost every office outfit.",
+      "topics": [
+        "smart casual",
+        "wardrobe"
+      ],
+      "occasions": [
+        "work"
+      ],
+      "strength": "tip"
+    },
+    {
+      "id": "esquireme-com-style-28062-how-to-dress-for-business-casual-at-the-office-10",
+      "text": "In a business-casual workplace, save the full suit for board meetings and job interviews.",
+      "why": "A suit every day looks overdressed in a relaxed office.",
+      "topics": [
+        "suits",
+        "occasions"
+      ],
+      "occasions": [
+        "work"
+      ],
+      "strength": "tip"
+    },
+    {
+      "id": "esquireme-com-style-28062-how-to-dress-for-business-casual-at-the-office-11",
+      "text": "Skip technical mountain or sports jackets at the office; a trench or mac covers cool, wet days.",
+      "why": "Performance outerwear looks out of place over office clothes.",
+      "topics": [
+        "outerwear",
+        "weather"
+      ],
+      "occasions": [
+        "work"
+      ],
+      "strength": "tip"
+    }
+  ],
+  "outfits": [
+    {
+      "outfit": "jacket navy smart casual +blazer, shirt white smart casual +oxford, jeans light blue slim casual +light-wash",
+      "occasion": "work",
+      "verdict": "good",
+      "why": "A white oxford and navy blazer dress up slim, rip-free light-wash jeans enough for a business-casual office."
+    }
+  ]
+}

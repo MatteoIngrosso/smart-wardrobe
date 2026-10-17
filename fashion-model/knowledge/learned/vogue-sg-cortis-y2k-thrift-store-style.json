@@ -1,0 +1,103 @@
+{
+  "source": {
+    "kind": "article",
+    "url": "https://vogue.sg/cortis-y2k-thrift-store-style/",
+    "title": "How to channel Cortis's Y2K thrift store style",
+    "author": "Vogue Singapore"
+  },
+  "learned_at": "2026-10-17T18:47:59+00:00",
+  "model": "by hand",
+  "tokens": {
+    "in": 0,
+    "out": 0
+  },
+  "tips": [
+    {
+      "id": "vogue-sg-cortis-y2k-thrift-store-style-1",
+      "text": "Build Y2K streetwear from thrifted and vintage pieces so the outfit looks like your own wardrobe, not a copied mood board.",
+      "why": "Clothes that seem collected over time look personal.",
+      "topics": [
+        "streetwear",
+        "wardrobe"
+      ],
+      "occasions": [
+        "casual"
+      ],
+      "strength": "opinion"
+    },
+    {
+      "id": "vogue-sg-cortis-y2k-thrift-store-style-2",
+      "text": "For a vintage athletic look, use old-school sportswear such as track jackets, windbreakers and hoodies.",
+      "why": "Retro sportswear gives an energetic, relaxed feel.",
+      "topics": [
+        "streetwear",
+        "sportswear"
+      ],
+      "occasions": [
+        "casual"
+      ],
+      "strength": "opinion"
+    },
+    {
+      "id": "vogue-sg-cortis-y2k-thrift-store-style-3",
+      "text": "Let one strong piece carry the outfit and keep the rest simple.",
+      "why": "A single focus stops a bold look from turning busy.",
+      "topics": [
+        "streetwear"
+      ],
+      "occasions": [
+        "casual"
+      ],
+      "strength": "tip",
+      "same_as": "streetwear-base"
+    },
+    {
+      "id": "vogue-sg-cortis-y2k-thrift-store-style-4",
+      "text": "When the setting is already loud, rely on texture and layering rather than loud pieces.",
+      "why": "Texture adds interest while keeping the look grounded.",
+      "topics": [
+        "layering",
+        "fabrics"
+      ],
+      "occasions": [
+        "casual",
+        "night"
+      ],
+      "strength": "tip"
+    },
+    {
+      "id": "vogue-sg-cortis-y2k-thrift-store-style-5",
+      "text": "For everyday Y2K style, wear a graphic tee with straight-leg or bootcut jeans and worn-in sneakers.",
+      "why": "It is the simplest version of the vintage look.",
+      "topics": [
+        "streetwear",
+        "denim",
+        "casual"
+      ],
+      "occasions": [
+        "casual"
+      ],
+      "strength": "opinion"
+    },
+    {
+      "id": "vogue-sg-cortis-y2k-thrift-store-style-6",
+      "text": "Treat rings and belts as accents, not the main statement.",
+      "why": "Small accessories should support the outfit, not compete with it.",
+      "topics": [
+        "accessories"
+      ],
+      "occasions": [
+        "casual"
+      ],
+      "strength": "tip"
+    }
+  ],
+  "outfits": [
+    {
+      "outfit": "track-jacket red vintage +sportswear, tshirt black streetwear +graphic, track-pants navy sporty +stripes",
+      "occasion": "casual",
+      "verdict": "good",
+      "why": "A vintage track jacket over a graphic tee with striped track pants gives a retro athletic look."
+    }
+  ]
+}

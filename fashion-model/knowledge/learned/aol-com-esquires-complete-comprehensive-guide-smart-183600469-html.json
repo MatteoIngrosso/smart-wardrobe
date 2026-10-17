@@ -1,0 +1,237 @@
+{
+  "source": {
+    "kind": "article",
+    "url": "https://www.aol.com/esquires-complete-comprehensive-guide-smart-183600469.html",
+    "title": "Esquire's Complete and Comprehensive Guide to Smart-Casual Style",
+    "author": "Esquire"
+  },
+  "learned_at": "2026-10-17T18:33:02+00:00",
+  "model": "by hand",
+  "tokens": {
+    "in": 0,
+    "out": 0
+  },
+  "tips": [
+    {
+      "id": "aol-com-esquires-complete-comprehensive-guide-smart-183600469-html-1",
+      "text": "Think of smart casual as the midpoint: everyday casual clothes made more polished, or dressy clothes loosened up.",
+      "why": "Landing in the middle keeps you from being either over- or underdressed.",
+      "topics": [
+        "smart casual",
+        "occasions"
+      ],
+      "occasions": [
+        "smart"
+      ],
+      "strength": "rule"
+    },
+    {
+      "id": "aol-com-esquires-complete-comprehensive-guide-smart-183600469-html-2",
+      "text": "When an invitation names a dress code, follow it; when it says nothing, smart casual is a safe default.",
+      "why": "It suits most gatherings without looking out of place.",
+      "topics": [
+        "occasions"
+      ],
+      "occasions": [
+        "smart",
+        "event"
+      ],
+      "strength": "tip"
+    },
+    {
+      "id": "aol-com-esquires-complete-comprehensive-guide-smart-183600469-html-3",
+      "text": "Keep black-tie pieces such as patent tuxedo shoes out of smart-casual outfits.",
+      "why": "Evening-formal items look strange next to workwear trousers and other casual pieces.",
+      "topics": [
+        "smart casual",
+        "shoes",
+        "formal"
+      ],
+      "occasions": [
+        "smart"
+      ],
+      "strength": "tip"
+    },
+    {
+      "id": "aol-com-esquires-complete-comprehensive-guide-smart-183600469-html-4",
+      "text": "Alternate smart and casual pieces from top to bottom, for example a smart shirt, relaxed trousers and smart shoes.",
+      "why": "The swap keeps the outfit balanced between dressy and easy.",
+      "topics": [
+        "smart casual"
+      ],
+      "occasions": [
+        "smart"
+      ],
+      "strength": "tip"
+    },
+    {
+      "id": "aol-com-esquires-complete-comprehensive-guide-smart-183600469-html-5",
+      "text": "When layering a smart-casual look, make one layer smart and the other casual, like a plain tee under a tailored blazer.",
+      "why": "Mixing levels in the layers gives the relaxed-but-polished balance.",
+      "topics": [
+        "smart casual",
+        "layering"
+      ],
+      "occasions": [
+        "smart"
+      ],
+      "strength": "tip"
+    },
+    {
+      "id": "aol-com-esquires-complete-comprehensive-guide-smart-183600469-html-6",
+      "text": "Keep a smart-casual outfit simple rather than piling on many pieces.",
+      "why": "Too many elements look messy instead of sharp.",
+      "topics": [
+        "smart casual"
+      ],
+      "occasions": [
+        "smart"
+      ],
+      "strength": "tip"
+    },
+    {
+      "id": "aol-com-esquires-complete-comprehensive-guide-smart-183600469-html-7",
+      "text": "Put money into timeless staples such as a wool coat and good leather shoes rather than passing trends.",
+      "why": "They last longer and never go out of date.",
+      "topics": [
+        "wardrobe"
+      ],
+      "occasions": [],
+      "strength": "tip"
+    },
+    {
+      "id": "aol-com-esquires-complete-comprehensive-guide-smart-183600469-html-8",
+      "text": "Have your smart-casual pieces tailored so they fit properly.",
+      "why": "Good fit is what makes relaxed clothes look intentional.",
+      "topics": [
+        "fit"
+      ],
+      "occasions": [
+        "smart"
+      ],
+      "strength": "tip",
+      "same_as": "tailor"
+    },
+    {
+      "id": "aol-com-esquires-complete-comprehensive-guide-smart-183600469-html-9",
+      "text": "For smart casual, pick a soft, unstructured blazer over a stiff, formal one.",
+      "why": "A rigid blazer looks like office tailoring and fights the relaxed pieces.",
+      "topics": [
+        "smart casual",
+        "outerwear"
+      ],
+      "occasions": [
+        "smart"
+      ],
+      "strength": "tip"
+    },
+    {
+      "id": "aol-com-esquires-complete-comprehensive-guide-smart-183600469-html-10",
+      "text": "Use shoes to tune the formality: loafers lift a casual outfit, sneakers relax a dressier one.",
+      "why": "Footwear shifts the whole look up or down quickly.",
+      "topics": [
+        "shoes",
+        "smart casual"
+      ],
+      "occasions": [
+        "smart"
+      ],
+      "strength": "tip"
+    },
+    {
+      "id": "aol-com-esquires-complete-comprehensive-guide-smart-183600469-html-11",
+      "text": "Workwear-style trousers make a practical, everyday option for smart-casual outfits.",
+      "why": "They are hard-wearing yet tidier than jeans or cargos.",
+      "topics": [
+        "trousers",
+        "smart casual"
+      ],
+      "occasions": [
+        "smart",
+        "casual"
+      ],
+      "strength": "opinion"
+    },
+    {
+      "id": "aol-com-esquires-complete-comprehensive-guide-smart-183600469-html-12",
+      "text": "Wear a button-down shirt in different ways: fully buttoned, open over a tee, or layered under a jacket or coat.",
+      "why": "One shirt then covers several levels of formality.",
+      "topics": [
+        "shirts",
+        "layering"
+      ],
+      "occasions": [
+        "smart",
+        "casual"
+      ],
+      "strength": "tip"
+    },
+    {
+      "id": "aol-com-esquires-complete-comprehensive-guide-smart-183600469-html-13",
+      "text": "A plain white tee works on its own or under a denim jacket or blazer.",
+      "why": "It is the most adaptable base layer.",
+      "topics": [
+        "layering",
+        "casual"
+      ],
+      "occasions": [
+        "casual",
+        "smart"
+      ],
+      "strength": "tip"
+    },
+    {
+      "id": "aol-com-esquires-complete-comprehensive-guide-smart-183600469-html-14",
+      "text": "In a hurry, tie a crewneck sweater over your shoulders for a quick preppy touch.",
+      "why": "It adds colour and polish with no effort.",
+      "topics": [
+        "knitwear",
+        "smart casual"
+      ],
+      "occasions": [
+        "smart"
+      ],
+      "strength": "opinion"
+    },
+    {
+      "id": "aol-com-esquires-complete-comprehensive-guide-smart-183600469-html-15",
+      "text": "Match the room: cargo trousers at a gathering where everyone else wears smart trousers will look out of place.",
+      "why": "Smart casual still has to fit the setting.",
+      "topics": [
+        "trousers",
+        "occasions"
+      ],
+      "occasions": [
+        "smart"
+      ],
+      "strength": "tip"
+    },
+    {
+      "id": "aol-com-esquires-complete-comprehensive-guide-smart-183600469-html-16",
+      "text": "Avoid putting a sharp double-breasted blazer over a boxy, heavy workwear tee.",
+      "why": "The two pieces are too far apart in spirit and the mismatch shows.",
+      "topics": [
+        "smart casual",
+        "layering"
+      ],
+      "occasions": [
+        "smart"
+      ],
+      "strength": "opinion"
+    },
+    {
+      "id": "aol-com-esquires-complete-comprehensive-guide-smart-183600469-html-17",
+      "text": "A white button-down shirt with relaxed, baggy trousers and loafers or sneakers mixes a classic piece with a current silhouette.",
+      "why": "Classic plus trendy reads modern without trying too hard.",
+      "topics": [
+        "smart casual",
+        "fit"
+      ],
+      "occasions": [
+        "smart"
+      ],
+      "strength": "opinion"
+    }
+  ],
+  "outfits": []
+}

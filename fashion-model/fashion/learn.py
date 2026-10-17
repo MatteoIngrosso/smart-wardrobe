@@ -10,7 +10,7 @@ from datetime import datetime, timezone
 
 from . import LEARNED
 from .gemini import DEFAULT_MODEL, generate_json
-from .knowledge import merged_tips
+from .knowledge import merged_tips, relevant
 from .outfit import Piece
 from .sources import fetch
 from .vocab import CATS, COLORS, FITS, OCCASIONS, STYLES, TOPICS
@@ -96,7 +96,7 @@ def learn(src, key=None, model=DEFAULT_MODEL, force=False, log=print):
         return path
     s = fetch(src)
     log(f"  read {s['kind']}: {s['title'][:70]} ({len(s['text']):,} characters)")
-    known = known_tips()
+    known = known_tips(text=s["text"])
     system = SYSTEM + "\n\nKNOWN TIPS:\n" + "\n".join(f"{t['id']}: {t['text'][:90]}" for t in known)
     data, usage = generate_json(system, f"Title: {s['title']}\nBy: {s['author']}\n\n{s['text']}", SCHEMA, key=key, model=model)
     return save(src, s, data, {t["id"] for t in known}, model, usage, log)
@@ -133,9 +133,10 @@ def save(src, meta, data, known_ids, model, usage=None, log=print):
     return path
 
 
-def instructions():
-    """What Gemini is told, as text, for reading a source without Gemini and saving it with `add`."""
-    known = known_tips()
+def instructions(text=None):
+    """What Gemini is told, as text, for reading a source without Gemini and saving it with `add`.
+    With the source's text, the known tips listed are the ones it's most likely to repeat."""
+    known = known_tips(text=text)
     return "\n".join([
         SYSTEM, "",
         "Answer with JSON only, shaped like this:",
@@ -154,10 +155,13 @@ def instructions():
     ])
 
 
-def known_tips(limit=150):
-    """The tips already in the bible, best supported first, so Gemini can say which ones a source repeats.
-    About 20 tokens each."""
-    return sorted(merged_tips(), key=lambda t: -t["rank"])[:limit]
+def known_tips(limit=150, text=None):
+    """The tips already in the bible, so Gemini can say which ones a source repeats: the best supported,
+    and once there are more than `limit`, the ones closest to the source's text. About 20 tokens each."""
+    tips = sorted(merged_tips(), key=lambda t: -t["rank"])
+    if text is None or len(tips) <= limit:
+        return tips[:limit]
+    return tips[:limit // 3] + relevant(tips[limit // 3:], text, limit - limit // 3)
 
 
 def clean_tips(tips, known_ids=()):
@@ -191,11 +195,20 @@ def clean_outfits(outfits):
         slots = {p.slot for p in pieces}
         if not ({"base", "mid"} & slots and "bottom" in slots):
             continue
+        match_suit(pieces)
         if o.get("verdict") not in ("good", "avoid") or o.get("occasion") not in OCCASIONS:
             continue
         out.append({"outfit": ", ".join(str(p) for p in pieces), "occasion": o["occasion"],
                     "verdict": o["verdict"], "why": " ".join(str(o.get("why", "")).split())})
     return out
+
+
+def match_suit(pieces):
+    """The two halves of a suit are cut and worn as one, so they get the same styles."""
+    jacket = next((p for p in pieces if p.category == "jacket" and p.has("suit", "dinner suit")), None)
+    trousers = next((p for p in pieces if p.category == "trousers" and p.has("suit", "dinner suit")), None)
+    if jacket and trousers:
+        trousers.styles = list(jacket.styles)
 
 
 def read_list(path):

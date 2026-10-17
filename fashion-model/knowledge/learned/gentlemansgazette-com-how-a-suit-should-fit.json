@@ -1,0 +1,259 @@
+{
+  "source": {
+    "kind": "article",
+    "url": "https://www.gentlemansgazette.com/how-a-suit-should-fit/",
+    "title": "How A Suit Should Fit",
+    "author": "Gentleman's Gazette"
+  },
+  "learned_at": "2026-10-17T18:34:06+00:00",
+  "model": "by hand",
+  "tokens": {
+    "in": 0,
+    "out": 0
+  },
+  "tips": [
+    {
+      "id": "gentlemansgazette-com-how-a-suit-should-fit-1",
+      "text": "The jacket collar should hug the shirt collar at the back of the neck and stay there when you move.",
+      "why": "A collar standing away from the neck is an obvious sign of poor fit; a tailor can often correct it.",
+      "topics": [
+        "fit",
+        "suits"
+      ],
+      "occasions": [
+        "work",
+        "event"
+      ],
+      "strength": "rule",
+      "same_as": "putthison-com-a-practical-guide-to-getting-started-6"
+    },
+    {
+      "id": "gentlemansgazette-com-how-a-suit-should-fit-2",
+      "text": "The shoulder seam should end at or just past your shoulder bone, with no dents under the pad and no slack cloth.",
+      "why": "Shoulders frame the jacket; dents or overhang mean the size is wrong.",
+      "topics": [
+        "fit",
+        "suits"
+      ],
+      "occasions": [
+        "work",
+        "event"
+      ],
+      "strength": "rule",
+      "same_as": "jacket-shoulders"
+    },
+    {
+      "id": "gentlemansgazette-com-how-a-suit-should-fit-3",
+      "text": "Prefer jackets with higher, closer armholes; oversized armholes make the whole jacket lift and shift when you raise your arms.",
+      "why": "A snug armhole actually gives more freedom of movement and a cleaner line.",
+      "topics": [
+        "fit",
+        "suits"
+      ],
+      "occasions": [
+        "work",
+        "event"
+      ],
+      "strength": "tip"
+    },
+    {
+      "id": "gentlemansgazette-com-how-a-suit-should-fit-4",
+      "text": "Leave a little clean drape over the chest; a chest cut too tight makes the lapels roll and pleats form.",
+      "why": "Some ease looks natural and lets the lapels lie flat.",
+      "topics": [
+        "fit",
+        "suits"
+      ],
+      "occasions": [
+        "work",
+        "event"
+      ],
+      "strength": "tip"
+    },
+    {
+      "id": "gentlemansgazette-com-how-a-suit-should-fit-5",
+      "text": "Choose side vents ending around pocket level; centre vents add little, and ventless jackets suit evening wear only if not tight.",
+      "why": "Side vents flatter most figures and let the jacket hang cleanly in movement.",
+      "topics": [
+        "suits",
+        "fit"
+      ],
+      "occasions": [
+        "work",
+        "event"
+      ],
+      "strength": "tip"
+    },
+    {
+      "id": "gentlemansgazette-com-how-a-suit-should-fit-6",
+      "text": "Judge jacket length by balance: back collar to hem should roughly equal hem to trouser bottom, which normally still covers the seat.",
+      "why": "Balanced proportions outlast trends; jackets too short or too long look off.",
+      "topics": [
+        "proportions",
+        "suits"
+      ],
+      "occasions": [
+        "work",
+        "event"
+      ],
+      "strength": "tip"
+    },
+    {
+      "id": "gentlemansgazette-com-how-a-suit-should-fit-7",
+      "text": "Sleeves should hang straight without twisting wrinkles; if they twist, have a tailor correct the sleeve pitch.",
+      "why": "Pitch errors are fixable and otherwise spoil the line of the arm.",
+      "topics": [
+        "fit",
+        "suits"
+      ],
+      "occasions": [
+        "work",
+        "event"
+      ],
+      "strength": "tip"
+    },
+    {
+      "id": "gentlemansgazette-com-how-a-suit-should-fit-8",
+      "text": "Check the jacket's back: apart from slight folds under the arms it should be smooth, free of horizontal or vertical wrinkles.",
+      "why": "A clean back is the best overall sign that the jacket fits.",
+      "topics": [
+        "fit",
+        "suits"
+      ],
+      "occasions": [
+        "work",
+        "event"
+      ],
+      "strength": "rule"
+    },
+    {
+      "id": "gentlemansgazette-com-how-a-suit-should-fit-9",
+      "text": "Buttoned, the front should form a clean V above and fall slightly open below; X-shaped pulls mean too tight, vertical folds too loose.",
+      "why": "These creases reveal fit at a glance.",
+      "topics": [
+        "fit",
+        "suits"
+      ],
+      "occasions": [
+        "work",
+        "event"
+      ],
+      "strength": "rule"
+    },
+    {
+      "id": "gentlemansgazette-com-how-a-suit-should-fit-10",
+      "text": "Place the jacket button at the natural waist; shorter men may raise it slightly, but the tie should never show below it.",
+      "why": "The buttoning point sets your proportions, and a tie tip peeking out looks sloppy.",
+      "topics": [
+        "proportions",
+        "suits"
+      ],
+      "occasions": [
+        "work",
+        "event"
+      ],
+      "strength": "tip"
+    },
+    {
+      "id": "gentlemansgazette-com-how-a-suit-should-fit-11",
+      "text": "A buttoned jacket should still give about 5 cm when pulled away from the stomach.",
+      "why": "That ease lets you move without the jacket looking loose.",
+      "topics": [
+        "fit",
+        "suits"
+      ],
+      "occasions": [
+        "work",
+        "event"
+      ],
+      "strength": "tip"
+    },
+    {
+      "id": "gentlemansgazette-com-how-a-suit-should-fit-12",
+      "text": "Open, rounded front quarters look more modern than closed ones, but pair them with higher-rise trousers so no shirt shows below the button.",
+      "why": "Open quarters expose the waist area.",
+      "topics": [
+        "suits",
+        "proportions"
+      ],
+      "occasions": [
+        "work",
+        "event"
+      ],
+      "strength": "opinion"
+    },
+    {
+      "id": "gentlemansgazette-com-how-a-suit-should-fit-13",
+      "text": "Avoid shapeless sack cuts and wide, low-buttoning 1990s-style jackets with excess cloth.",
+      "why": "They swamp the body and look dated.",
+      "topics": [
+        "suits",
+        "fit"
+      ],
+      "occasions": [
+        "work",
+        "event"
+      ],
+      "strength": "opinion"
+    },
+    {
+      "id": "gentlemansgazette-com-how-a-suit-should-fit-14",
+      "text": "Suit trousers should be neither tight nor baggy, with pleats lying flat and a slight break or none.",
+      "why": "Clean trouser lines finish the suit.",
+      "topics": [
+        "trousers",
+        "fit",
+        "suits"
+      ],
+      "occasions": [
+        "work",
+        "event"
+      ],
+      "strength": "rule"
+    },
+    {
+      "id": "gentlemansgazette-com-how-a-suit-should-fit-15",
+      "text": "Choose a moderately high trouser rise and consider braces rather than a belt to hold suit trousers.",
+      "why": "A higher rise looks cleaner under the jacket, and belts let trousers slip.",
+      "topics": [
+        "trousers",
+        "suits",
+        "accessories"
+      ],
+      "occasions": [
+        "work",
+        "event"
+      ],
+      "strength": "opinion"
+    },
+    {
+      "id": "gentlemansgazette-com-how-a-suit-should-fit-16",
+      "text": "Wear a two-piece jacket buttoned when standing, but a three-piece jacket may be left open over the waistcoat.",
+      "why": "The waistcoat already shapes the torso.",
+      "topics": [
+        "suits",
+        "formal"
+      ],
+      "occasions": [
+        "work",
+        "event"
+      ],
+      "strength": "tip"
+    },
+    {
+      "id": "gentlemansgazette-com-how-a-suit-should-fit-17",
+      "text": "Heavier suit cloth drapes better and hides small flaws, while lightweight cloth exposes every imperfection of the tailoring.",
+      "why": "Weight helps the fabric hang cleanly.",
+      "topics": [
+        "fabrics",
+        "suits"
+      ],
+      "occasions": [
+        "work",
+        "event"
+      ],
+      "strength": "tip"
+    }
+  ],
+  "outfits": []
+}

@@ -1,0 +1,179 @@
+{
+  "source": {
+    "kind": "article",
+    "url": "https://www.permanentstyle.com/2018/09/should-your-belt-match-your-shoes-or-bag.html",
+    "title": "Should your belt match your shoes? (Or bag)",
+    "author": "Permanent Style"
+  },
+  "learned_at": "2026-10-17T18:31:19+00:00",
+  "model": "by hand",
+  "tokens": {
+    "in": 0,
+    "out": 0
+  },
+  "tips": [
+    {
+      "id": "permanentstyle-com-2018-09-should-your-belt-match-your-shoes-or-bag-html-1",
+      "text": "Belt and shoes needn't be the exact same shade, but keep them closely related, such as a mid-brown belt with dark brown shoes.",
+      "why": "Browns from one family sit together without looking forced.",
+      "topics": [
+        "accessories",
+        "shoes",
+        "colour"
+      ],
+      "occasions": [],
+      "strength": "tip"
+    },
+    {
+      "id": "permanentstyle-com-2018-09-should-your-belt-match-your-shoes-or-bag-html-2",
+      "text": "A brown belt can go with brown suede shoes even if the shades differ slightly.",
+      "why": "Suede and leather browns are close relatives.",
+      "topics": [
+        "accessories",
+        "shoes"
+      ],
+      "occasions": [
+        "casual",
+        "smart"
+      ],
+      "strength": "tip"
+    },
+    {
+      "id": "permanentstyle-com-2018-09-should-your-belt-match-your-shoes-or-bag-html-3",
+      "text": "Never wear a brown belt with black shoes.",
+      "why": "Black has no shades to bridge the gap, so the mismatch shows.",
+      "topics": [
+        "accessories",
+        "shoes",
+        "colour"
+      ],
+      "occasions": [],
+      "strength": "rule"
+    },
+    {
+      "id": "permanentstyle-com-2018-09-should-your-belt-match-your-shoes-or-bag-html-4",
+      "text": "With black shoes, wear a black belt or no belt at all.",
+      "why": "Black shoes are formal and any other leather looks off beside them.",
+      "topics": [
+        "accessories",
+        "shoes",
+        "formal"
+      ],
+      "occasions": [
+        "work",
+        "smart",
+        "event"
+      ],
+      "strength": "rule"
+    },
+    {
+      "id": "permanentstyle-com-2018-09-should-your-belt-match-your-shoes-or-bag-html-5",
+      "text": "With black boots and jeans, consider going beltless rather than adding a formal black belt.",
+      "why": "A dressy black belt looks out of place in a casual outfit.",
+      "topics": [
+        "accessories",
+        "denim",
+        "casual"
+      ],
+      "occasions": [
+        "casual"
+      ],
+      "strength": "opinion"
+    },
+    {
+      "id": "permanentstyle-com-2018-09-should-your-belt-match-your-shoes-or-bag-html-6",
+      "text": "Treat leather watch straps like belts: keep them in the same colour family as your shoes.",
+      "why": "The leathers then read as one coordinated set.",
+      "topics": [
+        "accessories",
+        "colour"
+      ],
+      "occasions": [],
+      "strength": "tip",
+      "same_as": "watch-strap"
+    },
+    {
+      "id": "permanentstyle-com-2018-09-should-your-belt-match-your-shoes-or-bag-html-7",
+      "text": "A pale tan watch strap can work with a suit and black shoes.",
+      "why": "Its light, strong colour reads as a deliberate contrast rather than a mismatch.",
+      "topics": [
+        "accessories",
+        "suits"
+      ],
+      "occasions": [
+        "work",
+        "smart"
+      ],
+      "strength": "opinion"
+    },
+    {
+      "id": "permanentstyle-com-2018-09-should-your-belt-match-your-shoes-or-bag-html-8",
+      "text": "Canvas webbing belts and fabric NATO watch straps don't need to match your shoes.",
+      "why": "Non-leather pieces escape the leather-matching rules.",
+      "topics": [
+        "accessories",
+        "casual"
+      ],
+      "occasions": [
+        "casual"
+      ],
+      "strength": "tip"
+    },
+    {
+      "id": "permanentstyle-com-2018-09-should-your-belt-match-your-shoes-or-bag-html-9",
+      "text": "If you mostly wear suits with black shoes, carry a black briefcase; for casual versatility, choose dark brown.",
+      "why": "Black is the most elegant with formal wear; dark brown spans more outfits.",
+      "topics": [
+        "accessories",
+        "colour"
+      ],
+      "occasions": [
+        "work",
+        "casual"
+      ],
+      "strength": "tip"
+    },
+    {
+      "id": "permanentstyle-com-2018-09-should-your-belt-match-your-shoes-or-bag-html-10",
+      "text": "Match the bag's formality to the outfit: attaché case most formal, then briefcase, then tote.",
+      "why": "A casual bag undermines a sharp suit, and vice versa.",
+      "topics": [
+        "accessories",
+        "occasions"
+      ],
+      "occasions": [
+        "work"
+      ],
+      "strength": "tip"
+    },
+    {
+      "id": "permanentstyle-com-2018-09-should-your-belt-match-your-shoes-or-bag-html-11",
+      "text": "For the smartest suits, choose trousers without belt loops, using side adjusters or braces.",
+      "why": "A belt-free waist gives a cleaner line.",
+      "topics": [
+        "suits",
+        "trousers",
+        "formal"
+      ],
+      "occasions": [
+        "work",
+        "event"
+      ],
+      "strength": "opinion"
+    },
+    {
+      "id": "permanentstyle-com-2018-09-should-your-belt-match-your-shoes-or-bag-html-12",
+      "text": "In an open-necked tailored outfit without a tie, a good belt adds interest where a pocket square might look too showy.",
+      "why": "It gives a focal point without fuss.",
+      "topics": [
+        "accessories",
+        "smart casual"
+      ],
+      "occasions": [
+        "smart"
+      ],
+      "strength": "opinion"
+    }
+  ],
+  "outfits": []
+}

@@ -1,0 +1,175 @@
+{
+  "source": {
+    "kind": "article",
+    "url": "https://www.therake.com/stories/style/what-to-wear-in-autumn/",
+    "title": "What to Wear in Autumn",
+    "author": "The Rake"
+  },
+  "learned_at": "2026-10-17T18:32:16+00:00",
+  "model": "by hand",
+  "tokens": {
+    "in": 0,
+    "out": 0
+  },
+  "tips": [
+    {
+      "id": "therake-com-stories-style-what-to-wear-in-autumn-1",
+      "text": "Keep seasonal cloths such as flannel and tweed for autumn and winter instead of wearing year-round worsted suits all the time.",
+      "why": "Seasonal fabrics are warmer and have more texture and character.",
+      "topics": [
+        "fabrics",
+        "weather",
+        "suits",
+        "wardrobe"
+      ],
+      "occasions": [
+        "work",
+        "smart"
+      ],
+      "strength": "tip"
+    },
+    {
+      "id": "therake-com-stories-style-what-to-wear-in-autumn-2",
+      "text": "Use tweed to bring colour into a conservative wardrobe.",
+      "why": "Its mixed yarns carry colour and pattern without looking loud.",
+      "topics": [
+        "fabrics",
+        "colour",
+        "patterns"
+      ],
+      "occasions": [
+        "smart"
+      ],
+      "strength": "tip"
+    },
+    {
+      "id": "therake-com-stories-style-what-to-wear-in-autumn-3",
+      "text": "For houndstooth or glen check, consider flannel cloth.",
+      "why": "Flannel's soft surface blends the contrasting shades, so the check looks gentler.",
+      "topics": [
+        "patterns",
+        "fabrics",
+        "suits"
+      ],
+      "occasions": [
+        "work",
+        "smart"
+      ],
+      "strength": "tip"
+    },
+    {
+      "id": "therake-com-stories-style-what-to-wear-in-autumn-4",
+      "text": "Own grey flannel trousers: they go with jackets of any colour or texture and look more elegant than jeans.",
+      "why": "They are the most versatile odd trouser for cold months.",
+      "topics": [
+        "trousers",
+        "fabrics",
+        "wardrobe"
+      ],
+      "occasions": [
+        "smart",
+        "work"
+      ],
+      "strength": "tip"
+    },
+    {
+      "id": "therake-com-stories-style-what-to-wear-in-autumn-5",
+      "text": "To show off good tailoring, choose a plain mid-toned flannel suit.",
+      "why": "The rich, plain cloth draws the eye to the lapels, shoulders and chest.",
+      "topics": [
+        "suits",
+        "fabrics",
+        "colour"
+      ],
+      "occasions": [
+        "work",
+        "event"
+      ],
+      "strength": "opinion"
+    },
+    {
+      "id": "therake-com-stories-style-what-to-wear-in-autumn-6",
+      "text": "Dress down a flannel suit by swapping shirt and tie for a cashmere roll-neck and suede shoes.",
+      "why": "It stays elegant while feeling relaxed and smart casual.",
+      "topics": [
+        "suits",
+        "knitwear",
+        "smart casual"
+      ],
+      "occasions": [
+        "smart"
+      ],
+      "strength": "tip"
+    },
+    {
+      "id": "therake-com-stories-style-what-to-wear-in-autumn-7",
+      "text": "Wear a tweed hacking jacket off duty with a roll-neck, slim wool trousers, Chelsea boots and a knotted scarf.",
+      "why": "It makes a country jacket look modern and easy.",
+      "topics": [
+        "fabrics",
+        "smart casual",
+        "knitwear"
+      ],
+      "occasions": [
+        "smart",
+        "casual"
+      ],
+      "strength": "tip"
+    },
+    {
+      "id": "therake-com-stories-style-what-to-wear-in-autumn-8",
+      "text": "Pair a Norfolk or heavy tweed jacket with dark jeans and suede chukkas or loafers, not cavalry twills and a flat cap, when in town.",
+      "why": "Full country dress in the city looks like a costume.",
+      "topics": [
+        "fabrics",
+        "smart casual",
+        "occasions"
+      ],
+      "occasions": [
+        "smart",
+        "casual"
+      ],
+      "strength": "tip"
+    },
+    {
+      "id": "therake-com-stories-style-what-to-wear-in-autumn-9",
+      "text": "Choose woollen flannel for warmth and rustic character, worsted flannel for a lighter, sharper business suit.",
+      "why": "Woollen yarn is thicker and fuzzier; worsted is finer and smoother.",
+      "topics": [
+        "fabrics",
+        "suits",
+        "weather"
+      ],
+      "occasions": [
+        "work"
+      ],
+      "strength": "tip"
+    }
+  ],
+  "outfits": [
+    {
+      "outfit": "jacket purple smart +aubergine +double-breasted +flannel +suit +wool, trousers purple smart +aubergine +flannel +suit +wool, shirt purple smart casual +cotton +flannel +lilac, tie brown smart formal +print +silk, boots brown smart casual +chukka +leather",
+      "occasion": "work",
+      "verdict": "good",
+      "why": "A rich flannel suit with a soft flannel shirt and brown chukkas suits autumn."
+    },
+    {
+      "outfit": "jacket navy smart +flannel +suit +wool, trousers navy smart +flannel +suit +wool, shirt navy smart casual +brushed +check +cotton, tie navy smart formal +silk",
+      "occasion": "work",
+      "verdict": "good",
+      "why": "Tonal navy in soft autumn textures looks rich but quiet."
+    },
+    {
+      "outfit": "jacket navy formal +chalkstripe +flannel +suit +wool, trousers navy formal +chalkstripe +flannel +suit +wool, shirt blue smart casual +bengal-stripe +stripes, tie navy smart formal +silk, hat brown smart +fedora +felt",
+      "occasion": "work",
+      "verdict": "good",
+      "why": "A chalkstripe flannel suit is a classic cold-weather business look."
+    },
+    {
+      "outfit": "sweater grey smart casual +turtleneck +wool, trousers grey smart casual +tweed +wool",
+      "occasion": "smart",
+      "verdict": "good",
+      "why": "A grey roll-neck with tweed trousers is a textured tonal autumn look."
+    }
+  ]
+}

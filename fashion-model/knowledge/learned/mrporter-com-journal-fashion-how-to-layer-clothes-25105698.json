@@ -1,0 +1,141 @@
+{
+  "source": {
+    "kind": "article",
+    "url": "https://www.mrporter.com/journal/fashion/how-to-layer-clothes-25105698",
+    "title": "How To Get Your Layers Right",
+    "author": "MR PORTER"
+  },
+  "learned_at": "2026-10-17T18:32:32+00:00",
+  "model": "by hand",
+  "tokens": {
+    "in": 0,
+    "out": 0
+  },
+  "tips": [
+    {
+      "id": "mrporter-com-journal-fashion-how-to-layer-clothes-25105698-1",
+      "text": "Give each layer a different fabric or texture.",
+      "why": "Varied surfaces add depth, and each piece can change role as the weather shifts.",
+      "topics": [
+        "layering",
+        "fabrics"
+      ],
+      "occasions": [
+        "casual",
+        "smart"
+      ],
+      "strength": "tip"
+    },
+    {
+      "id": "mrporter-com-journal-fashion-how-to-layer-clothes-25105698-2",
+      "text": "Build autumn layers so the outfit still works when one is taken off, e.g. tee, cardigan, suede jacket and coat over jeans.",
+      "why": "Temperatures change through the day, and you'll shed layers.",
+      "topics": [
+        "layering",
+        "weather",
+        "knitwear"
+      ],
+      "occasions": [
+        "casual"
+      ],
+      "strength": "tip"
+    },
+    {
+      "id": "mrporter-com-journal-fashion-how-to-layer-clothes-25105698-3",
+      "text": "Layer tonally within one colour family, such as browns or blues, then add one piece in a contrasting shade.",
+      "why": "Tonal looks are balanced, and the contrast stops them looking flat.",
+      "topics": [
+        "layering",
+        "colour"
+      ],
+      "occasions": [
+        "casual",
+        "smart"
+      ],
+      "strength": "tip"
+    },
+    {
+      "id": "mrporter-com-journal-fashion-how-to-layer-clothes-25105698-4",
+      "text": "Repeat small details or colours across layers to tie an outfit together.",
+      "why": "Echoes make several pieces read as one deliberate look.",
+      "topics": [
+        "layering",
+        "colour"
+      ],
+      "occasions": [],
+      "strength": "tip"
+    },
+    {
+      "id": "mrporter-com-journal-fashion-how-to-layer-clothes-25105698-5",
+      "text": "Contrast glossy shoes, such as polished leather loafers, with matte or textured clothes.",
+      "why": "The shine adds polish against soft fabrics.",
+      "topics": [
+        "shoes",
+        "fabrics",
+        "layering"
+      ],
+      "occasions": [
+        "smart"
+      ],
+      "strength": "tip"
+    },
+    {
+      "id": "mrporter-com-journal-fashion-how-to-layer-clothes-25105698-6",
+      "text": "With wide or barrel-leg trousers, either balance with a neater, smaller top or commit to an equally slouchy one.",
+      "why": "Every layer's shape changes the overall silhouette.",
+      "topics": [
+        "proportions",
+        "layering",
+        "trousers"
+      ],
+      "occasions": [
+        "casual",
+        "smart"
+      ],
+      "strength": "opinion"
+    },
+    {
+      "id": "mrporter-com-journal-fashion-how-to-layer-clothes-25105698-7",
+      "text": "Add pattern in a top layer, such as a sweater vest over a shirt or a striped long-sleeved tee.",
+      "why": "It brings interest without changing the whole outfit.",
+      "topics": [
+        "patterns",
+        "layering",
+        "knitwear"
+      ],
+      "occasions": [
+        "casual",
+        "smart"
+      ],
+      "strength": "tip"
+    },
+    {
+      "id": "mrporter-com-journal-fashion-how-to-layer-clothes-25105698-8",
+      "text": "Use a plain cable-knit over a bolder piece to calm it down.",
+      "why": "The solid knit grounds the louder layer beneath.",
+      "topics": [
+        "knitwear",
+        "layering",
+        "patterns"
+      ],
+      "occasions": [
+        "casual"
+      ],
+      "strength": "tip"
+    },
+    {
+      "id": "mrporter-com-journal-fashion-how-to-layer-clothes-25105698-9",
+      "text": "Put a bold colour in a base or middle layer, soften it with neutral outer layers, and echo it in socks or sneaker details.",
+      "why": "The colour shows without overwhelming the outfit.",
+      "topics": [
+        "colour",
+        "layering"
+      ],
+      "occasions": [
+        "casual"
+      ],
+      "strength": "tip"
+    }
+  ],
+  "outfits": []
+}

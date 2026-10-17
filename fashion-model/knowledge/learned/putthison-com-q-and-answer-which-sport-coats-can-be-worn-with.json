@@ -1,0 +1,116 @@
+{
+  "source": {
+    "kind": "article",
+    "url": "https://putthison.com/q-and-answer-which-sport-coats-can-be-worn-with/",
+    "title": "Q and Answer: Which Sport Coats Can Be Worn with Jeans?",
+    "author": "Put This On"
+  },
+  "learned_at": "2026-10-17T18:34:06+00:00",
+  "model": "by hand",
+  "tokens": {
+    "in": 0,
+    "out": 0
+  },
+  "tips": [
+    {
+      "id": "putthison-com-q-and-answer-which-sport-coats-can-be-worn-with-1",
+      "text": "Don't pair a formal, smooth sport coat with jeans; the formality gap between top and bottom looks jarring.",
+      "why": "The two halves look as if they belong to different outfits.",
+      "topics": [
+        "smart casual",
+        "denim"
+      ],
+      "occasions": [
+        "smart",
+        "casual"
+      ],
+      "strength": "tip"
+    },
+    {
+      "id": "putthison-com-q-and-answer-which-sport-coats-can-be-worn-with-2",
+      "text": "With jeans, choose jackets that are casual by nature, such as tweed or corduroy.",
+      "why": "Their rustic texture matches the casual character of denim.",
+      "topics": [
+        "smart casual",
+        "denim",
+        "fabrics"
+      ],
+      "occasions": [
+        "smart",
+        "casual"
+      ],
+      "strength": "tip"
+    },
+    {
+      "id": "putthison-com-q-and-answer-which-sport-coats-can-be-worn-with-3",
+      "text": "Short, detailed casual jackets in casual fabrics go well with jeans, but treat them as outerwear rather than work tailoring.",
+      "why": "They are cut and styled as casual pieces, not office sport coats.",
+      "topics": [
+        "casual",
+        "denim",
+        "outerwear"
+      ],
+      "occasions": [
+        "casual"
+      ],
+      "strength": "opinion"
+    },
+    {
+      "id": "putthison-com-q-and-answer-which-sport-coats-can-be-worn-with-4",
+      "text": "A navy sport coat can sometimes work with jeans, but it is not a guaranteed match.",
+      "why": "Navy isn't rustic, so success depends on the cloth and cut.",
+      "topics": [
+        "smart casual",
+        "denim"
+      ],
+      "occasions": [
+        "smart"
+      ],
+      "strength": "opinion"
+    },
+    {
+      "id": "putthison-com-q-and-answer-which-sport-coats-can-be-worn-with-5",
+      "text": "Combine garments that sit close to each other on the formal-to-casual scale.",
+      "why": "Matched formality makes an outfit look coherent.",
+      "topics": [
+        "smart casual",
+        "occasions"
+      ],
+      "occasions": [
+        "smart",
+        "casual"
+      ],
+      "strength": "tip"
+    },
+    {
+      "id": "putthison-com-q-and-answer-which-sport-coats-can-be-worn-with-6",
+      "text": "If your sport coat is too dressy for denim, wear it with chinos instead of jeans.",
+      "why": "Chinos narrow the formality gap.",
+      "topics": [
+        "smart casual",
+        "trousers"
+      ],
+      "occasions": [
+        "smart",
+        "work"
+      ],
+      "strength": "tip"
+    },
+    {
+      "id": "putthison-com-q-and-answer-which-sport-coats-can-be-worn-with-7",
+      "text": "Keep shirt, shoes and tie as casual as the jacket and jeans, or skip the tie.",
+      "why": "Every piece should share the same level of formality.",
+      "topics": [
+        "smart casual",
+        "accessories",
+        "shoes"
+      ],
+      "occasions": [
+        "smart",
+        "casual"
+      ],
+      "strength": "tip"
+    }
+  ],
+  "outfits": []
+}

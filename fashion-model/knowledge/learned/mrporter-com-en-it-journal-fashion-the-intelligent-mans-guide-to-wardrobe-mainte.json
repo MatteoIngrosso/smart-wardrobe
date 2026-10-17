@@ -1,0 +1,228 @@
+{
+  "source": {
+    "kind": "article",
+    "url": "https://www.mrporter.com/en-it/journal/fashion/the-intelligent-mans-guide-to-wardrobe-maintenance-728388",
+    "title": "The Intelligent Man's Guide To Wardrobe Maintenance",
+    "author": "MR PORTER"
+  },
+  "learned_at": "2026-10-17T18:34:02+00:00",
+  "model": "by hand",
+  "tokens": {
+    "in": 0,
+    "out": 0
+  },
+  "tips": [
+    {
+      "id": "mrporter-com-en-it-journal-fashion-the-intelligent-mans-guide-to-wardrobe-mainte-1",
+      "text": "Read care labels first: most clothes can be washed at home, but tailored jackets and suits usually need dry cleaning.",
+      "why": "Washing tailoring can ruin its structure.",
+      "topics": [
+        "care",
+        "suits"
+      ],
+      "occasions": [],
+      "strength": "rule"
+    },
+    {
+      "id": "mrporter-com-en-it-journal-fashion-the-intelligent-mans-guide-to-wardrobe-mainte-2",
+      "text": "Sort laundry into whites, colours and delicates, and wash each load separately.",
+      "why": "Mixing them leads to dye transfer and damaged delicate fabrics.",
+      "topics": [
+        "care"
+      ],
+      "occasions": [],
+      "strength": "rule"
+    },
+    {
+      "id": "mrporter-com-en-it-journal-fashion-the-intelligent-mans-guide-to-wardrobe-mainte-3",
+      "text": "Wash new dark or indigo pieces on their own for the first few washes.",
+      "why": "Fresh dyes bleed onto other clothes.",
+      "topics": [
+        "care",
+        "denim"
+      ],
+      "occasions": [],
+      "strength": "rule"
+    },
+    {
+      "id": "mrporter-com-en-it-journal-fashion-the-intelligent-mans-guide-to-wardrobe-mainte-4",
+      "text": "Check the drum is empty before each wash.",
+      "why": "One forgotten item can stain a whole load.",
+      "topics": [
+        "care"
+      ],
+      "occasions": [],
+      "strength": "tip"
+    },
+    {
+      "id": "mrporter-com-en-it-journal-fashion-the-intelligent-mans-guide-to-wardrobe-mainte-5",
+      "text": "Wash at cool temperatures to prevent shrinking, using an oxygen-based detergent to deal with odours.",
+      "why": "Cool washes protect fibres but may not remove smells on their own.",
+      "topics": [
+        "care"
+      ],
+      "occasions": [],
+      "strength": "tip"
+    },
+    {
+      "id": "mrporter-com-en-it-journal-fashion-the-intelligent-mans-guide-to-wardrobe-mainte-6",
+      "text": "Wash wool, cashmere, silk and wool-rich socks on a wool or hand-wash cycle, inside a mesh bag.",
+      "why": "A gentle cycle and bag reduce stretching and felting.",
+      "topics": [
+        "care",
+        "knitwear",
+        "fabrics"
+      ],
+      "occasions": [],
+      "strength": "tip"
+    },
+    {
+      "id": "mrporter-com-en-it-journal-fashion-the-intelligent-mans-guide-to-wardrobe-mainte-7",
+      "text": "Dry knitwear flat on a towel over a rack, supporting the sleeves and gently reshaping it while damp.",
+      "why": "Hanging wet wool stretches it out of shape.",
+      "topics": [
+        "care",
+        "knitwear"
+      ],
+      "occasions": [],
+      "strength": "tip"
+    },
+    {
+      "id": "mrporter-com-en-it-journal-fashion-the-intelligent-mans-guide-to-wardrobe-mainte-8",
+      "text": "Avoid the tumble dryer.",
+      "why": "Its heat shrinks and wears out clothes.",
+      "topics": [
+        "care"
+      ],
+      "occasions": [],
+      "strength": "rule"
+    },
+    {
+      "id": "mrporter-com-en-it-journal-fashion-the-intelligent-mans-guide-to-wardrobe-mainte-9",
+      "text": "Iron shirts while still damp from the wash; mist and steam any that have dried completely.",
+      "why": "Creases come out far more easily from damp cotton.",
+      "topics": [
+        "care",
+        "shirts"
+      ],
+      "occasions": [],
+      "strength": "tip"
+    },
+    {
+      "id": "mrporter-com-en-it-journal-fashion-the-intelligent-mans-guide-to-wardrobe-mainte-10",
+      "text": "Iron a shirt in order: collar, cuffs, yoke, back, front, then sleeves.",
+      "why": "Working from small parts to large avoids re-creasing finished areas.",
+      "topics": [
+        "care",
+        "shirts"
+      ],
+      "occasions": [],
+      "strength": "tip"
+    },
+    {
+      "id": "mrporter-com-en-it-journal-fashion-the-intelligent-mans-guide-to-wardrobe-mainte-11",
+      "text": "Don't bother ironing jeans.",
+      "why": "Denim is meant to look relaxed.",
+      "topics": [
+        "care",
+        "denim"
+      ],
+      "occasions": [],
+      "strength": "tip"
+    },
+    {
+      "id": "mrporter-com-en-it-journal-fashion-the-intelligent-mans-guide-to-wardrobe-mainte-12",
+      "text": "Store shirts on hangers rather than folded, and hang them straight after ironing.",
+      "why": "Folding adds creases, and hanging lets them finish drying.",
+      "topics": [
+        "care",
+        "shirts"
+      ],
+      "occasions": [],
+      "strength": "tip"
+    },
+    {
+      "id": "mrporter-com-en-it-journal-fashion-the-intelligent-mans-guide-to-wardrobe-mainte-13",
+      "text": "Hang tailored jackets and overcoats on broad, correctly sized hangers, never wire hangers or coat pegs.",
+      "why": "Poor support distorts the shoulders.",
+      "topics": [
+        "care",
+        "suits",
+        "outerwear"
+      ],
+      "occasions": [],
+      "strength": "rule"
+    },
+    {
+      "id": "mrporter-com-en-it-journal-fashion-the-intelligent-mans-guide-to-wardrobe-mainte-14",
+      "text": "Hang trousers on felted hangers, folded along their front crease rather than the seams.",
+      "why": "It keeps the crease sharp and stops slipping.",
+      "topics": [
+        "care",
+        "trousers"
+      ],
+      "occasions": [],
+      "strength": "tip"
+    },
+    {
+      "id": "mrporter-com-en-it-journal-fashion-the-intelligent-mans-guide-to-wardrobe-mainte-15",
+      "text": "Clean tailoring before storing it for long, and keep it in breathable, moth-proof garment bags.",
+      "why": "Moths go for dirty wool, and plastic traps moisture.",
+      "topics": [
+        "care",
+        "suits",
+        "fabrics"
+      ],
+      "occasions": [],
+      "strength": "rule"
+    },
+    {
+      "id": "mrporter-com-en-it-journal-fashion-the-intelligent-mans-guide-to-wardrobe-mainte-16",
+      "text": "Fold knitwear rather than hanging it, keep worn pieces apart from clean ones, and add anti-moth sachets.",
+      "why": "Hanging stretches knits, and moths are drawn to worn wool.",
+      "topics": [
+        "care",
+        "knitwear"
+      ],
+      "occasions": [],
+      "strength": "tip",
+      "same_as": "care-knits"
+    },
+    {
+      "id": "mrporter-com-en-it-journal-fashion-the-intelligent-mans-guide-to-wardrobe-mainte-17",
+      "text": "Roll a tie loosely for a day or two after wearing, then store it.",
+      "why": "Resting lets the creases from the knot drop out.",
+      "topics": [
+        "care",
+        "accessories"
+      ],
+      "occasions": [],
+      "strength": "tip"
+    },
+    {
+      "id": "mrporter-com-en-it-journal-fashion-the-intelligent-mans-guide-to-wardrobe-mainte-18",
+      "text": "Keep leather shoes on shoe trees, rest them a day between wears, brush off dirt promptly and keep them polished.",
+      "why": "Rest and trees let leather dry and keep its shape.",
+      "topics": [
+        "care",
+        "shoes"
+      ],
+      "occasions": [],
+      "strength": "rule",
+      "same_as": "care-shoes"
+    },
+    {
+      "id": "mrporter-com-en-it-journal-fashion-the-intelligent-mans-guide-to-wardrobe-mainte-19",
+      "text": "Twice a year, clean the outgoing season's clothes, weed out what you didn't wear, and store the rest in moth-proof bags somewhere dry.",
+      "why": "A seasonal changeover protects clothes and keeps the wardrobe manageable; humidity damages fabric.",
+      "topics": [
+        "care",
+        "wardrobe",
+        "weather"
+      ],
+      "occasions": [],
+      "strength": "tip"
+    }
+  ],
+  "outfits": []
+}

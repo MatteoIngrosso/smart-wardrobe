@@ -1,0 +1,260 @@
+{
+  "source": {
+    "kind": "article",
+    "url": "https://www.gentlemansgazette.com/holiday-attire-for-men/",
+    "title": "Holiday Attire for Men: What It Means & How to Wear It",
+    "author": "Gentleman's Gazette"
+  },
+  "learned_at": "2026-10-17T18:33:03+00:00",
+  "model": "by hand",
+  "tokens": {
+    "in": 0,
+    "out": 0
+  },
+  "tips": [
+    {
+      "id": "gentlemansgazette-com-holiday-attire-for-men-1",
+      "text": "When a holiday party's dress code is unclear, lean towards the formal end, unless the hosts have said it's a playful ugly-sweater party.",
+      "why": "Nobody faults a guest for looking put together.",
+      "topics": [
+        "occasions",
+        "formal"
+      ],
+      "occasions": [
+        "event",
+        "night"
+      ],
+      "strength": "tip"
+    },
+    {
+      "id": "gentlemansgazette-com-holiday-attire-for-men-2",
+      "text": "If you're unsure what a holiday invitation expects, ask the hosts directly.",
+      "why": "Following their dress code is a courtesy.",
+      "topics": [
+        "occasions"
+      ],
+      "occasions": [
+        "event"
+      ],
+      "strength": "tip"
+    },
+    {
+      "id": "gentlemansgazette-com-holiday-attire-for-men-3",
+      "text": "Read 'holiday attire' as cocktail attire with a festive touch, such as tartan or a seasonal colour.",
+      "why": "It keeps the formality while marking the season.",
+      "topics": [
+        "occasions",
+        "formal",
+        "patterns"
+      ],
+      "occasions": [
+        "event",
+        "night"
+      ],
+      "strength": "tip"
+    },
+    {
+      "id": "gentlemansgazette-com-holiday-attire-for-men-4",
+      "text": "Use festive reds and greens in muted, deep shades rather than bright ones.",
+      "why": "Bright seasonal colours quickly look clownish.",
+      "topics": [
+        "colour",
+        "occasions"
+      ],
+      "occasions": [
+        "event",
+        "night"
+      ],
+      "strength": "tip"
+    },
+    {
+      "id": "gentlemansgazette-com-holiday-attire-for-men-5",
+      "text": "For an office holiday party, wear your normal work outfit, slightly relaxed and with one seasonal touch.",
+      "why": "It stays appropriate in front of colleagues while feeling festive.",
+      "topics": [
+        "occasions"
+      ],
+      "occasions": [
+        "work"
+      ],
+      "strength": "tip"
+    },
+    {
+      "id": "gentlemansgazette-com-holiday-attire-for-men-6",
+      "text": "At a conservative office holiday party, pair a dark suit with a pastel shirt rather than plain white.",
+      "why": "A white shirt can look stuffy at a celebration.",
+      "topics": [
+        "suits",
+        "shirts",
+        "colour"
+      ],
+      "occasions": [
+        "work",
+        "event"
+      ],
+      "strength": "opinion"
+    },
+    {
+      "id": "gentlemansgazette-com-holiday-attire-for-men-7",
+      "text": "With conservative holiday tailoring, wear black cap-toe oxfords or dark brown or oxblood shoes, not light tan.",
+      "why": "Light tan is too casual for a dark suit.",
+      "topics": [
+        "shoes",
+        "formal"
+      ],
+      "occasions": [
+        "work",
+        "event"
+      ],
+      "strength": "tip"
+    },
+    {
+      "id": "gentlemansgazette-com-holiday-attire-for-men-8",
+      "text": "Skip novelty ties with Santa or similar motifs; choose a dark burgundy or muted tie, plain or subtly patterned.",
+      "why": "Novelty prints look juvenile with tailoring.",
+      "topics": [
+        "accessories",
+        "occasions"
+      ],
+      "occasions": [
+        "work",
+        "event"
+      ],
+      "strength": "tip"
+    },
+    {
+      "id": "gentlemansgazette-com-holiday-attire-for-men-9",
+      "text": "At a holiday party, the pocket square can be bolder than the tie.",
+      "why": "It adds festive colour without making the outfit loud.",
+      "topics": [
+        "accessories"
+      ],
+      "occasions": [
+        "event"
+      ],
+      "strength": "opinion"
+    },
+    {
+      "id": "gentlemansgazette-com-holiday-attire-for-men-10",
+      "text": "Keep cufflinks, tie bars and rings understated and in matching metals.",
+      "why": "Coordinated, quiet jewellery looks refined.",
+      "topics": [
+        "accessories"
+      ],
+      "occasions": [
+        "event",
+        "work"
+      ],
+      "strength": "tip"
+    },
+    {
+      "id": "gentlemansgazette-com-holiday-attire-for-men-11",
+      "text": "In a less formal office, a textured or patterned sport coat (herringbone, houndstooth, tweed or tartan) with flannel or corduroy trousers suits a winter party.",
+      "why": "Rustic textures feel seasonal while staying smart.",
+      "topics": [
+        "fabrics",
+        "patterns",
+        "smart casual"
+      ],
+      "occasions": [
+        "work",
+        "smart"
+      ],
+      "strength": "tip"
+    },
+    {
+      "id": "gentlemansgazette-com-holiday-attire-for-men-12",
+      "text": "For casual offices and house parties, wear a cardigan, cable knit or Fair Isle sweater in warm colours with dark denim or coloured chinos.",
+      "why": "Cosy knits look festive without needing a suit.",
+      "topics": [
+        "knitwear",
+        "smart casual"
+      ],
+      "occasions": [
+        "smart",
+        "casual"
+      ],
+      "strength": "tip"
+    },
+    {
+      "id": "gentlemansgazette-com-holiday-attire-for-men-13",
+      "text": "Choose an ivory turtleneck over a stark white one.",
+      "why": "Ivory looks softer and warmer in winter.",
+      "topics": [
+        "knitwear",
+        "colour"
+      ],
+      "occasions": [
+        "smart"
+      ],
+      "strength": "opinion"
+    },
+    {
+      "id": "gentlemansgazette-com-holiday-attire-for-men-14",
+      "text": "Bright or playful socks are an easy festive accent at casual holiday gatherings.",
+      "why": "A small dose of fun that doesn't dominate the outfit.",
+      "topics": [
+        "accessories"
+      ],
+      "occasions": [
+        "casual",
+        "smart"
+      ],
+      "strength": "opinion"
+    },
+    {
+      "id": "gentlemansgazette-com-holiday-attire-for-men-15",
+      "text": "A house party can be more relaxed than the office one, but if the invitation says black tie, wear a dinner suit.",
+      "why": "The stated dress code always wins.",
+      "topics": [
+        "occasions",
+        "formal"
+      ],
+      "occasions": [
+        "event"
+      ],
+      "strength": "rule"
+    },
+    {
+      "id": "gentlemansgazette-com-holiday-attire-for-men-16",
+      "text": "Don't wear a tweed sport coat to a black-tie event.",
+      "why": "Country tailoring is too casual for evening formal dress.",
+      "topics": [
+        "formal",
+        "fabrics"
+      ],
+      "occasions": [
+        "event"
+      ],
+      "strength": "rule"
+    },
+    {
+      "id": "gentlemansgazette-com-holiday-attire-for-men-17",
+      "text": "For a festive gala, a burgundy velvet dinner jacket with traditional evening trousers is a seasonal alternative to the black jacket.",
+      "why": "Velvet and deep colour feel celebratory yet formal.",
+      "topics": [
+        "formal",
+        "fabrics",
+        "colour"
+      ],
+      "occasions": [
+        "event"
+      ],
+      "strength": "opinion"
+    }
+  ],
+  "outfits": [
+    {
+      "outfit": "jacket navy smart casual +blazer, sweater cream smart casual, shirt white smart casual, jeans navy casual +dark-wash, boots black smart casual, accessory burgundy +pocket-square",
+      "occasion": "smart",
+      "verdict": "good",
+      "why": "Navy blazer over a cream knit and white shirt with dark denim and black boots suits a holiday house party."
+    },
+    {
+      "outfit": "sweater brown smart casual +cardigan, shirt cream smart casual +check, tie olive smart formal +knit +silk, trousers brown smart casual +corduroy, dress-shoes brown formal +brogue +derby",
+      "occasion": "smart",
+      "verdict": "good",
+      "why": "Warm browns, a checked cream shirt and an olive knit tie make a relaxed, seasonal look for a casual office or home party."
+    }
+  ]
+}

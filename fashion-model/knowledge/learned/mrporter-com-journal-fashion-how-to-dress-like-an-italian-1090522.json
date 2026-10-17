@@ -1,0 +1,201 @@
+{
+  "source": {
+    "kind": "article",
+    "url": "https://www.mrporter.com/journal/fashion/how-to-dress-like-an-italian-1090522",
+    "title": "How To Dress Like An Italian",
+    "author": "MR PORTER"
+  },
+  "learned_at": "2026-10-17T18:33:39+00:00",
+  "model": "by hand",
+  "tokens": {
+    "in": 0,
+    "out": 0
+  },
+  "tips": [
+    {
+      "id": "mrporter-com-journal-fashion-how-to-dress-like-an-italian-1090522-1",
+      "text": "Buy fewer, well-made, timeless pieces that can be styled in many ways.",
+      "why": "Good pieces last for years without dating.",
+      "topics": [
+        "wardrobe"
+      ],
+      "occasions": [],
+      "strength": "tip",
+      "same_as": "buy-less-better"
+    },
+    {
+      "id": "mrporter-com-journal-fashion-how-to-dress-like-an-italian-1090522-2",
+      "text": "Have your key suits and jackets made to measure, choosing the cloth and details yourself.",
+      "why": "Tailoring cut to your body makes a visible difference.",
+      "topics": [
+        "suits",
+        "fit"
+      ],
+      "occasions": [
+        "work",
+        "event"
+      ],
+      "strength": "tip"
+    },
+    {
+      "id": "mrporter-com-journal-fashion-how-to-dress-like-an-italian-1090522-3",
+      "text": "Wear blue tonally, but don't pair a jacket and trousers in two different blues for formal wear.",
+      "why": "Two near-matching blues look like a mistake rather than a choice.",
+      "topics": [
+        "colour",
+        "suits"
+      ],
+      "occasions": [
+        "work",
+        "event"
+      ],
+      "strength": "tip"
+    },
+    {
+      "id": "mrporter-com-journal-fashion-how-to-dress-like-an-italian-1090522-4",
+      "text": "Treat neutrals as more than beige and camel; wear brighter, lighter neutrals in summer.",
+      "why": "They reflect light and feel fresher in the heat.",
+      "topics": [
+        "colour",
+        "weather"
+      ],
+      "occasions": [
+        "casual",
+        "smart"
+      ],
+      "strength": "tip"
+    },
+    {
+      "id": "mrporter-com-journal-fashion-how-to-dress-like-an-italian-1090522-5",
+      "text": "Dress a suit down with soft, unlined construction and espadrilles or yacht loafers instead of formal shoes.",
+      "why": "It takes the stiffness out for lunches or dates.",
+      "topics": [
+        "suits",
+        "smart casual",
+        "shoes"
+      ],
+      "occasions": [
+        "smart",
+        "night"
+      ],
+      "strength": "tip"
+    },
+    {
+      "id": "mrporter-com-journal-fashion-how-to-dress-like-an-italian-1090522-6",
+      "text": "Keep accessories minimal: a watch, a ring or a vintage silver bracelet.",
+      "why": "Taking away rather than adding keeps the look balanced.",
+      "topics": [
+        "accessories"
+      ],
+      "occasions": [],
+      "strength": "tip",
+      "same_as": "accessories-few"
+    },
+    {
+      "id": "mrporter-com-journal-fashion-how-to-dress-like-an-italian-1090522-7",
+      "text": "Turn back the jacket cuffs or carry a textured bag to give a simple outfit some interest.",
+      "why": "Small details add character without clutter.",
+      "topics": [
+        "accessories",
+        "smart casual"
+      ],
+      "occasions": [
+        "smart"
+      ],
+      "strength": "opinion"
+    },
+    {
+      "id": "mrporter-com-journal-fashion-how-to-dress-like-an-italian-1090522-8",
+      "text": "Add colour with contrasting shades while keeping the overall look controlled.",
+      "why": "Contrast works when the rest stays balanced.",
+      "topics": [
+        "colour"
+      ],
+      "occasions": [],
+      "strength": "tip"
+    },
+    {
+      "id": "mrporter-com-journal-fashion-how-to-dress-like-an-italian-1090522-9",
+      "text": "Tie a snug, hourglass-shaped knot with the blade and tail aligned and the tip reaching the waistband.",
+      "why": "A neat knot and correct length look considered.",
+      "topics": [
+        "accessories",
+        "formal"
+      ],
+      "occasions": [
+        "work",
+        "event"
+      ],
+      "strength": "tip"
+    },
+    {
+      "id": "mrporter-com-journal-fashion-how-to-dress-like-an-italian-1090522-10",
+      "text": "Printed twill or jacquard silk ties are dressier than knitted ties.",
+      "why": "Knit ties have a more casual texture.",
+      "topics": [
+        "accessories",
+        "formal"
+      ],
+      "occasions": [
+        "work",
+        "event"
+      ],
+      "strength": "rule"
+    },
+    {
+      "id": "mrporter-com-journal-fashion-how-to-dress-like-an-italian-1090522-11",
+      "text": "Swap the tie for a patterned or bright silk scarf at the neck when wearing a jacket.",
+      "why": "It adds playfulness when a tie isn't needed.",
+      "topics": [
+        "accessories",
+        "smart casual"
+      ],
+      "occasions": [
+        "smart",
+        "night"
+      ],
+      "strength": "opinion"
+    },
+    {
+      "id": "mrporter-com-journal-fashion-how-to-dress-like-an-italian-1090522-12",
+      "text": "A blue blazer with gold buttons, in linen or light wool, pairs with trousers in almost any colour.",
+      "why": "Blue on top is a flexible base for many trouser colours.",
+      "topics": [
+        "smart casual",
+        "colour"
+      ],
+      "occasions": [
+        "smart",
+        "work"
+      ],
+      "strength": "tip"
+    },
+    {
+      "id": "mrporter-com-journal-fashion-how-to-dress-like-an-italian-1090522-13",
+      "text": "For daytime, pair blue trousers with a beige or off-white soft-collared safari jacket in cotton or cotton-linen.",
+      "why": "Light jacket over darker trousers looks relaxed and summery.",
+      "topics": [
+        "outerwear",
+        "colour",
+        "smart casual"
+      ],
+      "occasions": [
+        "smart",
+        "casual"
+      ],
+      "strength": "opinion"
+    },
+    {
+      "id": "mrporter-com-journal-fashion-how-to-dress-like-an-italian-1090522-14",
+      "text": "Learn the classic rules properly before you bend them.",
+      "why": "Breaking conventions only works when you understand them.",
+      "topics": [
+        "wardrobe"
+      ],
+      "occasions": [],
+      "strength": "tip",
+      "same_as": "yt-bnyn59yPeXs-15"
+    }
+  ],
+  "outfits": []
+}

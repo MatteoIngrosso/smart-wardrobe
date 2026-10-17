@@ -1,0 +1,268 @@
+{
+  "source": {
+    "kind": "article",
+    "url": "https://www.mrporter.com/en-tw/journal/fashion/how-to-match-your-shirt-and-tie-788420",
+    "title": "How To Match Your Shirt And Tie",
+    "author": "MR PORTER"
+  },
+  "learned_at": "2026-10-17T18:29:49+00:00",
+  "model": "by hand",
+  "tokens": {
+    "in": 0,
+    "out": 0
+  },
+  "tips": [
+    {
+      "id": "mrporter-com-en-tw-journal-fashion-how-to-match-your-shirt-and-tie-788420-1",
+      "text": "Choose the shirt first, then a tie that picks up one of the colours in it.",
+      "why": "A shared colour makes the two look coordinated.",
+      "topics": [
+        "shirts",
+        "accessories",
+        "colour"
+      ],
+      "occasions": [
+        "work",
+        "smart"
+      ],
+      "strength": "tip"
+    },
+    {
+      "id": "mrporter-com-en-tw-journal-fashion-how-to-match-your-shirt-and-tie-788420-2",
+      "text": "Pair a bold pattern with a fine one; avoid two patterns of similar scale, such as gingham with a narrow stripe.",
+      "why": "Patterns of the same size compete and buzz.",
+      "topics": [
+        "patterns",
+        "shirts",
+        "accessories"
+      ],
+      "occasions": [
+        "work",
+        "smart"
+      ],
+      "strength": "rule",
+      "same_as": "patterns-scale"
+    },
+    {
+      "id": "mrporter-com-en-tw-journal-fashion-how-to-match-your-shirt-and-tie-788420-3",
+      "text": "When both shirt and tie are patterned, make the tie's pattern the larger, bolder one.",
+      "why": "The tie should lead and the shirt sit behind it.",
+      "topics": [
+        "patterns",
+        "accessories"
+      ],
+      "occasions": [
+        "work",
+        "smart"
+      ],
+      "strength": "tip"
+    },
+    {
+      "id": "mrporter-com-en-tw-journal-fashion-how-to-match-your-shirt-and-tie-788420-4",
+      "text": "In a formal outfit, keep at least one of the suit, shirt or tie plain.",
+      "why": "Three patterned pieces together are very hard to pull off.",
+      "topics": [
+        "patterns",
+        "suits",
+        "formal"
+      ],
+      "occasions": [
+        "work",
+        "smart",
+        "event"
+      ],
+      "strength": "rule"
+    },
+    {
+      "id": "mrporter-com-en-tw-journal-fashion-how-to-match-your-shirt-and-tie-788420-5",
+      "text": "Match tie and shirt texture to the setting: smooth silk and sleek shirting for business, coarser textured fabrics for relaxed occasions.",
+      "why": "Shine reads formal; texture reads casual.",
+      "topics": [
+        "fabrics",
+        "accessories",
+        "occasions"
+      ],
+      "occasions": [
+        "work",
+        "smart"
+      ],
+      "strength": "tip"
+    },
+    {
+      "id": "mrporter-com-en-tw-journal-fashion-how-to-match-your-shirt-and-tie-788420-6",
+      "text": "Own a knitted tie; it dresses up with a suit or down with chinos and a cardigan.",
+      "why": "It covers uncertain dress codes such as some interviews.",
+      "topics": [
+        "accessories",
+        "smart casual"
+      ],
+      "occasions": [
+        "work",
+        "smart"
+      ],
+      "strength": "tip"
+    },
+    {
+      "id": "mrporter-com-en-tw-journal-fashion-how-to-match-your-shirt-and-tie-788420-7",
+      "text": "If you are slim, avoid oversized collars and very wide lapels.",
+      "why": "Big details overwhelm a slight frame.",
+      "topics": [
+        "proportions",
+        "shirts",
+        "suits"
+      ],
+      "occasions": [],
+      "strength": "tip"
+    },
+    {
+      "id": "mrporter-com-en-tw-journal-fashion-how-to-match-your-shirt-and-tie-788420-8",
+      "text": "If you are stocky, avoid skinny ties and narrow collars.",
+      "why": "Small details make a broad frame look bigger by contrast.",
+      "topics": [
+        "proportions",
+        "accessories",
+        "shirts"
+      ],
+      "occasions": [],
+      "strength": "tip"
+    },
+    {
+      "id": "mrporter-com-en-tw-journal-fashion-how-to-match-your-shirt-and-tie-788420-9",
+      "text": "Keep tie width in proportion with the lapels and collar; a skinny tie looks wrong under the broad lapels of a double-breasted jacket.",
+      "why": "Collar, tie and lapel should agree in scale.",
+      "topics": [
+        "proportions",
+        "accessories",
+        "suits"
+      ],
+      "occasions": [
+        "work",
+        "smart"
+      ],
+      "strength": "rule",
+      "same_as": "tie-width"
+    },
+    {
+      "id": "mrporter-com-en-tw-journal-fashion-how-to-match-your-shirt-and-tie-788420-10",
+      "text": "A thick or heavy tie needs a deeper, larger shirt collar.",
+      "why": "A bulky knot crowds a small collar.",
+      "topics": [
+        "accessories",
+        "shirts",
+        "proportions"
+      ],
+      "occasions": [
+        "work",
+        "smart"
+      ],
+      "strength": "tip"
+    },
+    {
+      "id": "mrporter-com-en-tw-journal-fashion-how-to-match-your-shirt-and-tie-788420-11",
+      "text": "Tie a firm, neat knot and pinch a small dimple below it.",
+      "why": "A loose knot looks sloppy; the dimple adds polish.",
+      "topics": [
+        "accessories"
+      ],
+      "occasions": [
+        "work",
+        "smart"
+      ],
+      "strength": "tip"
+    },
+    {
+      "id": "mrporter-com-en-tw-journal-fashion-how-to-match-your-shirt-and-tie-788420-12",
+      "text": "Keep the tie darker than the shirt; avoid a light tie on a dark shirt.",
+      "why": "A pale tie on a dark shirt looks cheap.",
+      "topics": [
+        "colour",
+        "accessories",
+        "shirts"
+      ],
+      "occasions": [
+        "work",
+        "smart",
+        "night"
+      ],
+      "strength": "rule"
+    },
+    {
+      "id": "mrporter-com-en-tw-journal-fashion-how-to-match-your-shirt-and-tie-788420-13",
+      "text": "The tie's tip should reach the top of the trouser waistband when you stand.",
+      "why": "Shorter or longer looks off-balance.",
+      "topics": [
+        "accessories",
+        "proportions"
+      ],
+      "occasions": [
+        "work",
+        "smart"
+      ],
+      "strength": "rule",
+      "same_as": "tie-length"
+    },
+    {
+      "id": "mrporter-com-en-tw-journal-fashion-how-to-match-your-shirt-and-tie-788420-14",
+      "text": "Give every tie accessory a job, such as a collar bar holding the knot; when in doubt, take one off.",
+      "why": "Purely decorative extras look fussy.",
+      "topics": [
+        "accessories"
+      ],
+      "occasions": [
+        "work",
+        "smart"
+      ],
+      "strength": "tip",
+      "same_as": "accessories-few"
+    },
+    {
+      "id": "mrporter-com-en-tw-journal-fashion-how-to-match-your-shirt-and-tie-788420-15",
+      "text": "Never wear a pocket square that matches the tie.",
+      "why": "Matching sets look contrived.",
+      "topics": [
+        "accessories"
+      ],
+      "occasions": [
+        "work",
+        "smart",
+        "event"
+      ],
+      "strength": "rule",
+      "same_as": "pocket-square"
+    },
+    {
+      "id": "mrporter-com-en-tw-journal-fashion-how-to-match-your-shirt-and-tie-788420-16",
+      "text": "Use a four-in-hand knot rather than a full Windsor.",
+      "why": "The writer finds the Windsor too bulky.",
+      "topics": [
+        "accessories"
+      ],
+      "occasions": [
+        "work",
+        "smart"
+      ],
+      "strength": "opinion"
+    },
+    {
+      "id": "mrporter-com-en-tw-journal-fashion-how-to-match-your-shirt-and-tie-788420-17",
+      "text": "With a pinstripe suit, keep the shirt and tie fairly plain.",
+      "why": "Let the pinstripe be the pattern that leads.",
+      "topics": [
+        "patterns",
+        "suits"
+      ],
+      "occasions": [
+        "work"
+      ],
+      "strength": "tip"
+    }
+  ],
+  "outfits": [
+    {
+      "outfit": "shirt pink smart +fine-stripe +stripes, tie pink smart formal +silk +stripes, jacket navy smart +suit, trousers navy smart +suit",
+      "occasion": "work",
+      "verdict": "good",
+      "why": "A fine-striped shirt under a wider-striped tie in the same colour, on a plain navy suit as the neutral base."
+    }
+  ]
+}

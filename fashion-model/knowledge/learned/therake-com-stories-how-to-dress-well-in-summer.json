@@ -1,0 +1,259 @@
+{
+  "source": {
+    "kind": "article",
+    "url": "https://therake.com/stories/how-to-dress-well-in-summer",
+    "title": "How to Dress Well in Summer",
+    "author": "The Rake"
+  },
+  "learned_at": "2026-10-17T18:31:47+00:00",
+  "model": "by hand",
+  "tokens": {
+    "in": 0,
+    "out": 0
+  },
+  "tips": [
+    {
+      "id": "therake-com-stories-how-to-dress-well-in-summer-1",
+      "text": "Choose linen for hot-weather shirts, and use it to try brighter colours.",
+      "why": "Its open weave breathes, and the texture softens strong colours so they're easier to wear.",
+      "topics": [
+        "shirts",
+        "fabrics",
+        "weather",
+        "colour"
+      ],
+      "occasions": [
+        "casual",
+        "smart"
+      ],
+      "strength": "tip"
+    },
+    {
+      "id": "therake-com-stories-how-to-dress-well-in-summer-2",
+      "text": "Stick with long-sleeved shirts in summer: wear them under a jacket or roll the sleeves for a sportier look.",
+      "why": "One shirt then covers both smart and casual moments.",
+      "topics": [
+        "shirts",
+        "weather"
+      ],
+      "occasions": [
+        "casual",
+        "smart"
+      ],
+      "strength": "opinion"
+    },
+    {
+      "id": "therake-com-stories-how-to-dress-well-in-summer-3",
+      "text": "Let linen crease instead of fighting it.",
+      "why": "The rumple is part of its character.",
+      "topics": [
+        "fabrics",
+        "weather"
+      ],
+      "occasions": [],
+      "strength": "tip",
+      "same_as": "linen-creases"
+    },
+    {
+      "id": "therake-com-stories-how-to-dress-well-in-summer-4",
+      "text": "Avoid linen head to toe; mix it with other summer cloths such as wool fresco, seersucker, madras or silk.",
+      "why": "An all-linen outfit looks too crumpled.",
+      "topics": [
+        "fabrics",
+        "weather"
+      ],
+      "occasions": [
+        "smart"
+      ],
+      "strength": "tip"
+    },
+    {
+      "id": "therake-com-stories-how-to-dress-well-in-summer-5",
+      "text": "Pair a relaxed, crumpled linen shirt with sharply pressed trousers.",
+      "why": "The contrast between rumpled and crisp textures looks deliberate.",
+      "topics": [
+        "fabrics",
+        "shirts",
+        "trousers"
+      ],
+      "occasions": [
+        "smart"
+      ],
+      "strength": "tip"
+    },
+    {
+      "id": "therake-com-stories-how-to-dress-well-in-summer-6",
+      "text": "When buying an unstructured summer jacket, judge the cut: without padding or canvas, only good tailoring keeps it in shape.",
+      "why": "Soft jackets are harder to make well, not cheaper.",
+      "topics": [
+        "fabrics",
+        "weather",
+        "fit"
+      ],
+      "occasions": [
+        "smart"
+      ],
+      "strength": "tip"
+    },
+    {
+      "id": "therake-com-stories-how-to-dress-well-in-summer-7",
+      "text": "In summer, wear a tie or pocket square because you want to, not out of obligation, when the occasion doesn't require one.",
+      "why": "Forced formality in the heat looks and feels stiff.",
+      "topics": [
+        "accessories",
+        "weather",
+        "smart casual"
+      ],
+      "occasions": [
+        "smart"
+      ],
+      "strength": "opinion"
+    },
+    {
+      "id": "therake-com-stories-how-to-dress-well-in-summer-8",
+      "text": "Knot a neckerchief at the neck of a T-shirt or polo worn under a jacket.",
+      "why": "It adds polish and keeps sweat off the jacket collar.",
+      "topics": [
+        "accessories",
+        "weather",
+        "smart casual"
+      ],
+      "occasions": [
+        "smart"
+      ],
+      "strength": "opinion"
+    },
+    {
+      "id": "therake-com-stories-how-to-dress-well-in-summer-9",
+      "text": "In summer, wear loafers or white or tan sneakers without socks.",
+      "why": "Bare ankles look and feel cooler.",
+      "topics": [
+        "shoes",
+        "weather"
+      ],
+      "occasions": [
+        "casual",
+        "smart"
+      ],
+      "strength": "opinion"
+    },
+    {
+      "id": "therake-com-stories-how-to-dress-well-in-summer-10",
+      "text": "Choose summer trousers with side adjusters or a Gurkha waist instead of belt loops.",
+      "why": "Skipping the belt removes bulk and heat at the waist.",
+      "topics": [
+        "trousers",
+        "weather",
+        "accessories"
+      ],
+      "occasions": [
+        "smart"
+      ],
+      "strength": "opinion"
+    },
+    {
+      "id": "therake-com-stories-how-to-dress-well-in-summer-11",
+      "text": "Velvet slippers worn without socks give a summer evening outfit a cocktail touch.",
+      "why": "They dress up most looks instantly.",
+      "topics": [
+        "shoes",
+        "occasions"
+      ],
+      "occasions": [
+        "night",
+        "event"
+      ],
+      "strength": "opinion"
+    },
+    {
+      "id": "therake-com-stories-how-to-dress-well-in-summer-12",
+      "text": "Dress down a cocktail or dinner jacket with fine knitwear underneath instead of a dress shirt.",
+      "why": "It keeps the evening polish but feels relaxed.",
+      "topics": [
+        "knitwear",
+        "layering",
+        "formal"
+      ],
+      "occasions": [
+        "night",
+        "event"
+      ],
+      "strength": "opinion"
+    },
+    {
+      "id": "therake-com-stories-how-to-dress-well-in-summer-13",
+      "text": "For a summer cocktail dress code, a dark suit is enough; a dinner jacket with cream or ecru trousers is the more striking choice.",
+      "why": "Cocktail dress leans towards evening wear.",
+      "topics": [
+        "occasions",
+        "formal",
+        "suits"
+      ],
+      "occasions": [
+        "event",
+        "night"
+      ],
+      "strength": "tip"
+    },
+    {
+      "id": "therake-com-stories-how-to-dress-well-in-summer-14",
+      "text": "Wear an open linen shirt like a light jacket over a plain T-shirt, with fuller pleated trousers and turn-ups.",
+      "why": "It is a cool, relaxed take on classic summer elegance.",
+      "topics": [
+        "layering",
+        "shirts",
+        "weather"
+      ],
+      "occasions": [
+        "casual"
+      ],
+      "strength": "opinion"
+    },
+    {
+      "id": "therake-com-stories-how-to-dress-well-in-summer-15",
+      "text": "In hot weather, avoid swinging between stiff formality and sloppy casual; light tailored cloths keep you cool and well dressed.",
+      "why": "Summer dressing goes wrong at both extremes.",
+      "topics": [
+        "weather",
+        "smart casual",
+        "fabrics"
+      ],
+      "occasions": [
+        "smart"
+      ],
+      "strength": "tip"
+    }
+  ],
+  "outfits": [
+    {
+      "outfit": "jacket light blue preppy +blazer +cotton +double-breasted +seersucker +stripes, polo navy smart casual preppy +cotton, trousers yellow smart casual +cotton +mustard +pleated, dress-shoes grey formal +kiltie +leather +loafers",
+      "occasion": "smart",
+      "verdict": "good",
+      "why": "A seersucker jacket over a polo keeps summer tailoring light and relaxed."
+    },
+    {
+      "outfit": "jacket charcoal smart +blazer +check +wool, shirt cream smart casual +button-down +linen, trousers blue smart casual +cotton +wool, tie brown smart formal +silk",
+      "occasion": "work",
+      "verdict": "good",
+      "why": "A linen shirt lightens a wool check jacket for warm days."
+    },
+    {
+      "outfit": "jacket navy smart +blazer +double-breasted +wool, shirt yellow smart casual +linen +pale, tie navy smart formal +silk, trousers beige smart casual +chinos +cotton, dress-shoes navy formal +leather +loafers +tassel",
+      "occasion": "smart",
+      "verdict": "good",
+      "why": "Navy blazer, pale linen shirt and beige cotton trousers is a classic summer combination."
+    },
+    {
+      "outfit": "jacket beige luxury +blazer +cashmere +double-breasted, shirt purple smart casual +lilac +linen, trousers beige smart casual +linen, tie yellow smart formal +floral +linen, hat cream smart +panama",
+      "occasion": "smart",
+      "verdict": "good",
+      "why": "Tonal beige tailoring with a soft lilac shirt suits a summer day event."
+    },
+    {
+      "outfit": "jacket cream smart casual +blazer +herringbone, shirt green smart casual +print +silk, trousers blue smart casual +cotton +wool",
+      "occasion": "night",
+      "verdict": "good",
+      "why": "A cream jacket over a printed silk shirt is a relaxed summer evening look."
+    }
+  ]
+}

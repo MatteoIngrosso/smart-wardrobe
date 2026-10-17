@@ -1,0 +1,236 @@
+{
+  "source": {
+    "kind": "article",
+    "url": "https://gqphilippines.com/style/a-tie-guide-everything-you-need-to-know-before-putting-one-on/",
+    "title": "A Tie Guide: Everything You Need to Know Before Putting One On",
+    "author": "GQ Philippines"
+  },
+  "learned_at": "2026-10-17T18:47:58+00:00",
+  "model": "by hand",
+  "tokens": {
+    "in": 0,
+    "out": 0
+  },
+  "tips": [
+    {
+      "id": "gqphilippines-com-style-a-tie-guide-everything-you-need-to-know-before-putting-o-1",
+      "text": "Since few dress codes still require a tie, wear one on purpose: it signals that the outfit was planned.",
+      "why": "A tie is decorative; its value today is showing intent and effort.",
+      "topics": [
+        "accessories",
+        "formal"
+      ],
+      "occasions": [
+        "work",
+        "event"
+      ],
+      "strength": "opinion"
+    },
+    {
+      "id": "gqphilippines-com-style-a-tie-guide-everything-you-need-to-know-before-putting-o-2",
+      "text": "If you own only one tie, make it a silk one.",
+      "why": "Silk drapes and knots cleanly, works in every season and looks formal without effort.",
+      "topics": [
+        "accessories",
+        "fabrics",
+        "wardrobe"
+      ],
+      "occasions": [
+        "work",
+        "event"
+      ],
+      "strength": "tip"
+    },
+    {
+      "id": "gqphilippines-com-style-a-tie-guide-everything-you-need-to-know-before-putting-o-3",
+      "text": "Judge a silk tie by its weight and body rather than its shine; a very glossy, thin silk usually means a cheap tie.",
+      "why": "Good silk has some heft and survives repeated knotting.",
+      "topics": [
+        "accessories",
+        "fabrics"
+      ],
+      "occasions": [
+        "work",
+        "event"
+      ],
+      "strength": "tip"
+    },
+    {
+      "id": "gqphilippines-com-style-a-tie-guide-everything-you-need-to-know-before-putting-o-4",
+      "text": "Handle silk ties with care, since they crease more easily than wool ones.",
+      "why": "Creases in silk are hard to get out.",
+      "topics": [
+        "accessories",
+        "care"
+      ],
+      "occasions": [
+        "work",
+        "event"
+      ],
+      "strength": "tip"
+    },
+    {
+      "id": "gqphilippines-com-style-a-tie-guide-everything-you-need-to-know-before-putting-o-5",
+      "text": "Choose a wool tie for cold weather and for travel; its matte texture sits well with overcoats and heavier shirting.",
+      "why": "Wool resists creasing in a suitcase and matches winter fabrics.",
+      "topics": [
+        "accessories",
+        "fabrics",
+        "weather"
+      ],
+      "occasions": [
+        "work",
+        "smart"
+      ],
+      "strength": "tip"
+    },
+    {
+      "id": "gqphilippines-com-style-a-tie-guide-everything-you-need-to-know-before-putting-o-6",
+      "text": "Wear a knit tie, with its flat, squared-off tip, on business-casual days.",
+      "why": "It looks relaxed rather than corporate and doesn't wrinkle when packed.",
+      "topics": [
+        "accessories",
+        "smart casual"
+      ],
+      "occasions": [
+        "work",
+        "smart"
+      ],
+      "strength": "tip"
+    },
+    {
+      "id": "gqphilippines-com-style-a-tie-guide-everything-you-need-to-know-before-putting-o-7",
+      "text": "In hot, humid weather or at daytime outdoor events, pick a matte cotton or linen tie, ideally with a suit and shirt in similar light fabrics.",
+      "why": "They are light and breathable, though they wrinkle more easily.",
+      "topics": [
+        "accessories",
+        "fabrics",
+        "weather"
+      ],
+      "occasions": [
+        "event",
+        "work"
+      ],
+      "strength": "tip"
+    },
+    {
+      "id": "gqphilippines-com-style-a-tie-guide-everything-you-need-to-know-before-putting-o-8",
+      "text": "Woven jacquard ties give texture and wear well; printed ties allow bolder designs but have less texture and can fade.",
+      "why": "The pattern is part of the weave in jacquard, but only on the surface in a print.",
+      "topics": [
+        "accessories",
+        "patterns"
+      ],
+      "occasions": [
+        "work",
+        "event"
+      ],
+      "strength": "tip"
+    },
+    {
+      "id": "gqphilippines-com-style-a-tie-guide-everything-you-need-to-know-before-putting-o-9",
+      "text": "Know three knots: four-in-hand for standard or point collars, half-Windsor for medium spreads, and the most formal full Windsor for wide spread collars.",
+      "why": "The knot should fill the space the collar leaves open.",
+      "topics": [
+        "accessories",
+        "shirts",
+        "formal"
+      ],
+      "occasions": [
+        "work",
+        "event"
+      ],
+      "strength": "tip"
+    },
+    {
+      "id": "gqphilippines-com-style-a-tie-guide-everything-you-need-to-know-before-putting-o-10",
+      "text": "Keep proportions together: a wide tie, a bulky knot and a spread collar go as a set, as do a slim tie, a small knot and a standard collar.",
+      "why": "Mismatched sizes make the knot look lost or crammed.",
+      "topics": [
+        "accessories",
+        "proportions",
+        "shirts"
+      ],
+      "occasions": [
+        "work",
+        "event"
+      ],
+      "strength": "rule"
+    },
+    {
+      "id": "gqphilippines-com-style-a-tie-guide-everything-you-need-to-know-before-putting-o-11",
+      "text": "Match the knot to the tie's thickness: thick ties need small knots, while a light silk tie can carry a full Windsor.",
+      "why": "A heavy tie in a big knot becomes oversized.",
+      "topics": [
+        "accessories",
+        "proportions"
+      ],
+      "occasions": [
+        "work",
+        "event"
+      ],
+      "strength": "tip"
+    },
+    {
+      "id": "gqphilippines-com-style-a-tie-guide-everything-you-need-to-know-before-putting-o-12",
+      "text": "Tie it so the tip lands at the top of your belt buckle.",
+      "why": "Shorter or longer looks careless.",
+      "topics": [
+        "accessories",
+        "formal"
+      ],
+      "occasions": [
+        "work",
+        "event"
+      ],
+      "strength": "rule",
+      "same_as": "tie-length"
+    },
+    {
+      "id": "gqphilippines-com-style-a-tie-guide-everything-you-need-to-know-before-putting-o-13",
+      "text": "Match the tie's widest point to the width of your jacket lapels.",
+      "why": "Mismatched proportions look off.",
+      "topics": [
+        "accessories",
+        "suits",
+        "proportions"
+      ],
+      "occasions": [
+        "work",
+        "event"
+      ],
+      "strength": "rule",
+      "same_as": "tie-width"
+    },
+    {
+      "id": "gqphilippines-com-style-a-tie-guide-everything-you-need-to-know-before-putting-o-14",
+      "text": "Choose a tie for the formality of the occasion rather than to match your shirt colour.",
+      "why": "Fabric and pattern set formality; colour-matching alone doesn't make it right.",
+      "topics": [
+        "accessories",
+        "occasions"
+      ],
+      "occasions": [
+        "work",
+        "event"
+      ],
+      "strength": "tip"
+    },
+    {
+      "id": "gqphilippines-com-style-a-tie-guide-everything-you-need-to-know-before-putting-o-15",
+      "text": "For weddings, interviews and client meetings, a solid navy or burgundy silk tie, or a quiet stripe or small neat pattern, is the safe choice.",
+      "why": "These read polished without drawing attention.",
+      "topics": [
+        "accessories",
+        "formal",
+        "colour"
+      ],
+      "occasions": [
+        "event",
+        "work"
+      ],
+      "strength": "tip"
+    }
+  ],
+  "outfits": []
+}

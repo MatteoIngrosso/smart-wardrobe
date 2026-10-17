@@ -1,0 +1,180 @@
+{
+  "source": {
+    "kind": "article",
+    "url": "https://www.fashionbeans.com/article/pattern-mixing-guide/",
+    "title": "An Expert Guide To Pattern Mixing",
+    "author": "FashionBeans"
+  },
+  "learned_at": "2026-10-17T18:29:18+00:00",
+  "model": "by hand",
+  "tokens": {
+    "in": 0,
+    "out": 0
+  },
+  "tips": [
+    {
+      "id": "fashionbeans-com-article-pattern-mixing-guide-1",
+      "text": "When mixing patterns, keep to a tight colour palette and add any pop of colour through an accessory or a small detail.",
+      "why": "Shared colours stop the patterns fighting each other.",
+      "topics": [
+        "patterns",
+        "colour"
+      ],
+      "occasions": [],
+      "strength": "rule"
+    },
+    {
+      "id": "fashionbeans-com-article-pattern-mixing-guide-2",
+      "text": "Pair a large pattern with a small one rather than two patterns of similar size.",
+      "why": "Contrast in scale keeps the outfit from looking like a picnic blanket.",
+      "topics": [
+        "patterns"
+      ],
+      "occasions": [],
+      "strength": "rule",
+      "same_as": "patterns-scale"
+    },
+    {
+      "id": "fashionbeans-com-article-pattern-mixing-guide-3",
+      "text": "When combining different pattern types, choose ones that look clearly different, such as stripes with florals, not dots with puppytooth.",
+      "why": "Patterns that are too alike blur together and look like a mistake.",
+      "topics": [
+        "patterns"
+      ],
+      "occasions": [],
+      "strength": "tip"
+    },
+    {
+      "id": "fashionbeans-com-article-pattern-mixing-guide-4",
+      "text": "If wearing three patterns, make one small, one medium and one large; a patterned tie or pocket square can be the third.",
+      "why": "Graduated scales let each pattern read on its own.",
+      "topics": [
+        "patterns",
+        "accessories"
+      ],
+      "occasions": [],
+      "strength": "tip"
+    },
+    {
+      "id": "fashionbeans-com-article-pattern-mixing-guide-5",
+      "text": "Put the boldest pattern on the outer layer and keep quieter patterns underneath.",
+      "why": "The loud piece leads and the rest supports it.",
+      "topics": [
+        "patterns",
+        "layering"
+      ],
+      "occasions": [],
+      "strength": "tip"
+    },
+    {
+      "id": "fashionbeans-com-article-pattern-mixing-guide-6",
+      "text": "Start pattern mixing with checks.",
+      "why": "Checks are the easiest pattern for most men to wear.",
+      "topics": [
+        "patterns"
+      ],
+      "occasions": [],
+      "strength": "tip"
+    },
+    {
+      "id": "fashionbeans-com-article-pattern-mixing-guide-7",
+      "text": "When clashing two checks, keep them in a family of related colours.",
+      "why": "A shared palette lets different-sized checks look deliberate.",
+      "topics": [
+        "patterns",
+        "colour"
+      ],
+      "occasions": [],
+      "strength": "tip"
+    },
+    {
+      "id": "fashionbeans-com-article-pattern-mixing-guide-8",
+      "text": "To mix stripes with stripes, vary their width or direction, for example horizontal stripes under vertical ones.",
+      "why": "A change of width or direction separates the two layers.",
+      "topics": [
+        "patterns"
+      ],
+      "occasions": [],
+      "strength": "tip"
+    },
+    {
+      "id": "fashionbeans-com-article-pattern-mixing-guide-9",
+      "text": "For smart stripe-on-stripe outfits, use shades of one colour, such as tonal navy, rather than stark black and white.",
+      "why": "Tonal stripes look refined; black and white stripes look costume-like.",
+      "topics": [
+        "patterns",
+        "colour",
+        "formal"
+      ],
+      "occasions": [
+        "smart",
+        "work"
+      ],
+      "strength": "tip"
+    },
+    {
+      "id": "fashionbeans-com-article-pattern-mixing-guide-10",
+      "text": "Pair houndstooth only with simple patterns such as a narrow pinstripe or large polka dots.",
+      "why": "Houndstooth is already busy and fights other complex prints.",
+      "topics": [
+        "patterns"
+      ],
+      "occasions": [
+        "smart"
+      ],
+      "strength": "tip"
+    },
+    {
+      "id": "fashionbeans-com-article-pattern-mixing-guide-11",
+      "text": "Tame a paisley piece by repeating one of its colours elsewhere in the outfit.",
+      "why": "The repeated colour ties an intense print to the rest of the look.",
+      "topics": [
+        "patterns",
+        "colour"
+      ],
+      "occasions": [],
+      "strength": "tip"
+    },
+    {
+      "id": "fashionbeans-com-article-pattern-mixing-guide-12",
+      "text": "Wear polka dots mainly on accessories such as ties, pocket squares and socks, set against straight-line patterns like stripes or checks.",
+      "why": "Dots are easiest in small doses and contrast well with lines.",
+      "topics": [
+        "patterns",
+        "accessories"
+      ],
+      "occasions": [],
+      "strength": "tip"
+    },
+    {
+      "id": "fashionbeans-com-article-pattern-mixing-guide-13",
+      "text": "With a check suit, try a striped tie and a polka-dot pocket square in a sober palette.",
+      "why": "Three different pattern types in quiet colours mix without clashing.",
+      "topics": [
+        "patterns",
+        "suits",
+        "accessories"
+      ],
+      "occasions": [
+        "smart",
+        "work"
+      ],
+      "strength": "tip"
+    },
+    {
+      "id": "fashionbeans-com-article-pattern-mixing-guide-14",
+      "text": "For a casual pattern mix, wear an open check overshirt over a striped knit or a graphic tee.",
+      "why": "The outer check and inner pattern contrast in type and scale.",
+      "topics": [
+        "patterns",
+        "casual",
+        "layering"
+      ],
+      "occasions": [
+        "casual"
+      ],
+      "strength": "opinion"
+    }
+  ],
+  "outfits": []
+}
