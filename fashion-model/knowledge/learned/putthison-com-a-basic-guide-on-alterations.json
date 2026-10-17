@@ -1,0 +1,210 @@
+{
+  "source": {
+    "kind": "article",
+    "url": "https://putthison.com/a-basic-guide-on-alterations/",
+    "title": "A Basic Guide On Alterations",
+    "author": "Put This On"
+  },
+  "learned_at": "2026-10-17T18:34:06+00:00",
+  "model": "by hand",
+  "tokens": {
+    "in": 0,
+    "out": 0
+  },
+  "tips": [
+    {
+      "id": "putthison-com-a-basic-guide-on-alterations-1",
+      "text": "Try a new tailor on a simple job, such as hemming chinos, before trusting them with a jacket.",
+      "why": "A cheap, low-risk job shows whether their work is good.",
+      "topics": [
+        "fit",
+        "wardrobe"
+      ],
+      "occasions": [],
+      "strength": "tip"
+    },
+    {
+      "id": "putthison-com-a-basic-guide-on-alterations-2",
+      "text": "Easy, worthwhile alterations: shortening sleeves, nipping in waists, hemming trousers, small waistband changes and tapering trousers below the knee.",
+      "why": "Simple jobs make ready-to-wear fit much better for little cost.",
+      "topics": [
+        "fit",
+        "suits",
+        "trousers"
+      ],
+      "occasions": [
+        "work",
+        "smart"
+      ],
+      "strength": "tip",
+      "same_as": "tailor"
+    },
+    {
+      "id": "putthison-com-a-basic-guide-on-alterations-3",
+      "text": "Don't buy anything that doesn't fit in the chest and shoulders, or in the seat and thighs of trousers.",
+      "why": "Those areas can hardly be altered.",
+      "topics": [
+        "fit",
+        "suits",
+        "trousers"
+      ],
+      "occasions": [
+        "work",
+        "smart"
+      ],
+      "strength": "rule",
+      "same_as": "putthison-com-a-practical-guide-to-getting-started-9"
+    },
+    {
+      "id": "putthison-com-a-basic-guide-on-alterations-4",
+      "text": "Letting out a seam works on wool but not on crisp linen, fine cotton or leather.",
+      "why": "Wool's nap hides old stitch holes; smooth fabrics show them.",
+      "topics": [
+        "fabrics",
+        "fit"
+      ],
+      "occasions": [],
+      "strength": "tip"
+    },
+    {
+      "id": "putthison-com-a-basic-guide-on-alterations-5",
+      "text": "Don't pay to restyle details such as shoulder structure or lapel width; buy the style you want instead.",
+      "why": "It is risky, costly and rarely looks right, though removing a jacket's back lining is usually fine.",
+      "topics": [
+        "suits",
+        "fit"
+      ],
+      "occasions": [
+        "work",
+        "smart"
+      ],
+      "strength": "tip"
+    },
+    {
+      "id": "putthison-com-a-basic-guide-on-alterations-6",
+      "text": "When between sizes, take the larger one.",
+      "why": "Taking a garment in is much easier than letting it out.",
+      "topics": [
+        "fit"
+      ],
+      "occasions": [],
+      "strength": "rule"
+    },
+    {
+      "id": "putthison-com-a-basic-guide-on-alterations-7",
+      "text": "A dent just below the shoulder pad usually means the shoulders are too narrow; size up rather than paying to fix it.",
+      "why": "The fix is expensive and can create new problems.",
+      "topics": [
+        "fit",
+        "suits"
+      ],
+      "occasions": [
+        "work",
+        "smart"
+      ],
+      "strength": "tip"
+    },
+    {
+      "id": "putthison-com-a-basic-guide-on-alterations-8",
+      "text": "Before buying, check that the jacket collar stays close to the neck; if a gap can't be easily fixed, return it.",
+      "why": "Whether a collar gap is fixable depends on its cause and the jacket's make.",
+      "topics": [
+        "fit",
+        "suits"
+      ],
+      "occasions": [
+        "work",
+        "smart"
+      ],
+      "strength": "tip",
+      "same_as": "putthison-com-a-practical-guide-to-getting-started-6"
+    },
+    {
+      "id": "putthison-com-a-basic-guide-on-alterations-9",
+      "text": "Leave tuxedo and the most formal suit trousers uncuffed; on other trousers, when unsure, ask for cuffs.",
+      "why": "Cuffs can later be removed but not added.",
+      "topics": [
+        "trousers",
+        "formal"
+      ],
+      "occasions": [
+        "event",
+        "work"
+      ],
+      "strength": "tip"
+    },
+    {
+      "id": "putthison-com-a-basic-guide-on-alterations-10",
+      "text": "Hem trousers so they just touch the shoe, without pooling at the ankle or looking cropped.",
+      "why": "That length looks clean with most tailoring.",
+      "topics": [
+        "trousers",
+        "fit"
+      ],
+      "occasions": [
+        "work",
+        "smart"
+      ],
+      "strength": "rule",
+      "same_as": "trouser-break"
+    },
+    {
+      "id": "putthison-com-a-basic-guide-on-alterations-11",
+      "text": "Back darts can slim a shirt when the side seams can't take in more, and they shape the lower back.",
+      "why": "They remove excess cloth that billows when the shirt is tucked.",
+      "topics": [
+        "shirts",
+        "fit"
+      ],
+      "occasions": [
+        "work",
+        "smart"
+      ],
+      "strength": "tip"
+    },
+    {
+      "id": "putthison-com-a-basic-guide-on-alterations-12",
+      "text": "Don't have everything taken in too slim, the most common mistake of new tailoring customers.",
+      "why": "Over-tight clothes restrict movement and look strained.",
+      "topics": [
+        "fit"
+      ],
+      "occasions": [],
+      "strength": "tip"
+    },
+    {
+      "id": "putthison-com-a-basic-guide-on-alterations-13",
+      "text": "Make irreversible alterations in small steps and live with each change before going further.",
+      "why": "Cut fabric can't be put back.",
+      "topics": [
+        "fit"
+      ],
+      "occasions": [],
+      "strength": "tip"
+    },
+    {
+      "id": "putthison-com-a-basic-guide-on-alterations-14",
+      "text": "Wear the shoes and layers you'll pair with a garment to fittings: dress shoes and shirt for a suit, a sweater under a coat.",
+      "why": "Lengths and ease are set against what you'll actually wear.",
+      "topics": [
+        "fit",
+        "layering"
+      ],
+      "occasions": [],
+      "strength": "rule"
+    },
+    {
+      "id": "putthison-com-a-basic-guide-on-alterations-15",
+      "text": "Allow for movement: shirt cuffs should stay at the wrist when you reach, and trousers shouldn't be hemmed too short as they ride up.",
+      "why": "Clothes are judged moving, not only standing still.",
+      "topics": [
+        "fit",
+        "shirts",
+        "trousers"
+      ],
+      "occasions": [],
+      "strength": "tip"
+    }
+  ],
+  "outfits": []
+}

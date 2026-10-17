@@ -1,0 +1,180 @@
+{
+  "source": {
+    "kind": "article",
+    "url": "https://www.mrporter.com/en-at/journal/fashion/mens-socks-what-to-wear-and-when-758924",
+    "title": "Men's Socks: What To Wear And When",
+    "author": "MR PORTER"
+  },
+  "learned_at": "2026-10-17T18:30:57+00:00",
+  "model": "by hand",
+  "tokens": {
+    "in": 0,
+    "out": 0
+  },
+  "tips": [
+    {
+      "id": "mrporter-com-en-at-journal-fashion-mens-socks-what-to-wear-and-when-758924-1",
+      "text": "Don't wear socks with strappy sandals.",
+      "why": "Most people still see it as a style mistake.",
+      "topics": [
+        "accessories",
+        "shoes"
+      ],
+      "occasions": [
+        "casual"
+      ],
+      "strength": "tip"
+    },
+    {
+      "id": "mrporter-com-en-at-journal-fashion-mens-socks-what-to-wear-and-when-758924-2",
+      "text": "If you wear socks with slides, choose thick ribbed ones.",
+      "why": "Chunky socks make it look intentional; it is a runway-led taste.",
+      "topics": [
+        "accessories",
+        "shoes"
+      ],
+      "occasions": [
+        "casual"
+      ],
+      "strength": "opinion"
+    },
+    {
+      "id": "mrporter-com-en-at-journal-fashion-mens-socks-what-to-wear-and-when-758924-3",
+      "text": "With shorts, wear no-show socks unless you want a deliberately sporty, skate look with crew socks.",
+      "why": "Visible socks with shorts look dated unless the look is sporty on purpose.",
+      "topics": [
+        "accessories",
+        "casual"
+      ],
+      "occasions": [
+        "casual"
+      ],
+      "strength": "tip"
+    },
+    {
+      "id": "mrporter-com-en-at-journal-fashion-mens-socks-what-to-wear-and-when-758924-4",
+      "text": "In summer, wear loafers with no-show socks for a sockless look.",
+      "why": "It looks cleaner and is more hygienic than bare feet in the heat.",
+      "topics": [
+        "accessories",
+        "shoes",
+        "weather"
+      ],
+      "occasions": [
+        "casual",
+        "smart"
+      ],
+      "strength": "tip"
+    },
+    {
+      "id": "mrporter-com-en-at-journal-fashion-mens-socks-what-to-wear-and-when-758924-5",
+      "text": "In winter, wear thin patterned socks with loafers.",
+      "why": "They add warmth and a little interest at the ankle.",
+      "topics": [
+        "accessories",
+        "shoes",
+        "weather"
+      ],
+      "occasions": [
+        "casual",
+        "smart"
+      ],
+      "strength": "tip"
+    },
+    {
+      "id": "mrporter-com-en-at-journal-fashion-mens-socks-what-to-wear-and-when-758924-6",
+      "text": "With boots, wear thicker mid-calf ribbed socks with some wool in them.",
+      "why": "Stiff boots rub the ankle without the extra padding.",
+      "topics": [
+        "accessories",
+        "shoes"
+      ],
+      "occasions": [
+        "casual"
+      ],
+      "strength": "tip"
+    },
+    {
+      "id": "mrporter-com-en-at-journal-fashion-mens-socks-what-to-wear-and-when-758924-7",
+      "text": "Socks don't have to match exactly; a harmonious contrast works, and navy or dark grey is the safe default.",
+      "why": "Dark neutral socks go with almost any trouser and shoe.",
+      "topics": [
+        "accessories",
+        "colour"
+      ],
+      "occasions": [],
+      "strength": "tip"
+    },
+    {
+      "id": "mrporter-com-en-at-journal-fashion-mens-socks-what-to-wear-and-when-758924-8",
+      "text": "Don't match your socks to your tie.",
+      "why": "It looks affected and over-planned.",
+      "topics": [
+        "accessories",
+        "colour"
+      ],
+      "occasions": [
+        "work",
+        "smart"
+      ],
+      "strength": "tip"
+    },
+    {
+      "id": "mrporter-com-en-at-journal-fashion-mens-socks-what-to-wear-and-when-758924-9",
+      "text": "Keep patterned socks for casual outfits and echo one of their colours elsewhere in the look.",
+      "why": "The repeated colour ties the pattern into the outfit.",
+      "topics": [
+        "accessories",
+        "patterns",
+        "colour"
+      ],
+      "occasions": [
+        "casual",
+        "smart"
+      ],
+      "strength": "tip"
+    },
+    {
+      "id": "mrporter-com-en-at-journal-fashion-mens-socks-what-to-wear-and-when-758924-10",
+      "text": "Never wear white socks with tailoring; keep them for sporty looks or all-white preppy outfits.",
+      "why": "White socks are casual and jar with formal clothes.",
+      "topics": [
+        "accessories",
+        "formal"
+      ],
+      "occasions": [
+        "work",
+        "event"
+      ],
+      "strength": "rule"
+    },
+    {
+      "id": "mrporter-com-en-at-journal-fashion-mens-socks-what-to-wear-and-when-758924-11",
+      "text": "With suits and black tie, wear dark, very fine over-the-calf socks.",
+      "why": "They stay up and show no bare shin when you sit or cross your legs.",
+      "topics": [
+        "accessories",
+        "formal",
+        "suits"
+      ],
+      "occasions": [
+        "work",
+        "event",
+        "night"
+      ],
+      "strength": "rule"
+    },
+    {
+      "id": "mrporter-com-en-at-journal-fashion-mens-socks-what-to-wear-and-when-758924-12",
+      "text": "Choose ribbed socks in cooler weather.",
+      "why": "The ribbing grips the leg so the sock stays up, and adds warmth.",
+      "topics": [
+        "accessories",
+        "weather"
+      ],
+      "occasions": [],
+      "strength": "tip"
+    }
+  ],
+  "outfits": []
+}

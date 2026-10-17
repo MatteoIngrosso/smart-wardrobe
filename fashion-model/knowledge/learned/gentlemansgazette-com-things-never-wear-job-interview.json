@@ -1,0 +1,179 @@
+{
+  "source": {
+    "kind": "article",
+    "url": "https://www.gentlemansgazette.com/things-never-wear-job-interview/",
+    "title": "10 Things Men Should NEVER Wear to a Job Interview",
+    "author": "Gentleman's Gazette"
+  },
+  "learned_at": "2026-10-17T18:33:03+00:00",
+  "model": "by hand",
+  "tokens": {
+    "in": 0,
+    "out": 0
+  },
+  "tips": [
+    {
+      "id": "gentlemansgazette-com-things-never-wear-job-interview-1",
+      "text": "Research the company's dress culture before an interview and dress one level above what its staff wear day to day.",
+      "why": "It shows respect for the interviewers and the process.",
+      "topics": [
+        "occasions"
+      ],
+      "occasions": [
+        "work"
+      ],
+      "strength": "rule"
+    },
+    {
+      "id": "gentlemansgazette-com-things-never-wear-job-interview-2",
+      "text": "Dress at least business casual for an interview, even at a casual employer; never turn up in weekend clothes.",
+      "why": "Few interviewers mind a smarter look, many mind a sloppy one.",
+      "topics": [
+        "occasions",
+        "smart casual"
+      ],
+      "occasions": [
+        "work"
+      ],
+      "strength": "tip"
+    },
+    {
+      "id": "gentlemansgazette-com-things-never-wear-job-interview-3",
+      "text": "Wear a collared button-up shirt to an interview, even for a hands-on job.",
+      "why": "It signals respect, not that you'd dress that way on the job.",
+      "topics": [
+        "shirts",
+        "occasions"
+      ],
+      "occasions": [
+        "work"
+      ],
+      "strength": "tip"
+    },
+    {
+      "id": "gentlemansgazette-com-things-never-wear-job-interview-4",
+      "text": "Wear new interview clothes a few times beforehand and leave two to three weeks for alterations.",
+      "why": "Comfortable, well-fitting clothes help you feel confident.",
+      "topics": [
+        "fit",
+        "occasions"
+      ],
+      "occasions": [
+        "work"
+      ],
+      "strength": "tip"
+    },
+    {
+      "id": "gentlemansgazette-com-things-never-wear-job-interview-5",
+      "text": "Remove labels, pins and tacking stitches from new clothes and smooth out packaging creases before wearing them.",
+      "why": "Leftover tags make you look inattentive.",
+      "topics": [
+        "care"
+      ],
+      "occasions": [
+        "work"
+      ],
+      "strength": "tip"
+    },
+    {
+      "id": "gentlemansgazette-com-things-never-wear-job-interview-6",
+      "text": "Iron your shirt and trousers, steam out jacket creases and shine your shoes before an interview.",
+      "why": "Wrinkles make the whole outfit look dishevelled.",
+      "topics": [
+        "care"
+      ],
+      "occasions": [
+        "work"
+      ],
+      "strength": "rule",
+      "same_as": "iron"
+    },
+    {
+      "id": "gentlemansgazette-com-things-never-wear-job-interview-7",
+      "text": "Keep your undershirt invisible: avoid sheer shirts, and pick grey rather than white or black.",
+      "why": "A visible undershirt looks informal.",
+      "topics": [
+        "shirts",
+        "layering"
+      ],
+      "occasions": [
+        "work"
+      ],
+      "strength": "tip",
+      "same_as": "undershirt"
+    },
+    {
+      "id": "gentlemansgazette-com-things-never-wear-job-interview-8",
+      "text": "Don't wear T-shirts, henleys, sports jerseys or sweatshirts to an interview.",
+      "why": "They are too casual for the setting.",
+      "topics": [
+        "occasions",
+        "casual"
+      ],
+      "occasions": [
+        "work"
+      ],
+      "strength": "rule"
+    },
+    {
+      "id": "gentlemansgazette-com-things-never-wear-job-interview-9",
+      "text": "Wear dress trousers or chinos to an interview, not shorts, cargos or sweatpants; if you must wear jeans, add a blazer or sport coat.",
+      "why": "Jeans still read casual on their own.",
+      "topics": [
+        "trousers",
+        "occasions"
+      ],
+      "occasions": [
+        "work"
+      ],
+      "strength": "tip"
+    },
+    {
+      "id": "gentlemansgazette-com-things-never-wear-job-interview-10",
+      "text": "Avoid athletic shoes, sandals, flip-flops and trendy shoes at an interview; wear leather shoes with proper dress socks, never gym socks.",
+      "why": "Casual footwear drags a smart outfit down.",
+      "topics": [
+        "shoes",
+        "occasions"
+      ],
+      "occasions": [
+        "work"
+      ],
+      "strength": "rule"
+    },
+    {
+      "id": "gentlemansgazette-com-things-never-wear-job-interview-11",
+      "text": "Skip logos, slogans, flashy jewellery, bold prints and loud colours when interviewing.",
+      "why": "The interviewer should focus on you, not your clothes.",
+      "topics": [
+        "occasions",
+        "colour",
+        "accessories"
+      ],
+      "occasions": [
+        "work"
+      ],
+      "strength": "tip"
+    },
+    {
+      "id": "gentlemansgazette-com-things-never-wear-job-interview-12",
+      "text": "Take out earbuds and silence or remove beeping smartwatches before the interview.",
+      "why": "Visible or noisy tech looks inattentive and distracts.",
+      "topics": [
+        "accessories"
+      ],
+      "occasions": [
+        "work"
+      ],
+      "strength": "tip"
+    }
+  ],
+  "outfits": [
+    {
+      "outfit": "tshirt black casual, shorts green casual, sneakers black casual",
+      "occasion": "work",
+      "verdict": "avoid",
+      "why": "A tee, shorts and sneakers are far too casual for a job interview."
+    }
+  ]
+}

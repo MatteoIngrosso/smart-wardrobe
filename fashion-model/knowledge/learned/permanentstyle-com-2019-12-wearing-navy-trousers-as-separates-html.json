@@ -1,0 +1,153 @@
+{
+  "source": {
+    "kind": "article",
+    "url": "https://www.permanentstyle.com/2019/12/wearing-navy-trousers-as-separates.html",
+    "title": "Wearing navy trousers as separates",
+    "author": "Permanent Style"
+  },
+  "learned_at": "2026-10-17T18:34:06+00:00",
+  "model": "by hand",
+  "tokens": {
+    "in": 0,
+    "out": 0
+  },
+  "tips": [
+    {
+      "id": "permanentstyle-com-2019-12-wearing-navy-trousers-as-separates-html-1",
+      "text": "Avoid wearing smooth navy worsted trousers as separates with a tailored jacket.",
+      "why": "They look like the trousers of a suit whose jacket went missing, and worsted is too sleek for separates.",
+      "topics": [
+        "trousers",
+        "colour",
+        "smart casual"
+      ],
+      "occasions": [
+        "smart",
+        "work"
+      ],
+      "strength": "tip"
+    },
+    {
+      "id": "permanentstyle-com-2019-12-wearing-navy-trousers-as-separates-html-2",
+      "text": "Grey is the most versatile colour for odd trousers worn with jackets.",
+      "why": "It has little colour of its own, so it sits with almost any jacket.",
+      "topics": [
+        "trousers",
+        "colour",
+        "wardrobe"
+      ],
+      "occasions": [
+        "smart",
+        "work"
+      ],
+      "strength": "tip"
+    },
+    {
+      "id": "permanentstyle-com-2019-12-wearing-navy-trousers-as-separates-html-3",
+      "text": "When building jackets and trousers to mix, keep jackets darker and trousers lighter.",
+      "why": "That pattern makes jackets, trousers and shoes easier to combine.",
+      "topics": [
+        "colour",
+        "wardrobe",
+        "smart casual"
+      ],
+      "occasions": [
+        "smart",
+        "work"
+      ],
+      "strength": "opinion"
+    },
+    {
+      "id": "permanentstyle-com-2019-12-wearing-navy-trousers-as-separates-html-4",
+      "text": "Beige, cream and olive trousers usually pair with jackets more easily than navy ones.",
+      "why": "Muted, lighter tones are easier to match.",
+      "topics": [
+        "trousers",
+        "colour"
+      ],
+      "occasions": [
+        "smart",
+        "work"
+      ],
+      "strength": "tip"
+    },
+    {
+      "id": "permanentstyle-com-2019-12-wearing-navy-trousers-as-separates-html-5",
+      "text": "For dark odd trousers, pick muted shades such as charcoal, greyed green or dark brown rather than rich navy.",
+      "why": "Rich colours are harder to combine than muted ones.",
+      "topics": [
+        "trousers",
+        "colour"
+      ],
+      "occasions": [
+        "smart",
+        "work"
+      ],
+      "strength": "tip"
+    },
+    {
+      "id": "permanentstyle-com-2019-12-wearing-navy-trousers-as-separates-html-6",
+      "text": "If you wear navy trousers with a jacket, choose a muted, greyish jacket such as charcoal tweed, never a rich or bright one.",
+      "why": "Navy is a rich colour and clashes with other strong colours.",
+      "topics": [
+        "colour",
+        "smart casual"
+      ],
+      "occasions": [
+        "smart"
+      ],
+      "strength": "tip"
+    },
+    {
+      "id": "permanentstyle-com-2019-12-wearing-navy-trousers-as-separates-html-7",
+      "text": "Navy trousers work best in casual, textured cloths such as flannel or serge rather than smooth worsted.",
+      "why": "Texture breaks the link with suit trousers.",
+      "topics": [
+        "fabrics",
+        "trousers"
+      ],
+      "occasions": [
+        "smart",
+        "casual"
+      ],
+      "strength": "tip"
+    },
+    {
+      "id": "permanentstyle-com-2019-12-wearing-navy-trousers-as-separates-html-8",
+      "text": "Navy trousers sit more easily with a muted knit or casual shirt than with a tailored jacket.",
+      "why": "Casual outfits ask less of colour harmony.",
+      "topics": [
+        "trousers",
+        "colour",
+        "casual"
+      ],
+      "occasions": [
+        "casual",
+        "smart"
+      ],
+      "strength": "tip"
+    },
+    {
+      "id": "permanentstyle-com-2019-12-wearing-navy-trousers-as-separates-html-9",
+      "text": "Dark jeans don't follow the navy-trouser problem: indigo is less rich, fades and reads casual, so it pairs widely.",
+      "why": "Denim behaves differently from navy tailoring cloth.",
+      "topics": [
+        "denim",
+        "colour"
+      ],
+      "occasions": [
+        "casual",
+        "smart"
+      ],
+      "strength": "tip"
+    }
+  ],
+  "outfits": [
+    {
+      "outfit": "jacket brown smart casual +cotton, sweater grey smart casual, trousers navy smart casual +serge +wool",
+      "occasion": "smart",
+      "verdict": "good",
+      "why": "A very muted brown cotton jacket and a grey knit let rich navy serge trousers work as separates."
+    }
+  ]
+}

@@ -1,0 +1,176 @@
+{
+  "source": {
+    "kind": "article",
+    "url": "https://www.fashionbeans.com/2017/5-colour-combinations-that-always-work/",
+    "title": "5 Colour Combinations That Always Work",
+    "author": "FashionBeans"
+  },
+  "learned_at": "2026-10-17T18:28:22+00:00",
+  "model": "by hand",
+  "tokens": {
+    "in": 0,
+    "out": 0
+  },
+  "tips": [
+    {
+      "id": "fashionbeans-com-2017-5-colour-combinations-that-always-work-1",
+      "text": "Don't lean on the old complementary colour-wheel rule; use proven pairings such as black and camel, navy and burgundy, green and brown, pink and grey.",
+      "why": "Opposite colours often clash, and tested pairings are safer.",
+      "topics": [
+        "colour"
+      ],
+      "occasions": [],
+      "strength": "opinion"
+    },
+    {
+      "id": "fashionbeans-com-2017-5-colour-combinations-that-always-work-2",
+      "text": "Wear black as the main colour with camel as the accent, roughly a 70/30 split, for example an all-black outfit under a camel coat.",
+      "why": "Striking contrast with very little risk.",
+      "topics": [
+        "colour",
+        "outerwear"
+      ],
+      "occasions": [
+        "casual",
+        "smart"
+      ],
+      "strength": "tip"
+    },
+    {
+      "id": "fashionbeans-com-2017-5-colour-combinations-that-always-work-3",
+      "text": "If brown feels hard to wear, choose camel instead of dark brown; it is lighter and sits easily with black, white and grey.",
+      "why": "Lighter browns are more forgiving than dark chocolate shades.",
+      "topics": [
+        "colour"
+      ],
+      "occasions": [],
+      "strength": "tip"
+    },
+    {
+      "id": "fashionbeans-com-2017-5-colour-combinations-that-always-work-4",
+      "text": "Pick camel pieces in wool or other textured fabrics.",
+      "why": "Texture adds depth to a plain, light colour.",
+      "topics": [
+        "colour",
+        "fabrics"
+      ],
+      "occasions": [],
+      "strength": "tip"
+    },
+    {
+      "id": "fashionbeans-com-2017-5-colour-combinations-that-always-work-5",
+      "text": "Pair deep navy with burgundy rather than bright blue with purple.",
+      "why": "The dark versions look rich and smart; the bright ones look harsh, like a bruise.",
+      "topics": [
+        "colour"
+      ],
+      "occasions": [
+        "smart",
+        "night"
+      ],
+      "strength": "tip"
+    },
+    {
+      "id": "fashionbeans-com-2017-5-colour-combinations-that-always-work-6",
+      "text": "Wear a burgundy roll neck under a navy suit, or tucked into pleated trousers, for a smart pairing without a shirt and tie.",
+      "why": "Navy grounds the look and burgundy adds richness.",
+      "topics": [
+        "colour",
+        "suits",
+        "knitwear"
+      ],
+      "occasions": [
+        "smart",
+        "night"
+      ],
+      "strength": "tip"
+    },
+    {
+      "id": "fashionbeans-com-2017-5-colour-combinations-that-always-work-7",
+      "text": "Ground dark green trousers with brown shoes such as brogues or derbies.",
+      "why": "Green and brown are a natural pairing and dark green suits most builds.",
+      "topics": [
+        "colour",
+        "trousers",
+        "shoes"
+      ],
+      "occasions": [
+        "smart",
+        "casual"
+      ],
+      "strength": "tip"
+    },
+    {
+      "id": "fashionbeans-com-2017-5-colour-combinations-that-always-work-8",
+      "text": "With a green suit, try a brown knitted tie.",
+      "why": "It repeats the green-brown pairing in a relaxed texture.",
+      "topics": [
+        "colour",
+        "suits",
+        "accessories"
+      ],
+      "occasions": [
+        "smart",
+        "event"
+      ],
+      "strength": "opinion"
+    },
+    {
+      "id": "fashionbeans-com-2017-5-colour-combinations-that-always-work-9",
+      "text": "Combine pink with soft neutrals, especially grey, rather than with other strong colours.",
+      "why": "The neutral calms the pink so it doesn't overwhelm the outfit.",
+      "topics": [
+        "colour"
+      ],
+      "occasions": [
+        "casual",
+        "smart"
+      ],
+      "strength": "tip"
+    },
+    {
+      "id": "fashionbeans-com-2017-5-colour-combinations-that-always-work-10",
+      "text": "Black and white together is a timeless palette that suits classic, tailored or minimalist dressing.",
+      "why": "The stark contrast reads as clean and high quality.",
+      "topics": [
+        "colour"
+      ],
+      "occasions": [
+        "smart",
+        "night",
+        "event"
+      ],
+      "strength": "rule"
+    },
+    {
+      "id": "fashionbeans-com-2017-5-colour-combinations-that-always-work-11",
+      "text": "Avoid wearing red and green together.",
+      "why": "The pairing looks like a Christmas costume.",
+      "topics": [
+        "colour"
+      ],
+      "occasions": [],
+      "strength": "tip"
+    }
+  ],
+  "outfits": [
+    {
+      "outfit": "sweater burgundy smart casual +roll-neck +turtleneck, jacket navy smart +suit, trousers navy smart +suit",
+      "occasion": "smart",
+      "verdict": "good",
+      "why": "Navy grounds the look and the burgundy knit adds a rich, smart note."
+    },
+    {
+      "outfit": "sweatshirt pink casual, trousers grey smart casual +tailored",
+      "occasion": "casual",
+      "verdict": "good",
+      "why": "Grey tailoring calms the pink; the safer way to wear the pairing."
+    },
+    {
+      "outfit": "tshirt grey minimal, trousers pink wide smart casual",
+      "occasion": "casual",
+      "verdict": "good",
+      "why": "A bolder take on pink and grey, kept simple with a plain tee."
+    }
+  ]
+}

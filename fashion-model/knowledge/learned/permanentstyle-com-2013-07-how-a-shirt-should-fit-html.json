@@ -1,0 +1,182 @@
+{
+  "source": {
+    "kind": "article",
+    "url": "https://www.permanentstyle.com/2013/07/how-a-shirt-should-fit.html",
+    "title": "How a shirt should fit",
+    "author": "Permanent Style"
+  },
+  "learned_at": "2026-10-17T18:34:07+00:00",
+  "model": "by hand",
+  "tokens": {
+    "in": 0,
+    "out": 0
+  },
+  "tips": [
+    {
+      "id": "permanentstyle-com-2013-07-how-a-shirt-should-fit-html-1",
+      "text": "Don't cut a dress shirt's waist too close.",
+      "why": "Cotton doesn't stretch like wool, and you can't unbutton a shirt when you sit.",
+      "topics": [
+        "shirts",
+        "fit"
+      ],
+      "occasions": [
+        "work",
+        "smart"
+      ],
+      "strength": "tip"
+    },
+    {
+      "id": "permanentstyle-com-2013-07-how-a-shirt-should-fit-html-2",
+      "text": "Test a shirt's fit by sitting and slouching in the shop.",
+      "why": "Slight tightness when standing becomes unbearable after a day at a desk.",
+      "topics": [
+        "shirts",
+        "fit"
+      ],
+      "occasions": [
+        "work"
+      ],
+      "strength": "tip"
+    },
+    {
+      "id": "permanentstyle-com-2013-07-how-a-shirt-should-fit-html-3",
+      "text": "Make sure a shirt is long enough and roomy at the hips so it stays tucked without bunching above the waistband.",
+      "why": "Short or hip-tight shirts ride up and balloon at the waist.",
+      "topics": [
+        "shirts",
+        "fit"
+      ],
+      "occasions": [
+        "work",
+        "smart"
+      ],
+      "strength": "tip"
+    },
+    {
+      "id": "permanentstyle-com-2013-07-how-a-shirt-should-fit-html-4",
+      "text": "Put most fitting effort into the collar: its height should suit your neck so a tie can arch out, helped by a larger tie gap.",
+      "why": "Many off-the-rack collars sit too low and collapse under a tie.",
+      "topics": [
+        "shirts",
+        "fit"
+      ],
+      "occasions": [
+        "work",
+        "event"
+      ],
+      "strength": "tip"
+    },
+    {
+      "id": "permanentstyle-com-2013-07-how-a-shirt-should-fit-html-5",
+      "text": "Stick to one conservative collar that works with and without a tie, or keep two: a medium spread for ties and a button-down for open necks.",
+      "why": "Consistency makes every shirt work with your jackets and ties.",
+      "topics": [
+        "shirts",
+        "wardrobe"
+      ],
+      "occasions": [
+        "work",
+        "smart"
+      ],
+      "strength": "tip"
+    },
+    {
+      "id": "permanentstyle-com-2013-07-how-a-shirt-should-fit-html-6",
+      "text": "Have shirt sleeves shortened to your length rather than tolerating long ones.",
+      "why": "Shortening is easy and cheap; only double cuffs can be lengthened, and only slightly.",
+      "topics": [
+        "shirts",
+        "fit"
+      ],
+      "occasions": [
+        "work",
+        "smart"
+      ],
+      "strength": "tip"
+    },
+    {
+      "id": "permanentstyle-com-2013-07-how-a-shirt-should-fit-html-7",
+      "text": "Once a ready-to-wear shirt fits your collar, body and sleeves, buy several of the same.",
+      "why": "A proven fit saves endless searching and gives a consistent look.",
+      "topics": [
+        "shirts",
+        "wardrobe"
+      ],
+      "occasions": [
+        "work"
+      ],
+      "strength": "tip"
+    },
+    {
+      "id": "permanentstyle-com-2013-07-how-a-shirt-should-fit-html-8",
+      "text": "Shirt shoulder seams sit at the point of the shoulder, and sleeves end around the base of the thumb with room to move.",
+      "why": "More cuff shows once the arm is extended, so allow a little length.",
+      "topics": [
+        "shirts",
+        "fit"
+      ],
+      "occasions": [
+        "work",
+        "smart"
+      ],
+      "strength": "tip"
+    },
+    {
+      "id": "permanentstyle-com-2013-07-how-a-shirt-should-fit-html-9",
+      "text": "Leave the shirt cuff wide enough to slide over your watch.",
+      "why": "A tight cuff catches on the watch and bunches.",
+      "topics": [
+        "shirts",
+        "accessories"
+      ],
+      "occasions": [
+        "work",
+        "smart"
+      ],
+      "strength": "tip"
+    },
+    {
+      "id": "permanentstyle-com-2013-07-how-a-shirt-should-fit-html-10",
+      "text": "Shirt armholes can be fairly high but must sit within the jacket's armhole.",
+      "why": "Otherwise the shirt bunches inside the jacket sleeve.",
+      "topics": [
+        "shirts",
+        "fit",
+        "layering"
+      ],
+      "occasions": [
+        "work"
+      ],
+      "strength": "tip"
+    },
+    {
+      "id": "permanentstyle-com-2013-07-how-a-shirt-should-fit-html-11",
+      "text": "Avoid stretch-cotton shirts.",
+      "why": "They cling to everything and breathe less than plain cotton.",
+      "topics": [
+        "shirts",
+        "fabrics"
+      ],
+      "occasions": [
+        "work",
+        "smart"
+      ],
+      "strength": "opinion"
+    },
+    {
+      "id": "permanentstyle-com-2013-07-how-a-shirt-should-fit-html-12",
+      "text": "Brush suits after each wear and dry clean only for stains or odour.",
+      "why": "Frequent dry cleaning slowly damages the cloth.",
+      "topics": [
+        "care",
+        "suits"
+      ],
+      "occasions": [
+        "work"
+      ],
+      "strength": "tip"
+    }
+  ],
+  "outfits": []
+}

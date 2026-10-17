@@ -1,0 +1,195 @@
+{
+  "source": {
+    "kind": "article",
+    "url": "https://www.fashionbeans.com/article/how-to-wear-hoodies/",
+    "title": "How To Wear A Hoodie – Style And Fashion Guide",
+    "author": "FashionBeans"
+  },
+  "learned_at": "2026-10-17T18:34:18+00:00",
+  "model": "by hand",
+  "tokens": {
+    "in": 0,
+    "out": 0
+  },
+  "tips": [
+    {
+      "id": "fashionbeans-com-article-how-to-wear-hoodies-1",
+      "text": "Skip graphic, band and novelty hoodies once you're past your teens.",
+      "why": "They look juvenile and dated.",
+      "topics": [
+        "streetwear",
+        "casual"
+      ],
+      "occasions": [
+        "casual"
+      ],
+      "strength": "tip"
+    },
+    {
+      "id": "fashionbeans-com-article-how-to-wear-hoodies-2",
+      "text": "Choose hoodies in soft, heavier pure cotton, ideally brushed or loopback.",
+      "why": "Better yarn wears well and lasts longer.",
+      "topics": [
+        "fabrics",
+        "casual"
+      ],
+      "occasions": [
+        "casual"
+      ],
+      "strength": "tip"
+    },
+    {
+      "id": "fashionbeans-com-article-how-to-wear-hoodies-3",
+      "text": "A pullover hoodie looks smarter than a zip-up.",
+      "why": "Its cleaner front reads less sporty.",
+      "topics": [
+        "casual",
+        "smart casual"
+      ],
+      "occasions": [
+        "casual",
+        "smart"
+      ],
+      "strength": "opinion"
+    },
+    {
+      "id": "fashionbeans-com-article-how-to-wear-hoodies-4",
+      "text": "Buy a hoodie in a timeless design and a colour that suits your wardrobe rather than a trend.",
+      "why": "You'll get far more wear from it.",
+      "topics": [
+        "wardrobe",
+        "colour"
+      ],
+      "occasions": [
+        "casual"
+      ],
+      "strength": "tip"
+    },
+    {
+      "id": "fashionbeans-com-article-how-to-wear-hoodies-5",
+      "text": "Choose a hoodie with a neat, fitted cut instead of a loose, sagging one.",
+      "why": "A sharper fit looks intentional, not sloppy.",
+      "topics": [
+        "fit",
+        "casual"
+      ],
+      "occasions": [
+        "casual"
+      ],
+      "strength": "tip"
+    },
+    {
+      "id": "fashionbeans-com-article-how-to-wear-hoodies-6",
+      "text": "Keep hoodie logos minimal and get interest from a mottled or flecked fabric instead.",
+      "why": "Texture looks more grown-up than branding.",
+      "topics": [
+        "fabrics",
+        "streetwear"
+      ],
+      "occasions": [
+        "casual"
+      ],
+      "strength": "tip"
+    },
+    {
+      "id": "fashionbeans-com-article-how-to-wear-hoodies-7",
+      "text": "Keep university hoodies for campus and avoid slogan or joke hoodies.",
+      "why": "They undermine an adult wardrobe.",
+      "topics": [
+        "casual"
+      ],
+      "occasions": [
+        "casual"
+      ],
+      "strength": "opinion"
+    },
+    {
+      "id": "fashionbeans-com-article-how-to-wear-hoodies-8",
+      "text": "After 40, choose a hoodie in a luxurious fabric and wear it with tailored pieces.",
+      "why": "It looks polished rather than juvenile.",
+      "topics": [
+        "smart casual",
+        "fabrics"
+      ],
+      "occasions": [
+        "casual",
+        "smart"
+      ],
+      "strength": "tip"
+    },
+    {
+      "id": "fashionbeans-com-article-how-to-wear-hoodies-9",
+      "text": "Layer a zip-up hoodie under an overcoat or jacket for a smart-casual outfit.",
+      "why": "It adds warmth while still looking sharp.",
+      "topics": [
+        "layering",
+        "outerwear",
+        "smart casual"
+      ],
+      "occasions": [
+        "casual",
+        "smart"
+      ],
+      "strength": "tip"
+    },
+    {
+      "id": "fashionbeans-com-article-how-to-wear-hoodies-10",
+      "text": "Wear a hoodie under a leather jacket, trying different hoodie colours.",
+      "why": "It is an easy way to vary a classic jacket.",
+      "topics": [
+        "layering",
+        "outerwear",
+        "streetwear"
+      ],
+      "occasions": [
+        "casual",
+        "night"
+      ],
+      "strength": "opinion"
+    },
+    {
+      "id": "fashionbeans-com-article-how-to-wear-hoodies-11",
+      "text": "Wear a hoodie under an unstructured suit for a modern take on tailoring.",
+      "why": "It breaks from traditional dressing in a relaxed way.",
+      "topics": [
+        "suits",
+        "streetwear",
+        "layering"
+      ],
+      "occasions": [
+        "smart"
+      ],
+      "strength": "opinion"
+    },
+    {
+      "id": "fashionbeans-com-article-how-to-wear-hoodies-12",
+      "text": "Pair a neutral hoodie with smart trousers; pinstripe or check trousers make it bolder.",
+      "why": "The tailored bottom lifts the casual top.",
+      "topics": [
+        "smart casual",
+        "trousers",
+        "patterns"
+      ],
+      "occasions": [
+        "smart"
+      ],
+      "strength": "opinion"
+    },
+    {
+      "id": "fashionbeans-com-article-how-to-wear-hoodies-13",
+      "text": "Play a hoodie against wide-leg trousers or a long formal coat for high-low contrast.",
+      "why": "The mix of casual and formal looks deliberate.",
+      "topics": [
+        "proportions",
+        "outerwear",
+        "streetwear"
+      ],
+      "occasions": [
+        "casual",
+        "smart"
+      ],
+      "strength": "opinion"
+    }
+  ],
+  "outfits": []
+}

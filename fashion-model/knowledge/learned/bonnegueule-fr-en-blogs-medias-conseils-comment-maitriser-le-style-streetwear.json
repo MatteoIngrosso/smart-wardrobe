@@ -1,0 +1,306 @@
+{
+  "source": {
+    "kind": "article",
+    "url": "https://bonnegueule.fr/en/blogs/medias/conseils-comment-maitriser-le-style-streetwear",
+    "title": "Tips: How to dress in a STREETWEAR style?",
+    "author": "Bonne Gueule"
+  },
+  "learned_at": "2026-10-17T18:32:54+00:00",
+  "model": "by hand",
+  "tokens": {
+    "in": 0,
+    "out": 0
+  },
+  "tips": [
+    {
+      "id": "bonnegueule-fr-en-blogs-medias-conseils-comment-maitriser-le-style-streetwear-1",
+      "text": "Build a streetwear look on three essentials: a sweatshirt, sneakers and a cap.",
+      "why": "These pieces carry the style.",
+      "topics": [
+        "streetwear",
+        "wardrobe"
+      ],
+      "occasions": [
+        "casual"
+      ],
+      "strength": "tip"
+    },
+    {
+      "id": "bonnegueule-fr-en-blogs-medias-conseils-comment-maitriser-le-style-streetwear-2",
+      "text": "Choose sweatshirts and hoodies in plain colours rather than loud prints.",
+      "why": "Plain pieces combine more easily and look less juvenile.",
+      "topics": [
+        "streetwear",
+        "patterns"
+      ],
+      "occasions": [
+        "casual"
+      ],
+      "strength": "tip"
+    },
+    {
+      "id": "bonnegueule-fr-en-blogs-medias-conseils-comment-maitriser-le-style-streetwear-3",
+      "text": "Wear a zip hoodie either open over a good T-shirt or zipped up fully.",
+      "why": "Both look intentional; the tee becomes part of the outfit when it is open.",
+      "topics": [
+        "streetwear",
+        "layering"
+      ],
+      "occasions": [
+        "casual"
+      ],
+      "strength": "tip"
+    },
+    {
+      "id": "bonnegueule-fr-en-blogs-medias-conseils-comment-maitriser-le-style-streetwear-4",
+      "text": "Keep the hood down when you wear a hoodie out.",
+      "why": "A raised hood looks hostile and careless.",
+      "topics": [
+        "streetwear"
+      ],
+      "occasions": [
+        "casual"
+      ],
+      "strength": "opinion"
+    },
+    {
+      "id": "bonnegueule-fr-en-blogs-medias-conseils-comment-maitriser-le-style-streetwear-5",
+      "text": "Check a crew-neck sweatshirt's fit: neckline at the start of the shoulders, ribbing neither tight nor long, and shape recovering after you raise your arms.",
+      "why": "Poorly made sweatshirts lose their shape fast.",
+      "topics": [
+        "fit",
+        "streetwear"
+      ],
+      "occasions": [
+        "casual"
+      ],
+      "strength": "tip"
+    },
+    {
+      "id": "bonnegueule-fr-en-blogs-medias-conseils-comment-maitriser-le-style-streetwear-6",
+      "text": "Layer a buttoned shirt under a crew-neck sweatshirt, ideally one with interesting fabric details.",
+      "why": "It adds a smarter, more considered note.",
+      "topics": [
+        "layering",
+        "shirts",
+        "streetwear"
+      ],
+      "occasions": [
+        "casual",
+        "smart"
+      ],
+      "strength": "tip"
+    },
+    {
+      "id": "bonnegueule-fr-en-blogs-medias-conseils-comment-maitriser-le-style-streetwear-7",
+      "text": "Pick simple, versatile sneakers and avoid flashy colours or bulky oversized shapes.",
+      "why": "Sneakers should blend into the outfit, not steal attention.",
+      "topics": [
+        "shoes",
+        "streetwear"
+      ],
+      "occasions": [
+        "casual"
+      ],
+      "strength": "tip"
+    },
+    {
+      "id": "bonnegueule-fr-en-blogs-medias-conseils-comment-maitriser-le-style-streetwear-8",
+      "text": "Choose a well-sized cap in a classic colour with a discreet logo.",
+      "why": "Loud or ill-fitting caps cheapen the look.",
+      "topics": [
+        "accessories",
+        "streetwear"
+      ],
+      "occasions": [
+        "casual"
+      ],
+      "strength": "tip"
+    },
+    {
+      "id": "bonnegueule-fr-en-blogs-medias-conseils-comment-maitriser-le-style-streetwear-9",
+      "text": "Wear a cap facing straight forward or straight back, never at an angle.",
+      "why": "Other angles look like a costume.",
+      "topics": [
+        "accessories",
+        "streetwear"
+      ],
+      "occasions": [
+        "casual"
+      ],
+      "strength": "opinion"
+    },
+    {
+      "id": "bonnegueule-fr-en-blogs-medias-conseils-comment-maitriser-le-style-streetwear-10",
+      "text": "Avoid caps with a white inner sweatband.",
+      "why": "It shows sweat marks quickly.",
+      "topics": [
+        "accessories",
+        "care"
+      ],
+      "occasions": [
+        "casual"
+      ],
+      "strength": "tip"
+    },
+    {
+      "id": "bonnegueule-fr-en-blogs-medias-conseils-comment-maitriser-le-style-streetwear-11",
+      "text": "Wear well-cut T-shirts whose hem falls around the belt line.",
+      "why": "A neat length keeps the outfit tidy.",
+      "topics": [
+        "fit",
+        "streetwear"
+      ],
+      "occasions": [
+        "casual"
+      ],
+      "strength": "tip",
+      "same_as": "tshirt-fit"
+    },
+    {
+      "id": "bonnegueule-fr-en-blogs-medias-conseils-comment-maitriser-le-style-streetwear-12",
+      "text": "If you size up a T-shirt, have the sleeves shortened.",
+      "why": "Wide, long sleeves flare out like an umbrella.",
+      "topics": [
+        "fit",
+        "streetwear"
+      ],
+      "occasions": [
+        "casual"
+      ],
+      "strength": "tip"
+    },
+    {
+      "id": "bonnegueule-fr-en-blogs-medias-conseils-comment-maitriser-le-style-streetwear-13",
+      "text": "Keep prints on tops understated; all-over patterns like camouflage are the exception.",
+      "why": "Loud prints overwhelm a simple outfit.",
+      "topics": [
+        "patterns",
+        "streetwear"
+      ],
+      "occasions": [
+        "casual"
+      ],
+      "strength": "opinion"
+    },
+    {
+      "id": "bonnegueule-fr-en-blogs-medias-conseils-comment-maitriser-le-style-streetwear-14",
+      "text": "Use fine stripes or heathered cotton to add interest to plain tops instead of graphics.",
+      "why": "They give texture without shouting.",
+      "topics": [
+        "patterns",
+        "fabrics"
+      ],
+      "occasions": [
+        "casual"
+      ],
+      "strength": "tip"
+    },
+    {
+      "id": "bonnegueule-fr-en-blogs-medias-conseils-comment-maitriser-le-style-streetwear-15",
+      "text": "Wear jeans in a straight or slightly slim cut, skipping skinny and baggy extremes.",
+      "why": "Extreme cuts throw off the silhouette's proportions.",
+      "topics": [
+        "denim",
+        "fit"
+      ],
+      "occasions": [
+        "casual"
+      ],
+      "strength": "tip",
+      "same_as": "jeans-fit"
+    },
+    {
+      "id": "bonnegueule-fr-en-blogs-medias-conseils-comment-maitriser-le-style-streetwear-16",
+      "text": "Raw selvedge denim is a strong choice for streetwear jeans; a turn-up shows the selvedge edge.",
+      "why": "Raw denim ages well and the edge is a subtle detail.",
+      "topics": [
+        "denim",
+        "fabrics"
+      ],
+      "occasions": [
+        "casual"
+      ],
+      "strength": "opinion"
+    },
+    {
+      "id": "bonnegueule-fr-en-blogs-medias-conseils-comment-maitriser-le-style-streetwear-17",
+      "text": "With brightly coloured chinos, keep the rest of the outfit neutral.",
+      "why": "One strong colour is enough.",
+      "topics": [
+        "colour",
+        "trousers"
+      ],
+      "occasions": [
+        "casual"
+      ],
+      "strength": "tip"
+    },
+    {
+      "id": "bonnegueule-fr-en-blogs-medias-conseils-comment-maitriser-le-style-streetwear-18",
+      "text": "Shorts should end around the knee, without bulky extra pockets.",
+      "why": "That length and a clean leg look neater.",
+      "topics": [
+        "fit",
+        "casual"
+      ],
+      "occasions": [
+        "casual"
+      ],
+      "strength": "tip"
+    },
+    {
+      "id": "bonnegueule-fr-en-blogs-medias-conseils-comment-maitriser-le-style-streetwear-19",
+      "text": "Pair shorts with low-top sneakers rather than high-tops.",
+      "why": "Low-tops keep a summer outfit light.",
+      "topics": [
+        "shoes",
+        "casual"
+      ],
+      "occasions": [
+        "casual"
+      ],
+      "strength": "opinion"
+    },
+    {
+      "id": "bonnegueule-fr-en-blogs-medias-conseils-comment-maitriser-le-style-streetwear-20",
+      "text": "For streetwear outerwear, a long parka covers winter, an aviator bomber the cold, and a varsity jacket a street look.",
+      "why": "Each suits the style and the season.",
+      "topics": [
+        "outerwear",
+        "streetwear",
+        "weather"
+      ],
+      "occasions": [
+        "casual"
+      ],
+      "strength": "opinion"
+    },
+    {
+      "id": "bonnegueule-fr-en-blogs-medias-conseils-comment-maitriser-le-style-streetwear-21",
+      "text": "Lift a streetwear outfit with one premium piece such as a chunky knit, a poplin shirt or a quilted jacket.",
+      "why": "The contrast makes the look more grown-up.",
+      "topics": [
+        "streetwear",
+        "smart casual"
+      ],
+      "occasions": [
+        "casual",
+        "smart"
+      ],
+      "strength": "tip"
+    },
+    {
+      "id": "bonnegueule-fr-en-blogs-medias-conseils-comment-maitriser-le-style-streetwear-22",
+      "text": "Don't assume a brand collaboration is special; judge the garment itself.",
+      "why": "Many collaborations are mainly marketing.",
+      "topics": [
+        "wardrobe",
+        "streetwear"
+      ],
+      "occasions": [],
+      "strength": "opinion"
+    }
+  ],
+  "outfits": []
+}

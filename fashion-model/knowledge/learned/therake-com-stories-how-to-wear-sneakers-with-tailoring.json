@@ -1,0 +1,163 @@
+{
+  "source": {
+    "kind": "article",
+    "url": "https://therake.com/stories/how-to-wear-sneakers-with-tailoring",
+    "title": "How To Wear Sneakers With Tailoring",
+    "author": "The Rake"
+  },
+  "learned_at": "2026-10-17T18:33:39+00:00",
+  "model": "by hand",
+  "tokens": {
+    "in": 0,
+    "out": 0
+  },
+  "tips": [
+    {
+      "id": "therake-com-stories-how-to-wear-sneakers-with-tailoring-1",
+      "text": "Sneakers can stand in for oxfords, derbies or monks with tailoring as a deliberate dressed-down choice.",
+      "why": "Casualwear's rise has made the pairing widely accepted.",
+      "topics": [
+        "shoes",
+        "suits",
+        "smart casual"
+      ],
+      "occasions": [
+        "smart"
+      ],
+      "strength": "opinion"
+    },
+    {
+      "id": "therake-com-stories-how-to-wear-sneakers-with-tailoring-2",
+      "text": "Keep polished oxfords for the occasions and jobs that still call for them.",
+      "why": "Sneakers don't replace formal shoes everywhere.",
+      "topics": [
+        "shoes",
+        "formal"
+      ],
+      "occasions": [
+        "work",
+        "event"
+      ],
+      "strength": "rule"
+    },
+    {
+      "id": "therake-com-stories-how-to-wear-sneakers-with-tailoring-3",
+      "text": "Pair sneakers with relaxed tailoring fabrics such as linen.",
+      "why": "Linen sits at the casual end of the formality scale, like the shoes.",
+      "topics": [
+        "shoes",
+        "fabrics",
+        "suits"
+      ],
+      "occasions": [
+        "smart"
+      ],
+      "strength": "tip"
+    },
+    {
+      "id": "therake-com-stories-how-to-wear-sneakers-with-tailoring-4",
+      "text": "With relaxed tailored separates, wear sneakers rather than rugged combat boots.",
+      "why": "Heavy boots look out of place with soft tailoring.",
+      "topics": [
+        "shoes",
+        "smart casual"
+      ],
+      "occasions": [
+        "smart"
+      ],
+      "strength": "tip"
+    },
+    {
+      "id": "therake-com-stories-how-to-wear-sneakers-with-tailoring-5",
+      "text": "Repeat your sneakers' colours in the shirt and tie.",
+      "why": "Echoed colours tie the outfit together and make the pairing look intentional.",
+      "topics": [
+        "colour",
+        "shoes",
+        "accessories"
+      ],
+      "occasions": [
+        "smart"
+      ],
+      "strength": "tip"
+    },
+    {
+      "id": "therake-com-stories-how-to-wear-sneakers-with-tailoring-6",
+      "text": "Turn-ups or a slightly shorter trouser make a suit with sneakers feel more modern.",
+      "why": "A cropped, cuffed hem reads less formal and more contemporary.",
+      "topics": [
+        "trousers",
+        "suits"
+      ],
+      "occasions": [
+        "smart"
+      ],
+      "strength": "opinion"
+    },
+    {
+      "id": "therake-com-stories-how-to-wear-sneakers-with-tailoring-7",
+      "text": "Calm a loud, colourful suit with plain white sneakers and a white T-shirt.",
+      "why": "Simple pieces balance the statement instead of competing with it.",
+      "topics": [
+        "suits",
+        "colour",
+        "shoes"
+      ],
+      "occasions": [
+        "smart",
+        "night"
+      ],
+      "strength": "opinion"
+    },
+    {
+      "id": "therake-com-stories-how-to-wear-sneakers-with-tailoring-8",
+      "text": "Don't add dressy shoes such as double monks to an already flamboyant suit.",
+      "why": "Stacking formality on a statement suit looks overdone.",
+      "topics": [
+        "shoes",
+        "suits"
+      ],
+      "occasions": [
+        "smart",
+        "event"
+      ],
+      "strength": "opinion"
+    },
+    {
+      "id": "therake-com-stories-how-to-wear-sneakers-with-tailoring-9",
+      "text": "Save athletic sneakers for looser tailored outfits; with a proper two-piece suit, choose a sleeker, less sporty pair.",
+      "why": "Sporty trainers clash with a structured suit.",
+      "topics": [
+        "shoes",
+        "suits"
+      ],
+      "occasions": [
+        "smart"
+      ],
+      "strength": "tip"
+    },
+    {
+      "id": "therake-com-stories-how-to-wear-sneakers-with-tailoring-10",
+      "text": "Wide-leg trousers and relaxed blazers work especially well with sneakers.",
+      "why": "Loose tailoring shares the ease of casual shoes.",
+      "topics": [
+        "proportions",
+        "shoes",
+        "smart casual"
+      ],
+      "occasions": [
+        "smart",
+        "casual"
+      ],
+      "strength": "opinion"
+    }
+  ],
+  "outfits": [
+    {
+      "outfit": "jacket pink smart +pastel +suit, tshirt white minimal, trousers pink smart +pastel +suit, sneakers white minimal",
+      "occasion": "smart",
+      "verdict": "good",
+      "why": "Plain white sneakers and a white tee play down a bold pastel suit."
+    }
+  ]
+}

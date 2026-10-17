@@ -3,7 +3,7 @@
   learn <link or file> [...]     read videos/articles with Gemini and save what they teach
   learn --list sources.txt       the same for every link in a file
   fetch <link>                   save a video's transcript or an article's text, to read without Gemini
-  instructions                   what Gemini is told, to read a source yourself (or with another AI)
+  instructions [text file]       what Gemini is told, to read a source yourself (or with another AI)
   add <answer.json> --source <link>   save tips and outfits read that way
   train                          fit the model to all example outfits and write the bible
   check "<outfit>"               score an outfit and say why
@@ -34,7 +34,8 @@ def main(argv=None):
     pf.add_argument("source")
     pf.add_argument("--out", help="file to write (default: print it)")
 
-    sub.add_parser("instructions", help="print what Gemini is told, to read a source yourself")
+    pi = sub.add_parser("instructions", help="print what Gemini is told, to read a source yourself")
+    pi.add_argument("text", nargs="?", help="the transcript or article saved with fetch, to list the known tips it's likely to repeat")
 
     pa = sub.add_parser("add", help="save tips and outfits read without Gemini")
     pa.add_argument("answer", help="a JSON file shaped as described by `instructions`")
@@ -102,7 +103,11 @@ def cmd_fetch(a):
 
 def cmd_instructions(a):
     from .learn import instructions
-    print(instructions())
+    text = None
+    if a.text:
+        with open(a.text, encoding="utf-8") as f:
+            text = f.read()
+    print(instructions(text))
     return 0
 
 

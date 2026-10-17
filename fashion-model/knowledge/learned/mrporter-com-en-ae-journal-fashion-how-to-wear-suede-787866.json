@@ -1,0 +1,167 @@
+{
+  "source": {
+    "kind": "article",
+    "url": "https://www.mrporter.com/en-ae/journal/fashion/how-to-wear-suede-787866",
+    "title": "How To Wear Suede",
+    "author": "MR PORTER"
+  },
+  "learned_at": "2026-10-17T18:33:40+00:00",
+  "model": "by hand",
+  "tokens": {
+    "in": 0,
+    "out": 0
+  },
+  "tips": [
+    {
+      "id": "mrporter-com-en-ae-journal-fashion-how-to-wear-suede-787866-1",
+      "text": "When suede is the statement piece, keep the rest simple: few pieces, few colours, few accessories.",
+      "why": "Extra elements overwhelm the suede's appeal.",
+      "topics": [
+        "fabrics",
+        "outerwear",
+        "accessories"
+      ],
+      "occasions": [
+        "casual"
+      ],
+      "strength": "tip"
+    },
+    {
+      "id": "mrporter-com-en-ae-journal-fashion-how-to-wear-suede-787866-2",
+      "text": "Set suede against a contrasting colour or smoother texture.",
+      "why": "Contrast makes the suede's nap stand out.",
+      "topics": [
+        "fabrics",
+        "colour"
+      ],
+      "occasions": [],
+      "strength": "tip"
+    },
+    {
+      "id": "mrporter-com-en-ae-journal-fashion-how-to-wear-suede-787866-3",
+      "text": "When mixing suede with other heavy textures such as a chunky Aran knit, keep the colours neutral.",
+      "why": "A quiet palette lets the textures carry the look.",
+      "topics": [
+        "fabrics",
+        "knitwear",
+        "colour"
+      ],
+      "occasions": [
+        "casual"
+      ],
+      "strength": "tip"
+    },
+    {
+      "id": "mrporter-com-en-ae-journal-fashion-how-to-wear-suede-787866-4",
+      "text": "Add a black suede piece to an all-black outfit.",
+      "why": "Its soft, matte surface gives depth to a look that could be flat.",
+      "topics": [
+        "fabrics",
+        "colour"
+      ],
+      "occasions": [
+        "night",
+        "casual"
+      ],
+      "strength": "tip"
+    },
+    {
+      "id": "mrporter-com-en-ae-journal-fashion-how-to-wear-suede-787866-5",
+      "text": "Dress up a rugged suede jacket with a crisp white shirt.",
+      "why": "The clean shirt makes it fit for smarter settings.",
+      "topics": [
+        "outerwear",
+        "shirts",
+        "smart casual"
+      ],
+      "occasions": [
+        "smart"
+      ],
+      "strength": "tip"
+    },
+    {
+      "id": "mrporter-com-en-ae-journal-fashion-how-to-wear-suede-787866-6",
+      "text": "Try a soft suede jacket over sharp tailoring.",
+      "why": "The relaxed texture contrasts strikingly with a crisp suit.",
+      "topics": [
+        "outerwear",
+        "suits",
+        "fabrics"
+      ],
+      "occasions": [
+        "smart"
+      ],
+      "strength": "opinion"
+    },
+    {
+      "id": "mrporter-com-en-ae-journal-fashion-how-to-wear-suede-787866-7",
+      "text": "Break up a heavy suede coat with patterned trousers.",
+      "why": "Pattern gives a classic suede piece a modern edge.",
+      "topics": [
+        "outerwear",
+        "patterns",
+        "trousers"
+      ],
+      "occasions": [
+        "casual"
+      ],
+      "strength": "opinion"
+    },
+    {
+      "id": "mrporter-com-en-ae-journal-fashion-how-to-wear-suede-787866-8",
+      "text": "Leave the cuffs of a suede jacket open or roll the sleeves.",
+      "why": "It gives an easy, slightly careless feel that suits the material.",
+      "topics": [
+        "outerwear",
+        "casual"
+      ],
+      "occasions": [
+        "casual"
+      ],
+      "strength": "opinion"
+    },
+    {
+      "id": "mrporter-com-en-ae-journal-fashion-how-to-wear-suede-787866-9",
+      "text": "A suede trench in a versatile shade such as dusty tan makes a long-term outerwear investment.",
+      "why": "A neutral suede coat gets better with age and goes with much.",
+      "topics": [
+        "outerwear",
+        "fabrics",
+        "wardrobe"
+      ],
+      "occasions": [],
+      "strength": "opinion"
+    },
+    {
+      "id": "mrporter-com-en-ae-journal-fashion-how-to-wear-suede-787866-10",
+      "text": "Protect suede from spills and send it to a specialist dry-cleaner when dirty.",
+      "why": "Stains are hard to remove from suede at home.",
+      "topics": [
+        "care",
+        "fabrics"
+      ],
+      "occasions": [],
+      "strength": "tip"
+    },
+    {
+      "id": "mrporter-com-en-ae-journal-fashion-how-to-wear-suede-787866-11",
+      "text": "Choose very pale suede, such as cream, only if you'll look after it.",
+      "why": "Light suede marks easily and is hard to keep clean.",
+      "topics": [
+        "care",
+        "fabrics",
+        "colour"
+      ],
+      "occasions": [],
+      "strength": "tip"
+    }
+  ],
+  "outfits": [
+    {
+      "outfit": "jacket blue casual +kingfisher-blue +suede +utility, sweatshirt grey casual, trousers light blue smart casual +chinos",
+      "occasion": "casual",
+      "verdict": "good",
+      "why": "A bright suede jacket over a plain grey sweatshirt and pale chinos updates workwear."
+    }
+  ]
+}

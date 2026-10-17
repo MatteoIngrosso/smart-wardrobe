@@ -1,0 +1,159 @@
+{
+  "source": {
+    "kind": "article",
+    "url": "https://www.fashionbeans.com/article/mens-pocket-square-guide/",
+    "title": "The Complete Guide To Men's Pocket Squares",
+    "author": "FashionBeans"
+  },
+  "learned_at": "2026-10-17T18:30:32+00:00",
+  "model": "by hand",
+  "tokens": {
+    "in": 0,
+    "out": 0
+  },
+  "tips": [
+    {
+      "id": "fashionbeans-com-article-mens-pocket-square-guide-1",
+      "text": "Don't wear a pocket square that matches your tie; let it echo one colour from the tie instead.",
+      "why": "A matched set looks contrived; a shared colour looks chosen.",
+      "topics": [
+        "accessories",
+        "colour"
+      ],
+      "occasions": [
+        "work",
+        "smart",
+        "event"
+      ],
+      "strength": "rule",
+      "same_as": "pocket-square"
+    },
+    {
+      "id": "fashionbeans-com-article-mens-pocket-square-guide-2",
+      "text": "Build your pocket squares from plain colours first, starting with white, before adding patterns.",
+      "why": "Plain squares go with almost any jacket and tie.",
+      "topics": [
+        "accessories",
+        "wardrobe"
+      ],
+      "occasions": [],
+      "strength": "tip"
+    },
+    {
+      "id": "fashionbeans-com-article-mens-pocket-square-guide-3",
+      "text": "Choose patterned squares in classic motifs such as paisley, dots or checks, in jewel tones or neutrals.",
+      "why": "Timeless patterns and colours combine with more outfits.",
+      "topics": [
+        "accessories",
+        "patterns"
+      ],
+      "occasions": [],
+      "strength": "tip"
+    },
+    {
+      "id": "fashionbeans-com-article-mens-pocket-square-guide-4",
+      "text": "Keep pocket squares clean and wash them when they look grubby.",
+      "why": "A soiled square undoes a polished outfit.",
+      "topics": [
+        "accessories",
+        "care"
+      ],
+      "occasions": [],
+      "strength": "tip"
+    },
+    {
+      "id": "fashionbeans-com-article-mens-pocket-square-guide-5",
+      "text": "Look for pocket squares with hand-rolled edges rather than flat machine hems.",
+      "why": "Rolled edges show better craftsmanship and sit better in the pocket.",
+      "topics": [
+        "accessories"
+      ],
+      "occasions": [],
+      "strength": "tip"
+    },
+    {
+      "id": "fashionbeans-com-article-mens-pocket-square-guide-6",
+      "text": "Carry a separate handkerchief in another pocket for actual use; the pocket square is for show.",
+      "why": "It keeps the square clean and presentable.",
+      "topics": [
+        "accessories"
+      ],
+      "occasions": [],
+      "strength": "tip"
+    },
+    {
+      "id": "fashionbeans-com-article-mens-pocket-square-guide-7",
+      "text": "Keep pocket square folds simple.",
+      "why": "Elaborate origami folds look fussy and overdone.",
+      "topics": [
+        "accessories"
+      ],
+      "occasions": [],
+      "strength": "tip"
+    },
+    {
+      "id": "fashionbeans-com-article-mens-pocket-square-guide-8",
+      "text": "Use crisp cotton or linen for sharp straight or one-point folds, and silk for soft puff or two-point folds.",
+      "why": "Each fabric holds a different kind of shape.",
+      "topics": [
+        "accessories",
+        "fabrics"
+      ],
+      "occasions": [],
+      "strength": "tip"
+    },
+    {
+      "id": "fashionbeans-com-article-mens-pocket-square-guide-9",
+      "text": "Use small, neat folds with small patterns such as gingham.",
+      "why": "A small fold shows little fabric, so a large pattern gets lost.",
+      "topics": [
+        "accessories",
+        "patterns"
+      ],
+      "occasions": [],
+      "strength": "tip"
+    },
+    {
+      "id": "fashionbeans-com-article-mens-pocket-square-guide-10",
+      "text": "For business or formal outfits, use a white or light blue cotton square in a straight or one-point fold.",
+      "why": "It looks crisp and sober.",
+      "topics": [
+        "accessories",
+        "formal"
+      ],
+      "occasions": [
+        "work",
+        "event"
+      ],
+      "strength": "tip"
+    },
+    {
+      "id": "fashionbeans-com-article-mens-pocket-square-guide-11",
+      "text": "With a dinner jacket and bow tie, wear a simple square fold.",
+      "why": "A clean straight line suits black tie.",
+      "topics": [
+        "accessories",
+        "formal"
+      ],
+      "occasions": [
+        "event",
+        "night"
+      ],
+      "strength": "tip"
+    },
+    {
+      "id": "fashionbeans-com-article-mens-pocket-square-guide-12",
+      "text": "Save a casual silk puff fold for smart separates rather than a business suit.",
+      "why": "The relaxed puff clashes with strict business tailoring.",
+      "topics": [
+        "accessories",
+        "smart casual"
+      ],
+      "occasions": [
+        "smart"
+      ],
+      "strength": "tip"
+    }
+  ],
+  "outfits": []
+}

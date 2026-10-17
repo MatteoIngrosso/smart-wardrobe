@@ -1,0 +1,193 @@
+{
+  "source": {
+    "kind": "article",
+    "url": "https://www.apetogentleman.com/blazer-with-jeans-outfits/",
+    "title": "How To Wear A Blazer And Jeans Without Looking Like Your Dad",
+    "author": "Ape to Gentleman"
+  },
+  "learned_at": "2026-10-17T18:34:07+00:00",
+  "model": "by hand",
+  "tokens": {
+    "in": 0,
+    "out": 0
+  },
+  "tips": [
+    {
+      "id": "apetogentleman-com-blazer-with-jeans-outfits-1",
+      "text": "Don't wear a suit jacket with jeans; smooth, structured suiting clashes with denim.",
+      "why": "A formal jacket over casual jeans looks like an orphaned suit piece.",
+      "topics": [
+        "smart casual",
+        "denim",
+        "suits"
+      ],
+      "occasions": [
+        "smart",
+        "casual"
+      ],
+      "strength": "rule"
+    },
+    {
+      "id": "apetogentleman-com-blazer-with-jeans-outfits-2",
+      "text": "With jeans, choose an unstructured blazer with soft shoulders, slim sleeves and rear vents.",
+      "why": "It follows your natural shoulder and feels relaxed, more like a cardigan than formalwear.",
+      "topics": [
+        "smart casual",
+        "fit"
+      ],
+      "occasions": [
+        "smart",
+        "casual"
+      ],
+      "strength": "tip"
+    },
+    {
+      "id": "apetogentleman-com-blazer-with-jeans-outfits-3",
+      "text": "Pick textured jacket cloths such as tweed, corduroy or herringbone wool to wear with denim.",
+      "why": "Visible texture echoes the weave of jeans and suits relaxed tailoring.",
+      "topics": [
+        "fabrics",
+        "smart casual",
+        "denim"
+      ],
+      "occasions": [
+        "smart",
+        "casual"
+      ],
+      "strength": "tip"
+    },
+    {
+      "id": "apetogentleman-com-blazer-with-jeans-outfits-4",
+      "text": "Under a blazer, wear slim, tailored jeans that flatter the leg without clinging; avoid skinny cuts.",
+      "why": "Very skinny jeans look dated and unbalance the jacket.",
+      "topics": [
+        "denim",
+        "fit",
+        "proportions"
+      ],
+      "occasions": [
+        "smart",
+        "casual"
+      ],
+      "strength": "tip"
+    },
+    {
+      "id": "apetogentleman-com-blazer-with-jeans-outfits-5",
+      "text": "Dark indigo or black jeans are the safest choice to wear with a blazer.",
+      "why": "Dark, clean denim is the dressiest and easiest to pair with tailoring.",
+      "topics": [
+        "denim",
+        "colour",
+        "smart casual"
+      ],
+      "occasions": [
+        "smart"
+      ],
+      "strength": "tip",
+      "same_as": "jeans-dark"
+    },
+    {
+      "id": "apetogentleman-com-blazer-with-jeans-outfits-6",
+      "text": "Match jeans to the jacket: dark blue denim with brown, beige, green or blue blazers; black denim with grey or charcoal ones.",
+      "why": "These pairings keep the colours harmonious.",
+      "topics": [
+        "colour",
+        "denim",
+        "smart casual"
+      ],
+      "occasions": [
+        "smart",
+        "casual"
+      ],
+      "strength": "tip"
+    },
+    {
+      "id": "apetogentleman-com-blazer-with-jeans-outfits-7",
+      "text": "In spring and summer, try pale or white jeans with a lightweight blazer.",
+      "why": "Light denim and light cloth suit warm weather.",
+      "topics": [
+        "denim",
+        "weather"
+      ],
+      "occasions": [
+        "smart",
+        "casual"
+      ],
+      "strength": "tip"
+    },
+    {
+      "id": "apetogentleman-com-blazer-with-jeans-outfits-8",
+      "text": "If the blazer is smooth and plain, keep the outfit tonal, such as a navy blazer with a navy knit and dark denim.",
+      "why": "Tonal colour stops a flat jacket looking like it lost its trousers.",
+      "topics": [
+        "colour",
+        "smart casual"
+      ],
+      "occasions": [
+        "smart"
+      ],
+      "strength": "tip"
+    },
+    {
+      "id": "apetogentleman-com-blazer-with-jeans-outfits-9",
+      "text": "Double-breasted blazers work with jeans by the same rules: unstructured and textured where possible.",
+      "why": "Softness and texture bring the jacket closer to denim's formality.",
+      "topics": [
+        "smart casual",
+        "suits"
+      ],
+      "occasions": [
+        "smart"
+      ],
+      "strength": "tip"
+    },
+    {
+      "id": "apetogentleman-com-blazer-with-jeans-outfits-10",
+      "text": "A blazer with jeans suits most smart-casual settings, from dates and pubs to relaxed offices.",
+      "why": "It mixes one tailored piece with relaxed denim.",
+      "topics": [
+        "smart casual",
+        "occasions"
+      ],
+      "occasions": [
+        "smart",
+        "night",
+        "work"
+      ],
+      "strength": "tip",
+      "same_as": "smart-casual"
+    }
+  ],
+  "outfits": [
+    {
+      "outfit": "jacket brown smart casual +blazer +textured, sweater grey smart casual +turtleneck, jeans denim casual, coat brown smart +overcoat, boots brown smart casual +chelsea +leather",
+      "occasion": "smart",
+      "verdict": "good",
+      "why": "A brown textured blazer and blue jeans with a grey roll neck, a darker brown overcoat and brown Chelsea boots."
+    },
+    {
+      "outfit": "jacket grey smart casual +blazer +patterned, sweater black smart casual +turtleneck, jeans black smart casual",
+      "occasion": "smart",
+      "verdict": "good",
+      "why": "A patterned grey blazer over a black roll neck and black jeans: a monochrome take on blazer and denim."
+    },
+    {
+      "outfit": "jacket navy smart +blazer, sweater navy smart casual +crew-neck, jeans navy smart casual +raw-denim",
+      "occasion": "smart",
+      "verdict": "good",
+      "why": "A smooth navy blazer works with jeans when the rest is tonal: navy knit and dark raw denim."
+    },
+    {
+      "outfit": "jacket pink relaxed smart casual +blazer, shirt white smart casual +stripes, jeans light blue casual",
+      "occasion": "smart",
+      "verdict": "good",
+      "why": "A pale pink relaxed blazer with a white striped shirt and pale-wash jeans: a statement look that needs confidence."
+    },
+    {
+      "outfit": "jacket grey smart casual +blazer +herringbone +unstructured, tshirt white casual, jeans white casual",
+      "occasion": "smart",
+      "verdict": "good",
+      "why": "White jeans and a white tee under a light unstructured grey herringbone blazer for summer."
+    }
+  ]
+}

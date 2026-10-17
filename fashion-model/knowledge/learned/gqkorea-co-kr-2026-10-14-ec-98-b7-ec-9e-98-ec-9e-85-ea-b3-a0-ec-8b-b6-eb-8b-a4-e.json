@@ -1,0 +1,89 @@
+{
+  "source": {
+    "kind": "article",
+    "url": "https://www.gqkorea.co.kr/2026/10/14/%ec%98%b7-%ec%9e%98%ec%9e%85%ea%b3%a0-%ec%8b%b6%eb%8b%a4%eb%a9%b4-%ec%9d%bc%eb%8b%a8-%ed%98%95%ec%82%ac%ec%b2%98%eb%9f%bc-%ec%9e%85%ec%96%b4%eb%b3%b4%ec%9e%90/",
+    "title": "옷 잘입고 싶다면, 일단 형사처럼 입어보자 (If You Want to Dress Well, Start by Dressing Like a Detective)",
+    "author": "GQ Korea"
+  },
+  "learned_at": "2026-10-17T18:47:59+00:00",
+  "model": "by hand",
+  "tokens": {
+    "in": 0,
+    "out": 0
+  },
+  "tips": [
+    {
+      "id": "gqkorea-co-kr-2026-10-14-ec-98-b7-ec-9e-98-ec-9e-85-ea-b3-a0-ec-8b-b6-eb-8b-a4-e-1",
+      "text": "Borrow 1980s Miami Vice style through its relaxed tailoring and colour rather than recreating the full costume.",
+      "why": "The look nods to its era without seeming dated or flashy.",
+      "topics": [
+        "suits",
+        "colour"
+      ],
+      "occasions": [
+        "smart",
+        "night"
+      ],
+      "strength": "opinion"
+    },
+    {
+      "id": "gqkorea-co-kr-2026-10-14-ec-98-b7-ec-9e-98-ec-9e-85-ea-b3-a0-ec-8b-b6-eb-8b-a4-e-2",
+      "text": "Start from a roomy suit with generous, broad shoulders, like the Armani tailoring in American Gigolo.",
+      "why": "The easy silhouette is the base of the look.",
+      "topics": [
+        "suits",
+        "fit"
+      ],
+      "occasions": [
+        "smart",
+        "night"
+      ],
+      "strength": "opinion"
+    },
+    {
+      "id": "gqkorea-co-kr-2026-10-14-ec-98-b7-ec-9e-98-ec-9e-85-ea-b3-a0-ec-8b-b6-eb-8b-a4-e-3",
+      "text": "Put linen suits away once autumn arrives and switch to wool.",
+      "why": "Linen is too light for windy, cool days.",
+      "topics": [
+        "fabrics",
+        "weather",
+        "suits"
+      ],
+      "occasions": [
+        "smart",
+        "work"
+      ],
+      "strength": "tip"
+    },
+    {
+      "id": "gqkorea-co-kr-2026-10-14-ec-98-b7-ec-9e-98-ec-9e-85-ea-b3-a0-ec-8b-b6-eb-8b-a4-e-4",
+      "text": "In cooler weather, wear a bright knit, such as turquoise, under a broad-shouldered wool suit instead of a shirt.",
+      "why": "It keeps the bold colour of the summer look in a warmer fabric.",
+      "topics": [
+        "knitwear",
+        "suits",
+        "colour",
+        "layering"
+      ],
+      "occasions": [
+        "smart",
+        "night"
+      ],
+      "strength": "opinion"
+    },
+    {
+      "id": "gqkorea-co-kr-2026-10-14-ec-98-b7-ec-9e-98-ec-9e-85-ea-b3-a0-ec-8b-b6-eb-8b-a4-e-5",
+      "text": "Finish this kind of relaxed tailoring with classic wayfarer-shaped sunglasses on bright days.",
+      "why": "They block strong sun and suit the 1980s mood.",
+      "topics": [
+        "accessories"
+      ],
+      "occasions": [
+        "casual",
+        "smart"
+      ],
+      "strength": "opinion"
+    }
+  ],
+  "outfits": []
+}

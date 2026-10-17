@@ -1,0 +1,144 @@
+{
+  "source": {
+    "kind": "article",
+    "url": "https://www.mrporter.com/en-at/journal/fashion/you-asked-what-is-the-best-way-to-wear-an-overshirt-1145238",
+    "title": "You Asked: What Is The Best Way To Wear An Overshirt?",
+    "author": "MR PORTER"
+  },
+  "learned_at": "2026-10-17T18:35:05+00:00",
+  "model": "by hand",
+  "tokens": {
+    "in": 0,
+    "out": 0
+  },
+  "tips": [
+    {
+      "id": "mrporter-com-en-at-journal-fashion-you-asked-what-is-the-best-way-to-wear-an-ove-1",
+      "text": "On mild days, wear an overshirt open and untucked over a T-shirt as a light jacket.",
+      "why": "It is the ideal layer for unpredictable in-between weather.",
+      "topics": [
+        "layering",
+        "outerwear",
+        "casual"
+      ],
+      "occasions": [
+        "casual"
+      ],
+      "strength": "tip",
+      "same_as": "overshirt"
+    },
+    {
+      "id": "mrporter-com-en-at-journal-fashion-you-asked-what-is-the-best-way-to-wear-an-ove-2",
+      "text": "When it turns colder, button the overshirt up or wear it as a mid-layer under a coat.",
+      "why": "It adapts to changing temperatures.",
+      "topics": [
+        "layering",
+        "weather",
+        "outerwear"
+      ],
+      "occasions": [
+        "casual"
+      ],
+      "strength": "tip"
+    },
+    {
+      "id": "mrporter-com-en-at-journal-fashion-you-asked-what-is-the-best-way-to-wear-an-ove-3",
+      "text": "Try fastening only the top two buttons of an overshirt and leaving the rest open.",
+      "why": "It looks relaxed while keeping some shape.",
+      "topics": [
+        "layering",
+        "casual"
+      ],
+      "occasions": [
+        "casual"
+      ],
+      "strength": "opinion"
+    },
+    {
+      "id": "mrporter-com-en-at-journal-fashion-you-asked-what-is-the-best-way-to-wear-an-ove-4",
+      "text": "For a first overshirt, a military-style cotton one in olive or khaki is a safe pick.",
+      "why": "It reflects the garment's fatigue-shirt origins and goes with most casual clothes.",
+      "topics": [
+        "outerwear",
+        "wardrobe",
+        "colour"
+      ],
+      "occasions": [
+        "casual"
+      ],
+      "strength": "tip"
+    },
+    {
+      "id": "mrporter-com-en-at-journal-fashion-you-asked-what-is-the-best-way-to-wear-an-ove-5",
+      "text": "Choose overshirt fabric for the mood: sturdy canvas for rugged, brushed flannel for soft and relaxed, checked wool twill for outdoorsy cold days.",
+      "why": "The cloth sets the character and warmth.",
+      "topics": [
+        "fabrics",
+        "outerwear",
+        "weather"
+      ],
+      "occasions": [
+        "casual"
+      ],
+      "strength": "tip"
+    },
+    {
+      "id": "mrporter-com-en-at-journal-fashion-you-asked-what-is-the-best-way-to-wear-an-ove-6",
+      "text": "Don't layer one ordinary collared shirt over another; wear a proper overshirt instead.",
+      "why": "Two thin shirts with competing collars look like a mistake.",
+      "topics": [
+        "layering",
+        "shirts"
+      ],
+      "occasions": [
+        "casual"
+      ],
+      "strength": "tip"
+    },
+    {
+      "id": "mrporter-com-en-at-journal-fashion-you-asked-what-is-the-best-way-to-wear-an-ove-7",
+      "text": "With a patterned tie, wear a plain or finely patterned shirt rather than a bold check.",
+      "why": "A busy shirt competes with the tie.",
+      "topics": [
+        "patterns",
+        "shirts",
+        "accessories"
+      ],
+      "occasions": [
+        "work",
+        "smart"
+      ],
+      "strength": "tip"
+    },
+    {
+      "id": "mrporter-com-en-at-journal-fashion-you-asked-what-is-the-best-way-to-wear-an-ove-8",
+      "text": "Under a jumper, let about half an inch to an inch of shirt cuff show at the wrist.",
+      "why": "It frames the hand, as with a jacket sleeve.",
+      "topics": [
+        "knitwear",
+        "shirts",
+        "layering"
+      ],
+      "occasions": [
+        "smart",
+        "work"
+      ],
+      "strength": "tip"
+    },
+    {
+      "id": "mrporter-com-en-at-journal-fashion-you-asked-what-is-the-best-way-to-wear-an-ove-9",
+      "text": "Double cuffs under knitwear suit older men; younger men can soften them with fabric knot cufflinks.",
+      "why": "On under-35s polished cufflinks can look stuffy.",
+      "topics": [
+        "knitwear",
+        "shirts",
+        "accessories"
+      ],
+      "occasions": [
+        "smart"
+      ],
+      "strength": "opinion"
+    }
+  ],
+  "outfits": []
+}

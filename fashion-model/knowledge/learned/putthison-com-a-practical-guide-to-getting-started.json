@@ -1,0 +1,248 @@
+{
+  "source": {
+    "kind": "article",
+    "url": "https://putthison.com/a-practical-guide-to-getting-started/",
+    "title": "A Practical Guide To Getting Started",
+    "author": "Put This On"
+  },
+  "learned_at": "2026-10-17T18:32:56+00:00",
+  "model": "by hand",
+  "tokens": {
+    "in": 0,
+    "out": 0
+  },
+  "tips": [
+    {
+      "id": "putthison-com-a-practical-guide-to-getting-started-1",
+      "text": "Judge fit before brand or quality: ask whether a piece fits and flatters you before buying it.",
+      "why": "Fit is the biggest single improvement a beginner can make.",
+      "topics": [
+        "fit",
+        "wardrobe"
+      ],
+      "occasions": [],
+      "strength": "rule",
+      "same_as": "fit-first"
+    },
+    {
+      "id": "putthison-com-a-practical-guide-to-getting-started-2",
+      "text": "Aim for a moderate fit, neither very slim nor very baggy.",
+      "why": "Both extremes are common mistakes; a middle fit is a safe baseline.",
+      "topics": [
+        "fit"
+      ],
+      "occasions": [],
+      "strength": "tip"
+    },
+    {
+      "id": "putthison-com-a-practical-guide-to-getting-started-3",
+      "text": "Check that fabric hangs cleanly: pulling lines across chest or waist, or bunched folds, mean the fit is wrong.",
+      "why": "Tension and excess cloth are the clearest signs of poor fit.",
+      "topics": [
+        "fit"
+      ],
+      "occasions": [],
+      "strength": "rule"
+    },
+    {
+      "id": "putthison-com-a-practical-guide-to-getting-started-4",
+      "text": "Don't size down to look slimmer.",
+      "why": "Tight clothes tend to make you look heavier, not thinner.",
+      "topics": [
+        "fit",
+        "proportions"
+      ],
+      "occasions": [],
+      "strength": "tip"
+    },
+    {
+      "id": "putthison-com-a-practical-guide-to-getting-started-5",
+      "text": "Test fit while moving: a shirt shouldn't strain when you sit, and a jacket should let you lift your arms.",
+      "why": "Clothes have to work in motion, not just standing in a mirror.",
+      "topics": [
+        "fit",
+        "shirts"
+      ],
+      "occasions": [],
+      "strength": "tip"
+    },
+    {
+      "id": "putthison-com-a-practical-guide-to-getting-started-6",
+      "text": "A jacket collar should rest against the back of your neck without a gap.",
+      "why": "A gaping collar is a basic sign of a poorly fitting jacket.",
+      "topics": [
+        "fit",
+        "suits"
+      ],
+      "occasions": [],
+      "strength": "rule"
+    },
+    {
+      "id": "putthison-com-a-practical-guide-to-getting-started-7",
+      "text": "Clear out clothes that are worn out, dated or never suited you, and sell or donate them.",
+      "why": "A smaller wardrobe of things you'll wear is easier to dress from.",
+      "topics": [
+        "wardrobe"
+      ],
+      "occasions": [],
+      "strength": "tip"
+    },
+    {
+      "id": "putthison-com-a-practical-guide-to-getting-started-8",
+      "text": "Alter pieces you like instead of replacing them: hem or taper trousers, shorten sleeves, take in shirts and jackets.",
+      "why": "Tailoring usually costs less than buying new.",
+      "topics": [
+        "fit",
+        "wardrobe"
+      ],
+      "occasions": [],
+      "strength": "tip",
+      "same_as": "tailor"
+    },
+    {
+      "id": "putthison-com-a-practical-guide-to-getting-started-9",
+      "text": "Buy jackets and shirts that fit the shoulders and chest, and trousers that fit the seat and thighs; most other things can be altered.",
+      "why": "Those areas are hard or impossible for a tailor to fix.",
+      "topics": [
+        "fit",
+        "suits",
+        "trousers"
+      ],
+      "occasions": [],
+      "strength": "rule"
+    },
+    {
+      "id": "putthison-com-a-practical-guide-to-getting-started-10",
+      "text": "Shop for the life you actually lead and what you wear most, not trends or a lifestyle you don't have.",
+      "why": "Clothes that suit your habits get worn; the rest sits unused.",
+      "topics": [
+        "wardrobe"
+      ],
+      "occasions": [],
+      "strength": "tip"
+    },
+    {
+      "id": "putthison-com-a-practical-guide-to-getting-started-11",
+      "text": "Start with plain basics: white tee, white and light blue shirts, blue jeans, grey wool trousers, khaki chinos, a dark suit, good boots.",
+      "why": "Simple pieces without logos or prints are a flexible foundation while your taste develops.",
+      "topics": [
+        "wardrobe",
+        "casual"
+      ],
+      "occasions": [],
+      "strength": "tip",
+      "same_as": "basics"
+    },
+    {
+      "id": "putthison-com-a-practical-guide-to-getting-started-12",
+      "text": "Build a wardrobe of pieces that mix, not single outfits, in a narrow palette of blues, greys, browns, whites and tans.",
+      "why": "When colours coordinate, almost everything goes together.",
+      "topics": [
+        "wardrobe",
+        "colour"
+      ],
+      "occasions": [],
+      "strength": "tip",
+      "same_as": "capsule"
+    },
+    {
+      "id": "putthison-com-a-practical-guide-to-getting-started-13",
+      "text": "Buy fewer, better things, and avoid impulse purchases and fast fashion.",
+      "why": "Considered pieces stay satisfying for longer.",
+      "topics": [
+        "wardrobe"
+      ],
+      "occasions": [],
+      "strength": "tip",
+      "same_as": "buy-less-better"
+    },
+    {
+      "id": "putthison-com-a-practical-guide-to-getting-started-14",
+      "text": "While you're still learning, buy mid-priced pieces and treat early purchases as experiments.",
+      "why": "Your taste will change and you'll likely replace them.",
+      "topics": [
+        "wardrobe"
+      ],
+      "occasions": [],
+      "strength": "tip"
+    },
+    {
+      "id": "putthison-com-a-practical-guide-to-getting-started-15",
+      "text": "Spend most of your budget on outerwear and shoes, then knitwear.",
+      "why": "These pieces have the biggest impact on how you look.",
+      "topics": [
+        "wardrobe",
+        "outerwear",
+        "shoes"
+      ],
+      "occasions": [],
+      "strength": "tip",
+      "same_as": "yt-8yFRxH3hLXE-14"
+    },
+    {
+      "id": "putthison-com-a-practical-guide-to-getting-started-16",
+      "text": "Look at second-hand and thrift shops, locally or online, for well-made clothes.",
+      "why": "Good pieces can be found for much less.",
+      "topics": [
+        "wardrobe"
+      ],
+      "occasions": [],
+      "strength": "tip"
+    },
+    {
+      "id": "putthison-com-a-practical-guide-to-getting-started-17",
+      "text": "Never buy something just because it's on sale.",
+      "why": "A discount doesn't make an unneeded or ill-fitting piece useful.",
+      "topics": [
+        "wardrobe"
+      ],
+      "occasions": [],
+      "strength": "tip"
+    },
+    {
+      "id": "putthison-com-a-practical-guide-to-getting-started-18",
+      "text": "Train your eye by studying outfits you admire: where seams fall, how cloth drapes and where garments end.",
+      "why": "Recognising good fit and proportion takes years of looking.",
+      "topics": [
+        "fit",
+        "proportions"
+      ],
+      "occasions": [],
+      "strength": "tip"
+    },
+    {
+      "id": "putthison-com-a-practical-guide-to-getting-started-19",
+      "text": "Think about what an outfit says as a whole; changing one piece changes its message.",
+      "why": "Dressing works like writing: every element contributes.",
+      "topics": [
+        "wardrobe",
+        "occasions"
+      ],
+      "occasions": [],
+      "strength": "opinion"
+    },
+    {
+      "id": "putthison-com-a-practical-guide-to-getting-started-20",
+      "text": "Have your feet measured properly before buying good shoes.",
+      "why": "Many men wear the wrong shoe size.",
+      "topics": [
+        "shoes",
+        "fit"
+      ],
+      "occasions": [],
+      "strength": "tip"
+    },
+    {
+      "id": "putthison-com-a-practical-guide-to-getting-started-21",
+      "text": "Build your wardrobe slowly, drawing inspiration from film, art, music and subcultures and saving outfits you like.",
+      "why": "Taste develops gradually; rushing leads to regret buys.",
+      "topics": [
+        "wardrobe"
+      ],
+      "occasions": [],
+      "strength": "tip",
+      "same_as": "yt-1usH3SOn4q0-6"
+    }
+  ],
+  "outfits": []
+}

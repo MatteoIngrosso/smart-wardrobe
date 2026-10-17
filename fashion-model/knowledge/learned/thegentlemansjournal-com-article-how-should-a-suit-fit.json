@@ -1,0 +1,264 @@
+{
+  "source": {
+    "kind": "article",
+    "url": "https://www.thegentlemansjournal.com/article/how-should-a-suit-fit/",
+    "title": "How Should a Suit Fit",
+    "author": "Gentleman's Journal"
+  },
+  "learned_at": "2026-10-17T18:34:06+00:00",
+  "model": "by hand",
+  "tokens": {
+    "in": 0,
+    "out": 0
+  },
+  "tips": [
+    {
+      "id": "thegentlemansjournal-com-article-how-should-a-suit-fit-1",
+      "text": "Judge a suit while standing relaxed, not while holding your breath or striking a pose.",
+      "why": "Only your natural posture shows how it really fits.",
+      "topics": [
+        "fit",
+        "suits"
+      ],
+      "occasions": [
+        "work",
+        "event"
+      ],
+      "strength": "tip"
+    },
+    {
+      "id": "thegentlemansjournal-com-article-how-should-a-suit-fit-2",
+      "text": "Buy a jacket for its shoulders first: the seam should land where your shoulder ends.",
+      "why": "Shoulders are the hardest part to alter; most other areas can be adjusted.",
+      "topics": [
+        "fit",
+        "suits"
+      ],
+      "occasions": [
+        "work",
+        "event"
+      ],
+      "strength": "rule",
+      "same_as": "jacket-shoulders"
+    },
+    {
+      "id": "thegentlemansjournal-com-article-how-should-a-suit-fit-3",
+      "text": "Treat dimples at the top of the sleeve as a warning sign of a poor shoulder fit or a cut that doesn't suit your posture.",
+      "why": "They rarely disappear and spoil the shoulder line.",
+      "topics": [
+        "fit",
+        "suits"
+      ],
+      "occasions": [
+        "work",
+        "event"
+      ],
+      "strength": "tip"
+    },
+    {
+      "id": "thegentlemansjournal-com-article-how-should-a-suit-fit-4",
+      "text": "Lapels should lie flat against the chest without gaping or lifting.",
+      "why": "Gaping lapels make even a costly suit look cheap.",
+      "topics": [
+        "fit",
+        "suits"
+      ],
+      "occasions": [
+        "work",
+        "event"
+      ],
+      "strength": "rule"
+    },
+    {
+      "id": "thegentlemansjournal-com-article-how-should-a-suit-fit-5",
+      "text": "The jacket should button without pulling, leaving room to slide a flat hand inside.",
+      "why": "Too tight causes strain lines; too loose looks sloppy.",
+      "topics": [
+        "fit",
+        "suits"
+      ],
+      "occasions": [
+        "work",
+        "event"
+      ],
+      "strength": "rule"
+    },
+    {
+      "id": "thegentlemansjournal-com-article-how-should-a-suit-fit-6",
+      "text": "Look for gentle waist shaping in a jacket, neither clinging at the button nor hanging straight like a box.",
+      "why": "Shaping suggests your build without exaggerating it.",
+      "topics": [
+        "fit",
+        "suits"
+      ],
+      "occasions": [
+        "work",
+        "event"
+      ],
+      "strength": "tip",
+      "same_as": "yt-vu-Zj7FWDwY-3"
+    },
+    {
+      "id": "thegentlemansjournal-com-article-how-should-a-suit-fit-7",
+      "text": "The jacket should cover your seat, with the hem around mid-palm when your arms hang at your sides.",
+      "why": "Too short looks juvenile, too long looks awkward.",
+      "topics": [
+        "fit",
+        "suits",
+        "proportions"
+      ],
+      "occasions": [
+        "work",
+        "event"
+      ],
+      "strength": "rule",
+      "same_as": "jacket-length"
+    },
+    {
+      "id": "thegentlemansjournal-com-article-how-should-a-suit-fit-8",
+      "text": "Jacket sleeves should end at the wrist bone, showing roughly a quarter to half an inch of shirt cuff.",
+      "why": "The cuff visually separates jacket from hand and looks finished.",
+      "topics": [
+        "fit",
+        "suits"
+      ],
+      "occasions": [
+        "work",
+        "event"
+      ],
+      "strength": "rule",
+      "same_as": "sleeve-length"
+    },
+    {
+      "id": "thegentlemansjournal-com-article-how-should-a-suit-fit-9",
+      "text": "The jacket collar should sit flush on the shirt collar with no gap at the back of the neck.",
+      "why": "A gap there signals poor fit.",
+      "topics": [
+        "fit",
+        "suits"
+      ],
+      "occasions": [
+        "work",
+        "event"
+      ],
+      "strength": "rule",
+      "same_as": "putthison-com-a-practical-guide-to-getting-started-6"
+    },
+    {
+      "id": "thegentlemansjournal-com-article-how-should-a-suit-fit-10",
+      "text": "Read the jacket's back: horizontal creases mean too tight, vertical folds mean excess cloth, and spreading vents mean tight hips or seat.",
+      "why": "The back exposes fit problems that are hard to hide.",
+      "topics": [
+        "fit",
+        "suits"
+      ],
+      "occasions": [
+        "work",
+        "event"
+      ],
+      "strength": "rule"
+    },
+    {
+      "id": "thegentlemansjournal-com-article-how-should-a-suit-fit-11",
+      "text": "Test a suit by reaching, walking and sitting; it should settle back into place without constant tugging.",
+      "why": "A suit that fights your movements doesn't fit.",
+      "topics": [
+        "fit",
+        "suits"
+      ],
+      "occasions": [
+        "work",
+        "event"
+      ],
+      "strength": "tip"
+    },
+    {
+      "id": "thegentlemansjournal-com-article-how-should-a-suit-fit-12",
+      "text": "Suit trousers should stay up without a belt doing the work, feel comfortable seated and standing, and not sag at the seat.",
+      "why": "Well-fitting trousers hold their shape on their own.",
+      "topics": [
+        "trousers",
+        "fit"
+      ],
+      "occasions": [
+        "work",
+        "event"
+      ],
+      "strength": "tip"
+    },
+    {
+      "id": "thegentlemansjournal-com-article-how-should-a-suit-fit-13",
+      "text": "Leave room to move in the thigh, but avoid both excess fabric and cling around thigh and knee.",
+      "why": "Trousers should move easily without looking baggy or tight.",
+      "topics": [
+        "trousers",
+        "fit"
+      ],
+      "occasions": [
+        "work",
+        "event"
+      ],
+      "strength": "tip"
+    },
+    {
+      "id": "thegentlemansjournal-com-article-how-should-a-suit-fit-14",
+      "text": "A slight break is the safest trouser length; avoid fabric pooling on the shoe, and the back hem shouldn't catch the heel.",
+      "why": "Break length shapes the whole line of the leg.",
+      "topics": [
+        "trousers",
+        "fit",
+        "suits"
+      ],
+      "occasions": [
+        "work",
+        "event"
+      ],
+      "strength": "rule",
+      "same_as": "trouser-break"
+    },
+    {
+      "id": "thegentlemansjournal-com-article-how-should-a-suit-fit-15",
+      "text": "Check the jacket unbuttoned as well; it should still look sharp worn open.",
+      "why": "Most men wear their jacket open much of the time.",
+      "topics": [
+        "fit",
+        "suits"
+      ],
+      "occasions": [
+        "work",
+        "event"
+      ],
+      "strength": "tip"
+    },
+    {
+      "id": "thegentlemansjournal-com-article-how-should-a-suit-fit-16",
+      "text": "Choose the size that fits shoulders, chest and seat, then have the waist, sleeves and trouser length tailored.",
+      "why": "Structural changes are costly and rarely succeed, and making a suit smaller is easier than larger.",
+      "topics": [
+        "fit",
+        "suits"
+      ],
+      "occasions": [
+        "work",
+        "event"
+      ],
+      "strength": "rule"
+    },
+    {
+      "id": "thegentlemansjournal-com-article-how-should-a-suit-fit-17",
+      "text": "Avoid jackets cut too short or too tight and trousers whose waist sits too low.",
+      "why": "These common mistakes make a suit look juvenile or sloppy.",
+      "topics": [
+        "fit",
+        "suits",
+        "proportions"
+      ],
+      "occasions": [
+        "work",
+        "event"
+      ],
+      "strength": "tip"
+    }
+  ],
+  "outfits": []
+}

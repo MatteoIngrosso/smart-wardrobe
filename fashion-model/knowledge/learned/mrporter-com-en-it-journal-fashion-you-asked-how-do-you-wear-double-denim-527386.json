@@ -1,0 +1,140 @@
+{
+  "source": {
+    "kind": "article",
+    "url": "https://www.mrporter.com/en-it/journal/fashion/you-asked-how-do-you-wear-double-denim-527386",
+    "title": "You Asked: How Do You Wear Double Denim?",
+    "author": "MR PORTER"
+  },
+  "learned_at": "2026-10-17T18:33:39+00:00",
+  "model": "by hand",
+  "tokens": {
+    "in": 0,
+    "out": 0
+  },
+  "tips": [
+    {
+      "id": "mrporter-com-en-it-journal-fashion-you-asked-how-do-you-wear-double-denim-527386-1",
+      "text": "Dressing down still takes effort; choose casual clothes you feel genuinely comfortable in.",
+      "why": "Discomfort shows and makes the outfit look careless or forced.",
+      "topics": [
+        "casual"
+      ],
+      "occasions": [
+        "casual"
+      ],
+      "strength": "tip"
+    },
+    {
+      "id": "mrporter-com-en-it-journal-fashion-you-asked-how-do-you-wear-double-denim-527386-2",
+      "text": "Move toward casual clothes step by step from your comfort zone, not in one sudden jump.",
+      "why": "An abrupt switch, like monk straps straight to sneakers, looks borrowed.",
+      "topics": [
+        "wardrobe",
+        "casual"
+      ],
+      "occasions": [
+        "casual"
+      ],
+      "strength": "tip"
+    },
+    {
+      "id": "mrporter-com-en-it-journal-fashion-you-asked-how-do-you-wear-double-denim-527386-3",
+      "text": "To ease away from suits, start with chinos and a shirt with the sleeves rolled up.",
+      "why": "It is a gentle first step toward relaxed dressing.",
+      "topics": [
+        "smart casual",
+        "trousers",
+        "shirts"
+      ],
+      "occasions": [
+        "casual",
+        "smart"
+      ],
+      "strength": "tip"
+    },
+    {
+      "id": "mrporter-com-en-it-journal-fashion-you-asked-how-do-you-wear-double-denim-527386-4",
+      "text": "Choose trouser width for your frame: wide legs can swamp a very slim man, while tight tapers make sitting uncomfortable.",
+      "why": "Proportion and practicality matter more than the trend.",
+      "topics": [
+        "fit",
+        "proportions",
+        "trousers"
+      ],
+      "occasions": [],
+      "strength": "tip"
+    },
+    {
+      "id": "mrporter-com-en-it-journal-fashion-you-asked-how-do-you-wear-double-denim-527386-5",
+      "text": "Wide-leg trousers flatter a broader range of builds than slim fits.",
+      "why": "Their extra room is more forgiving.",
+      "topics": [
+        "fit",
+        "trousers"
+      ],
+      "occasions": [],
+      "strength": "opinion"
+    },
+    {
+      "id": "mrporter-com-en-it-journal-fashion-you-asked-how-do-you-wear-double-denim-527386-6",
+      "text": "For double denim, stick to classic blue shades and skip novelty colours.",
+      "why": "Odd colours turn it into a loud statement.",
+      "topics": [
+        "denim",
+        "colour"
+      ],
+      "occasions": [
+        "casual"
+      ],
+      "strength": "tip"
+    },
+    {
+      "id": "mrporter-com-en-it-journal-fashion-you-asked-how-do-you-wear-double-denim-527386-7",
+      "text": "Wear different denim shades top and bottom, such as a darker jacket over lighter jeans.",
+      "why": "The contrast keeps it from looking like a matching uniform.",
+      "topics": [
+        "denim",
+        "colour"
+      ],
+      "occasions": [
+        "casual"
+      ],
+      "strength": "tip"
+    },
+    {
+      "id": "mrporter-com-en-it-journal-fashion-you-asked-how-do-you-wear-double-denim-527386-8",
+      "text": "Black denim looks best in a slimmer fit, while blue workwear-style denim can be relaxed.",
+      "why": "Each fit suits the character of the fabric.",
+      "topics": [
+        "denim",
+        "fit"
+      ],
+      "occasions": [
+        "casual"
+      ],
+      "strength": "opinion"
+    },
+    {
+      "id": "mrporter-com-en-it-journal-fashion-you-asked-how-do-you-wear-double-denim-527386-9",
+      "text": "Keep double denim simple with a striped Breton T-shirt and clean white sneakers.",
+      "why": "Plain classics let the denim do the work.",
+      "topics": [
+        "denim",
+        "casual",
+        "shoes"
+      ],
+      "occasions": [
+        "casual"
+      ],
+      "strength": "tip"
+    }
+  ],
+  "outfits": [
+    {
+      "outfit": "jacket denim casual +denim +selvedge, tshirt white casual +breton +stripes, jeans denim slim casual +selvedge, sneakers white minimal +leather",
+      "occasion": "casual",
+      "verdict": "good",
+      "why": "Classic blue double denim kept simple with a Breton tee and clean white leather sneakers."
+    }
+  ]
+}

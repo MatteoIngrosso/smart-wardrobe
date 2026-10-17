@@ -1,0 +1,101 @@
+{
+  "source": {
+    "kind": "article",
+    "url": "https://www.mrporter.com/journal/fashion/how-to-wear-navy-blue-blazer-jacket-style-guide-wedding-men-24331032",
+    "title": "Ways To Wear: The Navy Blazer",
+    "author": "MR PORTER"
+  },
+  "learned_at": "2026-10-17T18:34:07+00:00",
+  "model": "by hand",
+  "tokens": {
+    "in": 0,
+    "out": 0
+  },
+  "tips": [
+    {
+      "id": "mrporter-com-journal-fashion-how-to-wear-navy-blue-blazer-jacket-style-guide-wed-1",
+      "text": "Owning any navy blazer isn't enough; choose the cloth, cut and buttoning that suit where you'll wear it.",
+      "why": "A work blazer, a summer blazer and a casual blazer are different garments.",
+      "topics": [
+        "smart casual",
+        "wardrobe"
+      ],
+      "occasions": [
+        "smart",
+        "work"
+      ],
+      "strength": "tip"
+    },
+    {
+      "id": "mrporter-com-journal-fashion-how-to-wear-navy-blue-blazer-jacket-style-guide-wed-2",
+      "text": "A double-breasted navy blazer adds structure and can make you look taller and broader; it suits most builds.",
+      "why": "Its overlapping front and strong lines sharpen the silhouette.",
+      "topics": [
+        "proportions",
+        "smart casual"
+      ],
+      "occasions": [
+        "smart",
+        "work"
+      ],
+      "strength": "opinion"
+    },
+    {
+      "id": "mrporter-com-journal-fashion-how-to-wear-navy-blue-blazer-jacket-style-guide-wed-3",
+      "text": "Dress a double-breasted blazer down with a printed camp-collar shirt or a striped T-shirt and faded jeans.",
+      "why": "Casual pieces soften its formality and make it an all-day jacket.",
+      "topics": [
+        "smart casual",
+        "denim"
+      ],
+      "occasions": [
+        "casual",
+        "smart"
+      ],
+      "strength": "opinion"
+    },
+    {
+      "id": "mrporter-com-journal-fashion-how-to-wear-navy-blue-blazer-jacket-style-guide-wed-4",
+      "text": "In hot weather, wear an unlined linen blazer with pleated linen trousers.",
+      "why": "No lining and roomier trousers let air move.",
+      "topics": [
+        "weather",
+        "fabrics",
+        "smart casual"
+      ],
+      "occasions": [
+        "event",
+        "smart"
+      ],
+      "strength": "tip"
+    },
+    {
+      "id": "mrporter-com-journal-fashion-how-to-wear-navy-blue-blazer-jacket-style-guide-wed-5",
+      "text": "Loafers are the most adaptable summer shoe with a blazer, worn with or without socks.",
+      "why": "They sit between casual and smart.",
+      "topics": [
+        "shoes",
+        "smart casual"
+      ],
+      "occasions": [
+        "smart",
+        "casual"
+      ],
+      "strength": "tip"
+    },
+    {
+      "id": "mrporter-com-journal-fashion-how-to-wear-navy-blue-blazer-jacket-style-guide-wed-6",
+      "text": "For the office, a cotton-twill blazer with patch pockets worn with straight chinos can stand in for a suit.",
+      "why": "It is tidy enough for work but less stiff than a suit.",
+      "topics": [
+        "smart casual",
+        "trousers"
+      ],
+      "occasions": [
+        "work"
+      ],
+      "strength": "tip"
+    }
+  ],
+  "outfits": []
+}

@@ -1,0 +1,158 @@
+{
+  "source": {
+    "kind": "article",
+    "url": "https://gqphilippines.com/style/should-you-wear-socks-with-loafers/",
+    "title": "Should You Wear Socks With Loafers?",
+    "author": "GQ"
+  },
+  "learned_at": "2026-10-17T18:47:58+00:00",
+  "model": "by hand",
+  "tokens": {
+    "in": 0,
+    "out": 0
+  },
+  "tips": [
+    {
+      "id": "gqphilippines-com-style-should-you-wear-socks-with-loafers-1",
+      "text": "Decide on socks with loafers by outfit, occasion and weather: bare ankles for casual, warm days; socks for anything formal.",
+      "why": "Socks add polish, while bare ankles read relaxed.",
+      "topics": [
+        "shoes",
+        "occasions",
+        "weather"
+      ],
+      "occasions": [
+        "casual",
+        "smart",
+        "work"
+      ],
+      "strength": "tip"
+    },
+    {
+      "id": "gqphilippines-com-style-should-you-wear-socks-with-loafers-2",
+      "text": "With a dark suit at a cocktail-dress event, wear dark socks with your loafers.",
+      "why": "Bare ankles are too casual for that level of formality.",
+      "topics": [
+        "shoes",
+        "suits",
+        "formal"
+      ],
+      "occasions": [
+        "event",
+        "night"
+      ],
+      "strength": "rule"
+    },
+    {
+      "id": "gqphilippines-com-style-should-you-wear-socks-with-loafers-3",
+      "text": "Sockless loafers suit very casual outfits, such as denim shorts and a tank top.",
+      "why": "The relaxed clothes make bare ankles look natural.",
+      "topics": [
+        "shoes",
+        "casual"
+      ],
+      "occasions": [
+        "casual"
+      ],
+      "strength": "tip"
+    },
+    {
+      "id": "gqphilippines-com-style-should-you-wear-socks-with-loafers-4",
+      "text": "Skip no-show socks with loafers: either wear proper socks or go bare.",
+      "why": "The experts quoted see them as a half-measure.",
+      "topics": [
+        "shoes",
+        "accessories"
+      ],
+      "occasions": [
+        "casual",
+        "smart"
+      ],
+      "strength": "opinion"
+    },
+    {
+      "id": "gqphilippines-com-style-should-you-wear-socks-with-loafers-5",
+      "text": "Avoid pairing a slim suit with bare ankles and loafers.",
+      "why": "The look has become a cliche, much like an extra shirt button undone.",
+      "topics": [
+        "suits",
+        "shoes"
+      ],
+      "occasions": [
+        "work",
+        "event"
+      ],
+      "strength": "opinion"
+    },
+    {
+      "id": "gqphilippines-com-style-should-you-wear-socks-with-loafers-6",
+      "text": "Bare ankles are at home in hot, waterside settings, though boat shoes or sandals may suit them better than loafers.",
+      "why": "Heat and water call for footwear meant to be worn without socks.",
+      "topics": [
+        "shoes",
+        "weather"
+      ],
+      "occasions": [
+        "casual"
+      ],
+      "strength": "tip"
+    },
+    {
+      "id": "gqphilippines-com-style-should-you-wear-socks-with-loafers-7",
+      "text": "If you wear loafers without socks, rotate pairs rather than wearing one daily, and keep cedar shoe trees in them.",
+      "why": "Bare feet sweat heavily; leather needs time and cedar to dry out.",
+      "topics": [
+        "care",
+        "shoes"
+      ],
+      "occasions": [
+        "casual",
+        "smart"
+      ],
+      "strength": "tip",
+      "same_as": "care-shoes"
+    },
+    {
+      "id": "gqphilippines-com-style-should-you-wear-socks-with-loafers-8",
+      "text": "Treat loafers you wear sockless with an antifungal spray now and then.",
+      "why": "Sweat soaking into leather encourages fungus and odour.",
+      "topics": [
+        "care",
+        "shoes"
+      ],
+      "occasions": [
+        "casual"
+      ],
+      "strength": "tip"
+    },
+    {
+      "id": "gqphilippines-com-style-should-you-wear-socks-with-loafers-9",
+      "text": "In summer, socks are the practical choice with loafers.",
+      "why": "They prevent blisters and keep sweat off the leather.",
+      "topics": [
+        "shoes",
+        "weather"
+      ],
+      "occasions": [
+        "casual",
+        "smart"
+      ],
+      "strength": "tip"
+    },
+    {
+      "id": "gqphilippines-com-style-should-you-wear-socks-with-loafers-10",
+      "text": "White socks with black loafers is a long-standing casual classic.",
+      "why": "The contrast reads deliberate and a little preppy.",
+      "topics": [
+        "shoes",
+        "colour",
+        "accessories"
+      ],
+      "occasions": [
+        "casual"
+      ],
+      "strength": "opinion"
+    }
+  ],
+  "outfits": []
+}

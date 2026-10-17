@@ -1,0 +1,124 @@
+{
+  "source": {
+    "kind": "article",
+    "url": "https://www.fashionbeans.com/article/short-men-fashion-tips",
+    "title": "Essential Fashion Tips For Short Men",
+    "author": "FashionBeans"
+  },
+  "learned_at": "2026-10-17T18:30:12+00:00",
+  "model": "by hand",
+  "tokens": {
+    "in": 0,
+    "out": 0
+  },
+  "tips": [
+    {
+      "id": "fashionbeans-com-article-short-men-fashion-tips-1",
+      "text": "If you're short, have one pair of trousers hemmed to the perfect length and use it as the template for hemming every future pair.",
+      "why": "Off-the-rack trousers are usually too long and pool at the ankle.",
+      "topics": [
+        "trousers",
+        "fit",
+        "proportions"
+      ],
+      "occasions": [],
+      "strength": "tip"
+    },
+    {
+      "id": "fashionbeans-com-article-short-men-fashion-tips-2",
+      "text": "To look taller, wear your top and trousers in the same or very similar shades.",
+      "why": "Low contrast creates one unbroken line that lengthens the body.",
+      "topics": [
+        "proportions",
+        "colour"
+      ],
+      "occasions": [],
+      "strength": "tip",
+      "same_as": "dress-height"
+    },
+    {
+      "id": "fashionbeans-com-article-short-men-fashion-tips-3",
+      "text": "Wear trousers sitting a couple of inches below the navel and tuck in your shirt or knit.",
+      "why": "A higher waistline makes the legs look longer.",
+      "topics": [
+        "proportions",
+        "trousers"
+      ],
+      "occasions": [],
+      "strength": "tip"
+    },
+    {
+      "id": "fashionbeans-com-article-short-men-fashion-tips-4",
+      "text": "Short men should choose slim or tapered cuts over baggy or boxy ones.",
+      "why": "Excess fabric swamps a small frame and makes it look smaller.",
+      "topics": [
+        "proportions",
+        "fit"
+      ],
+      "occasions": [],
+      "strength": "tip"
+    },
+    {
+      "id": "fashionbeans-com-article-short-men-fashion-tips-5",
+      "text": "Keep trousers plain and neutral and put pattern and detail on your top half.",
+      "why": "Detail near the face draws the eye upward; loud trousers pull it down.",
+      "topics": [
+        "proportions",
+        "patterns",
+        "trousers"
+      ],
+      "occasions": [],
+      "strength": "tip"
+    },
+    {
+      "id": "fashionbeans-com-article-short-men-fashion-tips-6",
+      "text": "Short men suit a slim suit with narrow lapels and the jacket button placed slightly above the navel.",
+      "why": "One column of colour and a high button point lengthen the body.",
+      "topics": [
+        "proportions",
+        "suits"
+      ],
+      "occasions": [
+        "work",
+        "smart",
+        "event"
+      ],
+      "strength": "tip"
+    },
+    {
+      "id": "fashionbeans-com-article-short-men-fashion-tips-7",
+      "text": "For extra height, pick chunky-soled trainers, commando-soled shoes or work boots rather than Cuban heels.",
+      "why": "They add height quietly; obvious heels can look desperate.",
+      "topics": [
+        "proportions",
+        "shoes"
+      ],
+      "occasions": [],
+      "strength": "opinion"
+    },
+    {
+      "id": "fashionbeans-com-article-short-men-fashion-tips-8",
+      "text": "Choose shirts that end around the hips rather than long, boxy ones.",
+      "why": "A shorter hem shows more leg; boxy cuts look dumpy.",
+      "topics": [
+        "proportions",
+        "shirts",
+        "fit"
+      ],
+      "occasions": [],
+      "strength": "tip"
+    },
+    {
+      "id": "fashionbeans-com-article-short-men-fashion-tips-9",
+      "text": "Favour cropped jackets such as a Harrington or bomber, and keep overcoats above mid-thigh.",
+      "why": "Long coats swamp a short frame like a cape.",
+      "topics": [
+        "proportions",
+        "outerwear"
+      ],
+      "occasions": [],
+      "strength": "tip"
+    }
+  ],
+  "outfits": []
+}

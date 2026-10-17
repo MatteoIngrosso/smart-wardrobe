@@ -3,7 +3,7 @@ from each source. Tips that several sources agree on are merged and rank higher.
 import json
 import math
 import re
-from collections import Counter
+from collections import Counter, defaultdict
 
 from . import KNOWLEDGE, LEARNED
 
@@ -43,9 +43,16 @@ def load_learned():
     return sorted(recs, key=lambda r: r.get("learned_at", ""))
 
 
+def stems(text):
+    return {stem(w) for w in words(text)}
+
+
 def similar(a, b):
     """A fallback for tips Gemini didn't link: the same advice when most meaningful words are shared."""
-    wa, wb = {stem(w) for w in words(a)}, {stem(w) for w in words(b)}
+    return alike(stems(a), stems(b))
+
+
+def alike(wa, wb):
     if not wa or not wb:
         return False
     shared = len(wa & wb)
@@ -56,31 +63,76 @@ STRENGTH = {"core": 1.0, "rule": 1.0, "tip": 0.8, "opinion": 0.4}
 
 
 def merged_tips(rulebook=None, learned=None):
-    """Core tips first, then learnt ones. A learnt tip that repeats an earlier one (Gemini's
-    same_as, or the same words) adds a source to it instead of a new line; `support` counts
-    how many sources gave the advice."""
+    """Core tips first, then learnt ones. A learnt tip that repeats another (its same_as, or the
+    same words) adds a source to that tip instead of a new line; `support` counts how many sources
+    gave the advice. same_as can point at any tip, learnt before or after it, and chains of
+    same_as are followed."""
     rulebook = rulebook or load_rulebook()
     learned = load_learned() if learned is None else learned
-    tips = [{**t, "strength": "core", "sources": ["rulebook"], "support": 1} for t in rulebook["tips"]]
-    by_id = {t["id"]: t for t in tips}  # also maps merged tips' ids to the tip they joined
+    tips, words_of = [], []
+    by_id = {}               # also maps merged tips' ids to the tip they joined
+    index = defaultdict(list)  # word stem -> positions in tips, so repeats are found without comparing every pair
+
+    def new(tip):
+        ws = stems(tip["text"])
+        for w in ws:
+            index[w].append(len(tips))
+        tips.append(tip)
+        words_of.append(ws)
+        by_id[tip["id"]] = tip
+
+    def repeat_of(text):
+        ws = stems(text)
+        return next((tips[i] for i in sorted({i for w in ws for i in index.get(w, ())}) if alike(ws, words_of[i])), None)
+
+    for t in rulebook["tips"]:
+        new({**t, "strength": "core", "sources": ["rulebook"], "support": 1})
+    raw = {t["id"]: t for rec in learned for t in rec.get("tips", [])}
+    known = set(raw) | set(by_id)
+
+    def root(tid):
+        seen = set()
+        while tid in raw and tid not in seen and raw[tid].get("same_as") in known:
+            seen.add(tid)
+            tid = raw[tid]["same_as"]
+        return min(seen) if tid in seen else tid  # a loop of same_as: any one of them, always the same
+
+    def join(tip, t, src):
+        by_id[t["id"]] = tip
+        if src not in tip["sources"]:
+            tip["sources"].append(src)
+            tip["support"] += 1
+        tip["topics"] = tip["topics"] + [x for x in t.get("topics", []) if x not in tip["topics"]]
+
+    linked = []
     for rec in learned:
         src = rec["source"].get("title") or rec["source"]["url"]
         for t in rec.get("tips", []):
-            same = by_id.get(t.get("same_as")) or next((x for x in tips if similar(x["text"], t["text"])), None)
-            if same:
-                by_id[t["id"]] = same
-                if src not in same["sources"]:
-                    same["sources"].append(src)
-                    same["support"] += 1
-                same["topics"] = same["topics"] + [x for x in t.get("topics", []) if x not in same["topics"]]
+            if root(t["id"]) != t["id"]:
+                linked.append((t, src))
                 continue
-            tips.append({"id": t["id"], "text": t["text"], "why": t.get("why", ""), "topics": t.get("topics", []),
-                         "occasions": t.get("occasions", []), "strength": t.get("strength", "tip"),
-                         "sources": [src], "support": 1})
-            by_id[t["id"]] = tips[-1]
+            same = repeat_of(t["text"])
+            if same:
+                join(same, t, src)
+            else:
+                new({"id": t["id"], "text": t["text"], "why": t.get("why", ""), "topics": t.get("topics", []),
+                     "occasions": t.get("occasions", []), "strength": t.get("strength", "tip"),
+                     "sources": [src], "support": 1})
+    for t, src in linked:
+        join(by_id[root(t["id"])], t, src)
     for t in tips:
         t["rank"] = round(STRENGTH.get(t["strength"], 0.8) * (1 + math.log(t["support"])), 3)
     return tips
+
+
+def relevant(tips, text, k):
+    """The k tips a long text (a transcript, an article) is most likely to repeat: those sharing
+    the most of its words, rare words counting more."""
+    have = stems(text)
+    docs = [stems(t["text"]) for t in tips]
+    df = Counter(w for d in docs for w in d)
+    score = [sum(math.log(len(docs) / df[w]) for w in d if w in have) / math.sqrt(len(d) or 1) for d in docs]
+    return [tips[i] for i in sorted(range(len(tips)), key=lambda i: -score[i])[:k]]
 
 
 class Search:

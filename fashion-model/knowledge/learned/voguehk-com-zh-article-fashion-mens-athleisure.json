@@ -1,0 +1,119 @@
+{
+  "source": {
+    "kind": "article",
+    "url": "https://www.voguehk.com/zh/article/fashion/mens-athleisure/",
+    "title": "運動風穿搭成新潮流？看看男星們都怎樣穿衛衣風褸等單品 隨性同時展現活力 (Is Athleisure the New Trend? How Male Stars Wear Hoodies and Windbreakers)",
+    "author": "Vogue Hong Kong"
+  },
+  "learned_at": "2026-10-17T18:47:59+00:00",
+  "model": "by hand",
+  "tokens": {
+    "in": 0,
+    "out": 0
+  },
+  "tips": [
+    {
+      "id": "voguehk-com-zh-article-fashion-mens-athleisure-1",
+      "text": "Use athleisure for relaxed weekend dressing.",
+      "why": "It is practical and comfortable across many casual situations.",
+      "topics": [
+        "sportswear",
+        "casual"
+      ],
+      "occasions": [
+        "casual"
+      ],
+      "strength": "opinion"
+    },
+    {
+      "id": "voguehk-com-zh-article-fashion-mens-athleisure-2",
+      "text": "An easy athleisure formula: a windbreaker with joggers, or a sweatshirt with a cap.",
+      "why": "Both pairings are simple and hard to get wrong.",
+      "topics": [
+        "sportswear",
+        "casual"
+      ],
+      "occasions": [
+        "casual"
+      ],
+      "strength": "tip"
+    },
+    {
+      "id": "voguehk-com-zh-article-fashion-mens-athleisure-3",
+      "text": "Make sporty pieces look considered through colour coordination and layering.",
+      "why": "Planned colours and layers lift basic sportswear above gym clothes.",
+      "topics": [
+        "sportswear",
+        "colour",
+        "layering"
+      ],
+      "occasions": [
+        "casual"
+      ],
+      "strength": "tip"
+    },
+    {
+      "id": "voguehk-com-zh-article-fashion-mens-athleisure-4",
+      "text": "Wear a tracksuit in one deep colour from top to bottom, with flat shoes.",
+      "why": "A single dark shade looks unified; flat shoes keep it casual.",
+      "topics": [
+        "sportswear",
+        "colour"
+      ],
+      "occasions": [
+        "casual"
+      ],
+      "strength": "tip"
+    },
+    {
+      "id": "voguehk-com-zh-article-fashion-mens-athleisure-5",
+      "text": "If an all-black, white and grey athleisure outfit feels flat, add one contrasting coloured jacket, such as a mint windbreaker.",
+      "why": "One fresh colour gives neutral sportswear a focal point.",
+      "topics": [
+        "sportswear",
+        "colour",
+        "outerwear"
+      ],
+      "occasions": [
+        "casual"
+      ],
+      "strength": "opinion"
+    },
+    {
+      "id": "voguehk-com-zh-article-fashion-mens-athleisure-6",
+      "text": "Layer a scarf over a sporty jacket.",
+      "why": "It adds depth to a streetwear look.",
+      "topics": [
+        "layering",
+        "accessories",
+        "streetwear"
+      ],
+      "occasions": [
+        "casual"
+      ],
+      "strength": "tip"
+    },
+    {
+      "id": "voguehk-com-zh-article-fashion-mens-athleisure-7",
+      "text": "An oversized warm-toned sweatshirt over a white tee with loose jeans is an easy, low-effort casual outfit.",
+      "why": "It looks put together with almost no styling.",
+      "topics": [
+        "casual",
+        "layering",
+        "denim"
+      ],
+      "occasions": [
+        "casual"
+      ],
+      "strength": "opinion"
+    }
+  ],
+  "outfits": [
+    {
+      "outfit": "track-jacket charcoal sporty +tracksuit, track-pants charcoal sporty +tracksuit",
+      "occasion": "casual",
+      "verdict": "good",
+      "why": "A tracksuit in one deep grey looks unified and relaxed."
+    }
+  ]
+}

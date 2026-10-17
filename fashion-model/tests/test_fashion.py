@@ -166,6 +166,24 @@ class Knowledge(unittest.TestCase):
         self.assertIn("Video A", fit["sources"])
         self.assertTrue(any(t["id"] == "a-2" for t in tips))
 
+    def test_same_as_can_point_at_a_later_tip_and_chains(self):
+        learned = [
+            {"source": {"title": "Video A", "url": "a"}, "tips": [
+                {"id": "a-1", "text": "Pair a grey flannel suit with a burgundy knitted tie.", "topics": ["suits"], "same_as": "b-1"}]},
+            {"source": {"title": "Video B", "url": "b"}, "tips": [
+                {"id": "b-1", "text": "Grey flannel and burgundy knit ties go together well.", "topics": ["colour"]},
+                {"id": "b-2", "text": "Shoulders of a jacket should end where yours do.", "topics": ["fit"], "same_as": "c-1"}]},
+            {"source": {"title": "Video C", "url": "c"}, "tips": [
+                {"id": "c-1", "text": "The jacket's shoulder seam sits at the edge of your shoulder.", "topics": ["fit"], "same_as": "jacket-shoulders"}]},
+        ]
+        tips = {t["id"]: t for t in merged_tips(learned=learned)}
+        self.assertNotIn("a-1", tips)
+        self.assertEqual(tips["b-1"]["support"], 2)
+        self.assertEqual(tips["b-1"]["topics"], ["colour", "suits"])
+        self.assertNotIn("b-2", tips)
+        self.assertNotIn("c-1", tips)
+        self.assertEqual(tips["jacket-shoulders"]["support"], 3)
+
     def test_search(self):
         found = Search(merged_tips(learned=[]))("which jacket button should I leave open", k=3)
         self.assertEqual(found[0]["id"], "bottom-button")
@@ -268,6 +286,20 @@ class Learning(unittest.TestCase):
         self.assertIn("KNOWN TIPS:", text)
         self.assertIn("bottom-button:", text)
         self.assertIn("dress-shoes", text)
+
+    def test_suit_halves_get_the_same_styles(self):
+        piece = lambda t, c, st, tags: {"type": t, "colour": c, "style": st, "tags": tags}
+        out = learn.clean_outfits([{"pieces": [
+            piece("jacket", "navy", "smart", ["suit"]), piece("shirt", "white", "smart casual", []),
+            piece("trousers", "navy", "smart casual", ["suit"])], "occasion": "work", "verdict": "good", "why": ""}])
+        self.assertEqual(out[0]["outfit"], "jacket navy smart +suit, shirt white smart casual, trousers navy smart +suit")
+
+    def test_known_tips_follow_the_source_once_there_are_many(self):
+        transcript = "Knitwear care: never hang a wool sweater, fold it. Wash wool cold and dry it flat on a towel."
+        ids = [t["id"] for t in learn.known_tips(limit=9, text=transcript)]
+        self.assertEqual(len(ids), 9)
+        self.assertIn("care-knits", ids)
+        self.assertNotIn("care-knits", [t["id"] for t in learn.known_tips(limit=9)])
 
 
 class CommandLine(unittest.TestCase):
