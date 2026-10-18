@@ -4,6 +4,7 @@
 // cost nothing; the AI (Gemini or Claude) is only called to recognise a new photo
 // once, and when you ask the stylist something.
 import { parseICS, eventsBetween, guessOccasion, titleKey } from "./calendar.js";
+import * as Style from "./stylist.js";
 
 /* ======================================================================
    Reference data
@@ -1222,6 +1223,33 @@ function eventWeather(ev) {
   return { feels, wet: idx.some((k) => isWet(h.code[k]) || (h.rain[k] ?? 0) >= 55) };
 }
 const CORE = ["base", "mid", "outer", "bottom", "shoes"];
+
+/* ---------- The fashion bible (fashion-bible.json, see stylist.js) ----------
+   The rules and tips of the Python fashion model. Every outfit idea is scored by its rules,
+   outfits that break an important one are only shown when nothing else is left, and the AI
+   stylist is given the same rules and the tips that fit the question. */
+// Saved on the device after the first download, so it also works offline; a newer one replaces it.
+async function loadBible() {
+  const saved = await raw.get("kv", "bible").catch(() => null);
+  if (saved) Style.setBible(saved);
+  const fetched = fetch("fashion-bible.json", { cache: "no-cache" })
+    .then((r) => (r.ok ? r.json() : Promise.reject(new Error(r.status))))
+    .then(async (b) => {
+      if (!Style.setBible(b)) return false;
+      if (b.built_at === saved?.built_at) return false;
+      await raw.put("kv", b, "bible").catch(() => {});
+      return true;
+    })
+    .catch(() => false);
+  if (!saved) await fetched; // nothing saved yet: the first download comes before the first outfits
+  else fetched.then((changed) => { if (changed) { tasteMemo = null; state.outfits = []; if (view === "today") render(); } });
+}
+// What the rules need to know about the day. Warmth rules use how warm this person likes to dress.
+const styleCtx = (cond, occ, t) => ({ occasion: occ.id, feels: cond.feels, wet: cond.wet, offset: occ.id === "gym" ? 0 : t?.offset || 0 });
+// The rules the engine scores in its own, personal way (see scoreOutfit); they still count as violations.
+const OWN_COMFORT_RULES = ["warmth", "shorts-weather"];
+const ruleLine = (v) => v.note || v.rule.title;
+
 // Warmth points of the top layers, and how many the rule of thumb wants at a temperature.
 const layerWarmth = (pieces) => pieces.filter((p) => ["base", "mid", "outer"].includes(roleOf(p))).reduce((a, p) => a + (p.warmth || 2), 0);
 const wantedWarmth = (feels) => (feels >= 24 ? 1 : feels >= 19 ? 2.5 : feels >= 14 ? 3.5 : feels >= 8 ? 6 : feels >= 2 ? 8 : 9.5);
@@ -1248,50 +1276,60 @@ function scoreOutfit(o, cond, occ, t = taste()) {
     else if (feels < 14) reasons.push(`A light layer for ${fmtTemp(feels)}`);
     if (wet && o.outer.category === "rain") { s += 1.5; reasons.push("Rain jacket for the showers"); }
   }
+  if (o.shoes?.category === "boots") s -= feels >= 24 ? 3 : feels >= 20 ? 1 : 0; // boots in the heat
   if (o.bottom) {
     const shorts = /shorts/.test(o.bottom.category);
     if (shorts && feels < 17) s -= o.bottom.category === "gym-shorts" ? 1 : 5; // you train indoors in gym shorts
     else if (shorts && feels >= 23) { s += 1; reasons.push(`Shorts weather at ${fmtTemp(feels)}`); }
     else if (!shorts && feels >= 27) s -= 1.5;
   }
-  if (wet && o.shoes?.category === "sneakers" && /white|cream/.test(o.shoes.colors?.[0])) s -= 1;
+  // The style: the fashion bible's rules (colour, dressiness, shoes, proportions, patterns...)
+  let broken = [];
+  if (Style.ready()) {
+    const j = Style.judge(pieces, styleCtx(cond, occ, t), OWN_COMFORT_RULES);
+    s += j.logit;
+    reasons.unshift(...j.praise.slice(0, 2));
+    broken = j.violations;
+  } else {
+    if (wet && o.shoes?.category === "sneakers" && /white|cream/.test(o.shoes.colors?.[0])) s -= 1;
 
-  // Colour harmony
-  const cols = pieces.map((p) => p.colors?.[0]).filter(Boolean);
-  const accents = [...new Set(cols.filter((c) => !COLORS[c]?.neutral))];
-  if (accents.length === 0) { s += 1; reasons.push(new Set(cols).size === 1 ? `Tonal ${cols[0]} look` : "All neutrals, easy to match"); }
-  else if (accents.length === 1) { s += 2; reasons.push(`${cap(accents[0])} as the single accent colour`); }
-  else { s -= 2.5 * (accents.length - 1); }
-  const tones = new Set(cols.map((c) => COLORS[c]?.tone));
-  if (tones.has("light") && tones.has("dark")) { s += 0.8; reasons.push("Light and dark pieces give contrast"); }
-  const graphics = pieces.filter((p) => (p.tags || []).some((t) => /graphic|statement/.test(t)));
-  if (graphics.length > 1) s -= 1.5 * (graphics.length - 1);
-  // Denim top with jeans reads as a costume unless the washes clearly differ.
-  if (o.bottom?.category === "jeans" && [o.base, o.mid, o.outer].some((p) => p?.colors?.[0] === "denim")) s -= 1;
+    // Colour harmony
+    const cols = pieces.map((p) => p.colors?.[0]).filter(Boolean);
+    const accents = [...new Set(cols.filter((c) => !COLORS[c]?.neutral))];
+    if (accents.length === 0) { s += 1; reasons.push(new Set(cols).size === 1 ? `Tonal ${cols[0]} look` : "All neutrals, easy to match"); }
+    else if (accents.length === 1) { s += 2; reasons.push(`${cap(accents[0])} as the single accent colour`); }
+    else { s -= 2.5 * (accents.length - 1); }
+    const tones = new Set(cols.map((c) => COLORS[c]?.tone));
+    if (tones.has("light") && tones.has("dark")) { s += 0.8; reasons.push("Light and dark pieces give contrast"); }
+    const graphics = pieces.filter((p) => (p.tags || []).some((t) => /graphic|statement/.test(t)));
+    if (graphics.length > 1) s -= 1.5 * (graphics.length - 1);
+    // Denim top with jeans reads as a costume unless the washes clearly differ.
+    if (o.bottom?.category === "jeans" && [o.base, o.mid, o.outer].some((p) => p?.colors?.[0] === "denim")) s -= 1;
 
-  // Silhouette: a roomy top looks best over slimmer bottoms and the other way round.
-  // Baggy on baggy is a streetwear look: fine for streetwear, sloppy for anything dressier.
-  const hero = heroOf(o);
-  const top = fitVol(hero), bottom = fitVol(o.bottom);
-  if (occ.id !== "gym" && top != null && bottom != null) {
-    if (top >= 1 && bottom <= 0) { s += 1; reasons.push(`${FITS[hero.fit].label} top balanced by ${FITS[o.bottom.fit].label.toLowerCase()} ${catLabel(o.bottom.category).toLowerCase()}`); }
-    else if (top <= -1 && bottom >= 1) { s += 0.8; reasons.push(`Fitted top with ${FITS[o.bottom.fit].label.toLowerCase()} ${catLabel(o.bottom.category).toLowerCase()}`); }
-    else if (top >= 2 && bottom >= 2) {
-      const street = pieces.some((p) => (p.styles || []).includes("streetwear"));
-      if (street && occ.target < 2.2) { s += 0.5; reasons.push("Relaxed streetwear proportions"); } else s -= 1.5;
-    } else if (top <= -1 && bottom <= -1 && occ.target >= 2.2) s += 0.5;
+    // Silhouette: a roomy top looks best over slimmer bottoms and the other way round.
+    // Baggy on baggy is a streetwear look: fine for streetwear, sloppy for anything dressier.
+    const hero = heroOf(o);
+    const top = fitVol(hero), bottom = fitVol(o.bottom);
+    if (occ.id !== "gym" && top != null && bottom != null) {
+      if (top >= 1 && bottom <= 0) { s += 1; reasons.push(`${FITS[hero.fit].label} top balanced by ${FITS[o.bottom.fit].label.toLowerCase()} ${catLabel(o.bottom.category).toLowerCase()}`); }
+      else if (top <= -1 && bottom >= 1) { s += 0.8; reasons.push(`Fitted top with ${FITS[o.bottom.fit].label.toLowerCase()} ${catLabel(o.bottom.category).toLowerCase()}`); }
+      else if (top >= 2 && bottom >= 2) {
+        const street = pieces.some((p) => (p.styles || []).includes("streetwear"));
+        if (street && occ.target < 2.2) { s += 0.5; reasons.push("Relaxed streetwear proportions"); } else s -= 1.5;
+      } else if (top <= -1 && bottom <= -1 && occ.target >= 2.2) s += 0.5;
+    }
+    if (occ.target >= 2.9) for (const p of [hero, o.bottom]) if (fitVol(p) >= 2) s -= 0.8;
+
+    // Style: fits the occasion, and the pieces speak the same language
+    const f = pieces.reduce((a, p) => a + (p.formality || 1), 0) / Math.max(1, pieces.length);
+    s -= Math.abs(f - occ.target) * 1.2;
+    for (const p of pieces) s += (p.styles || []).some((st) => occ.likes.includes(st)) ? 0.7 : -0.5;
+    const freq = {};
+    for (const p of pieces) for (const st of p.styles || []) freq[st] = (freq[st] || 0) + 1;
+    const [topStyle, topN] = Object.entries(freq).sort((a, b) => b[1] - a[1])[0] || [];
+    if (pieces.length > 1 && topN === pieces.length) { s += 1.2; reasons.unshift(`A consistent ${styleLabel(topStyle).toLowerCase()} look`); }
+    for (const [a, b] of STYLE_CLASH) if (freq[a] && freq[b]) s -= 1.5;
   }
-  if (occ.target >= 2.9) for (const p of [hero, o.bottom]) if (fitVol(p) >= 2) s -= 0.8;
-
-  // Style: fits the occasion, and the pieces speak the same language
-  const f = pieces.reduce((a, p) => a + (p.formality || 1), 0) / Math.max(1, pieces.length);
-  s -= Math.abs(f - occ.target) * 1.2;
-  for (const p of pieces) s += (p.styles || []).some((st) => occ.likes.includes(st)) ? 0.7 : -0.5;
-  const freq = {};
-  for (const p of pieces) for (const st of p.styles || []) freq[st] = (freq[st] || 0) + 1;
-  const [topStyle, topN] = Object.entries(freq).sort((a, b) => b[1] - a[1])[0] || [];
-  if (pieces.length > 1 && topN === pieces.length) { s += 1.2; reasons.unshift(`A consistent ${styleLabel(topStyle).toLowerCase()} look`); }
-  for (const [a, b] of STYLE_CLASH) if (freq[a] && freq[b]) s -= 1.5;
 
   // Rotation: don't repeat what you wore recently; give the forgotten pieces a turn
   for (const p of pieces) {
@@ -1307,7 +1345,7 @@ function scoreOutfit(o, cond, occ, t = taste()) {
   s += learnt.score;
   if (learnt.reason) reasons.unshift(learnt.reason);
   if (fresh) reasons.push(`Gives the ${fresh.name} some wear`);
-  return { score: s, reasons: reasons.slice(0, 3) };
+  return { score: s, reasons: reasons.slice(0, 3), broken: broken.map(ruleLine) };
 }
 
 // Today's candidates, best first. Cheap enough to redo on every tap (900 tries).
@@ -1349,7 +1387,8 @@ function ideaPool(opts = {}) {
     const key = outfitKey(Object.values(o));
     if (seen.has(key)) continue;
     seen.add(key);
-    cands.push({ key, pieces: o, ...scoreOutfit(o, cond, occ, t), jitter: Math.random() * 0.6, blocked: t.blocked.has(key) });
+    const scored = scoreOutfit(o, cond, occ, t);
+    cands.push({ key, pieces: o, ...scored, jitter: Math.random() * 0.6, blocked: t.blocked.has(key), isBroken: scored.broken.length > 0 });
   }
   cands.sort((a, b) => b.score + b.jitter - (a.score + a.jitter));
   const missing = ["bottom", "shoes"].filter((s) => !by[s].length && roleOf(anchor || {}) !== s);
@@ -1360,7 +1399,8 @@ function ideaPool(opts = {}) {
 // Pick `n` ideas that differ from each other and from the ones in `keep`: ideally no shared
 // hero piece or bottom. If the wardrobe is too small for that (one T-shirt on a hot day),
 // sharing one of them beats a much worse outfit (a hoodie at 29°); only then anything left.
-// Outfits you said no to are left out while there's anything else.
+// Outfits you said no to are left out while there's anything else, and outfits that break
+// one of the fashion bible's important rules only come when nothing else is left.
 function pickIdeas(pool, n, keep = [], avoid = []) {
   const { cands } = pool;
   const out = [];
@@ -1368,15 +1408,15 @@ function pickIdeas(pool, n, keep = [], avoid = []) {
   const heroes = new Set(keep.map((o) => heroOf(o.pieces).id)), bottoms = new Set(keep.map((o) => o.pieces.bottom?.id).filter(Boolean));
   const differ = (h, b) => !heroes.has(h) && !(b && bottoms.has(b));
   const half = (h, b) => !heroes.has(h) || !(b && bottoms.has(b));
-  const good = (cands.find((c) => !c.blocked)?.score ?? 0) - 3;
+  const good = (cands.find((c) => !c.blocked && !c.isBroken)?.score ?? cands.find((c) => !c.blocked)?.score ?? 0) - 3;
   const passes = [[differ, good], [half, good], [differ, -Infinity], [half, -Infinity], [() => true, -Infinity]];
-  for (const allowBlocked of [false, true]) {
+  for (const [allowBlocked, allowBroken] of [[false, false], [true, false], [true, true]]) {
     for (const [ok, min] of passes) {
       for (const c of cands) {
         if (out.length === n) break;
         const hero = heroOf(c.pieces).id;
         const bottom = c.pieces.bottom?.id;
-        if (out.includes(c) || shown.has(c.key) || (c.blocked && !allowBlocked) || c.score < min || !ok(hero, bottom)) continue;
+        if (out.includes(c) || shown.has(c.key) || (c.blocked && !allowBlocked) || (c.isBroken && !allowBroken) || c.score < min || !ok(hero, bottom)) continue;
         heroes.add(hero);
         if (bottom) bottoms.add(bottom);
         out.push(c);
@@ -1387,7 +1427,13 @@ function pickIdeas(pool, n, keep = [], avoid = []) {
 }
 // An idea you already ♥ today keeps its heart when it comes back.
 const likedToday = (key) => state.log.find((l) => l.kind === "like" && l.date === today() && outfitKey((l.itemIds || []).map((id) => state.items.find((i) => i.id === id))) === key)?.id;
-const dressIdea = (c, pool, used) => ({ ...c, missing: pool.missing, likedId: likedToday(c.key), ...extrasFor(c.pieces, pool.cond, pool.occ, used) });
+const dressIdea = (c, pool, used) => withWarn({ ...c, missing: pool.missing, likedId: likedToday(c.key), ...extrasFor(c.pieces, pool.cond, pool.occ, used) }, pool.cond, pool.occ);
+// An idea that still breaks one of the fashion bible's important rules once its headwear and
+// accessories are on (only shown when nothing better is left) says so on its card.
+function withWarn(idea, cond, occ) {
+  const j = Style.ready() ? Style.judge([...Object.values(idea.pieces), ...(idea.extras || [])].filter(Boolean), styleCtx(cond, occ, taste())) : null;
+  return { ...idea, warn: j ? j.violations.map(ruleLine) : [] };
+}
 
 // `avoid`: outfits just shown, so "New ideas" always brings different ones.
 function generateOutfits(n = 3, avoid = []) {
@@ -1411,7 +1457,7 @@ function plannedIdea(pool) {
   for (const it of items) (CORE.includes(roleOf(it)) && !pieces[roleOf(it)] ? (pieces[roleOf(it)] = it) : extras.push(it));
   if (!pieces.base && !pieces.mid) return null;
   const key = outfitKey(items);
-  return { key, pieces, planned: p, missing: [], likedId: likedToday(key), ...scoreOutfit(pieces, pool.cond, pool.occ), extras, extrasWhy: [] };
+  return withWarn({ key, pieces, planned: p, missing: [], likedId: likedToday(key), ...scoreOutfit(pieces, pool.cond, pool.occ), extras, extrasWhy: [] }, pool.cond, pool.occ);
 }
 async function planOutfit(o) {
   const e = state.event;
@@ -1445,7 +1491,7 @@ async function swapPiece(i, role, toId) {
   const used = new Set(state.outfits.filter((_, k) => k !== i).flatMap((x) => (x.extras || []).map((e) => e.id)));
   const key = outfitKey(Object.values(pieces));
   const cond = conditions();
-  state.outfits[i] = { ...o, key, pieces, swapping: null, likedId: likedToday(key), ...scoreOutfit(pieces, cond, occ), ...extrasFor(pieces, cond, occ, used) };
+  state.outfits[i] = withWarn({ ...o, key, pieces, swapping: null, likedId: likedToday(key), ...scoreOutfit(pieces, cond, occ), ...extrasFor(pieces, cond, occ, used) }, cond, occ);
 }
 
 // After "Not for me": swap that idea for the next best one, keeping the others where they are.
@@ -1639,7 +1685,9 @@ function extrasFor(pieces, cond, occ, used) {
   const accent = cols.find((c) => !COLORS[c]?.neutral);
   const extras = [], why = [];
   for (const [cats, reason] of needs) {
-    const options = wearable().filter((i) => cats.includes(i.category));
+    let options = wearable().filter((i) => cats.includes(i.category));
+    // A belt in the same colour family as the leather shoes (black with black, brown with brown).
+    if (cats[0] === "belt" && pieces.shoes && Style.ready()) options = options.filter((i) => !((Style.ruleScore([pieces.shoes, i], "belt-shoes") ?? 0) <= -0.5));
     if (!options.length) continue;
     const score = (i) => {
       const c = i.colors?.[0];
@@ -2128,10 +2176,11 @@ const STYLIST_SYSTEM =
   "For every outfit, write a line 'Outfit: <short title>', then one line per piece, then one line starting 'Why:'. " +
   "For anything the user doesn't own (a missing piece, a suggested buy), write its own line: 'To buy: <item> | search: <words to paste into a shop>'. " +
   "Dress for the temperature: add up the warmth of the top layers (about 1 when hot, 3-4 when mild, 6+ when cold). " +
-  "Keep to one accent colour and one graphic piece per outfit, and balance proportions: roomy (oversized, baggy, wide) with slimmer pieces, unless it's a deliberate streetwear look. " +
   "Never put a piece marked IN THE WASH in an outfit. " +
   "Follow the user's taste notes when given: build on pairings they wear and like, avoid what they turned down, and don't repeat pieces worn in the last 2 days unless asked. " +
   "Plain text, no markdown, at most 24 short lines.";
+// Used when the fashion bible hasn't loaded (it normally brings these and many more rules).
+const BASIC_RULES = "Keep to one accent colour and one graphic piece per outfit, and balance proportions: roomy (oversized, baggy, wide) with slimmer pieces, unless it's a deliberate streetwear look.";
 const SHOP_QUESTION =
   "Looking at my wardrobe and style, what are the 5 most useful things to buy next? " +
   "One line each: 'To buy: <item> | <why, a few words> | search: <words to paste into a shop> | with: <#numbers of my pieces it goes with>'.";
@@ -2302,9 +2351,8 @@ function tipsHTML(lines, refs, named) {
   flush();
   return out.join("");
 }
-function answerHTML(ans) {
-  if (!ans) return "";
-  if (typeof ans === "string") return esc(ans);
+// The answer split into plain advice and "Outfit:" blocks (title, the user's pieces, buys, other lines).
+function parseAnswer(ans) {
   const named = namedPieces(ans.refs);
   const intro = [], looks = [];
   let look = null;
@@ -2319,8 +2367,14 @@ function answerHTML(ans) {
     if (items.length) { for (const it of items) if (!look.items.includes(it)) look.items.push(it); continue; }
     (look ? look.lines : intro).push(line);
   }
+  return { named, intro, looks };
+}
+function answerHTML(ans) {
+  if (!ans) return "";
+  if (typeof ans === "string") return esc(ans);
+  const { named, intro, looks } = parseAnswer(ans);
   if (!looks.length) return `<div class="ai-rich">${tipsHTML(intro, ans.refs, named)}</div>`;
-  return `<div class="ai-rich">${tipsHTML(intro, ans.refs, named)}<div class="looks">${looks.map((l) => `<article class="look"><h3>${esc(cleanRefs(l.title, ans.refs))}</h3><div class="pieces">${l.items.map(pieceTile).join("")}${l.buy.map(buyTile).join("")}</div>${l.lines.length ? `<p class="why">${esc(l.lines.map((x) => cleanRefs(x, ans.refs)).join("\n"))}</p>` : ""}${l.items.length ? `<div class="row"><button class="btn" data-wearids="${l.items.map((i) => i.id).join(",")}">Wear this today</button><button class="btn icon-btn like" data-likeids="${l.items.map((i) => i.id).join(",")}" aria-pressed="false" aria-label="Like this outfit">${ICON_HEART}</button></div>` : ""}</article>`).join("")}</div></div>`;
+  return `<div class="ai-rich">${tipsHTML(intro, ans.refs, named)}<div class="looks">${looks.map((l) => `<article class="look"><h3>${esc(cleanRefs(l.title, ans.refs))}</h3><div class="pieces">${l.items.map(pieceTile).join("")}${l.buy.map(buyTile).join("")}</div>${l.lines.length ? `<p class="why">${esc(l.lines.map((x) => cleanRefs(x, ans.refs)).join("\n"))}</p>` : ""}${ans.warn?.[looks.indexOf(l)]?.length ? `<p class="why warn">Heads up: ${ans.warn[looks.indexOf(l)].map(esc).join(" · ")}</p>` : ""}${l.items.length ? `<div class="row"><button class="btn" data-wearids="${l.items.map((i) => i.id).join(",")}">Wear this today</button><button class="btn icon-btn like" data-likeids="${l.items.map((i) => i.id).join(",")}" aria-pressed="false" aria-label="Like this outfit">${ICON_HEART}</button></div>` : ""}</article>`).join("")}</div></div>`;
 }
 
 // Recognise type, colours, brand and style from one photo.
@@ -2516,6 +2570,7 @@ function outfitCard(o, i) {
     ${o.swapping ? swapPicker(o, i) : ""}
     ${o.extras?.length ? `<div class="pieces extras">${o.extras.map(pieceTile).join("")}</div>` : ""}
     ${o.reasons.length || o.extrasWhy?.length ? `<p class="why">${[...o.reasons, ...(o.extrasWhy || [])].map(esc).join(" · ")}</p>` : ""}
+    ${o.warn?.length ? `<p class="why warn">Heads up: ${o.warn.map(esc).join(" · ")}</p>` : ""}
     ${o.asking
       ? `<div class="stack" style="gap:8px"><span class="muted small">What's off? The next ideas take it into account.</span><div class="chips">${SKIP_REASONS.map(([k, l]) => `<button class="chip" data-skipwhy="${i}:${k}">${l}</button>`).join("")}<button class="chip" data-skip="${i}" data-cancel="1">Cancel</button></div></div>`
       : `<div class="row outfit-actions">
@@ -3711,6 +3766,8 @@ const LOOK_SCHEMA = {
     },
   },
 };
+// The important fashion bible rules a designed look (new pieces: type and colour only) still breaks.
+const lookBreaks = (r, occ) => (Style.ready() ? Style.judge((r.pieces || []).map((p) => ({ category: p.category, colors: [p.color], name: p.name })), { occasion: occ.id }).violations.map(ruleLine) : []);
 async function makeLook() {
   const L = state.disc.look;
   const season = L.season || seasonNow(), style = L.style || topStyle() || "casual", occ = OCCASIONS.find((o) => o.id === L.occ) || OCCASIONS[0];
@@ -3722,22 +3779,31 @@ async function makeLook() {
     const palette = Object.entries(a.colorCount).sort((x, y) => y[1] - x[1]).slice(0, 4).map(([c]) => c).join(", ");
     const brands = Object.entries(a.brandCount).sort((x, y) => y[1] - x[1]).slice(0, 4).map(([b]) => b).join(", ");
     const shops = state.trip ? state.trip.stores.map((s) => s.name).slice(0, 30).join(", ") : "";
-    const text = await aiGenerate({
-      system: "You are a stylist in a wardrobe app. Design one complete outfit made only of new pieces the user can buy. Reply with JSON only.",
+    const guide = Style.guideText({ question: `${styleLabel(style)} ${occ.label} ${SEASONS[season].label}`, occasion: occ.id, k: 4 });
+    const request = (fix = "") => aiGenerate({
+      system: `You are a stylist in a wardrobe app. Design one complete outfit made only of new pieces the user can buy. Reply with JSON only.${guide ? "\n\n" + guide : ""}`,
       text: `For ${shopperText()}. Season: ${SEASONS[season].label}. Style: ${styleLabel(style)}. Occasion: ${occ.label}.` +
         (palette ? ` Colours they usually wear: ${palette}.` : "") + (brands ? ` Brands they own: ${brands}.` : "") +
         (shops ? ` Only use pieces sold by these shops and name the shop for each: ${shops}.` : "") +
-        ` Real, easy-to-find pieces; at most one accent colour.` + (L.seen.length ? ` Make it different from: ${L.seen.slice(-4).join("; ")}.` : ""),
+        ` Real, easy-to-find pieces; at most one accent colour.` + (L.seen.length ? ` Make it different from: ${L.seen.slice(-4).join("; ")}.` : "") + fix,
       schema: LOOK_SCHEMA,
       maxTokens: 700,
     });
-    const r = JSON.parse(text.replace(/^```(json)?|```$/g, "").trim());
+    const parse = (text) => JSON.parse(text.replace(/^```(json)?|```$/g, "").trim());
+    let r = parse(await request());
+    // A look that breaks an important rule of the fashion bible gets one more try.
+    let breaks = lookBreaks(r, occ);
+    if (breaks.length) {
+      const again = parse(await request(` Your last look broke the style guide: ${breaks.join("; ")}. Design another that follows it.`));
+      const left = lookBreaks(again, occ);
+      if (left.length <= breaks.length) { r = again; breaks = left; }
+    }
     const pieces = (r.pieces || []).filter((p) => CAT[p.category]).slice(0, 6).map((p) => {
       const st = state.trip?.stores.find((s) => s.name.toLowerCase() === String(p.store || "").toLowerCase());
       return { ...mkIdea({ cat: p.category, color: p.color, title: cap(p.name) }), query: p.search || p.name, store: st?.name || "" };
     });
     if (!pieces.length) throw new Error("The stylist didn't send any pieces. Try again.");
-    L.result = { title: r.title, why: r.why, pieces, ai: true };
+    L.result = { title: r.title, why: r.why, pieces, ai: true, warn: breaks };
     L.seen.push(r.title);
   } catch (e) {
     toast(`${e.message || "Couldn't reach the stylist"} Showing a built-in look instead.`);
@@ -3761,7 +3827,7 @@ function lookTab() {
       <div class="row"><button class="btn primary" data-act="look" ${L.busy ? "disabled" : ""}>${r ? "Another look" : "Create a look"}</button>${L.busy ? `<div class="spinner"></div><span class="muted">Putting a look together…</span>` : ""}</div>
     </section>
     ${r ? `<section class="card stack">
-      <div><h2 style="margin:0">${esc(r.title)}</h2>${r.why ? `<p class="muted" style="margin:6px 0 0">${esc(r.why)}</p>` : ""}</div>
+      <div><h2 style="margin:0">${esc(r.title)}</h2>${r.why ? `<p class="muted" style="margin:6px 0 0">${esc(r.why)}</p>` : ""}${r.warn?.length ? `<p class="why warn" style="margin:6px 0 0">Heads up: ${r.warn.map(esc).join(" · ")}</p>` : ""}</div>
       <div class="pieces look-row">${r.pieces.map((b) => `<div class="piece">${artTile(b)}<span>${esc(b.title)}</span></div>`).join("")}</div>
       <div class="sugg">${r.pieces.map((b) => `<div class="look-piece"><div class="row" style="gap:10px">${artTile(b)}<div><h3 style="margin:0">${esc(b.title)}</h3>${b.store ? `<span class="muted small">At ${esc(b.store)}</span>` : state.trip && !soldHere(b) ? `<span class="muted small">Not sold at ${esc(state.trip.name)}</span>` : ""}</div></div>${ideaDetail(b, { withPieces: false })}</div>`).join("")}</div>
     </section>` : ""}`;
@@ -3997,6 +4063,15 @@ function renderSettings() {
         <p class="muted small" style="margin:0">This month: ${u.requests} AI request${u.requests === 1 ? "" : "s"} · ${(u.input + u.output).toLocaleString()} tokens (${u.input.toLocaleString()} in, ${u.output.toLocaleString()} out)</p>
       </section>
       <section class="card stack">
+        <h2 style="margin:0">Fashion bible</h2>
+        ${(() => {
+          const b = Style.bible();
+          if (!b) return `<p class="muted small" style="margin:0">Not loaded yet, so outfit ideas use the app's basic rules. It downloads by itself when the app is online.</p>`;
+          const n = b.model.trained_on.sources, acc = b.model.accuracy?.unseen;
+          return `<p class="muted small" style="margin:0">The stylist must follow the fashion bible: ${b.rules.length} checked rules and ${b.tips.length} tips${n ? ` learnt from ${n} magazine, article and video sources` : ""}${acc != null ? `, right on ${Math.round(acc * 100)}% of example outfits it hadn't seen` : ""}. Outfit ideas that break an important rule only appear when nothing else is left, and every question to the AI stylist carries the rules and the tips that fit it. Updated ${esc(String(b.built_at).slice(0, 10))}.</p>`;
+        })()}
+      </section>
+      <section class="card stack">
         <h2 style="margin:0">Look</h2>
         <div class="chips">${[["auto", "Match system"], ["dark", "Dark"], ["light", "Light"]].map(([k, l]) => `<button class="chip" aria-pressed="${s.theme === k}" data-theme="${k}">${l}</button>`).join("")}</div>
         <div class="field"><label>Shops</label><div class="chips">${[["it", "Italy"], ["com", "International"]].map(([k, l]) => `<button class="chip" aria-pressed="${s.region === k}" data-region="${k}">${l}</button>`).join("")}</div></div>
@@ -4213,6 +4288,13 @@ async function importBackup() {
   input.click();
 }
 
+// What each outfit in a stylist answer still breaks of the fashion bible's important rules.
+// Judged without the occasion or weather, which the question may not be about.
+function answerBreaks(ans) {
+  if (!Style.ready()) return [];
+  return parseAnswer(ans).looks.map((l) => (l.items.length >= 2 ? Style.judge(l.items, {}).violations.map(ruleLine) : []));
+}
+
 async function ask(question, targetId = "ai-answer") {
   const out = document.getElementById(targetId);
   if (!question?.trim()) return;
@@ -4224,7 +4306,24 @@ async function ask(question, targetId = "ai-answer") {
     const context = `The user is ${shopperText()}.\n${state.event?.day === "tomorrow" ? "Tomorrow" : "Today"}: feels ${Math.round(c.feels)}°C${c.wet ? ", wet" : ""}. Occasion: ${OCCASIONS.find((o) => o.id === state.occasion).label}.${cal ? `\n${cal}` : ""}\nWardrobe (#number name; type; colours; brand; style; fit; warmth 1-5; wear):\n${wardrobeText() || "(empty)"}${likes ? `\nTaste (learnt from what the user wears, likes and skips):\n${likes}` : ""}`;
     const refs = state.items.map((i) => i.id);
     const show = (t) => { const el = document.getElementById(targetId); if (el) el.textContent = cleanRefs(t, refs); };
-    const answer = { text: await aiGenerate({ system: STYLIST_SYSTEM + "\n\n" + context, text: question, maxTokens: 800, onText: show }), refs };
+    // The fashion bible: its mandatory rules and the tips that fit this question.
+    const weather = [c.feels < 8 ? "cold winter layers coat" : c.feels >= 24 ? "hot summer light" : "", c.wet ? "rain" : ""].join(" ");
+    const occ = OCCASIONS.find((o) => o.id === state.occasion);
+    const guide = Style.guideText({ question, occasion: occ.id, extra: `${occ.label} ${occ.likes.join(" ")} ${weather}` });
+    const system = `${STYLIST_SYSTEM}${guide ? "" : ` ${BASIC_RULES}`}\n\n${guide ? guide + "\n\n" : ""}${context}`;
+    const answer = { text: await aiGenerate({ system, text: question, maxTokens: 800, onText: show }), refs };
+    // Check the outfits against the rules; if one breaks an important rule, ask once for a fixed answer.
+    let broken = answerBreaks(answer);
+    if (broken.some((b) => b.length)) {
+      const el = document.getElementById(targetId);
+      if (el) el.innerHTML = `<div class="row"><div class="spinner"></div><span class="muted">Checking the outfits against the style guide…</span></div>`;
+      const { looks } = parseAnswer(answer);
+      const fix = broken.map((b, i) => (b.length ? `- ${looks[i].title}: ${b.join("; ")}` : "")).filter(Boolean).join("\n");
+      const retry = { text: await aiGenerate({ system, text: `${question}\n\nYour first answer:\n${answer.text}\n\nIt breaks the style guide:\n${fix}\nWrite the whole answer again in the same format, changing only what is needed to follow the guide.`, maxTokens: 800, onText: show }), refs };
+      const again = answerBreaks(retry);
+      if (again.flat().length <= broken.flat().length) { answer.text = retry.text; broken = again; }
+    }
+    if (broken.some((b) => b.length)) answer.warn = broken;
     if (targetId === "ai-answer") state.aiAnswer = answer;
     if (targetId === "try-ai") state.disc.try.answer = answer;
     const el = document.getElementById(targetId);
@@ -4612,6 +4711,7 @@ document.addEventListener("keydown", (e) => {
    ====================================================================== */
 await loadAll();
 applyTheme();
+await loadBible();
 loadWeather().then(() => { if (view === "today") { state.outfits = []; render(); } });
 // Calendar events: now, when the app comes back to the front, and every half hour.
 async function refreshCalendar() {

@@ -1,6 +1,6 @@
 # Fashion bible
 
-Built 2026-10-17 from 67 learnt sources, 26 rules, 715 tips and 127 example outfits.
+Built 2026-10-18 from 67 learnt sources, 26 rules, 715 tips and 127 example outfits.
 
 Model accuracy on outfits it hadn't seen: **87%** (rulebook weights alone: 85%).
 
