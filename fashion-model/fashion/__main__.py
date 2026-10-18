@@ -6,6 +6,7 @@
   instructions [text file]       what Gemini is told, to read a source yourself (or with another AI)
   add <answer.json> --source <link>   save tips and outfits read that way
   train                          fit the model to all example outfits and write the bible
+  export                         write the slim fashion-bible.json the app loads (train does this too)
   check "<outfit>"               score an outfit and say why
   search "<question>"            the tips that answer a question
   stats                          what the model knows so far
@@ -43,6 +44,9 @@ def main(argv=None):
     pa.add_argument("--no-train", action="store_true", help="don't retrain afterwards")
 
     sub.add_parser("train", help="train on all example outfits and write bible/fashion-bible.json")
+
+    sub.add_parser("parity", help="write the test cases that keep the app's copy of the checks identical (tests/parity.json)")
+    sub.add_parser("export", help="write the slim copy of the bible the app loads (fashion-bible.json at the top of the repository)")
 
     pc = sub.add_parser("check", help="score an outfit")
     pc.add_argument("outfit", help='e.g. "blazer navy, shirt white, chinos beige, loafers brown"')
@@ -129,6 +133,20 @@ def cmd_train(a):
     return 0
 
 
+def cmd_parity(a):
+    from .parity import write
+    out = write()
+    print(f"Wrote {out} ({out.stat().st_size / 1024:.0f} KB)")
+    return 0
+
+
+def cmd_export(a):
+    from .bible import export_for_app
+    out = export_for_app()
+    print(f"Wrote {out} ({out.stat().st_size / 1024:.0f} KB)")
+    return 0
+
+
 def cmd_check(a):
     from .bible import judge
     from .outfit import Context, Outfit
@@ -172,7 +190,7 @@ def cmd_stats(a):
     return 0
 
 
-COMMANDS = {"learn": cmd_learn, "fetch": cmd_fetch, "instructions": cmd_instructions, "add": cmd_add, "train": cmd_train, "check": cmd_check, "search": cmd_search, "stats": cmd_stats}
+COMMANDS = {"learn": cmd_learn, "fetch": cmd_fetch, "instructions": cmd_instructions, "add": cmd_add, "train": cmd_train, "export": cmd_export, "parity": cmd_parity, "check": cmd_check, "search": cmd_search, "stats": cmd_stats}
 
 if __name__ == "__main__":
     sys.exit(main())

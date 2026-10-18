@@ -1,7 +1,7 @@
 {
  "name": "Fashion bible",
  "version": 1,
- "built_at": "2026-10-17T19:20:57+00:00",
+ "built_at": "2026-10-18T11:59:20+00:00",
  "about": "Menswear rules, tips and example outfits, in the Smart Wardrobe app's vocabulary (garment types, colours, styles, fits and occasions as in app.js). Score an outfit with: sigmoid(model.bias + sum(rule.weight * check(rule))).",
  "model": {
   "bias": -2.998,
@@ -554,6 +554,7 @@
    ],
    "strength": "core",
    "support": 6,
+   "rank": 2.792,
    "sources": [
     "rulebook",
     "TOM FORD | Project Upgrade | Full Version",
@@ -576,6 +577,7 @@
    ],
    "strength": "core",
    "support": 5,
+   "rank": 2.609,
    "sources": [
     "rulebook",
     "James Bond Style Explained | How to Dress Like 007",
@@ -593,6 +595,7 @@
    ],
    "strength": "core",
    "support": 5,
+   "rank": 2.609,
    "sources": [
     "rulebook",
     "Alain Delon Style Breakdown | Why Everything Worked",
@@ -612,6 +615,7 @@
    ],
    "strength": "core",
    "support": 4,
+   "rank": 2.386,
    "sources": [
     "rulebook",
     "James Bond Style Explained | How to Dress Like 007",
@@ -631,6 +635,7 @@
    ],
    "strength": "core",
    "support": 4,
+   "rank": 2.386,
    "sources": [
     "rulebook",
     "Alain Delon Style Breakdown | Why Everything Worked",
@@ -650,6 +655,7 @@
    ],
    "strength": "core",
    "support": 4,
+   "rank": 2.386,
    "sources": [
     "rulebook",
     "How to Dress Like Tom Ford",
@@ -667,6 +673,7 @@
    ],
    "strength": "core",
    "support": 4,
+   "rank": 2.386,
    "sources": [
     "rulebook",
     "James Bond Style Explained | How to Dress Like 007",
@@ -685,6 +692,7 @@
    ],
    "strength": "core",
    "support": 4,
+   "rank": 2.386,
    "sources": [
     "rulebook",
     "When the Mall Taught Men How to Dress: J.Crew, Banana Republic & Gap",
@@ -702,6 +710,7 @@
    ],
    "strength": "core",
    "support": 4,
+   "rank": 2.386,
    "sources": [
     "rulebook",
     "Cody Rhodes Goes Sneaker Shopping With Complex",
@@ -720,6 +729,7 @@
    "occasions": [],
    "strength": "rule",
    "support": 4,
+   "rank": 2.386,
    "sources": [
     "A Practical Guide To Getting Started",
     "How A Suit Should Fit",
@@ -738,6 +748,7 @@
    ],
    "strength": "core",
    "support": 3,
+   "rank": 2.099,
    "sources": [
     "rulebook",
     "How A Suit Should Fit",
@@ -755,6 +766,7 @@
    ],
    "strength": "core",
    "support": 3,
+   "rank": 2.099,
    "sources": [
     "rulebook",
     "How To Match Your Shirt And Tie",
@@ -772,6 +784,7 @@
    ],
    "strength": "core",
    "support": 3,
+   "rank": 2.099,
    "sources": [
     "rulebook",
     "How To Match Your Shirt And Tie",
@@ -790,6 +803,7 @@
    ],
    "strength": "core",
    "support": 3,
+   "rank": 2.099,
    "sources": [
     "rulebook",
     "The 3 Ralph Lauren Aesthetics Every Man Can Wear This Fall",
@@ -806,6 +820,7 @@
    ],
    "strength": "core",
    "support": 3,
+   "rank": 2.099,
    "sources": [
     "rulebook",
     "The 3 Ralph Lauren Aesthetics Every Man Can Wear This Fall",
@@ -823,6 +838,7 @@
    ],
    "strength": "core",
    "support": 3,
+   "rank": 2.099,
    "sources": [
     "rulebook",
     "James Bond Style Explained | How to Dress Like 007",
@@ -839,6 +855,7 @@
    ],
    "strength": "core",
    "support": 3,
+   "rank": 2.099,
    "sources": [
     "rulebook",
     "When the Mall Taught Men How to Dress: J.Crew, Banana Republic & Gap",
@@ -859,6 +876,7 @@
    ],
    "strength": "core",
    "support": 3,
+   "rank": 2.099,
    "sources": [
     "rulebook",
     "How to Dress Like Tom Ford",
@@ -880,6 +898,7 @@
    ],
    "strength": "core",
    "support": 3,
+   "rank": 2.099,
    "sources": [
     "rulebook",
     "The 3 Ralph Lauren Aesthetics Every Man Can Wear This Fall",
@@ -901,6 +920,7 @@
    ],
    "strength": "core",
    "support": 3,
+   "rank": 2.099,
    "sources": [
     "rulebook",
     "What to Wear as a Wedding Guest",
@@ -917,6 +937,7 @@
    ],
    "strength": "core",
    "support": 3,
+   "rank": 2.099,
    "sources": [
     "rulebook",
     "A TAKE ON MODERN TAILORING | In Conversation with Mike Amiri & GQ Italia",
@@ -934,6 +955,7 @@
    ],
    "strength": "core",
    "support": 3,
+   "rank": 2.099,
    "sources": [
     "rulebook",
     "An Expert Guide To Pattern Mixing",
@@ -951,6 +973,7 @@
    ],
    "strength": "core",
    "support": 2,
+   "rank": 1.693,
    "sources": [
     "rulebook",
     "How Should a Suit Fit"
@@ -967,6 +990,7 @@
    ],
    "strength": "core",
    "support": 2,
+   "rank": 1.693,
    "sources": [
     "rulebook",
     "How Should a Suit Fit"
@@ -982,6 +1006,7 @@
    ],
    "strength": "core",
    "support": 2,
+   "rank": 1.693,
    "sources": [
     "rulebook",
     "TOM FORD | Project Upgrade | Full Version"
@@ -997,6 +1022,7 @@
    ],
    "strength": "core",
    "support": 2,
+   "rank": 1.693,
    "sources": [
     "rulebook",
     "10 Things Men Should NEVER Wear to a Job Interview"
@@ -1012,6 +1038,7 @@
    ],
    "strength": "core",
    "support": 2,
+   "rank": 1.693,
    "sources": [
     "rulebook",
     "Alain Delon Style Breakdown | Why Everything Worked"
@@ -1032,6 +1059,7 @@
    ],
    "strength": "core",
    "support": 2,
+   "rank": 1.693,
    "sources": [
     "rulebook",
     "TOM FORD | Project Upgrade | Full Version"
@@ -1048,6 +1076,7 @@
    ],
    "strength": "core",
    "support": 2,
+   "rank": 1.693,
    "sources": [
     "rulebook",
     "How To Wear A Blazer And Jeans Without Looking Like Your Dad"
@@ -1063,6 +1092,7 @@
    ],
    "strength": "core",
    "support": 2,
+   "rank": 1.693,
    "sources": [
     "rulebook",
     "How To Match Clothes and Shoes For Guys: Outfit Color Guide"
@@ -1079,6 +1109,7 @@
    ],
    "strength": "core",
    "support": 2,
+   "rank": 1.693,
    "sources": [
     "rulebook",
     "How to Dress Like Tom Ford"
@@ -1095,6 +1126,7 @@
    ],
    "strength": "core",
    "support": 2,
+   "rank": 1.693,
    "sources": [
     "rulebook",
     "Men's Socks: What To Wear And When"
@@ -1110,6 +1142,7 @@
    ],
    "strength": "core",
    "support": 2,
+   "rank": 1.693,
    "sources": [
     "rulebook",
     "Should your belt match your shoes? (Or bag)"
@@ -1124,6 +1157,7 @@
    ],
    "strength": "core",
    "support": 2,
+   "rank": 1.693,
    "sources": [
     "rulebook",
     "Alain Delon Style Breakdown | Why Everything Worked"
@@ -1138,6 +1172,7 @@
    ],
    "strength": "core",
    "support": 2,
+   "rank": 1.693,
    "sources": [
     "rulebook",
     "Rebuilding My Wardrobe with ONLY Cotton On..."
@@ -1153,6 +1188,7 @@
    ],
    "strength": "core",
    "support": 2,
+   "rank": 1.693,
    "sources": [
     "rulebook",
     "Rebuilding My Wardrobe with ONLY Cotton On..."
@@ -1169,6 +1205,7 @@
    ],
    "strength": "core",
    "support": 2,
+   "rank": 1.693,
    "sources": [
     "rulebook",
     "Tips: How to dress in a STREETWEAR style?"
@@ -1184,6 +1221,7 @@
    ],
    "strength": "core",
    "support": 2,
+   "rank": 1.693,
    "sources": [
     "rulebook",
     "James Bond Style Explained | How to Dress Like 007"
@@ -1200,6 +1238,7 @@
    ],
    "strength": "core",
    "support": 2,
+   "rank": 1.693,
    "sources": [
     "rulebook",
     "You Asked: What Is The Best Way To Wear An Overshirt?"
@@ -1216,6 +1255,7 @@
    ],
    "strength": "core",
    "support": 2,
+   "rank": 1.693,
    "sources": [
     "rulebook",
     "A Man's Guide to '90s Minimalism"
@@ -1231,6 +1271,7 @@
    ],
    "strength": "core",
    "support": 2,
+   "rank": 1.693,
    "sources": [
     "rulebook",
     "How to Dress Well in Summer"
@@ -1247,6 +1288,7 @@
    ],
    "strength": "core",
    "support": 2,
+   "rank": 1.693,
    "sources": [
     "rulebook",
     "Mi faccio creare un abito custom made da Suitsupply per Miami"
@@ -1262,6 +1304,7 @@
    ],
    "strength": "core",
    "support": 2,
+   "rank": 1.693,
    "sources": [
     "rulebook",
     "The Intelligent Man's Guide To Wardrobe Maintenance"
@@ -1277,6 +1320,7 @@
    ],
    "strength": "core",
    "support": 2,
+   "rank": 1.693,
    "sources": [
     "rulebook",
     "10 Things Men Should NEVER Wear to a Job Interview"
@@ -1293,6 +1337,7 @@
    ],
    "strength": "core",
    "support": 2,
+   "rank": 1.693,
    "sources": [
     "rulebook",
     "Essential Fashion Tips For Short Men"
@@ -1310,6 +1355,7 @@
    "occasions": [],
    "strength": "rule",
    "support": 2,
+   "rank": 1.693,
    "sources": [
     "A Practical Guide To Getting Started",
     "A Basic Guide On Alterations"
@@ -1329,6 +1375,7 @@
    ],
    "strength": "tip",
    "support": 2,
+   "rank": 1.355,
    "sources": [
     "TOM FORD | Project Upgrade | Full Version",
     "How Should a Suit Fit"
@@ -1349,6 +1396,7 @@
    ],
    "strength": "tip",
    "support": 2,
+   "rank": 1.355,
    "sources": [
     "TOM FORD | Project Upgrade | Full Version",
     "Alain Delon Style Breakdown | Why Everything Worked"
@@ -1367,6 +1415,7 @@
    ],
    "strength": "tip",
    "support": 2,
+   "rank": 1.355,
    "sources": [
     "TOM FORD | Project Upgrade | Full Version",
     "Tom Ford Gives a 30-Year-Old Man an Eyebrow Makeover | Project Upgrade | GQ"
@@ -1387,6 +1436,7 @@
    ],
    "strength": "tip",
    "support": 2,
+   "rank": 1.355,
    "sources": [
     "When the Mall Taught Men How to Dress: J.Crew, Banana Republic & Gap",
     "Alain Delon Style Breakdown | Why Everything Worked"
@@ -1402,6 +1452,7 @@
    "occasions": [],
    "strength": "tip",
    "support": 2,
+   "rank": 1.355,
    "sources": [
     "When the Mall Taught Men How to Dress: J.Crew, Banana Republic & Gap",
     "A Practical Guide To Getting Started"
@@ -1421,6 +1472,7 @@
    ],
    "strength": "tip",
    "support": 2,
+   "rank": 1.355,
    "sources": [
     "How to Dress Like Tom Ford",
     "The Complete Guide To Men's Pocket Squares"
@@ -1436,6 +1488,7 @@
    "occasions": [],
    "strength": "tip",
    "support": 2,
+   "rank": 1.355,
    "sources": [
     "How to Dress Like Tom Ford",
     "How To Dress Like An Italian"
@@ -1455,6 +1508,7 @@
    ],
    "strength": "tip",
    "support": 2,
+   "rank": 1.355,
    "sources": [
     "The 3 Ralph Lauren Aesthetics Every Man Can Wear This Fall",
     "A Man's Guide to '90s Minimalism"
@@ -1472,6 +1526,7 @@
    "occasions": [],
    "strength": "tip",
    "support": 2,
+   "rank": 1.355,
    "sources": [
     "James Bond Style Explained | How to Dress Like 007",
     "A Practical Guide To Getting Started"
@@ -1489,6 +1544,7 @@
    "occasions": [],
    "strength": "tip",
    "support": 2,
+   "rank": 1.355,
    "sources": [
     "Alain Delon Style Breakdown | Why Everything Worked",
     "How Your Pants Should Fit Now"
@@ -1505,6 +1561,7 @@
    "occasions": [],
    "strength": "tip",
    "support": 2,
+   "rank": 1.355,
    "sources": [
     "PERCHÉ NON TUTTI I CAPI MADE IN ITALY SONO UGUALI con Mattia Berveglieri | Live Talk @ WHITE Milano",
     "Mi faccio creare un abito custom made da Suitsupply per Miami"
@@ -1524,6 +1581,7 @@
    ],
    "strength": "tip",
    "support": 2,
+   "rank": 1.355,
    "sources": [
     "Tips: How to dress in a STREETWEAR style?",
     "How a shirt should fit"
@@ -1541,6 +1599,7 @@
    "occasions": [],
    "strength": "tip",
    "support": 2,
+   "rank": 1.355,
    "sources": [
     "A Practical Guide To Getting Started",
     "How Your Pants Should Fit Now"
@@ -1556,6 +1615,7 @@
    ],
    "strength": "core",
    "support": 1,
+   "rank": 1.0,
    "sources": [
     "rulebook"
    ]
@@ -1570,6 +1630,7 @@
    ],
    "strength": "core",
    "support": 1,
+   "rank": 1.0,
    "sources": [
     "rulebook"
    ]
@@ -1584,6 +1645,7 @@
    ],
    "strength": "core",
    "support": 1,
+   "rank": 1.0,
    "sources": [
     "rulebook"
    ]
@@ -1599,6 +1661,7 @@
    ],
    "strength": "core",
    "support": 1,
+   "rank": 1.0,
    "sources": [
     "rulebook"
    ]
@@ -1612,6 +1675,7 @@
    ],
    "strength": "core",
    "support": 1,
+   "rank": 1.0,
    "sources": [
     "rulebook"
    ]
@@ -1627,6 +1691,7 @@
    ],
    "strength": "core",
    "support": 1,
+   "rank": 1.0,
    "sources": [
     "rulebook"
    ]
@@ -1641,6 +1706,7 @@
    ],
    "strength": "core",
    "support": 1,
+   "rank": 1.0,
    "sources": [
     "rulebook"
    ]
@@ -1656,6 +1722,7 @@
    ],
    "strength": "core",
    "support": 1,
+   "rank": 1.0,
    "sources": [
     "rulebook"
    ]
@@ -1671,6 +1738,7 @@
    ],
    "strength": "core",
    "support": 1,
+   "rank": 1.0,
    "sources": [
     "rulebook"
    ]
@@ -1684,6 +1752,7 @@
    ],
    "strength": "core",
    "support": 1,
+   "rank": 1.0,
    "sources": [
     "rulebook"
    ]
@@ -1698,6 +1767,7 @@
    ],
    "strength": "core",
    "support": 1,
+   "rank": 1.0,
    "sources": [
     "rulebook"
    ]
@@ -1717,6 +1787,7 @@
    ],
    "strength": "core",
    "support": 1,
+   "rank": 1.0,
    "sources": [
     "rulebook"
    ]
@@ -1735,6 +1806,7 @@
    ],
    "strength": "core",
    "support": 1,
+   "rank": 1.0,
    "sources": [
     "rulebook"
    ]
@@ -1752,6 +1824,7 @@
    ],
    "strength": "core",
    "support": 1,
+   "rank": 1.0,
    "sources": [
     "rulebook"
    ]
@@ -1766,6 +1839,7 @@
    ],
    "strength": "core",
    "support": 1,
+   "rank": 1.0,
    "sources": [
     "rulebook"
    ]
@@ -1780,6 +1854,7 @@
    ],
    "strength": "core",
    "support": 1,
+   "rank": 1.0,
    "sources": [
     "rulebook"
    ]
@@ -1797,6 +1872,7 @@
    ],
    "strength": "core",
    "support": 1,
+   "rank": 1.0,
    "sources": [
     "rulebook"
    ]
@@ -1811,6 +1887,7 @@
    ],
    "strength": "core",
    "support": 1,
+   "rank": 1.0,
    "sources": [
     "rulebook"
    ]
@@ -1825,6 +1902,7 @@
    ],
    "strength": "core",
    "support": 1,
+   "rank": 1.0,
    "sources": [
     "rulebook"
    ]
@@ -1839,6 +1917,7 @@
    ],
    "strength": "core",
    "support": 1,
+   "rank": 1.0,
    "sources": [
     "rulebook"
    ]
@@ -1856,6 +1935,7 @@
    ],
    "strength": "rule",
    "support": 1,
+   "rank": 1.0,
    "sources": [
     "How to Dress Like Tom Ford"
    ]
@@ -1874,6 +1954,7 @@
    ],
    "strength": "rule",
    "support": 1,
+   "rank": 1.0,
    "sources": [
     "How to Dress Like Tom Ford"
    ]
@@ -1889,6 +1970,7 @@
    "occasions": [],
    "strength": "rule",
    "support": 1,
+   "rank": 1.0,
    "sources": [
     "James Bond Style Explained | How to Dress Like 007"
    ]
@@ -1907,6 +1989,7 @@
    ],
    "strength": "rule",
    "support": 1,
+   "rank": 1.0,
    "sources": [
     "The Only 5 Shoes Everyone Should Own"
    ]
@@ -1925,6 +2008,7 @@
    ],
    "strength": "rule",
    "support": 1,
+   "rank": 1.0,
    "sources": [
     "5 Colour Combinations That Always Work"
    ]
@@ -1939,6 +2023,7 @@
    "occasions": [],
    "strength": "rule",
    "support": 1,
+   "rank": 1.0,
    "sources": [
     "8 Outfit Colour Matching Combinations That Always Work"
    ]
@@ -1954,6 +2039,7 @@
    "occasions": [],
    "strength": "rule",
    "support": 1,
+   "rank": 1.0,
    "sources": [
     "An Expert Guide To Pattern Mixing"
    ]
@@ -1974,6 +2060,7 @@
    ],
    "strength": "rule",
    "support": 1,
+   "rank": 1.0,
    "sources": [
     "How To Match Your Shirt And Tie"
    ]
@@ -1994,6 +2081,7 @@
    ],
    "strength": "rule",
    "support": 1,
+   "rank": 1.0,
    "sources": [
     "How To Match Your Shirt And Tie"
    ]
@@ -2012,6 +2100,7 @@
    ],
    "strength": "rule",
    "support": 1,
+   "rank": 1.0,
    "sources": [
     "Men's Socks: What To Wear And When"
    ]
@@ -2032,6 +2121,7 @@
    ],
    "strength": "rule",
    "support": 1,
+   "rank": 1.0,
    "sources": [
     "Men's Socks: What To Wear And When"
    ]
@@ -2049,6 +2139,7 @@
    "occasions": [],
    "strength": "rule",
    "support": 1,
+   "rank": 1.0,
    "sources": [
     "Should your belt match your shoes? (Or bag)"
    ]
@@ -2063,6 +2154,7 @@
    "occasions": [],
    "strength": "rule",
    "support": 1,
+   "rank": 1.0,
    "sources": [
     "A Practical Guide To Getting Started"
    ]
@@ -2080,6 +2172,7 @@
    ],
    "strength": "rule",
    "support": 1,
+   "rank": 1.0,
    "sources": [
     "Esquire's Complete and Comprehensive Guide to Smart-Casual Style"
    ]
@@ -2097,6 +2190,7 @@
    ],
    "strength": "rule",
    "support": 1,
+   "rank": 1.0,
    "sources": [
     "Black Tie Dress Code: A Modern Man's Guide For 2026"
    ]
@@ -2114,6 +2208,7 @@
    ],
    "strength": "rule",
    "support": 1,
+   "rank": 1.0,
    "sources": [
     "Black Tie Dress Code: A Modern Man's Guide For 2026"
    ]
@@ -2131,6 +2226,7 @@
    ],
    "strength": "rule",
    "support": 1,
+   "rank": 1.0,
    "sources": [
     "Black Tie Dress Code: A Modern Man's Guide For 2026"
    ]
@@ -2148,6 +2244,7 @@
    ],
    "strength": "rule",
    "support": 1,
+   "rank": 1.0,
    "sources": [
     "Black Tie Dress Code: A Modern Man's Guide For 2026"
    ]
@@ -2165,6 +2262,7 @@
    ],
    "strength": "rule",
    "support": 1,
+   "rank": 1.0,
    "sources": [
     "Black Tie Dress Code: A Modern Man's Guide For 2026"
    ]
@@ -2182,6 +2280,7 @@
    ],
    "strength": "rule",
    "support": 1,
+   "rank": 1.0,
    "sources": [
     "Holiday Attire for Men: What It Means & How to Wear It"
    ]
@@ -2199,6 +2298,7 @@
    ],
    "strength": "rule",
    "support": 1,
+   "rank": 1.0,
    "sources": [
     "Holiday Attire for Men: What It Means & How to Wear It"
    ]
@@ -2215,6 +2315,7 @@
    ],
    "strength": "rule",
    "support": 1,
+   "rank": 1.0,
    "sources": [
     "10 Things Men Should NEVER Wear to a Job Interview"
    ]
@@ -2232,6 +2333,7 @@
    ],
    "strength": "rule",
    "support": 1,
+   "rank": 1.0,
    "sources": [
     "10 Things Men Should NEVER Wear to a Job Interview"
    ]
@@ -2249,6 +2351,7 @@
    ],
    "strength": "rule",
    "support": 1,
+   "rank": 1.0,
    "sources": [
     "10 Things Men Should NEVER Wear to a Job Interview"
    ]
@@ -2266,6 +2369,7 @@
    ],
    "strength": "rule",
    "support": 1,
+   "rank": 1.0,
    "sources": [
     "What to Wear as a Wedding Guest"
    ]
@@ -2283,6 +2387,7 @@
    ],
    "strength": "rule",
    "support": 1,
+   "rank": 1.0,
    "sources": [
     "What to Wear as a Wedding Guest"
    ]
@@ -2300,6 +2405,7 @@
    ],
    "strength": "rule",
    "support": 1,
+   "rank": 1.0,
    "sources": [
     "What to Wear as a Wedding Guest"
    ]
@@ -2317,6 +2423,7 @@
    ],
    "strength": "rule",
    "support": 1,
+   "rank": 1.0,
    "sources": [
     "What to Wear as a Wedding Guest"
    ]
@@ -2335,6 +2442,7 @@
    ],
    "strength": "rule",
    "support": 1,
+   "rank": 1.0,
    "sources": [
     "How To Match Clothes and Shoes For Guys: Outfit Color Guide"
    ]
@@ -2350,6 +2458,7 @@
    "occasions": [],
    "strength": "rule",
    "support": 1,
+   "rank": 1.0,
    "sources": [
     "How To Match Clothes and Shoes For Guys: Outfit Color Guide"
    ]
@@ -2369,6 +2478,7 @@
    ],
    "strength": "rule",
    "support": 1,
+   "rank": 1.0,
    "sources": [
     "How To Match Clothes and Shoes For Guys: Outfit Color Guide"
    ]
@@ -2385,6 +2495,7 @@
    "occasions": [],
    "strength": "rule",
    "support": 1,
+   "rank": 1.0,
    "sources": [
     "How To Match Clothes and Shoes For Guys: Outfit Color Guide"
    ]
@@ -2403,6 +2514,7 @@
    ],
    "strength": "rule",
    "support": 1,
+   "rank": 1.0,
    "sources": [
     "How To Dress Like An Italian"
    ]
@@ -2421,6 +2533,7 @@
    ],
    "strength": "rule",
    "support": 1,
+   "rank": 1.0,
    "sources": [
     "How To Wear Sneakers With Tailoring"
    ]
@@ -2436,6 +2549,7 @@
    "occasions": [],
    "strength": "rule",
    "support": 1,
+   "rank": 1.0,
    "sources": [
     "The Intelligent Man's Guide To Wardrobe Maintenance"
    ]
@@ -2450,6 +2564,7 @@
    "occasions": [],
    "strength": "rule",
    "support": 1,
+   "rank": 1.0,
    "sources": [
     "The Intelligent Man's Guide To Wardrobe Maintenance"
    ]
@@ -2465,6 +2580,7 @@
    "occasions": [],
    "strength": "rule",
    "support": 1,
+   "rank": 1.0,
    "sources": [
     "The Intelligent Man's Guide To Wardrobe Maintenance"
    ]
@@ -2479,6 +2595,7 @@
    "occasions": [],
    "strength": "rule",
    "support": 1,
+   "rank": 1.0,
    "sources": [
     "The Intelligent Man's Guide To Wardrobe Maintenance"
    ]
@@ -2495,6 +2612,7 @@
    "occasions": [],
    "strength": "rule",
    "support": 1,
+   "rank": 1.0,
    "sources": [
     "The Intelligent Man's Guide To Wardrobe Maintenance"
    ]
@@ -2511,6 +2629,7 @@
    "occasions": [],
    "strength": "rule",
    "support": 1,
+   "rank": 1.0,
    "sources": [
     "The Intelligent Man's Guide To Wardrobe Maintenance"
    ]
@@ -2529,6 +2648,7 @@
    ],
    "strength": "rule",
    "support": 1,
+   "rank": 1.0,
    "sources": [
     "How A Suit Should Fit"
    ]
@@ -2547,6 +2667,7 @@
    ],
    "strength": "rule",
    "support": 1,
+   "rank": 1.0,
    "sources": [
     "How A Suit Should Fit"
    ]
@@ -2566,6 +2687,7 @@
    ],
    "strength": "rule",
    "support": 1,
+   "rank": 1.0,
    "sources": [
     "How A Suit Should Fit"
    ]
@@ -2580,6 +2702,7 @@
    "occasions": [],
    "strength": "rule",
    "support": 1,
+   "rank": 1.0,
    "sources": [
     "A Basic Guide On Alterations"
    ]
@@ -2595,6 +2718,7 @@
    "occasions": [],
    "strength": "rule",
    "support": 1,
+   "rank": 1.0,
    "sources": [
     "A Basic Guide On Alterations"
    ]
@@ -2613,6 +2737,7 @@
    ],
    "strength": "rule",
    "support": 1,
+   "rank": 1.0,
    "sources": [
     "How Should a Suit Fit"
    ]
@@ -2631,6 +2756,7 @@
    ],
    "strength": "rule",
    "support": 1,
+   "rank": 1.0,
    "sources": [
     "How Should a Suit Fit"
    ]
@@ -2649,6 +2775,7 @@
    ],
    "strength": "rule",
    "support": 1,
+   "rank": 1.0,
    "sources": [
     "How Should a Suit Fit"
    ]
@@ -2667,6 +2794,7 @@
    ],
    "strength": "rule",
    "support": 1,
+   "rank": 1.0,
    "sources": [
     "How Should a Suit Fit"
    ]
@@ -2686,6 +2814,7 @@
    ],
    "strength": "rule",
    "support": 1,
+   "rank": 1.0,
    "sources": [
     "How To Wear A Blazer And Jeans Without Looking Like Your Dad"
    ]
@@ -2705,6 +2834,7 @@
    ],
    "strength": "rule",
    "support": 1,
+   "rank": 1.0,
    "sources": [
     "A Tie Guide: Everything You Need to Know Before Putting One On"
    ]
@@ -2724,6 +2854,7 @@
    ],
    "strength": "rule",
    "support": 1,
+   "rank": 1.0,
    "sources": [
     "Should You Wear Socks With Loafers?"
    ]
@@ -2738,6 +2869,7 @@
    "occasions": [],
    "strength": "opinion",
    "support": 3,
+   "rank": 0.839,
    "sources": [
     "The 3 Ralph Lauren Aesthetics Every Man Can Wear This Fall",
     "Alain Delon Style Breakdown | Why Everything Worked",
@@ -2757,6 +2889,7 @@
    ],
    "strength": "tip",
    "support": 1,
+   "rank": 0.8,
    "sources": [
     "TOM FORD | Project Upgrade | Full Version"
    ]
@@ -2771,6 +2904,7 @@
    "occasions": [],
    "strength": "tip",
    "support": 1,
+   "rank": 0.8,
    "sources": [
     "TOM FORD | Project Upgrade | Full Version"
    ]
@@ -2789,6 +2923,7 @@
    ],
    "strength": "tip",
    "support": 1,
+   "rank": 0.8,
    "sources": [
     "TOM FORD | Project Upgrade | Full Version"
    ]
@@ -2806,6 +2941,7 @@
    ],
    "strength": "tip",
    "support": 1,
+   "rank": 0.8,
    "sources": [
     "When the Mall Taught Men How to Dress: J.Crew, Banana Republic & Gap"
    ]
@@ -2822,6 +2958,7 @@
    "occasions": [],
    "strength": "tip",
    "support": 1,
+   "rank": 0.8,
    "sources": [
     "When the Mall Taught Men How to Dress: J.Crew, Banana Republic & Gap"
    ]
@@ -2841,6 +2978,7 @@
    ],
    "strength": "tip",
    "support": 1,
+   "rank": 0.8,
    "sources": [
     "How to Dress Like Tom Ford"
    ]
@@ -2858,6 +2996,7 @@
    ],
    "strength": "tip",
    "support": 1,
+   "rank": 0.8,
    "sources": [
     "How to Dress Like Tom Ford"
    ]
@@ -2875,6 +3014,7 @@
    ],
    "strength": "tip",
    "support": 1,
+   "rank": 0.8,
    "sources": [
     "How to Dress Like Tom Ford"
    ]
@@ -2892,6 +3032,7 @@
    ],
    "strength": "tip",
    "support": 1,
+   "rank": 0.8,
    "sources": [
     "How to Dress Like Tom Ford"
    ]
@@ -2906,6 +3047,7 @@
    "occasions": [],
    "strength": "tip",
    "support": 1,
+   "rank": 0.8,
    "sources": [
     "How to Dress Like Tom Ford"
    ]
@@ -2923,6 +3065,7 @@
    ],
    "strength": "tip",
    "support": 1,
+   "rank": 0.8,
    "sources": [
     "How to Dress Like Tom Ford"
    ]
@@ -2941,6 +3084,7 @@
    ],
    "strength": "tip",
    "support": 1,
+   "rank": 0.8,
    "sources": [
     "The 3 Ralph Lauren Aesthetics Every Man Can Wear This Fall"
    ]
@@ -2959,6 +3103,7 @@
    ],
    "strength": "tip",
    "support": 1,
+   "rank": 0.8,
    "sources": [
     "The 3 Ralph Lauren Aesthetics Every Man Can Wear This Fall"
    ]
@@ -2977,6 +3122,7 @@
    ],
    "strength": "tip",
    "support": 1,
+   "rank": 0.8,
    "sources": [
     "The 3 Ralph Lauren Aesthetics Every Man Can Wear This Fall"
    ]
@@ -2995,6 +3141,7 @@
    ],
    "strength": "tip",
    "support": 1,
+   "rank": 0.8,
    "sources": [
     "The 3 Ralph Lauren Aesthetics Every Man Can Wear This Fall"
    ]
@@ -3009,6 +3156,7 @@
    "occasions": [],
    "strength": "tip",
    "support": 1,
+   "rank": 0.8,
    "sources": [
     "The 3 Ralph Lauren Aesthetics Every Man Can Wear This Fall"
    ]
@@ -3028,6 +3176,7 @@
    ],
    "strength": "tip",
    "support": 1,
+   "rank": 0.8,
    "sources": [
     "The 3 Ralph Lauren Aesthetics Every Man Can Wear This Fall"
    ]
@@ -3045,6 +3194,7 @@
    ],
    "strength": "tip",
    "support": 1,
+   "rank": 0.8,
    "sources": [
     "The 3 Ralph Lauren Aesthetics Every Man Can Wear This Fall"
    ]
@@ -3062,6 +3212,7 @@
    ],
    "strength": "tip",
    "support": 1,
+   "rank": 0.8,
    "sources": [
     "The 3 Ralph Lauren Aesthetics Every Man Can Wear This Fall"
    ]
@@ -3078,6 +3229,7 @@
    ],
    "strength": "tip",
    "support": 1,
+   "rank": 0.8,
    "sources": [
     "The 3 Ralph Lauren Aesthetics Every Man Can Wear This Fall"
    ]
@@ -3095,6 +3247,7 @@
    ],
    "strength": "tip",
    "support": 1,
+   "rank": 0.8,
    "sources": [
     "The 3 Ralph Lauren Aesthetics Every Man Can Wear This Fall"
    ]
@@ -3114,6 +3267,7 @@
    ],
    "strength": "tip",
    "support": 1,
+   "rank": 0.8,
    "sources": [
     "A TAKE ON MODERN TAILORING | In Conversation with Mike Amiri & GQ Italia"
    ]
@@ -3131,6 +3285,7 @@
    ],
    "strength": "tip",
    "support": 1,
+   "rank": 0.8,
    "sources": [
     "A TAKE ON MODERN TAILORING | In Conversation with Mike Amiri & GQ Italia"
    ]
@@ -3148,6 +3303,7 @@
    ],
    "strength": "tip",
    "support": 1,
+   "rank": 0.8,
    "sources": [
     "A TAKE ON MODERN TAILORING | In Conversation with Mike Amiri & GQ Italia"
    ]
@@ -3163,6 +3319,7 @@
    "occasions": [],
    "strength": "tip",
    "support": 1,
+   "rank": 0.8,
    "sources": [
     "A TAKE ON MODERN TAILORING | In Conversation with Mike Amiri & GQ Italia"
    ]
@@ -3182,6 +3339,7 @@
    ],
    "strength": "tip",
    "support": 1,
+   "rank": 0.8,
    "sources": [
     "A TAKE ON MODERN TAILORING | In Conversation with Mike Amiri & GQ Italia"
    ]
@@ -3198,6 +3356,7 @@
    ],
    "strength": "tip",
    "support": 1,
+   "rank": 0.8,
    "sources": [
     "Rebuilding My Wardrobe with ONLY Cotton On..."
    ]
@@ -3212,6 +3371,7 @@
    "occasions": [],
    "strength": "tip",
    "support": 1,
+   "rank": 0.8,
    "sources": [
     "Rebuilding My Wardrobe with ONLY Cotton On..."
    ]
@@ -3229,6 +3389,7 @@
    ],
    "strength": "tip",
    "support": 1,
+   "rank": 0.8,
    "sources": [
     "Rebuilding My Wardrobe with ONLY Cotton On..."
    ]
@@ -3246,6 +3407,7 @@
    ],
    "strength": "tip",
    "support": 1,
+   "rank": 0.8,
    "sources": [
     "Rebuilding My Wardrobe with ONLY Cotton On..."
    ]
@@ -3263,6 +3425,7 @@
    ],
    "strength": "tip",
    "support": 1,
+   "rank": 0.8,
    "sources": [
     "Rebuilding My Wardrobe with ONLY Cotton On..."
    ]
@@ -3280,6 +3443,7 @@
    ],
    "strength": "tip",
    "support": 1,
+   "rank": 0.8,
    "sources": [
     "Rebuilding My Wardrobe with ONLY Cotton On..."
    ]
@@ -3294,6 +3458,7 @@
    "occasions": [],
    "strength": "tip",
    "support": 1,
+   "rank": 0.8,
    "sources": [
     "James Bond Style Explained | How to Dress Like 007"
    ]
@@ -3309,6 +3474,7 @@
    "occasions": [],
    "strength": "tip",
    "support": 1,
+   "rank": 0.8,
    "sources": [
     "James Bond Style Explained | How to Dress Like 007"
    ]
@@ -3326,6 +3492,7 @@
    ],
    "strength": "tip",
    "support": 1,
+   "rank": 0.8,
    "sources": [
     "James Bond Style Explained | How to Dress Like 007"
    ]
@@ -3342,6 +3509,7 @@
    ],
    "strength": "tip",
    "support": 1,
+   "rank": 0.8,
    "sources": [
     "James Bond Style Explained | How to Dress Like 007"
    ]
@@ -3359,6 +3527,7 @@
    ],
    "strength": "tip",
    "support": 1,
+   "rank": 0.8,
    "sources": [
     "James Bond Style Explained | How to Dress Like 007"
    ]
@@ -3374,6 +3543,7 @@
    "occasions": [],
    "strength": "tip",
    "support": 1,
+   "rank": 0.8,
    "sources": [
     "James Bond Style Explained | How to Dress Like 007"
    ]
@@ -3388,6 +3558,7 @@
    "occasions": [],
    "strength": "tip",
    "support": 1,
+   "rank": 0.8,
    "sources": [
     "James Bond Style Explained | How to Dress Like 007"
    ]
@@ -3403,6 +3574,7 @@
    "occasions": [],
    "strength": "tip",
    "support": 1,
+   "rank": 0.8,
    "sources": [
     "Alain Delon Style Breakdown | Why Everything Worked"
    ]
@@ -3421,6 +3593,7 @@
    ],
    "strength": "tip",
    "support": 1,
+   "rank": 0.8,
    "sources": [
     "Alain Delon Style Breakdown | Why Everything Worked"
    ]
@@ -3439,6 +3612,7 @@
    ],
    "strength": "tip",
    "support": 1,
+   "rank": 0.8,
    "sources": [
     "Alain Delon Style Breakdown | Why Everything Worked"
    ]
@@ -3455,6 +3629,7 @@
    "occasions": [],
    "strength": "tip",
    "support": 1,
+   "rank": 0.8,
    "sources": [
     "Alain Delon Style Breakdown | Why Everything Worked"
    ]
@@ -3469,6 +3644,7 @@
    "occasions": [],
    "strength": "tip",
    "support": 1,
+   "rank": 0.8,
    "sources": [
     "Alain Delon Style Breakdown | Why Everything Worked"
    ]
@@ -3484,6 +3660,7 @@
    "occasions": [],
    "strength": "tip",
    "support": 1,
+   "rank": 0.8,
    "sources": [
     "Alain Delon Style Breakdown | Why Everything Worked"
    ]
@@ -3499,6 +3676,7 @@
    "occasions": [],
    "strength": "tip",
    "support": 1,
+   "rank": 0.8,
    "sources": [
     "Alain Delon Style Breakdown | Why Everything Worked"
    ]
@@ -3518,6 +3696,7 @@
    ],
    "strength": "tip",
    "support": 1,
+   "rank": 0.8,
    "sources": [
     "Alain Delon Style Breakdown | Why Everything Worked"
    ]
@@ -3532,6 +3711,7 @@
    "occasions": [],
    "strength": "tip",
    "support": 1,
+   "rank": 0.8,
    "sources": [
     "Alain Delon Style Breakdown | Why Everything Worked"
    ]
@@ -3550,6 +3730,7 @@
    ],
    "strength": "tip",
    "support": 1,
+   "rank": 0.8,
    "sources": [
     "Alain Delon Style Breakdown | Why Everything Worked"
    ]
@@ -3567,6 +3748,7 @@
    ],
    "strength": "tip",
    "support": 1,
+   "rank": 0.8,
    "sources": [
     "Cody Rhodes Goes Sneaker Shopping With Complex"
    ]
@@ -3582,6 +3764,7 @@
    "occasions": [],
    "strength": "tip",
    "support": 1,
+   "rank": 0.8,
    "sources": [
     "PERCHÉ NON TUTTI I CAPI MADE IN ITALY SONO UGUALI con Mattia Berveglieri | Live Talk @ WHITE Milano"
    ]
@@ -3599,6 +3782,7 @@
    ],
    "strength": "tip",
    "support": 1,
+   "rank": 0.8,
    "sources": [
     "PERCHÉ NON TUTTI I CAPI MADE IN ITALY SONO UGUALI con Mattia Berveglieri | Live Talk @ WHITE Milano"
    ]
@@ -3614,6 +3798,7 @@
    "occasions": [],
    "strength": "tip",
    "support": 1,
+   "rank": 0.8,
    "sources": [
     "PERCHÉ NON TUTTI I CAPI MADE IN ITALY SONO UGUALI con Mattia Berveglieri | Live Talk @ WHITE Milano"
    ]
@@ -3629,6 +3814,7 @@
    "occasions": [],
    "strength": "tip",
    "support": 1,
+   "rank": 0.8,
    "sources": [
     "PERCHÉ NON TUTTI I CAPI MADE IN ITALY SONO UGUALI con Mattia Berveglieri | Live Talk @ WHITE Milano"
    ]
@@ -3646,6 +3832,7 @@
    ],
    "strength": "tip",
    "support": 1,
+   "rank": 0.8,
    "sources": [
     "What Are People Wearing in Tokyo? (Fashion Trends 2026 Street Style Ep.207)"
    ]
@@ -3661,6 +3848,7 @@
    "occasions": [],
    "strength": "tip",
    "support": 1,
+   "rank": 0.8,
    "sources": [
     "THE LAST Fragrance Guide You Will EVER Need"
    ]
@@ -3675,6 +3863,7 @@
    "occasions": [],
    "strength": "tip",
    "support": 1,
+   "rank": 0.8,
    "sources": [
     "THE LAST Fragrance Guide You Will EVER Need"
    ]
@@ -3691,6 +3880,7 @@
    ],
    "strength": "tip",
    "support": 1,
+   "rank": 0.8,
    "sources": [
     "THE LAST Fragrance Guide You Will EVER Need"
    ]
@@ -3708,6 +3898,7 @@
    ],
    "strength": "tip",
    "support": 1,
+   "rank": 0.8,
    "sources": [
     "THE LAST Fragrance Guide You Will EVER Need"
    ]
@@ -3722,6 +3913,7 @@
    "occasions": [],
    "strength": "tip",
    "support": 1,
+   "rank": 0.8,
    "sources": [
     "THE LAST Fragrance Guide You Will EVER Need"
    ]
@@ -3736,6 +3928,7 @@
    "occasions": [],
    "strength": "tip",
    "support": 1,
+   "rank": 0.8,
    "sources": [
     "THE LAST Fragrance Guide You Will EVER Need"
    ]
@@ -3750,6 +3943,7 @@
    "occasions": [],
    "strength": "tip",
    "support": 1,
+   "rank": 0.8,
    "sources": [
     "THE LAST Fragrance Guide You Will EVER Need"
    ]
@@ -3768,6 +3962,7 @@
    ],
    "strength": "tip",
    "support": 1,
+   "rank": 0.8,
    "sources": [
     "11 Things You Only Need To Buy Once (they will last forever)"
    ]
@@ -3783,6 +3978,7 @@
    "occasions": [],
    "strength": "tip",
    "support": 1,
+   "rank": 0.8,
    "sources": [
     "11 Things You Only Need To Buy Once (they will last forever)"
    ]
@@ -3798,6 +3994,7 @@
    "occasions": [],
    "strength": "tip",
    "support": 1,
+   "rank": 0.8,
    "sources": [
     "11 Things You Only Need To Buy Once (they will last forever)"
    ]
@@ -3813,6 +4010,7 @@
    "occasions": [],
    "strength": "tip",
    "support": 1,
+   "rank": 0.8,
    "sources": [
     "11 Things You Only Need To Buy Once (they will last forever)"
    ]
@@ -3828,6 +4026,7 @@
    "occasions": [],
    "strength": "tip",
    "support": 1,
+   "rank": 0.8,
    "sources": [
     "11 Things You Only Need To Buy Once (they will last forever)"
    ]
@@ -3842,6 +4041,7 @@
    "occasions": [],
    "strength": "tip",
    "support": 1,
+   "rank": 0.8,
    "sources": [
     "11 Things You Only Need To Buy Once (they will last forever)"
    ]
@@ -3857,6 +4057,7 @@
    "occasions": [],
    "strength": "tip",
    "support": 1,
+   "rank": 0.8,
    "sources": [
     "The Only 5 Shoes Everyone Should Own"
    ]
@@ -3874,6 +4075,7 @@
    ],
    "strength": "tip",
    "support": 1,
+   "rank": 0.8,
    "sources": [
     "The Only 5 Shoes Everyone Should Own"
    ]
@@ -3891,6 +4093,7 @@
    ],
    "strength": "tip",
    "support": 1,
+   "rank": 0.8,
    "sources": [
     "The Only 5 Shoes Everyone Should Own"
    ]
@@ -3910,6 +4113,7 @@
    ],
    "strength": "tip",
    "support": 1,
+   "rank": 0.8,
    "sources": [
     "The Only 5 Shoes Everyone Should Own"
    ]
@@ -3928,6 +4132,7 @@
    ],
    "strength": "tip",
    "support": 1,
+   "rank": 0.8,
    "sources": [
     "The Only 5 Shoes Everyone Should Own"
    ]
@@ -3947,6 +4152,7 @@
    ],
    "strength": "tip",
    "support": 1,
+   "rank": 0.8,
    "sources": [
     "Mi faccio creare un abito custom made da Suitsupply per Miami"
    ]
@@ -3965,6 +4171,7 @@
    ],
    "strength": "tip",
    "support": 1,
+   "rank": 0.8,
    "sources": [
     "Mi faccio creare un abito custom made da Suitsupply per Miami"
    ]
@@ -3980,6 +4187,7 @@
    "occasions": [],
    "strength": "tip",
    "support": 1,
+   "rank": 0.8,
    "sources": [
     "Mi faccio creare un abito custom made da Suitsupply per Miami"
    ]
@@ -3995,6 +4203,7 @@
    "occasions": [],
    "strength": "tip",
    "support": 1,
+   "rank": 0.8,
    "sources": [
     "Mi faccio creare un abito custom made da Suitsupply per Miami"
    ]
@@ -4013,6 +4222,7 @@
    ],
    "strength": "tip",
    "support": 1,
+   "rank": 0.8,
    "sources": [
     "Mi faccio creare un abito custom made da Suitsupply per Miami"
    ]
@@ -4028,6 +4238,7 @@
    "occasions": [],
    "strength": "tip",
    "support": 1,
+   "rank": 0.8,
    "sources": [
     "Mi faccio creare un abito custom made da Suitsupply per Miami"
    ]
@@ -4046,6 +4257,7 @@
    ],
    "strength": "tip",
    "support": 1,
+   "rank": 0.8,
    "sources": [
     "Mi faccio creare un abito custom made da Suitsupply per Miami"
    ]
@@ -4061,6 +4273,7 @@
    "occasions": [],
    "strength": "tip",
    "support": 1,
+   "rank": 0.8,
    "sources": [
     "Mi faccio creare un abito custom made da Suitsupply per Miami"
    ]
@@ -4076,6 +4289,7 @@
    "occasions": [],
    "strength": "tip",
    "support": 1,
+   "rank": 0.8,
    "sources": [
     "Mi faccio creare un abito custom made da Suitsupply per Miami"
    ]
@@ -4091,6 +4305,7 @@
    "occasions": [],
    "strength": "tip",
    "support": 1,
+   "rank": 0.8,
    "sources": [
     "Mi faccio creare un abito custom made da Suitsupply per Miami"
    ]
@@ -4106,6 +4321,7 @@
    "occasions": [],
    "strength": "tip",
    "support": 1,
+   "rank": 0.8,
    "sources": [
     "Mi faccio creare un abito custom made da Suitsupply per Miami"
    ]
@@ -4121,6 +4337,7 @@
    "occasions": [],
    "strength": "tip",
    "support": 1,
+   "rank": 0.8,
    "sources": [
     "Mi faccio creare un abito custom made da Suitsupply per Miami"
    ]
@@ -4136,6 +4353,7 @@
    "occasions": [],
    "strength": "tip",
    "support": 1,
+   "rank": 0.8,
    "sources": [
     "A Man's Guide to '90s Minimalism"
    ]
@@ -4152,6 +4370,7 @@
    "occasions": [],
    "strength": "tip",
    "support": 1,
+   "rank": 0.8,
    "sources": [
     "A Man's Guide to '90s Minimalism"
    ]
@@ -4170,6 +4389,7 @@
    ],
    "strength": "tip",
    "support": 1,
+   "rank": 0.8,
    "sources": [
     "A Man's Guide to '90s Minimalism"
    ]
@@ -4187,6 +4407,7 @@
    ],
    "strength": "tip",
    "support": 1,
+   "rank": 0.8,
    "sources": [
     "A Man's Guide to '90s Minimalism"
    ]
@@ -4201,6 +4422,7 @@
    "occasions": [],
    "strength": "tip",
    "support": 1,
+   "rank": 0.8,
    "sources": [
     "A Man's Guide to '90s Minimalism"
    ]
@@ -4217,6 +4439,7 @@
    "occasions": [],
    "strength": "tip",
    "support": 1,
+   "rank": 0.8,
    "sources": [
     "A Man's Guide to '90s Minimalism"
    ]
@@ -4235,6 +4458,7 @@
    ],
    "strength": "tip",
    "support": 1,
+   "rank": 0.8,
    "sources": [
     "5 Colour Combinations That Always Work"
    ]
@@ -4249,6 +4473,7 @@
    "occasions": [],
    "strength": "tip",
    "support": 1,
+   "rank": 0.8,
    "sources": [
     "5 Colour Combinations That Always Work"
    ]
@@ -4264,6 +4489,7 @@
    "occasions": [],
    "strength": "tip",
    "support": 1,
+   "rank": 0.8,
    "sources": [
     "5 Colour Combinations That Always Work"
    ]
@@ -4281,6 +4507,7 @@
    ],
    "strength": "tip",
    "support": 1,
+   "rank": 0.8,
    "sources": [
     "5 Colour Combinations That Always Work"
    ]
@@ -4300,6 +4527,7 @@
    ],
    "strength": "tip",
    "support": 1,
+   "rank": 0.8,
    "sources": [
     "5 Colour Combinations That Always Work"
    ]
@@ -4319,6 +4547,7 @@
    ],
    "strength": "tip",
    "support": 1,
+   "rank": 0.8,
    "sources": [
     "5 Colour Combinations That Always Work"
    ]
@@ -4336,6 +4565,7 @@
    ],
    "strength": "tip",
    "support": 1,
+   "rank": 0.8,
    "sources": [
     "5 Colour Combinations That Always Work"
    ]
@@ -4350,6 +4580,7 @@
    "occasions": [],
    "strength": "tip",
    "support": 1,
+   "rank": 0.8,
    "sources": [
     "5 Colour Combinations That Always Work"
    ]
@@ -4364,6 +4595,7 @@
    "occasions": [],
    "strength": "tip",
    "support": 1,
+   "rank": 0.8,
    "sources": [
     "8 Outfit Colour Matching Combinations That Always Work"
    ]
@@ -4382,6 +4614,7 @@
    ],
    "strength": "tip",
    "support": 1,
+   "rank": 0.8,
    "sources": [
     "8 Outfit Colour Matching Combinations That Always Work"
    ]
@@ -4399,6 +4632,7 @@
    ],
    "strength": "tip",
    "support": 1,
+   "rank": 0.8,
    "sources": [
     "8 Outfit Colour Matching Combinations That Always Work"
    ]
@@ -4415,6 +4649,7 @@
    ],
    "strength": "tip",
    "support": 1,
+   "rank": 0.8,
    "sources": [
     "8 Outfit Colour Matching Combinations That Always Work"
    ]
@@ -4433,6 +4668,7 @@
    ],
    "strength": "tip",
    "support": 1,
+   "rank": 0.8,
    "sources": [
     "8 Outfit Colour Matching Combinations That Always Work"
    ]
@@ -4451,6 +4687,7 @@
    ],
    "strength": "tip",
    "support": 1,
+   "rank": 0.8,
    "sources": [
     "8 Outfit Colour Matching Combinations That Always Work"
    ]
@@ -4467,6 +4704,7 @@
    ],
    "strength": "tip",
    "support": 1,
+   "rank": 0.8,
    "sources": [
     "8 Outfit Colour Matching Combinations That Always Work"
    ]
@@ -4485,6 +4723,7 @@
    ],
    "strength": "tip",
    "support": 1,
+   "rank": 0.8,
    "sources": [
     "8 Outfit Colour Matching Combinations That Always Work"
    ]
@@ -4502,6 +4741,7 @@
    ],
    "strength": "tip",
    "support": 1,
+   "rank": 0.8,
    "sources": [
     "8 Outfit Colour Matching Combinations That Always Work"
    ]
@@ -4516,6 +4756,7 @@
    "occasions": [],
    "strength": "tip",
    "support": 1,
+   "rank": 0.8,
    "sources": [
     "An Expert Guide To Pattern Mixing"
    ]
@@ -4531,6 +4772,7 @@
    "occasions": [],
    "strength": "tip",
    "support": 1,
+   "rank": 0.8,
    "sources": [
     "An Expert Guide To Pattern Mixing"
    ]
@@ -4546,6 +4788,7 @@
    "occasions": [],
    "strength": "tip",
    "support": 1,
+   "rank": 0.8,
    "sources": [
     "An Expert Guide To Pattern Mixing"
    ]
@@ -4560,6 +4803,7 @@
    "occasions": [],
    "strength": "tip",
    "support": 1,
+   "rank": 0.8,
    "sources": [
     "An Expert Guide To Pattern Mixing"
    ]
@@ -4575,6 +4819,7 @@
    "occasions": [],
    "strength": "tip",
    "support": 1,
+   "rank": 0.8,
    "sources": [
     "An Expert Guide To Pattern Mixing"
    ]
@@ -4589,6 +4834,7 @@
    "occasions": [],
    "strength": "tip",
    "support": 1,
+   "rank": 0.8,
    "sources": [
     "An Expert Guide To Pattern Mixing"
    ]
@@ -4608,6 +4854,7 @@
    ],
    "strength": "tip",
    "support": 1,
+   "rank": 0.8,
    "sources": [
     "An Expert Guide To Pattern Mixing"
    ]
@@ -4624,6 +4871,7 @@
    ],
    "strength": "tip",
    "support": 1,
+   "rank": 0.8,
    "sources": [
     "An Expert Guide To Pattern Mixing"
    ]
@@ -4639,6 +4887,7 @@
    "occasions": [],
    "strength": "tip",
    "support": 1,
+   "rank": 0.8,
    "sources": [
     "An Expert Guide To Pattern Mixing"
    ]
@@ -4654,6 +4903,7 @@
    "occasions": [],
    "strength": "tip",
    "support": 1,
+   "rank": 0.8,
    "sources": [
     "An Expert Guide To Pattern Mixing"
    ]
@@ -4673,6 +4923,7 @@
    ],
    "strength": "tip",
    "support": 1,
+   "rank": 0.8,
    "sources": [
     "An Expert Guide To Pattern Mixing"
    ]
@@ -4692,6 +4943,7 @@
    ],
    "strength": "tip",
    "support": 1,
+   "rank": 0.8,
    "sources": [
     "How To Match Your Shirt And Tie"
    ]
@@ -4710,6 +4962,7 @@
    ],
    "strength": "tip",
    "support": 1,
+   "rank": 0.8,
    "sources": [
     "How To Match Your Shirt And Tie"
    ]
@@ -4729,6 +4982,7 @@
    ],
    "strength": "tip",
    "support": 1,
+   "rank": 0.8,
    "sources": [
     "How To Match Your Shirt And Tie"
    ]
@@ -4747,6 +5001,7 @@
    ],
    "strength": "tip",
    "support": 1,
+   "rank": 0.8,
    "sources": [
     "How To Match Your Shirt And Tie"
    ]
@@ -4763,6 +5018,7 @@
    "occasions": [],
    "strength": "tip",
    "support": 1,
+   "rank": 0.8,
    "sources": [
     "How To Match Your Shirt And Tie"
    ]
@@ -4779,6 +5035,7 @@
    "occasions": [],
    "strength": "tip",
    "support": 1,
+   "rank": 0.8,
    "sources": [
     "How To Match Your Shirt And Tie"
    ]
@@ -4798,6 +5055,7 @@
    ],
    "strength": "tip",
    "support": 1,
+   "rank": 0.8,
    "sources": [
     "How To Match Your Shirt And Tie"
    ]
@@ -4815,6 +5073,7 @@
    ],
    "strength": "tip",
    "support": 1,
+   "rank": 0.8,
    "sources": [
     "How To Match Your Shirt And Tie"
    ]
@@ -4831,6 +5090,7 @@
    "occasions": [],
    "strength": "tip",
    "support": 1,
+   "rank": 0.8,
    "sources": [
     "Essential Fashion Tips For Short Men"
    ]
@@ -4846,6 +5106,7 @@
    "occasions": [],
    "strength": "tip",
    "support": 1,
+   "rank": 0.8,
    "sources": [
     "Essential Fashion Tips For Short Men"
    ]
@@ -4861,6 +5122,7 @@
    "occasions": [],
    "strength": "tip",
    "support": 1,
+   "rank": 0.8,
    "sources": [
     "Essential Fashion Tips For Short Men"
    ]
@@ -4877,6 +5139,7 @@
    "occasions": [],
    "strength": "tip",
    "support": 1,
+   "rank": 0.8,
    "sources": [
     "Essential Fashion Tips For Short Men"
    ]
@@ -4896,6 +5159,7 @@
    ],
    "strength": "tip",
    "support": 1,
+   "rank": 0.8,
    "sources": [
     "Essential Fashion Tips For Short Men"
    ]
@@ -4912,6 +5176,7 @@
    "occasions": [],
    "strength": "tip",
    "support": 1,
+   "rank": 0.8,
    "sources": [
     "Essential Fashion Tips For Short Men"
    ]
@@ -4927,6 +5192,7 @@
    "occasions": [],
    "strength": "tip",
    "support": 1,
+   "rank": 0.8,
    "sources": [
     "Essential Fashion Tips For Short Men"
    ]
@@ -4942,6 +5208,7 @@
    "occasions": [],
    "strength": "tip",
    "support": 1,
+   "rank": 0.8,
    "sources": [
     "The Complete Guide To Men's Pocket Squares"
    ]
@@ -4957,6 +5224,7 @@
    "occasions": [],
    "strength": "tip",
    "support": 1,
+   "rank": 0.8,
    "sources": [
     "The Complete Guide To Men's Pocket Squares"
    ]
@@ -4972,6 +5240,7 @@
    "occasions": [],
    "strength": "tip",
    "support": 1,
+   "rank": 0.8,
    "sources": [
     "The Complete Guide To Men's Pocket Squares"
    ]
@@ -4986,6 +5255,7 @@
    "occasions": [],
    "strength": "tip",
    "support": 1,
+   "rank": 0.8,
    "sources": [
     "The Complete Guide To Men's Pocket Squares"
    ]
@@ -5000,6 +5270,7 @@
    "occasions": [],
    "strength": "tip",
    "support": 1,
+   "rank": 0.8,
    "sources": [
     "The Complete Guide To Men's Pocket Squares"
    ]
@@ -5015,6 +5286,7 @@
    "occasions": [],
    "strength": "tip",
    "support": 1,
+   "rank": 0.8,
    "sources": [
     "The Complete Guide To Men's Pocket Squares"
    ]
@@ -5030,6 +5302,7 @@
    "occasions": [],
    "strength": "tip",
    "support": 1,
+   "rank": 0.8,
    "sources": [
     "The Complete Guide To Men's Pocket Squares"
    ]
@@ -5048,6 +5321,7 @@
    ],
    "strength": "tip",
    "support": 1,
+   "rank": 0.8,
    "sources": [
     "The Complete Guide To Men's Pocket Squares"
    ]
@@ -5066,6 +5340,7 @@
    ],
    "strength": "tip",
    "support": 1,
+   "rank": 0.8,
    "sources": [
     "The Complete Guide To Men's Pocket Squares"
    ]
@@ -5083,6 +5358,7 @@
    ],
    "strength": "tip",
    "support": 1,
+   "rank": 0.8,
    "sources": [
     "The Complete Guide To Men's Pocket Squares"
    ]
@@ -5100,6 +5376,7 @@
    ],
    "strength": "tip",
    "support": 1,
+   "rank": 0.8,
    "sources": [
     "Men's Socks: What To Wear And When"
    ]
@@ -5117,6 +5394,7 @@
    ],
    "strength": "tip",
    "support": 1,
+   "rank": 0.8,
    "sources": [
     "Men's Socks: What To Wear And When"
    ]
@@ -5136,6 +5414,7 @@
    ],
    "strength": "tip",
    "support": 1,
+   "rank": 0.8,
    "sources": [
     "Men's Socks: What To Wear And When"
    ]
@@ -5153,6 +5432,7 @@
    ],
    "strength": "tip",
    "support": 1,
+   "rank": 0.8,
    "sources": [
     "Men's Socks: What To Wear And When"
    ]
@@ -5168,6 +5448,7 @@
    "occasions": [],
    "strength": "tip",
    "support": 1,
+   "rank": 0.8,
    "sources": [
     "Men's Socks: What To Wear And When"
    ]
@@ -5186,6 +5467,7 @@
    ],
    "strength": "tip",
    "support": 1,
+   "rank": 0.8,
    "sources": [
     "Men's Socks: What To Wear And When"
    ]
@@ -5205,6 +5487,7 @@
    ],
    "strength": "tip",
    "support": 1,
+   "rank": 0.8,
    "sources": [
     "Men's Socks: What To Wear And When"
    ]
@@ -5220,6 +5503,7 @@
    "occasions": [],
    "strength": "tip",
    "support": 1,
+   "rank": 0.8,
    "sources": [
     "Men's Socks: What To Wear And When"
    ]
@@ -5239,6 +5523,7 @@
    ],
    "strength": "tip",
    "support": 1,
+   "rank": 0.8,
    "sources": [
     "How an overcoat should fit: Cifonelli fitting"
    ]
@@ -5254,6 +5539,7 @@
    "occasions": [],
    "strength": "tip",
    "support": 1,
+   "rank": 0.8,
    "sources": [
     "How an overcoat should fit: Cifonelli fitting"
    ]
@@ -5269,6 +5555,7 @@
    "occasions": [],
    "strength": "tip",
    "support": 1,
+   "rank": 0.8,
    "sources": [
     "How an overcoat should fit: Cifonelli fitting"
    ]
@@ -5288,6 +5575,7 @@
    ],
    "strength": "tip",
    "support": 1,
+   "rank": 0.8,
    "sources": [
     "How an overcoat should fit: Cifonelli fitting"
    ]
@@ -5306,6 +5594,7 @@
    ],
    "strength": "tip",
    "support": 1,
+   "rank": 0.8,
    "sources": [
     "How an overcoat should fit: Cifonelli fitting"
    ]
@@ -5322,6 +5611,7 @@
    "occasions": [],
    "strength": "tip",
    "support": 1,
+   "rank": 0.8,
    "sources": [
     "How an overcoat should fit: Cifonelli fitting"
    ]
@@ -5338,6 +5628,7 @@
    "occasions": [],
    "strength": "tip",
    "support": 1,
+   "rank": 0.8,
    "sources": [
     "How an overcoat should fit: Cifonelli fitting"
    ]
@@ -5354,6 +5645,7 @@
    "occasions": [],
    "strength": "tip",
    "support": 1,
+   "rank": 0.8,
    "sources": [
     "How an overcoat should fit: Cifonelli fitting"
    ]
@@ -5370,6 +5662,7 @@
    "occasions": [],
    "strength": "tip",
    "support": 1,
+   "rank": 0.8,
    "sources": [
     "Should your belt match your shoes? (Or bag)"
    ]
@@ -5388,6 +5681,7 @@
    ],
    "strength": "tip",
    "support": 1,
+   "rank": 0.8,
    "sources": [
     "Should your belt match your shoes? (Or bag)"
    ]
@@ -5405,6 +5699,7 @@
    ],
    "strength": "tip",
    "support": 1,
+   "rank": 0.8,
    "sources": [
     "Should your belt match your shoes? (Or bag)"
    ]
@@ -5423,6 +5718,7 @@
    ],
    "strength": "tip",
    "support": 1,
+   "rank": 0.8,
    "sources": [
     "Should your belt match your shoes? (Or bag)"
    ]
@@ -5440,6 +5736,7 @@
    ],
    "strength": "tip",
    "support": 1,
+   "rank": 0.8,
    "sources": [
     "Should your belt match your shoes? (Or bag)"
    ]
@@ -5460,6 +5757,7 @@
    ],
    "strength": "tip",
    "support": 1,
+   "rank": 0.8,
    "sources": [
     "How to Dress Well in Summer"
    ]
@@ -5477,6 +5775,7 @@
    ],
    "strength": "tip",
    "support": 1,
+   "rank": 0.8,
    "sources": [
     "How to Dress Well in Summer"
    ]
@@ -5495,6 +5794,7 @@
    ],
    "strength": "tip",
    "support": 1,
+   "rank": 0.8,
    "sources": [
     "How to Dress Well in Summer"
    ]
@@ -5513,6 +5813,7 @@
    ],
    "strength": "tip",
    "support": 1,
+   "rank": 0.8,
    "sources": [
     "How to Dress Well in Summer"
    ]
@@ -5532,6 +5833,7 @@
    ],
    "strength": "tip",
    "support": 1,
+   "rank": 0.8,
    "sources": [
     "How to Dress Well in Summer"
    ]
@@ -5550,6 +5852,7 @@
    ],
    "strength": "tip",
    "support": 1,
+   "rank": 0.8,
    "sources": [
     "How to Dress Well in Summer"
    ]
@@ -5570,6 +5873,7 @@
    ],
    "strength": "tip",
    "support": 1,
+   "rank": 0.8,
    "sources": [
     "What to Wear in Autumn"
    ]
@@ -5588,6 +5892,7 @@
    ],
    "strength": "tip",
    "support": 1,
+   "rank": 0.8,
    "sources": [
     "What to Wear in Autumn"
    ]
@@ -5607,6 +5912,7 @@
    ],
    "strength": "tip",
    "support": 1,
+   "rank": 0.8,
    "sources": [
     "What to Wear in Autumn"
    ]
@@ -5626,6 +5932,7 @@
    ],
    "strength": "tip",
    "support": 1,
+   "rank": 0.8,
    "sources": [
     "What to Wear in Autumn"
    ]
@@ -5644,6 +5951,7 @@
    ],
    "strength": "tip",
    "support": 1,
+   "rank": 0.8,
    "sources": [
     "What to Wear in Autumn"
    ]
@@ -5663,6 +5971,7 @@
    ],
    "strength": "tip",
    "support": 1,
+   "rank": 0.8,
    "sources": [
     "What to Wear in Autumn"
    ]
@@ -5682,6 +5991,7 @@
    ],
    "strength": "tip",
    "support": 1,
+   "rank": 0.8,
    "sources": [
     "What to Wear in Autumn"
    ]
@@ -5700,6 +6010,7 @@
    ],
    "strength": "tip",
    "support": 1,
+   "rank": 0.8,
    "sources": [
     "What to Wear in Autumn"
    ]
@@ -5718,6 +6029,7 @@
    ],
    "strength": "tip",
    "support": 1,
+   "rank": 0.8,
    "sources": [
     "How To Get Your Layers Right"
    ]
@@ -5736,6 +6048,7 @@
    ],
    "strength": "tip",
    "support": 1,
+   "rank": 0.8,
    "sources": [
     "How To Get Your Layers Right"
    ]
@@ -5754,6 +6067,7 @@
    ],
    "strength": "tip",
    "support": 1,
+   "rank": 0.8,
    "sources": [
     "How To Get Your Layers Right"
    ]
@@ -5769,6 +6083,7 @@
    "occasions": [],
    "strength": "tip",
    "support": 1,
+   "rank": 0.8,
    "sources": [
     "How To Get Your Layers Right"
    ]
@@ -5787,6 +6102,7 @@
    ],
    "strength": "tip",
    "support": 1,
+   "rank": 0.8,
    "sources": [
     "How To Get Your Layers Right"
    ]
@@ -5806,6 +6122,7 @@
    ],
    "strength": "tip",
    "support": 1,
+   "rank": 0.8,
    "sources": [
     "How To Get Your Layers Right"
    ]
@@ -5824,6 +6141,7 @@
    ],
    "strength": "tip",
    "support": 1,
+   "rank": 0.8,
    "sources": [
     "How To Get Your Layers Right"
    ]
@@ -5841,6 +6159,7 @@
    ],
    "strength": "tip",
    "support": 1,
+   "rank": 0.8,
    "sources": [
     "How To Get Your Layers Right"
    ]
@@ -5858,6 +6177,7 @@
    ],
    "strength": "tip",
    "support": 1,
+   "rank": 0.8,
    "sources": [
     "Tips: How to dress in a STREETWEAR style?"
    ]
@@ -5875,6 +6195,7 @@
    ],
    "strength": "tip",
    "support": 1,
+   "rank": 0.8,
    "sources": [
     "Tips: How to dress in a STREETWEAR style?"
    ]
@@ -5892,6 +6213,7 @@
    ],
    "strength": "tip",
    "support": 1,
+   "rank": 0.8,
    "sources": [
     "Tips: How to dress in a STREETWEAR style?"
    ]
@@ -5909,6 +6231,7 @@
    ],
    "strength": "tip",
    "support": 1,
+   "rank": 0.8,
    "sources": [
     "Tips: How to dress in a STREETWEAR style?"
    ]
@@ -5928,6 +6251,7 @@
    ],
    "strength": "tip",
    "support": 1,
+   "rank": 0.8,
    "sources": [
     "Tips: How to dress in a STREETWEAR style?"
    ]
@@ -5945,6 +6269,7 @@
    ],
    "strength": "tip",
    "support": 1,
+   "rank": 0.8,
    "sources": [
     "Tips: How to dress in a STREETWEAR style?"
    ]
@@ -5962,6 +6287,7 @@
    ],
    "strength": "tip",
    "support": 1,
+   "rank": 0.8,
    "sources": [
     "Tips: How to dress in a STREETWEAR style?"
    ]
@@ -5979,6 +6305,7 @@
    ],
    "strength": "tip",
    "support": 1,
+   "rank": 0.8,
    "sources": [
     "Tips: How to dress in a STREETWEAR style?"
    ]
@@ -5996,6 +6323,7 @@
    ],
    "strength": "tip",
    "support": 1,
+   "rank": 0.8,
    "sources": [
     "Tips: How to dress in a STREETWEAR style?"
    ]
@@ -6013,6 +6341,7 @@
    ],
    "strength": "tip",
    "support": 1,
+   "rank": 0.8,
    "sources": [
     "Tips: How to dress in a STREETWEAR style?"
    ]
@@ -6030,6 +6359,7 @@
    ],
    "strength": "tip",
    "support": 1,
+   "rank": 0.8,
    "sources": [
     "Tips: How to dress in a STREETWEAR style?"
    ]
@@ -6048,6 +6378,7 @@
    ],
    "strength": "tip",
    "support": 1,
+   "rank": 0.8,
    "sources": [
     "Tips: How to dress in a STREETWEAR style?"
    ]
@@ -6066,6 +6397,7 @@
    ],
    "strength": "tip",
    "support": 1,
+   "rank": 0.8,
    "sources": [
     "You Asked: How Do I Make Streetwear Smart?"
    ]
@@ -6085,6 +6417,7 @@
    ],
    "strength": "tip",
    "support": 1,
+   "rank": 0.8,
    "sources": [
     "You Asked: How Do I Make Streetwear Smart?"
    ]
@@ -6104,6 +6437,7 @@
    ],
    "strength": "tip",
    "support": 1,
+   "rank": 0.8,
    "sources": [
     "You Asked: How Do I Make Streetwear Smart?"
    ]
@@ -6122,6 +6456,7 @@
    ],
    "strength": "tip",
    "support": 1,
+   "rank": 0.8,
    "sources": [
     "You Asked: How Do I Make Streetwear Smart?"
    ]
@@ -6141,6 +6476,7 @@
    ],
    "strength": "tip",
    "support": 1,
+   "rank": 0.8,
    "sources": [
     "You Asked: How Do I Make Streetwear Smart?"
    ]
@@ -6159,6 +6495,7 @@
    ],
    "strength": "tip",
    "support": 1,
+   "rank": 0.8,
    "sources": [
     "You Asked: How Do I Make Streetwear Smart?"
    ]
@@ -6173,6 +6510,7 @@
    "occasions": [],
    "strength": "tip",
    "support": 1,
+   "rank": 0.8,
    "sources": [
     "A Practical Guide To Getting Started"
    ]
@@ -6188,6 +6526,7 @@
    "occasions": [],
    "strength": "tip",
    "support": 1,
+   "rank": 0.8,
    "sources": [
     "A Practical Guide To Getting Started"
    ]
@@ -6202,6 +6541,7 @@
    "occasions": [],
    "strength": "tip",
    "support": 1,
+   "rank": 0.8,
    "sources": [
     "A Practical Guide To Getting Started"
    ]
@@ -6216,6 +6556,7 @@
    "occasions": [],
    "strength": "tip",
    "support": 1,
+   "rank": 0.8,
    "sources": [
     "A Practical Guide To Getting Started"
    ]
@@ -6230,6 +6571,7 @@
    "occasions": [],
    "strength": "tip",
    "support": 1,
+   "rank": 0.8,
    "sources": [
     "A Practical Guide To Getting Started"
    ]
@@ -6244,6 +6586,7 @@
    "occasions": [],
    "strength": "tip",
    "support": 1,
+   "rank": 0.8,
    "sources": [
     "A Practical Guide To Getting Started"
    ]
@@ -6258,6 +6601,7 @@
    "occasions": [],
    "strength": "tip",
    "support": 1,
+   "rank": 0.8,
    "sources": [
     "A Practical Guide To Getting Started"
    ]
@@ -6273,6 +6617,7 @@
    "occasions": [],
    "strength": "tip",
    "support": 1,
+   "rank": 0.8,
    "sources": [
     "A Practical Guide To Getting Started"
    ]
@@ -6288,6 +6633,7 @@
    "occasions": [],
    "strength": "tip",
    "support": 1,
+   "rank": 0.8,
    "sources": [
     "A Practical Guide To Getting Started"
    ]
@@ -6305,6 +6651,7 @@
    ],
    "strength": "tip",
    "support": 1,
+   "rank": 0.8,
    "sources": [
     "Esquire's Complete and Comprehensive Guide to Smart-Casual Style"
    ]
@@ -6323,6 +6670,7 @@
    ],
    "strength": "tip",
    "support": 1,
+   "rank": 0.8,
    "sources": [
     "Esquire's Complete and Comprehensive Guide to Smart-Casual Style"
    ]
@@ -6339,6 +6687,7 @@
    ],
    "strength": "tip",
    "support": 1,
+   "rank": 0.8,
    "sources": [
     "Esquire's Complete and Comprehensive Guide to Smart-Casual Style"
    ]
@@ -6356,6 +6705,7 @@
    ],
    "strength": "tip",
    "support": 1,
+   "rank": 0.8,
    "sources": [
     "Esquire's Complete and Comprehensive Guide to Smart-Casual Style"
    ]
@@ -6372,6 +6722,7 @@
    ],
    "strength": "tip",
    "support": 1,
+   "rank": 0.8,
    "sources": [
     "Esquire's Complete and Comprehensive Guide to Smart-Casual Style"
    ]
@@ -6386,6 +6737,7 @@
    "occasions": [],
    "strength": "tip",
    "support": 1,
+   "rank": 0.8,
    "sources": [
     "Esquire's Complete and Comprehensive Guide to Smart-Casual Style"
    ]
@@ -6403,6 +6755,7 @@
    ],
    "strength": "tip",
    "support": 1,
+   "rank": 0.8,
    "sources": [
     "Esquire's Complete and Comprehensive Guide to Smart-Casual Style"
    ]
@@ -6420,6 +6773,7 @@
    ],
    "strength": "tip",
    "support": 1,
+   "rank": 0.8,
    "sources": [
     "Esquire's Complete and Comprehensive Guide to Smart-Casual Style"
    ]
@@ -6438,6 +6792,7 @@
    ],
    "strength": "tip",
    "support": 1,
+   "rank": 0.8,
    "sources": [
     "Esquire's Complete and Comprehensive Guide to Smart-Casual Style"
    ]
@@ -6456,6 +6811,7 @@
    ],
    "strength": "tip",
    "support": 1,
+   "rank": 0.8,
    "sources": [
     "Esquire's Complete and Comprehensive Guide to Smart-Casual Style"
    ]
@@ -6473,6 +6829,7 @@
    ],
    "strength": "tip",
    "support": 1,
+   "rank": 0.8,
    "sources": [
     "Esquire's Complete and Comprehensive Guide to Smart-Casual Style"
    ]
@@ -6490,6 +6847,7 @@
    ],
    "strength": "tip",
    "support": 1,
+   "rank": 0.8,
    "sources": [
     "How to dress for business casual at the office"
    ]
@@ -6507,6 +6865,7 @@
    ],
    "strength": "tip",
    "support": 1,
+   "rank": 0.8,
    "sources": [
     "How to dress for business casual at the office"
    ]
@@ -6524,6 +6883,7 @@
    ],
    "strength": "tip",
    "support": 1,
+   "rank": 0.8,
    "sources": [
     "How to dress for business casual at the office"
    ]
@@ -6541,6 +6901,7 @@
    ],
    "strength": "tip",
    "support": 1,
+   "rank": 0.8,
    "sources": [
     "How to dress for business casual at the office"
    ]
@@ -6558,6 +6919,7 @@
    ],
    "strength": "tip",
    "support": 1,
+   "rank": 0.8,
    "sources": [
     "How to dress for business casual at the office"
    ]
@@ -6575,6 +6937,7 @@
    ],
    "strength": "tip",
    "support": 1,
+   "rank": 0.8,
    "sources": [
     "How to dress for business casual at the office"
    ]
@@ -6592,6 +6955,7 @@
    ],
    "strength": "tip",
    "support": 1,
+   "rank": 0.8,
    "sources": [
     "How to dress for business casual at the office"
    ]
@@ -6609,6 +6973,7 @@
    ],
    "strength": "tip",
    "support": 1,
+   "rank": 0.8,
    "sources": [
     "How to dress for business casual at the office"
    ]
@@ -6626,6 +6991,7 @@
    ],
    "strength": "tip",
    "support": 1,
+   "rank": 0.8,
    "sources": [
     "How to dress for business casual at the office"
    ]
@@ -6643,6 +7009,7 @@
    ],
    "strength": "tip",
    "support": 1,
+   "rank": 0.8,
    "sources": [
     "Black Tie Dress Code: A Modern Man's Guide For 2026"
    ]
@@ -6660,6 +7027,7 @@
    ],
    "strength": "tip",
    "support": 1,
+   "rank": 0.8,
    "sources": [
     "Black Tie Dress Code: A Modern Man's Guide For 2026"
    ]
@@ -6677,6 +7045,7 @@
    ],
    "strength": "tip",
    "support": 1,
+   "rank": 0.8,
    "sources": [
     "Black Tie Dress Code: A Modern Man's Guide For 2026"
    ]
@@ -6694,6 +7063,7 @@
    ],
    "strength": "tip",
    "support": 1,
+   "rank": 0.8,
    "sources": [
     "Black Tie Dress Code: A Modern Man's Guide For 2026"
    ]
@@ -6712,6 +7082,7 @@
    ],
    "strength": "tip",
    "support": 1,
+   "rank": 0.8,
    "sources": [
     "Black Tie Dress Code: A Modern Man's Guide For 2026"
    ]
@@ -6729,6 +7100,7 @@
    ],
    "strength": "tip",
    "support": 1,
+   "rank": 0.8,
    "sources": [
     "Black Tie Dress Code: A Modern Man's Guide For 2026"
    ]
@@ -6747,6 +7119,7 @@
    ],
    "strength": "tip",
    "support": 1,
+   "rank": 0.8,
    "sources": [
     "Black Tie Dress Code: A Modern Man's Guide For 2026"
    ]
@@ -6764,6 +7137,7 @@
    ],
    "strength": "tip",
    "support": 1,
+   "rank": 0.8,
    "sources": [
     "Black Tie Dress Code: A Modern Man's Guide For 2026"
    ]
@@ -6782,6 +7156,7 @@
    ],
    "strength": "tip",
    "support": 1,
+   "rank": 0.8,
    "sources": [
     "Holiday Attire for Men: What It Means & How to Wear It"
    ]
@@ -6798,6 +7173,7 @@
    ],
    "strength": "tip",
    "support": 1,
+   "rank": 0.8,
    "sources": [
     "Holiday Attire for Men: What It Means & How to Wear It"
    ]
@@ -6817,6 +7193,7 @@
    ],
    "strength": "tip",
    "support": 1,
+   "rank": 0.8,
    "sources": [
     "Holiday Attire for Men: What It Means & How to Wear It"
    ]
@@ -6835,6 +7212,7 @@
    ],
    "strength": "tip",
    "support": 1,
+   "rank": 0.8,
    "sources": [
     "Holiday Attire for Men: What It Means & How to Wear It"
    ]
@@ -6851,6 +7229,7 @@
    ],
    "strength": "tip",
    "support": 1,
+   "rank": 0.8,
    "sources": [
     "Holiday Attire for Men: What It Means & How to Wear It"
    ]
@@ -6869,6 +7248,7 @@
    ],
    "strength": "tip",
    "support": 1,
+   "rank": 0.8,
    "sources": [
     "Holiday Attire for Men: What It Means & How to Wear It"
    ]
@@ -6887,6 +7267,7 @@
    ],
    "strength": "tip",
    "support": 1,
+   "rank": 0.8,
    "sources": [
     "Holiday Attire for Men: What It Means & How to Wear It"
    ]
@@ -6904,6 +7285,7 @@
    ],
    "strength": "tip",
    "support": 1,
+   "rank": 0.8,
    "sources": [
     "Holiday Attire for Men: What It Means & How to Wear It"
    ]
@@ -6923,6 +7305,7 @@
    ],
    "strength": "tip",
    "support": 1,
+   "rank": 0.8,
    "sources": [
     "Holiday Attire for Men: What It Means & How to Wear It"
    ]
@@ -6941,6 +7324,7 @@
    ],
    "strength": "tip",
    "support": 1,
+   "rank": 0.8,
    "sources": [
     "Holiday Attire for Men: What It Means & How to Wear It"
    ]
@@ -6958,6 +7342,7 @@
    ],
    "strength": "tip",
    "support": 1,
+   "rank": 0.8,
    "sources": [
     "10 Things Men Should NEVER Wear to a Job Interview"
    ]
@@ -6975,6 +7360,7 @@
    ],
    "strength": "tip",
    "support": 1,
+   "rank": 0.8,
    "sources": [
     "10 Things Men Should NEVER Wear to a Job Interview"
    ]
@@ -6992,6 +7378,7 @@
    ],
    "strength": "tip",
    "support": 1,
+   "rank": 0.8,
    "sources": [
     "10 Things Men Should NEVER Wear to a Job Interview"
    ]
@@ -7008,6 +7395,7 @@
    ],
    "strength": "tip",
    "support": 1,
+   "rank": 0.8,
    "sources": [
     "10 Things Men Should NEVER Wear to a Job Interview"
    ]
@@ -7025,6 +7413,7 @@
    ],
    "strength": "tip",
    "support": 1,
+   "rank": 0.8,
    "sources": [
     "10 Things Men Should NEVER Wear to a Job Interview"
    ]
@@ -7043,6 +7432,7 @@
    ],
    "strength": "tip",
    "support": 1,
+   "rank": 0.8,
    "sources": [
     "10 Things Men Should NEVER Wear to a Job Interview"
    ]
@@ -7059,6 +7449,7 @@
    ],
    "strength": "tip",
    "support": 1,
+   "rank": 0.8,
    "sources": [
     "10 Things Men Should NEVER Wear to a Job Interview"
    ]
@@ -7076,6 +7467,7 @@
    ],
    "strength": "tip",
    "support": 1,
+   "rank": 0.8,
    "sources": [
     "What to Wear as a Wedding Guest"
    ]
@@ -7093,6 +7485,7 @@
    ],
    "strength": "tip",
    "support": 1,
+   "rank": 0.8,
    "sources": [
     "What to Wear as a Wedding Guest"
    ]
@@ -7110,6 +7503,7 @@
    ],
    "strength": "tip",
    "support": 1,
+   "rank": 0.8,
    "sources": [
     "What to Wear as a Wedding Guest"
    ]
@@ -7127,6 +7521,7 @@
    ],
    "strength": "tip",
    "support": 1,
+   "rank": 0.8,
    "sources": [
     "What to Wear as a Wedding Guest"
    ]
@@ -7144,6 +7539,7 @@
    ],
    "strength": "tip",
    "support": 1,
+   "rank": 0.8,
    "sources": [
     "What to Wear as a Wedding Guest"
    ]
@@ -7162,6 +7558,7 @@
    ],
    "strength": "tip",
    "support": 1,
+   "rank": 0.8,
    "sources": [
     "What to Wear as a Wedding Guest"
    ]
@@ -7179,6 +7576,7 @@
    ],
    "strength": "tip",
    "support": 1,
+   "rank": 0.8,
    "sources": [
     "What to Wear as a Wedding Guest"
    ]
@@ -7196,6 +7594,7 @@
    ],
    "strength": "tip",
    "support": 1,
+   "rank": 0.8,
    "sources": [
     "What to Wear as a Wedding Guest"
    ]
@@ -7214,6 +7613,7 @@
    ],
    "strength": "tip",
    "support": 1,
+   "rank": 0.8,
    "sources": [
     "What to Wear as a Wedding Guest"
    ]
@@ -7232,6 +7632,7 @@
    ],
    "strength": "tip",
    "support": 1,
+   "rank": 0.8,
    "sources": [
     "What to Wear as a Wedding Guest"
    ]
@@ -7248,6 +7649,7 @@
    ],
    "strength": "tip",
    "support": 1,
+   "rank": 0.8,
    "sources": [
     "What to Wear as a Wedding Guest"
    ]
@@ -7265,6 +7667,7 @@
    ],
    "strength": "tip",
    "support": 1,
+   "rank": 0.8,
    "sources": [
     "What to Wear as a Wedding Guest"
    ]
@@ -7283,6 +7686,7 @@
    ],
    "strength": "tip",
    "support": 1,
+   "rank": 0.8,
    "sources": [
     "What to Wear as a Wedding Guest"
    ]
@@ -7300,6 +7704,7 @@
    ],
    "strength": "tip",
    "support": 1,
+   "rank": 0.8,
    "sources": [
     "How To Crack Every Summer Party Dress Code"
    ]
@@ -7318,6 +7723,7 @@
    ],
    "strength": "tip",
    "support": 1,
+   "rank": 0.8,
    "sources": [
     "How To Crack Every Summer Party Dress Code"
    ]
@@ -7337,6 +7743,7 @@
    ],
    "strength": "tip",
    "support": 1,
+   "rank": 0.8,
    "sources": [
     "How To Crack Every Summer Party Dress Code"
    ]
@@ -7354,6 +7761,7 @@
    ],
    "strength": "tip",
    "support": 1,
+   "rank": 0.8,
    "sources": [
     "How To Crack Every Summer Party Dress Code"
    ]
@@ -7373,6 +7781,7 @@
    ],
    "strength": "tip",
    "support": 1,
+   "rank": 0.8,
    "sources": [
     "How To Crack Every Summer Party Dress Code"
    ]
@@ -7390,6 +7799,7 @@
    ],
    "strength": "tip",
    "support": 1,
+   "rank": 0.8,
    "sources": [
     "How To Crack Every Summer Party Dress Code"
    ]
@@ -7407,6 +7817,7 @@
    ],
    "strength": "tip",
    "support": 1,
+   "rank": 0.8,
    "sources": [
     "How To Crack Every Summer Party Dress Code"
    ]
@@ -7425,6 +7836,7 @@
    ],
    "strength": "tip",
    "support": 1,
+   "rank": 0.8,
    "sources": [
     "The Wedding Style Guide: It's not about you"
    ]
@@ -7442,6 +7854,7 @@
    ],
    "strength": "tip",
    "support": 1,
+   "rank": 0.8,
    "sources": [
     "The Wedding Style Guide: It's not about you"
    ]
@@ -7459,6 +7872,7 @@
    ],
    "strength": "tip",
    "support": 1,
+   "rank": 0.8,
    "sources": [
     "The Wedding Style Guide: It's not about you"
    ]
@@ -7476,6 +7890,7 @@
    ],
    "strength": "tip",
    "support": 1,
+   "rank": 0.8,
    "sources": [
     "The Wedding Style Guide: It's not about you"
    ]
@@ -7492,6 +7907,7 @@
    ],
    "strength": "tip",
    "support": 1,
+   "rank": 0.8,
    "sources": [
     "The Wedding Style Guide: It's not about you"
    ]
@@ -7509,6 +7925,7 @@
    ],
    "strength": "tip",
    "support": 1,
+   "rank": 0.8,
    "sources": [
     "The Wedding Style Guide: It's not about you"
    ]
@@ -7524,6 +7941,7 @@
    "occasions": [],
    "strength": "tip",
    "support": 1,
+   "rank": 0.8,
    "sources": [
     "How To Match Clothes and Shoes For Guys: Outfit Color Guide"
    ]
@@ -7541,6 +7959,7 @@
    ],
    "strength": "tip",
    "support": 1,
+   "rank": 0.8,
    "sources": [
     "How To Match Clothes and Shoes For Guys: Outfit Color Guide"
    ]
@@ -7558,6 +7977,7 @@
    ],
    "strength": "tip",
    "support": 1,
+   "rank": 0.8,
    "sources": [
     "How To Match Clothes and Shoes For Guys: Outfit Color Guide"
    ]
@@ -7576,6 +7996,7 @@
    ],
    "strength": "tip",
    "support": 1,
+   "rank": 0.8,
    "sources": [
     "How To Match Clothes and Shoes For Guys: Outfit Color Guide"
    ]
@@ -7593,6 +8014,7 @@
    ],
    "strength": "tip",
    "support": 1,
+   "rank": 0.8,
    "sources": [
     "How To Match Clothes and Shoes For Guys: Outfit Color Guide"
    ]
@@ -7609,6 +8031,7 @@
    "occasions": [],
    "strength": "tip",
    "support": 1,
+   "rank": 0.8,
    "sources": [
     "How To Match Clothes and Shoes For Guys: Outfit Color Guide"
    ]
@@ -7628,6 +8051,7 @@
    ],
    "strength": "tip",
    "support": 1,
+   "rank": 0.8,
    "sources": [
     "How To Match Clothes and Shoes For Guys: Outfit Color Guide"
    ]
@@ -7646,6 +8070,7 @@
    ],
    "strength": "tip",
    "support": 1,
+   "rank": 0.8,
    "sources": [
     "How To Match Clothes and Shoes For Guys: Outfit Color Guide"
    ]
@@ -7661,6 +8086,7 @@
    "occasions": [],
    "strength": "tip",
    "support": 1,
+   "rank": 0.8,
    "sources": [
     "How To Match Clothes and Shoes For Guys: Outfit Color Guide"
    ]
@@ -7677,6 +8103,7 @@
    ],
    "strength": "tip",
    "support": 1,
+   "rank": 0.8,
    "sources": [
     "You Asked: How Do You Wear Double Denim?"
    ]
@@ -7694,6 +8121,7 @@
    ],
    "strength": "tip",
    "support": 1,
+   "rank": 0.8,
    "sources": [
     "You Asked: How Do You Wear Double Denim?"
    ]
@@ -7713,6 +8141,7 @@
    ],
    "strength": "tip",
    "support": 1,
+   "rank": 0.8,
    "sources": [
     "You Asked: How Do You Wear Double Denim?"
    ]
@@ -7729,6 +8158,7 @@
    "occasions": [],
    "strength": "tip",
    "support": 1,
+   "rank": 0.8,
    "sources": [
     "You Asked: How Do You Wear Double Denim?"
    ]
@@ -7746,6 +8176,7 @@
    ],
    "strength": "tip",
    "support": 1,
+   "rank": 0.8,
    "sources": [
     "You Asked: How Do You Wear Double Denim?"
    ]
@@ -7763,6 +8194,7 @@
    ],
    "strength": "tip",
    "support": 1,
+   "rank": 0.8,
    "sources": [
     "You Asked: How Do You Wear Double Denim?"
    ]
@@ -7781,6 +8213,7 @@
    ],
    "strength": "tip",
    "support": 1,
+   "rank": 0.8,
    "sources": [
     "You Asked: How Do You Wear Double Denim?"
    ]
@@ -7799,6 +8232,7 @@
    ],
    "strength": "tip",
    "support": 1,
+   "rank": 0.8,
    "sources": [
     "How To Dress Like An Italian"
    ]
@@ -7817,6 +8251,7 @@
    ],
    "strength": "tip",
    "support": 1,
+   "rank": 0.8,
    "sources": [
     "How To Dress Like An Italian"
    ]
@@ -7835,6 +8270,7 @@
    ],
    "strength": "tip",
    "support": 1,
+   "rank": 0.8,
    "sources": [
     "How To Dress Like An Italian"
    ]
@@ -7854,6 +8290,7 @@
    ],
    "strength": "tip",
    "support": 1,
+   "rank": 0.8,
    "sources": [
     "How To Dress Like An Italian"
    ]
@@ -7868,6 +8305,7 @@
    "occasions": [],
    "strength": "tip",
    "support": 1,
+   "rank": 0.8,
    "sources": [
     "How To Dress Like An Italian"
    ]
@@ -7886,6 +8324,7 @@
    ],
    "strength": "tip",
    "support": 1,
+   "rank": 0.8,
    "sources": [
     "How To Dress Like An Italian"
    ]
@@ -7904,6 +8343,7 @@
    ],
    "strength": "tip",
    "support": 1,
+   "rank": 0.8,
    "sources": [
     "How To Dress Like An Italian"
    ]
@@ -7922,6 +8362,7 @@
    ],
    "strength": "tip",
    "support": 1,
+   "rank": 0.8,
    "sources": [
     "How To Wear Sneakers With Tailoring"
    ]
@@ -7939,6 +8380,7 @@
    ],
    "strength": "tip",
    "support": 1,
+   "rank": 0.8,
    "sources": [
     "How To Wear Sneakers With Tailoring"
    ]
@@ -7957,6 +8399,7 @@
    ],
    "strength": "tip",
    "support": 1,
+   "rank": 0.8,
    "sources": [
     "How To Wear Sneakers With Tailoring"
    ]
@@ -7974,6 +8417,7 @@
    ],
    "strength": "tip",
    "support": 1,
+   "rank": 0.8,
    "sources": [
     "How To Wear Sneakers With Tailoring"
    ]
@@ -7992,6 +8436,7 @@
    ],
    "strength": "tip",
    "support": 1,
+   "rank": 0.8,
    "sources": [
     "How To Wear Suede"
    ]
@@ -8007,6 +8452,7 @@
    "occasions": [],
    "strength": "tip",
    "support": 1,
+   "rank": 0.8,
    "sources": [
     "How To Wear Suede"
    ]
@@ -8025,6 +8471,7 @@
    ],
    "strength": "tip",
    "support": 1,
+   "rank": 0.8,
    "sources": [
     "How To Wear Suede"
    ]
@@ -8043,6 +8490,7 @@
    ],
    "strength": "tip",
    "support": 1,
+   "rank": 0.8,
    "sources": [
     "How To Wear Suede"
    ]
@@ -8061,6 +8509,7 @@
    ],
    "strength": "tip",
    "support": 1,
+   "rank": 0.8,
    "sources": [
     "How To Wear Suede"
    ]
@@ -8076,6 +8525,7 @@
    "occasions": [],
    "strength": "tip",
    "support": 1,
+   "rank": 0.8,
    "sources": [
     "How To Wear Suede"
    ]
@@ -8092,6 +8542,7 @@
    "occasions": [],
    "strength": "tip",
    "support": 1,
+   "rank": 0.8,
    "sources": [
     "How To Wear Suede"
    ]
@@ -8106,6 +8557,7 @@
    "occasions": [],
    "strength": "tip",
    "support": 1,
+   "rank": 0.8,
    "sources": [
     "The Intelligent Man's Guide To Wardrobe Maintenance"
    ]
@@ -8120,6 +8572,7 @@
    "occasions": [],
    "strength": "tip",
    "support": 1,
+   "rank": 0.8,
    "sources": [
     "The Intelligent Man's Guide To Wardrobe Maintenance"
    ]
@@ -8136,6 +8589,7 @@
    "occasions": [],
    "strength": "tip",
    "support": 1,
+   "rank": 0.8,
    "sources": [
     "The Intelligent Man's Guide To Wardrobe Maintenance"
    ]
@@ -8151,6 +8605,7 @@
    "occasions": [],
    "strength": "tip",
    "support": 1,
+   "rank": 0.8,
    "sources": [
     "The Intelligent Man's Guide To Wardrobe Maintenance"
    ]
@@ -8166,6 +8621,7 @@
    "occasions": [],
    "strength": "tip",
    "support": 1,
+   "rank": 0.8,
    "sources": [
     "The Intelligent Man's Guide To Wardrobe Maintenance"
    ]
@@ -8181,6 +8637,7 @@
    "occasions": [],
    "strength": "tip",
    "support": 1,
+   "rank": 0.8,
    "sources": [
     "The Intelligent Man's Guide To Wardrobe Maintenance"
    ]
@@ -8196,6 +8653,7 @@
    "occasions": [],
    "strength": "tip",
    "support": 1,
+   "rank": 0.8,
    "sources": [
     "The Intelligent Man's Guide To Wardrobe Maintenance"
    ]
@@ -8211,6 +8669,7 @@
    "occasions": [],
    "strength": "tip",
    "support": 1,
+   "rank": 0.8,
    "sources": [
     "The Intelligent Man's Guide To Wardrobe Maintenance"
    ]
@@ -8226,6 +8685,7 @@
    "occasions": [],
    "strength": "tip",
    "support": 1,
+   "rank": 0.8,
    "sources": [
     "The Intelligent Man's Guide To Wardrobe Maintenance"
    ]
@@ -8241,6 +8701,7 @@
    "occasions": [],
    "strength": "tip",
    "support": 1,
+   "rank": 0.8,
    "sources": [
     "The Intelligent Man's Guide To Wardrobe Maintenance"
    ]
@@ -8257,6 +8718,7 @@
    "occasions": [],
    "strength": "tip",
    "support": 1,
+   "rank": 0.8,
    "sources": [
     "The Intelligent Man's Guide To Wardrobe Maintenance"
    ]
@@ -8275,6 +8737,7 @@
    ],
    "strength": "tip",
    "support": 1,
+   "rank": 0.8,
    "sources": [
     "How A Suit Should Fit"
    ]
@@ -8293,6 +8756,7 @@
    ],
    "strength": "tip",
    "support": 1,
+   "rank": 0.8,
    "sources": [
     "How A Suit Should Fit"
    ]
@@ -8311,6 +8775,7 @@
    ],
    "strength": "tip",
    "support": 1,
+   "rank": 0.8,
    "sources": [
     "How A Suit Should Fit"
    ]
@@ -8329,6 +8794,7 @@
    ],
    "strength": "tip",
    "support": 1,
+   "rank": 0.8,
    "sources": [
     "How A Suit Should Fit"
    ]
@@ -8347,6 +8813,7 @@
    ],
    "strength": "tip",
    "support": 1,
+   "rank": 0.8,
    "sources": [
     "How A Suit Should Fit"
    ]
@@ -8365,6 +8832,7 @@
    ],
    "strength": "tip",
    "support": 1,
+   "rank": 0.8,
    "sources": [
     "How A Suit Should Fit"
    ]
@@ -8383,6 +8851,7 @@
    ],
    "strength": "tip",
    "support": 1,
+   "rank": 0.8,
    "sources": [
     "How A Suit Should Fit"
    ]
@@ -8401,6 +8870,7 @@
    ],
    "strength": "tip",
    "support": 1,
+   "rank": 0.8,
    "sources": [
     "How A Suit Should Fit"
    ]
@@ -8419,6 +8889,7 @@
    ],
    "strength": "tip",
    "support": 1,
+   "rank": 0.8,
    "sources": [
     "How A Suit Should Fit"
    ]
@@ -8438,6 +8909,7 @@
    ],
    "strength": "tip",
    "support": 1,
+   "rank": 0.8,
    "sources": [
     "Wearing navy trousers as separates"
    ]
@@ -8457,6 +8929,7 @@
    ],
    "strength": "tip",
    "support": 1,
+   "rank": 0.8,
    "sources": [
     "Wearing navy trousers as separates"
    ]
@@ -8475,6 +8948,7 @@
    ],
    "strength": "tip",
    "support": 1,
+   "rank": 0.8,
    "sources": [
     "Wearing navy trousers as separates"
    ]
@@ -8493,6 +8967,7 @@
    ],
    "strength": "tip",
    "support": 1,
+   "rank": 0.8,
    "sources": [
     "Wearing navy trousers as separates"
    ]
@@ -8510,6 +8985,7 @@
    ],
    "strength": "tip",
    "support": 1,
+   "rank": 0.8,
    "sources": [
     "Wearing navy trousers as separates"
    ]
@@ -8528,6 +9004,7 @@
    ],
    "strength": "tip",
    "support": 1,
+   "rank": 0.8,
    "sources": [
     "Wearing navy trousers as separates"
    ]
@@ -8547,6 +9024,7 @@
    ],
    "strength": "tip",
    "support": 1,
+   "rank": 0.8,
    "sources": [
     "Wearing navy trousers as separates"
    ]
@@ -8565,6 +9043,7 @@
    ],
    "strength": "tip",
    "support": 1,
+   "rank": 0.8,
    "sources": [
     "Wearing navy trousers as separates"
    ]
@@ -8580,6 +9059,7 @@
    "occasions": [],
    "strength": "tip",
    "support": 1,
+   "rank": 0.8,
    "sources": [
     "A Basic Guide On Alterations"
    ]
@@ -8595,6 +9075,7 @@
    "occasions": [],
    "strength": "tip",
    "support": 1,
+   "rank": 0.8,
    "sources": [
     "A Basic Guide On Alterations"
    ]
@@ -8613,6 +9094,7 @@
    ],
    "strength": "tip",
    "support": 1,
+   "rank": 0.8,
    "sources": [
     "A Basic Guide On Alterations"
    ]
@@ -8631,6 +9113,7 @@
    ],
    "strength": "tip",
    "support": 1,
+   "rank": 0.8,
    "sources": [
     "A Basic Guide On Alterations"
    ]
@@ -8649,6 +9132,7 @@
    ],
    "strength": "tip",
    "support": 1,
+   "rank": 0.8,
    "sources": [
     "A Basic Guide On Alterations"
    ]
@@ -8667,6 +9151,7 @@
    ],
    "strength": "tip",
    "support": 1,
+   "rank": 0.8,
    "sources": [
     "A Basic Guide On Alterations"
    ]
@@ -8681,6 +9166,7 @@
    "occasions": [],
    "strength": "tip",
    "support": 1,
+   "rank": 0.8,
    "sources": [
     "A Basic Guide On Alterations"
    ]
@@ -8695,6 +9181,7 @@
    "occasions": [],
    "strength": "tip",
    "support": 1,
+   "rank": 0.8,
    "sources": [
     "A Basic Guide On Alterations"
    ]
@@ -8711,6 +9198,7 @@
    "occasions": [],
    "strength": "tip",
    "support": 1,
+   "rank": 0.8,
    "sources": [
     "A Basic Guide On Alterations"
    ]
@@ -8729,6 +9217,7 @@
    ],
    "strength": "tip",
    "support": 1,
+   "rank": 0.8,
    "sources": [
     "Q and Answer: Which Sport Coats Can Be Worn with Jeans?"
    ]
@@ -8748,6 +9237,7 @@
    ],
    "strength": "tip",
    "support": 1,
+   "rank": 0.8,
    "sources": [
     "Q and Answer: Which Sport Coats Can Be Worn with Jeans?"
    ]
@@ -8766,6 +9256,7 @@
    ],
    "strength": "tip",
    "support": 1,
+   "rank": 0.8,
    "sources": [
     "Q and Answer: Which Sport Coats Can Be Worn with Jeans?"
    ]
@@ -8784,6 +9275,7 @@
    ],
    "strength": "tip",
    "support": 1,
+   "rank": 0.8,
    "sources": [
     "Q and Answer: Which Sport Coats Can Be Worn with Jeans?"
    ]
@@ -8803,6 +9295,7 @@
    ],
    "strength": "tip",
    "support": 1,
+   "rank": 0.8,
    "sources": [
     "Q and Answer: Which Sport Coats Can Be Worn with Jeans?"
    ]
@@ -8821,6 +9314,7 @@
    ],
    "strength": "tip",
    "support": 1,
+   "rank": 0.8,
    "sources": [
     "How Should a Suit Fit"
    ]
@@ -8839,6 +9333,7 @@
    ],
    "strength": "tip",
    "support": 1,
+   "rank": 0.8,
    "sources": [
     "How Should a Suit Fit"
    ]
@@ -8857,6 +9352,7 @@
    ],
    "strength": "tip",
    "support": 1,
+   "rank": 0.8,
    "sources": [
     "How Should a Suit Fit"
    ]
@@ -8875,6 +9371,7 @@
    ],
    "strength": "tip",
    "support": 1,
+   "rank": 0.8,
    "sources": [
     "How Should a Suit Fit"
    ]
@@ -8893,6 +9390,7 @@
    ],
    "strength": "tip",
    "support": 1,
+   "rank": 0.8,
    "sources": [
     "How Should a Suit Fit"
    ]
@@ -8911,6 +9409,7 @@
    ],
    "strength": "tip",
    "support": 1,
+   "rank": 0.8,
    "sources": [
     "How Should a Suit Fit"
    ]
@@ -8930,6 +9429,7 @@
    ],
    "strength": "tip",
    "support": 1,
+   "rank": 0.8,
    "sources": [
     "How Should a Suit Fit"
    ]
@@ -8948,6 +9448,7 @@
    ],
    "strength": "tip",
    "support": 1,
+   "rank": 0.8,
    "sources": [
     "How To Wear A Blazer And Jeans Without Looking Like Your Dad"
    ]
@@ -8967,6 +9468,7 @@
    ],
    "strength": "tip",
    "support": 1,
+   "rank": 0.8,
    "sources": [
     "How To Wear A Blazer And Jeans Without Looking Like Your Dad"
    ]
@@ -8986,6 +9488,7 @@
    ],
    "strength": "tip",
    "support": 1,
+   "rank": 0.8,
    "sources": [
     "How To Wear A Blazer And Jeans Without Looking Like Your Dad"
    ]
@@ -9005,6 +9508,7 @@
    ],
    "strength": "tip",
    "support": 1,
+   "rank": 0.8,
    "sources": [
     "How To Wear A Blazer And Jeans Without Looking Like Your Dad"
    ]
@@ -9023,6 +9527,7 @@
    ],
    "strength": "tip",
    "support": 1,
+   "rank": 0.8,
    "sources": [
     "How To Wear A Blazer And Jeans Without Looking Like Your Dad"
    ]
@@ -9040,6 +9545,7 @@
    ],
    "strength": "tip",
    "support": 1,
+   "rank": 0.8,
    "sources": [
     "How To Wear A Blazer And Jeans Without Looking Like Your Dad"
    ]
@@ -9057,6 +9563,7 @@
    ],
    "strength": "tip",
    "support": 1,
+   "rank": 0.8,
    "sources": [
     "How To Wear A Blazer And Jeans Without Looking Like Your Dad"
    ]
@@ -9075,6 +9582,7 @@
    ],
    "strength": "tip",
    "support": 1,
+   "rank": 0.8,
    "sources": [
     "Ways To Wear: The Navy Blazer"
    ]
@@ -9094,6 +9602,7 @@
    ],
    "strength": "tip",
    "support": 1,
+   "rank": 0.8,
    "sources": [
     "Ways To Wear: The Navy Blazer"
    ]
@@ -9112,6 +9621,7 @@
    ],
    "strength": "tip",
    "support": 1,
+   "rank": 0.8,
    "sources": [
     "Ways To Wear: The Navy Blazer"
    ]
@@ -9129,6 +9639,7 @@
    ],
    "strength": "tip",
    "support": 1,
+   "rank": 0.8,
    "sources": [
     "Ways To Wear: The Navy Blazer"
    ]
@@ -9147,6 +9658,7 @@
    ],
    "strength": "tip",
    "support": 1,
+   "rank": 0.8,
    "sources": [
     "How a shirt should fit"
    ]
@@ -9164,6 +9676,7 @@
    ],
    "strength": "tip",
    "support": 1,
+   "rank": 0.8,
    "sources": [
     "How a shirt should fit"
    ]
@@ -9182,6 +9695,7 @@
    ],
    "strength": "tip",
    "support": 1,
+   "rank": 0.8,
    "sources": [
     "How a shirt should fit"
    ]
@@ -9200,6 +9714,7 @@
    ],
    "strength": "tip",
    "support": 1,
+   "rank": 0.8,
    "sources": [
     "How a shirt should fit"
    ]
@@ -9218,6 +9733,7 @@
    ],
    "strength": "tip",
    "support": 1,
+   "rank": 0.8,
    "sources": [
     "How a shirt should fit"
    ]
@@ -9235,6 +9751,7 @@
    ],
    "strength": "tip",
    "support": 1,
+   "rank": 0.8,
    "sources": [
     "How a shirt should fit"
    ]
@@ -9253,6 +9770,7 @@
    ],
    "strength": "tip",
    "support": 1,
+   "rank": 0.8,
    "sources": [
     "How a shirt should fit"
    ]
@@ -9271,6 +9789,7 @@
    ],
    "strength": "tip",
    "support": 1,
+   "rank": 0.8,
    "sources": [
     "How a shirt should fit"
    ]
@@ -9289,6 +9808,7 @@
    ],
    "strength": "tip",
    "support": 1,
+   "rank": 0.8,
    "sources": [
     "How a shirt should fit"
    ]
@@ -9306,6 +9826,7 @@
    ],
    "strength": "tip",
    "support": 1,
+   "rank": 0.8,
    "sources": [
     "How a shirt should fit"
    ]
@@ -9323,6 +9844,7 @@
    ],
    "strength": "tip",
    "support": 1,
+   "rank": 0.8,
    "sources": [
     "How Your Pants Should Fit Now"
    ]
@@ -9340,6 +9862,7 @@
    ],
    "strength": "tip",
    "support": 1,
+   "rank": 0.8,
    "sources": [
     "How Your Pants Should Fit Now"
    ]
@@ -9357,6 +9880,7 @@
    ],
    "strength": "tip",
    "support": 1,
+   "rank": 0.8,
    "sources": [
     "How Your Pants Should Fit Now"
    ]
@@ -9373,6 +9897,7 @@
    ],
    "strength": "tip",
    "support": 1,
+   "rank": 0.8,
    "sources": [
     "How Your Pants Should Fit Now"
    ]
@@ -9391,6 +9916,7 @@
    ],
    "strength": "tip",
    "support": 1,
+   "rank": 0.8,
    "sources": [
     "How Your Pants Should Fit Now"
    ]
@@ -9406,6 +9932,7 @@
    "occasions": [],
    "strength": "tip",
    "support": 1,
+   "rank": 0.8,
    "sources": [
     "How Your Pants Should Fit Now"
    ]
@@ -9424,6 +9951,7 @@
    ],
    "strength": "tip",
    "support": 1,
+   "rank": 0.8,
    "sources": [
     "How Your Pants Should Fit Now"
    ]
@@ -9439,6 +9967,7 @@
    "occasions": [],
    "strength": "tip",
    "support": 1,
+   "rank": 0.8,
    "sources": [
     "How Your Pants Should Fit Now"
    ]
@@ -9454,6 +9983,7 @@
    "occasions": [],
    "strength": "tip",
    "support": 1,
+   "rank": 0.8,
    "sources": [
     "How Your Pants Should Fit Now"
    ]
@@ -9471,6 +10001,7 @@
    ],
    "strength": "tip",
    "support": 1,
+   "rank": 0.8,
    "sources": [
     "How To Wear A Hoodie – Style And Fashion Guide"
    ]
@@ -9488,6 +10019,7 @@
    ],
    "strength": "tip",
    "support": 1,
+   "rank": 0.8,
    "sources": [
     "How To Wear A Hoodie – Style And Fashion Guide"
    ]
@@ -9505,6 +10037,7 @@
    ],
    "strength": "tip",
    "support": 1,
+   "rank": 0.8,
    "sources": [
     "How To Wear A Hoodie – Style And Fashion Guide"
    ]
@@ -9522,6 +10055,7 @@
    ],
    "strength": "tip",
    "support": 1,
+   "rank": 0.8,
    "sources": [
     "How To Wear A Hoodie – Style And Fashion Guide"
    ]
@@ -9539,6 +10073,7 @@
    ],
    "strength": "tip",
    "support": 1,
+   "rank": 0.8,
    "sources": [
     "How To Wear A Hoodie – Style And Fashion Guide"
    ]
@@ -9557,6 +10092,7 @@
    ],
    "strength": "tip",
    "support": 1,
+   "rank": 0.8,
    "sources": [
     "How To Wear A Hoodie – Style And Fashion Guide"
    ]
@@ -9576,6 +10112,7 @@
    ],
    "strength": "tip",
    "support": 1,
+   "rank": 0.8,
    "sources": [
     "How To Wear A Hoodie – Style And Fashion Guide"
    ]
@@ -9594,6 +10131,7 @@
    ],
    "strength": "tip",
    "support": 1,
+   "rank": 0.8,
    "sources": [
     "You Asked: What Is The Best Way To Wear An Overshirt?"
    ]
@@ -9612,6 +10150,7 @@
    ],
    "strength": "tip",
    "support": 1,
+   "rank": 0.8,
    "sources": [
     "You Asked: What Is The Best Way To Wear An Overshirt?"
    ]
@@ -9630,6 +10169,7 @@
    ],
    "strength": "tip",
    "support": 1,
+   "rank": 0.8,
    "sources": [
     "You Asked: What Is The Best Way To Wear An Overshirt?"
    ]
@@ -9647,6 +10187,7 @@
    ],
    "strength": "tip",
    "support": 1,
+   "rank": 0.8,
    "sources": [
     "You Asked: What Is The Best Way To Wear An Overshirt?"
    ]
@@ -9666,6 +10207,7 @@
    ],
    "strength": "tip",
    "support": 1,
+   "rank": 0.8,
    "sources": [
     "You Asked: What Is The Best Way To Wear An Overshirt?"
    ]
@@ -9685,6 +10227,7 @@
    ],
    "strength": "tip",
    "support": 1,
+   "rank": 0.8,
    "sources": [
     "You Asked: What Is The Best Way To Wear An Overshirt?"
    ]
@@ -9704,6 +10247,7 @@
    ],
    "strength": "tip",
    "support": 1,
+   "rank": 0.8,
    "sources": [
     "A Tie Guide: Everything You Need to Know Before Putting One On"
    ]
@@ -9722,6 +10266,7 @@
    ],
    "strength": "tip",
    "support": 1,
+   "rank": 0.8,
    "sources": [
     "A Tie Guide: Everything You Need to Know Before Putting One On"
    ]
@@ -9740,6 +10285,7 @@
    ],
    "strength": "tip",
    "support": 1,
+   "rank": 0.8,
    "sources": [
     "A Tie Guide: Everything You Need to Know Before Putting One On"
    ]
@@ -9759,6 +10305,7 @@
    ],
    "strength": "tip",
    "support": 1,
+   "rank": 0.8,
    "sources": [
     "A Tie Guide: Everything You Need to Know Before Putting One On"
    ]
@@ -9777,6 +10324,7 @@
    ],
    "strength": "tip",
    "support": 1,
+   "rank": 0.8,
    "sources": [
     "A Tie Guide: Everything You Need to Know Before Putting One On"
    ]
@@ -9796,6 +10344,7 @@
    ],
    "strength": "tip",
    "support": 1,
+   "rank": 0.8,
    "sources": [
     "A Tie Guide: Everything You Need to Know Before Putting One On"
    ]
@@ -9814,6 +10363,7 @@
    ],
    "strength": "tip",
    "support": 1,
+   "rank": 0.8,
    "sources": [
     "A Tie Guide: Everything You Need to Know Before Putting One On"
    ]
@@ -9833,6 +10383,7 @@
    ],
    "strength": "tip",
    "support": 1,
+   "rank": 0.8,
    "sources": [
     "A Tie Guide: Everything You Need to Know Before Putting One On"
    ]
@@ -9851,6 +10402,7 @@
    ],
    "strength": "tip",
    "support": 1,
+   "rank": 0.8,
    "sources": [
     "A Tie Guide: Everything You Need to Know Before Putting One On"
    ]
@@ -9869,6 +10421,7 @@
    ],
    "strength": "tip",
    "support": 1,
+   "rank": 0.8,
    "sources": [
     "A Tie Guide: Everything You Need to Know Before Putting One On"
    ]
@@ -9888,6 +10441,7 @@
    ],
    "strength": "tip",
    "support": 1,
+   "rank": 0.8,
    "sources": [
     "A Tie Guide: Everything You Need to Know Before Putting One On"
    ]
@@ -9906,6 +10460,7 @@
    ],
    "strength": "tip",
    "support": 1,
+   "rank": 0.8,
    "sources": [
     "Men Can Dress So Much Better with the Help of Color Analysis"
    ]
@@ -9927,6 +10482,7 @@
    ],
    "strength": "tip",
    "support": 1,
+   "rank": 0.8,
    "sources": [
     "Men Can Dress So Much Better with the Help of Color Analysis"
    ]
@@ -9947,6 +10503,7 @@
    ],
    "strength": "tip",
    "support": 1,
+   "rank": 0.8,
    "sources": [
     "Men Can Dress So Much Better with the Help of Color Analysis"
    ]
@@ -9965,6 +10522,7 @@
    ],
    "strength": "tip",
    "support": 1,
+   "rank": 0.8,
    "sources": [
     "Men Can Dress So Much Better with the Help of Color Analysis"
    ]
@@ -9984,6 +10542,7 @@
    ],
    "strength": "tip",
    "support": 1,
+   "rank": 0.8,
    "sources": [
     "Men Can Dress So Much Better with the Help of Color Analysis"
    ]
@@ -10002,6 +10561,7 @@
    ],
    "strength": "tip",
    "support": 1,
+   "rank": 0.8,
    "sources": [
     "Men Can Dress So Much Better with the Help of Color Analysis"
    ]
@@ -10019,6 +10579,7 @@
    ],
    "strength": "tip",
    "support": 1,
+   "rank": 0.8,
    "sources": [
     "Men Can Dress So Much Better with the Help of Color Analysis"
    ]
@@ -10039,6 +10600,7 @@
    ],
    "strength": "tip",
    "support": 1,
+   "rank": 0.8,
    "sources": [
     "Men Can Dress So Much Better with the Help of Color Analysis"
    ]
@@ -10056,6 +10618,7 @@
    ],
    "strength": "tip",
    "support": 1,
+   "rank": 0.8,
    "sources": [
     "Men Can Dress So Much Better with the Help of Color Analysis"
    ]
@@ -10075,6 +10638,7 @@
    ],
    "strength": "tip",
    "support": 1,
+   "rank": 0.8,
    "sources": [
     "Men Can Dress So Much Better with the Help of Color Analysis"
    ]
@@ -10095,6 +10659,7 @@
    ],
    "strength": "tip",
    "support": 1,
+   "rank": 0.8,
    "sources": [
     "Should You Wear Socks With Loafers?"
    ]
@@ -10112,6 +10677,7 @@
    ],
    "strength": "tip",
    "support": 1,
+   "rank": 0.8,
    "sources": [
     "Should You Wear Socks With Loafers?"
    ]
@@ -10129,6 +10695,7 @@
    ],
    "strength": "tip",
    "support": 1,
+   "rank": 0.8,
    "sources": [
     "Should You Wear Socks With Loafers?"
    ]
@@ -10146,6 +10713,7 @@
    ],
    "strength": "tip",
    "support": 1,
+   "rank": 0.8,
    "sources": [
     "Should You Wear Socks With Loafers?"
    ]
@@ -10164,6 +10732,7 @@
    ],
    "strength": "tip",
    "support": 1,
+   "rank": 0.8,
    "sources": [
     "Should You Wear Socks With Loafers?"
    ]
@@ -10183,6 +10752,7 @@
    ],
    "strength": "tip",
    "support": 1,
+   "rank": 0.8,
    "sources": [
     "옷 잘입고 싶다면, 일단 형사처럼 입어보자 (If You Want to Dress Well, Start by Dressing Like a Detective)"
    ]
@@ -10201,6 +10771,7 @@
    ],
    "strength": "tip",
    "support": 1,
+   "rank": 0.8,
    "sources": [
     "How to Look Good in Both Skinny and Baggy Fits"
    ]
@@ -10219,6 +10790,7 @@
    ],
    "strength": "tip",
    "support": 1,
+   "rank": 0.8,
    "sources": [
     "How to Look Good in Both Skinny and Baggy Fits"
    ]
@@ -10235,6 +10807,7 @@
    ],
    "strength": "tip",
    "support": 1,
+   "rank": 0.8,
    "sources": [
     "How to Look Good in Both Skinny and Baggy Fits"
    ]
@@ -10254,6 +10827,7 @@
    ],
    "strength": "tip",
    "support": 1,
+   "rank": 0.8,
    "sources": [
     "How to Look Good in Both Skinny and Baggy Fits"
    ]
@@ -10273,6 +10847,7 @@
    ],
    "strength": "tip",
    "support": 1,
+   "rank": 0.8,
    "sources": [
     "How to Look Good in Both Skinny and Baggy Fits"
    ]
@@ -10291,6 +10866,7 @@
    ],
    "strength": "tip",
    "support": 1,
+   "rank": 0.8,
    "sources": [
     "How to Look Good in Both Skinny and Baggy Fits"
    ]
@@ -10309,6 +10885,7 @@
    ],
    "strength": "tip",
    "support": 1,
+   "rank": 0.8,
    "sources": [
     "How to channel Cortis's Y2K thrift store style"
    ]
@@ -10325,6 +10902,7 @@
    ],
    "strength": "tip",
    "support": 1,
+   "rank": 0.8,
    "sources": [
     "How to channel Cortis's Y2K thrift store style"
    ]
@@ -10342,6 +10920,7 @@
    ],
    "strength": "tip",
    "support": 1,
+   "rank": 0.8,
    "sources": [
     "運動風穿搭成新潮流？看看男星們都怎樣穿衛衣風褸等單品 隨性同時展現活力 (Is Athleisure the New Trend? How Male Stars Wear Hoodies and Windbreakers)"
    ]
@@ -10360,6 +10939,7 @@
    ],
    "strength": "tip",
    "support": 1,
+   "rank": 0.8,
    "sources": [
     "運動風穿搭成新潮流？看看男星們都怎樣穿衛衣風褸等單品 隨性同時展現活力 (Is Athleisure the New Trend? How Male Stars Wear Hoodies and Windbreakers)"
    ]
@@ -10377,6 +10957,7 @@
    ],
    "strength": "tip",
    "support": 1,
+   "rank": 0.8,
    "sources": [
     "運動風穿搭成新潮流？看看男星們都怎樣穿衛衣風褸等單品 隨性同時展現活力 (Is Athleisure the New Trend? How Male Stars Wear Hoodies and Windbreakers)"
    ]
@@ -10395,6 +10976,7 @@
    ],
    "strength": "tip",
    "support": 1,
+   "rank": 0.8,
    "sources": [
     "運動風穿搭成新潮流？看看男星們都怎樣穿衛衣風褸等單品 隨性同時展現活力 (Is Athleisure the New Trend? How Male Stars Wear Hoodies and Windbreakers)"
    ]
@@ -10413,6 +10995,7 @@
    ],
    "strength": "opinion",
    "support": 2,
+   "rank": 0.677,
    "sources": [
     "TOM FORD | Project Upgrade | Full Version",
     "Tom Ford Breaks Down 20 Looks From 1981 to Now | Life in Looks | Vogue"
@@ -10433,6 +11016,7 @@
    ],
    "strength": "opinion",
    "support": 2,
+   "rank": 0.677,
    "sources": [
     "A TAKE ON MODERN TAILORING | In Conversation with Mike Amiri & GQ Italia",
     "Mi faccio creare un abito custom made da Suitsupply per Miami"
@@ -10448,6 +11032,7 @@
    "occasions": [],
    "strength": "opinion",
    "support": 1,
+   "rank": 0.4,
    "sources": [
     "TOM FORD | Project Upgrade | Full Version"
    ]
@@ -10466,6 +11051,7 @@
    ],
    "strength": "opinion",
    "support": 1,
+   "rank": 0.4,
    "sources": [
     "TOM FORD | Project Upgrade | Full Version"
    ]
@@ -10483,6 +11069,7 @@
    ],
    "strength": "opinion",
    "support": 1,
+   "rank": 0.4,
    "sources": [
     "TOM FORD | Project Upgrade | Full Version"
    ]
@@ -10501,6 +11088,7 @@
    ],
    "strength": "opinion",
    "support": 1,
+   "rank": 0.4,
    "sources": [
     "When the Mall Taught Men How to Dress: J.Crew, Banana Republic & Gap"
    ]
@@ -10518,6 +11106,7 @@
    ],
    "strength": "opinion",
    "support": 1,
+   "rank": 0.4,
    "sources": [
     "When the Mall Taught Men How to Dress: J.Crew, Banana Republic & Gap"
    ]
@@ -10536,6 +11125,7 @@
    ],
    "strength": "opinion",
    "support": 1,
+   "rank": 0.4,
    "sources": [
     "How to Dress Like Tom Ford"
    ]
@@ -10550,6 +11140,7 @@
    "occasions": [],
    "strength": "opinion",
    "support": 1,
+   "rank": 0.4,
    "sources": [
     "How to Dress Like Tom Ford"
    ]
@@ -10569,6 +11160,7 @@
    ],
    "strength": "opinion",
    "support": 1,
+   "rank": 0.4,
    "sources": [
     "A TAKE ON MODERN TAILORING | In Conversation with Mike Amiri & GQ Italia"
    ]
@@ -10586,6 +11178,7 @@
    ],
    "strength": "opinion",
    "support": 1,
+   "rank": 0.4,
    "sources": [
     "A TAKE ON MODERN TAILORING | In Conversation with Mike Amiri & GQ Italia"
    ]
@@ -10603,6 +11196,7 @@
    ],
    "strength": "opinion",
    "support": 1,
+   "rank": 0.4,
    "sources": [
     "Rebuilding My Wardrobe with ONLY Cotton On..."
    ]
@@ -10617,6 +11211,7 @@
    "occasions": [],
    "strength": "opinion",
    "support": 1,
+   "rank": 0.4,
    "sources": [
     "Alain Delon Style Breakdown | Why Everything Worked"
    ]
@@ -10634,6 +11229,7 @@
    ],
    "strength": "opinion",
    "support": 1,
+   "rank": 0.4,
    "sources": [
     "Alain Delon Style Breakdown | Why Everything Worked"
    ]
@@ -10648,6 +11244,7 @@
    "occasions": [],
    "strength": "opinion",
    "support": 1,
+   "rank": 0.4,
    "sources": [
     "Alain Delon Style Breakdown | Why Everything Worked"
    ]
@@ -10663,6 +11260,7 @@
    "occasions": [],
    "strength": "opinion",
    "support": 1,
+   "rank": 0.4,
    "sources": [
     "Cody Rhodes Goes Sneaker Shopping With Complex"
    ]
@@ -10680,6 +11278,7 @@
    ],
    "strength": "opinion",
    "support": 1,
+   "rank": 0.4,
    "sources": [
     "What Are People Wearing in Tokyo? (Fashion Trends 2026 Street Style Ep.207)"
    ]
@@ -10697,6 +11296,7 @@
    ],
    "strength": "opinion",
    "support": 1,
+   "rank": 0.4,
    "sources": [
     "What Are People Wearing in Tokyo? (Fashion Trends 2026 Street Style Ep.207)"
    ]
@@ -10711,6 +11311,7 @@
    "occasions": [],
    "strength": "opinion",
    "support": 1,
+   "rank": 0.4,
    "sources": [
     "11 Things You Only Need To Buy Once (they will last forever)"
    ]
@@ -10728,6 +11329,7 @@
    ],
    "strength": "opinion",
    "support": 1,
+   "rank": 0.4,
    "sources": [
     "The Only 5 Shoes Everyone Should Own"
    ]
@@ -10746,6 +11348,7 @@
    ],
    "strength": "opinion",
    "support": 1,
+   "rank": 0.4,
    "sources": [
     "Mi faccio creare un abito custom made da Suitsupply per Miami"
    ]
@@ -10760,6 +11363,7 @@
    "occasions": [],
    "strength": "opinion",
    "support": 1,
+   "rank": 0.4,
    "sources": [
     "A Man's Guide to '90s Minimalism"
    ]
@@ -10779,6 +11383,7 @@
    ],
    "strength": "opinion",
    "support": 1,
+   "rank": 0.4,
    "sources": [
     "Tom Ford Breaks Down 20 Looks From 1981 to Now | Life in Looks | Vogue"
    ]
@@ -10793,6 +11398,7 @@
    "occasions": [],
    "strength": "opinion",
    "support": 1,
+   "rank": 0.4,
    "sources": [
     "5 Colour Combinations That Always Work"
    ]
@@ -10812,6 +11418,7 @@
    ],
    "strength": "opinion",
    "support": 1,
+   "rank": 0.4,
    "sources": [
     "5 Colour Combinations That Always Work"
    ]
@@ -10830,6 +11437,7 @@
    ],
    "strength": "opinion",
    "support": 1,
+   "rank": 0.4,
    "sources": [
     "An Expert Guide To Pattern Mixing"
    ]
@@ -10847,6 +11455,7 @@
    ],
    "strength": "opinion",
    "support": 1,
+   "rank": 0.4,
    "sources": [
     "How To Match Your Shirt And Tie"
    ]
@@ -10862,6 +11471,7 @@
    "occasions": [],
    "strength": "opinion",
    "support": 1,
+   "rank": 0.4,
    "sources": [
     "Essential Fashion Tips For Short Men"
    ]
@@ -10879,6 +11489,7 @@
    ],
    "strength": "opinion",
    "support": 1,
+   "rank": 0.4,
    "sources": [
     "Men's Socks: What To Wear And When"
    ]
@@ -10894,6 +11505,7 @@
    "occasions": [],
    "strength": "opinion",
    "support": 1,
+   "rank": 0.4,
    "sources": [
     "How an overcoat should fit: Cifonelli fitting"
    ]
@@ -10910,6 +11522,7 @@
    "occasions": [],
    "strength": "opinion",
    "support": 1,
+   "rank": 0.4,
    "sources": [
     "How an overcoat should fit: Cifonelli fitting"
    ]
@@ -10926,6 +11539,7 @@
    "occasions": [],
    "strength": "opinion",
    "support": 1,
+   "rank": 0.4,
    "sources": [
     "How an overcoat should fit: Cifonelli fitting"
    ]
@@ -10944,6 +11558,7 @@
    ],
    "strength": "opinion",
    "support": 1,
+   "rank": 0.4,
    "sources": [
     "Should your belt match your shoes? (Or bag)"
    ]
@@ -10962,6 +11577,7 @@
    ],
    "strength": "opinion",
    "support": 1,
+   "rank": 0.4,
    "sources": [
     "Should your belt match your shoes? (Or bag)"
    ]
@@ -10981,6 +11597,7 @@
    ],
    "strength": "opinion",
    "support": 1,
+   "rank": 0.4,
    "sources": [
     "Should your belt match your shoes? (Or bag)"
    ]
@@ -10998,6 +11615,7 @@
    ],
    "strength": "opinion",
    "support": 1,
+   "rank": 0.4,
    "sources": [
     "Should your belt match your shoes? (Or bag)"
    ]
@@ -11016,6 +11634,7 @@
    ],
    "strength": "opinion",
    "support": 1,
+   "rank": 0.4,
    "sources": [
     "How to Dress Well in Summer"
    ]
@@ -11034,6 +11653,7 @@
    ],
    "strength": "opinion",
    "support": 1,
+   "rank": 0.4,
    "sources": [
     "How to Dress Well in Summer"
    ]
@@ -11052,6 +11672,7 @@
    ],
    "strength": "opinion",
    "support": 1,
+   "rank": 0.4,
    "sources": [
     "How to Dress Well in Summer"
    ]
@@ -11070,6 +11691,7 @@
    ],
    "strength": "opinion",
    "support": 1,
+   "rank": 0.4,
    "sources": [
     "How to Dress Well in Summer"
    ]
@@ -11088,6 +11710,7 @@
    ],
    "strength": "opinion",
    "support": 1,
+   "rank": 0.4,
    "sources": [
     "How to Dress Well in Summer"
    ]
@@ -11106,6 +11729,7 @@
    ],
    "strength": "opinion",
    "support": 1,
+   "rank": 0.4,
    "sources": [
     "How to Dress Well in Summer"
    ]
@@ -11125,6 +11749,7 @@
    ],
    "strength": "opinion",
    "support": 1,
+   "rank": 0.4,
    "sources": [
     "How to Dress Well in Summer"
    ]
@@ -11143,6 +11768,7 @@
    ],
    "strength": "opinion",
    "support": 1,
+   "rank": 0.4,
    "sources": [
     "How to Dress Well in Summer"
    ]
@@ -11162,6 +11788,7 @@
    ],
    "strength": "opinion",
    "support": 1,
+   "rank": 0.4,
    "sources": [
     "What to Wear in Autumn"
    ]
@@ -11181,6 +11808,7 @@
    ],
    "strength": "opinion",
    "support": 1,
+   "rank": 0.4,
    "sources": [
     "How To Get Your Layers Right"
    ]
@@ -11197,6 +11825,7 @@
    ],
    "strength": "opinion",
    "support": 1,
+   "rank": 0.4,
    "sources": [
     "Tips: How to dress in a STREETWEAR style?"
    ]
@@ -11214,6 +11843,7 @@
    ],
    "strength": "opinion",
    "support": 1,
+   "rank": 0.4,
    "sources": [
     "Tips: How to dress in a STREETWEAR style?"
    ]
@@ -11231,6 +11861,7 @@
    ],
    "strength": "opinion",
    "support": 1,
+   "rank": 0.4,
    "sources": [
     "Tips: How to dress in a STREETWEAR style?"
    ]
@@ -11248,6 +11879,7 @@
    ],
    "strength": "opinion",
    "support": 1,
+   "rank": 0.4,
    "sources": [
     "Tips: How to dress in a STREETWEAR style?"
    ]
@@ -11265,6 +11897,7 @@
    ],
    "strength": "opinion",
    "support": 1,
+   "rank": 0.4,
    "sources": [
     "Tips: How to dress in a STREETWEAR style?"
    ]
@@ -11283,6 +11916,7 @@
    ],
    "strength": "opinion",
    "support": 1,
+   "rank": 0.4,
    "sources": [
     "Tips: How to dress in a STREETWEAR style?"
    ]
@@ -11298,6 +11932,7 @@
    "occasions": [],
    "strength": "opinion",
    "support": 1,
+   "rank": 0.4,
    "sources": [
     "Tips: How to dress in a STREETWEAR style?"
    ]
@@ -11317,6 +11952,7 @@
    ],
    "strength": "opinion",
    "support": 1,
+   "rank": 0.4,
    "sources": [
     "You Asked: How Do I Make Streetwear Smart?"
    ]
@@ -11334,6 +11970,7 @@
    ],
    "strength": "opinion",
    "support": 1,
+   "rank": 0.4,
    "sources": [
     "You Asked: How Do I Make Streetwear Smart?"
    ]
@@ -11349,6 +11986,7 @@
    "occasions": [],
    "strength": "opinion",
    "support": 1,
+   "rank": 0.4,
    "sources": [
     "A Practical Guide To Getting Started"
    ]
@@ -11367,6 +12005,7 @@
    ],
    "strength": "opinion",
    "support": 1,
+   "rank": 0.4,
    "sources": [
     "Esquire's Complete and Comprehensive Guide to Smart-Casual Style"
    ]
@@ -11384,6 +12023,7 @@
    ],
    "strength": "opinion",
    "support": 1,
+   "rank": 0.4,
    "sources": [
     "Esquire's Complete and Comprehensive Guide to Smart-Casual Style"
    ]
@@ -11401,6 +12041,7 @@
    ],
    "strength": "opinion",
    "support": 1,
+   "rank": 0.4,
    "sources": [
     "Esquire's Complete and Comprehensive Guide to Smart-Casual Style"
    ]
@@ -11418,6 +12059,7 @@
    ],
    "strength": "opinion",
    "support": 1,
+   "rank": 0.4,
    "sources": [
     "Esquire's Complete and Comprehensive Guide to Smart-Casual Style"
    ]
@@ -11434,6 +12076,7 @@
    ],
    "strength": "opinion",
    "support": 1,
+   "rank": 0.4,
    "sources": [
     "How to dress for business casual at the office"
    ]
@@ -11452,6 +12095,7 @@
    ],
    "strength": "opinion",
    "support": 1,
+   "rank": 0.4,
    "sources": [
     "Black Tie Dress Code: A Modern Man's Guide For 2026"
    ]
@@ -11471,6 +12115,7 @@
    ],
    "strength": "opinion",
    "support": 1,
+   "rank": 0.4,
    "sources": [
     "Holiday Attire for Men: What It Means & How to Wear It"
    ]
@@ -11487,6 +12132,7 @@
    ],
    "strength": "opinion",
    "support": 1,
+   "rank": 0.4,
    "sources": [
     "Holiday Attire for Men: What It Means & How to Wear It"
    ]
@@ -11504,6 +12150,7 @@
    ],
    "strength": "opinion",
    "support": 1,
+   "rank": 0.4,
    "sources": [
     "Holiday Attire for Men: What It Means & How to Wear It"
    ]
@@ -11521,6 +12168,7 @@
    ],
    "strength": "opinion",
    "support": 1,
+   "rank": 0.4,
    "sources": [
     "Holiday Attire for Men: What It Means & How to Wear It"
    ]
@@ -11539,6 +12187,7 @@
    ],
    "strength": "opinion",
    "support": 1,
+   "rank": 0.4,
    "sources": [
     "Holiday Attire for Men: What It Means & How to Wear It"
    ]
@@ -11556,6 +12205,7 @@
    ],
    "strength": "opinion",
    "support": 1,
+   "rank": 0.4,
    "sources": [
     "How To Crack Every Summer Party Dress Code"
    ]
@@ -11573,6 +12223,7 @@
    ],
    "strength": "opinion",
    "support": 1,
+   "rank": 0.4,
    "sources": [
     "How To Crack Every Summer Party Dress Code"
    ]
@@ -11591,6 +12242,7 @@
    ],
    "strength": "opinion",
    "support": 1,
+   "rank": 0.4,
    "sources": [
     "How To Crack Every Summer Party Dress Code"
    ]
@@ -11609,6 +12261,7 @@
    ],
    "strength": "opinion",
    "support": 1,
+   "rank": 0.4,
    "sources": [
     "How To Crack Every Summer Party Dress Code"
    ]
@@ -11627,6 +12280,7 @@
    ],
    "strength": "opinion",
    "support": 1,
+   "rank": 0.4,
    "sources": [
     "The Wedding Style Guide: It's not about you"
    ]
@@ -11644,6 +12298,7 @@
    ],
    "strength": "opinion",
    "support": 1,
+   "rank": 0.4,
    "sources": [
     "The Wedding Style Guide: It's not about you"
    ]
@@ -11661,6 +12316,7 @@
    ],
    "strength": "opinion",
    "support": 1,
+   "rank": 0.4,
    "sources": [
     "The Wedding Style Guide: It's not about you"
    ]
@@ -11677,6 +12333,7 @@
    ],
    "strength": "opinion",
    "support": 1,
+   "rank": 0.4,
    "sources": [
     "The Wedding Style Guide: It's not about you"
    ]
@@ -11696,6 +12353,7 @@
    ],
    "strength": "opinion",
    "support": 1,
+   "rank": 0.4,
    "sources": [
     "How To Match Clothes and Shoes For Guys: Outfit Color Guide"
    ]
@@ -11714,6 +12372,7 @@
    ],
    "strength": "opinion",
    "support": 1,
+   "rank": 0.4,
    "sources": [
     "How To Match Clothes and Shoes For Guys: Outfit Color Guide"
    ]
@@ -11732,6 +12391,7 @@
    ],
    "strength": "opinion",
    "support": 1,
+   "rank": 0.4,
    "sources": [
     "How To Match Clothes and Shoes For Guys: Outfit Color Guide"
    ]
@@ -11749,6 +12409,7 @@
    ],
    "strength": "opinion",
    "support": 1,
+   "rank": 0.4,
    "sources": [
     "How To Match Clothes and Shoes For Guys: Outfit Color Guide"
    ]
@@ -11767,6 +12428,7 @@
    ],
    "strength": "opinion",
    "support": 1,
+   "rank": 0.4,
    "sources": [
     "How To Match Clothes and Shoes For Guys: Outfit Color Guide"
    ]
@@ -11782,6 +12444,7 @@
    "occasions": [],
    "strength": "opinion",
    "support": 1,
+   "rank": 0.4,
    "sources": [
     "You Asked: How Do You Wear Double Denim?"
    ]
@@ -11799,6 +12462,7 @@
    ],
    "strength": "opinion",
    "support": 1,
+   "rank": 0.4,
    "sources": [
     "You Asked: How Do You Wear Double Denim?"
    ]
@@ -11816,6 +12480,7 @@
    ],
    "strength": "opinion",
    "support": 1,
+   "rank": 0.4,
    "sources": [
     "How To Dress Like An Italian"
    ]
@@ -11834,6 +12499,7 @@
    ],
    "strength": "opinion",
    "support": 1,
+   "rank": 0.4,
    "sources": [
     "How To Dress Like An Italian"
    ]
@@ -11853,6 +12519,7 @@
    ],
    "strength": "opinion",
    "support": 1,
+   "rank": 0.4,
    "sources": [
     "How To Dress Like An Italian"
    ]
@@ -11871,6 +12538,7 @@
    ],
    "strength": "opinion",
    "support": 1,
+   "rank": 0.4,
    "sources": [
     "How To Wear Sneakers With Tailoring"
    ]
@@ -11888,6 +12556,7 @@
    ],
    "strength": "opinion",
    "support": 1,
+   "rank": 0.4,
    "sources": [
     "How To Wear Sneakers With Tailoring"
    ]
@@ -11907,6 +12576,7 @@
    ],
    "strength": "opinion",
    "support": 1,
+   "rank": 0.4,
    "sources": [
     "How To Wear Sneakers With Tailoring"
    ]
@@ -11925,6 +12595,7 @@
    ],
    "strength": "opinion",
    "support": 1,
+   "rank": 0.4,
    "sources": [
     "How To Wear Sneakers With Tailoring"
    ]
@@ -11944,6 +12615,7 @@
    ],
    "strength": "opinion",
    "support": 1,
+   "rank": 0.4,
    "sources": [
     "How To Wear Sneakers With Tailoring"
    ]
@@ -11962,6 +12634,7 @@
    ],
    "strength": "opinion",
    "support": 1,
+   "rank": 0.4,
    "sources": [
     "How To Wear Suede"
    ]
@@ -11980,6 +12653,7 @@
    ],
    "strength": "opinion",
    "support": 1,
+   "rank": 0.4,
    "sources": [
     "How To Wear Suede"
    ]
@@ -11997,6 +12671,7 @@
    ],
    "strength": "opinion",
    "support": 1,
+   "rank": 0.4,
    "sources": [
     "How To Wear Suede"
    ]
@@ -12013,6 +12688,7 @@
    "occasions": [],
    "strength": "opinion",
    "support": 1,
+   "rank": 0.4,
    "sources": [
     "How To Wear Suede"
    ]
@@ -12031,6 +12707,7 @@
    ],
    "strength": "opinion",
    "support": 1,
+   "rank": 0.4,
    "sources": [
     "How A Suit Should Fit"
    ]
@@ -12049,6 +12726,7 @@
    ],
    "strength": "opinion",
    "support": 1,
+   "rank": 0.4,
    "sources": [
     "How A Suit Should Fit"
    ]
@@ -12068,6 +12746,7 @@
    ],
    "strength": "opinion",
    "support": 1,
+   "rank": 0.4,
    "sources": [
     "How A Suit Should Fit"
    ]
@@ -12087,6 +12766,7 @@
    ],
    "strength": "opinion",
    "support": 1,
+   "rank": 0.4,
    "sources": [
     "Wearing navy trousers as separates"
    ]
@@ -12105,6 +12785,7 @@
    ],
    "strength": "opinion",
    "support": 1,
+   "rank": 0.4,
    "sources": [
     "Q and Answer: Which Sport Coats Can Be Worn with Jeans?"
    ]
@@ -12122,6 +12803,7 @@
    ],
    "strength": "opinion",
    "support": 1,
+   "rank": 0.4,
    "sources": [
     "Q and Answer: Which Sport Coats Can Be Worn with Jeans?"
    ]
@@ -12140,6 +12822,7 @@
    ],
    "strength": "opinion",
    "support": 1,
+   "rank": 0.4,
    "sources": [
     "Ways To Wear: The Navy Blazer"
    ]
@@ -12158,6 +12841,7 @@
    ],
    "strength": "opinion",
    "support": 1,
+   "rank": 0.4,
    "sources": [
     "Ways To Wear: The Navy Blazer"
    ]
@@ -12176,6 +12860,7 @@
    ],
    "strength": "opinion",
    "support": 1,
+   "rank": 0.4,
    "sources": [
     "How a shirt should fit"
    ]
@@ -12195,6 +12880,7 @@
    ],
    "strength": "opinion",
    "support": 1,
+   "rank": 0.4,
    "sources": [
     "How Your Pants Should Fit Now"
    ]
@@ -12214,6 +12900,7 @@
    ],
    "strength": "opinion",
    "support": 1,
+   "rank": 0.4,
    "sources": [
     "How Your Pants Should Fit Now"
    ]
@@ -12232,6 +12919,7 @@
    ],
    "strength": "opinion",
    "support": 1,
+   "rank": 0.4,
    "sources": [
     "How Your Pants Should Fit Now"
    ]
@@ -12249,6 +12937,7 @@
    ],
    "strength": "opinion",
    "support": 1,
+   "rank": 0.4,
    "sources": [
     "How Your Pants Should Fit Now"
    ]
@@ -12264,6 +12953,7 @@
    "occasions": [],
    "strength": "opinion",
    "support": 1,
+   "rank": 0.4,
    "sources": [
     "How Your Pants Should Fit Now"
    ]
@@ -12279,6 +12969,7 @@
    "occasions": [],
    "strength": "opinion",
    "support": 1,
+   "rank": 0.4,
    "sources": [
     "How Your Pants Should Fit Now"
    ]
@@ -12297,6 +12988,7 @@
    ],
    "strength": "opinion",
    "support": 1,
+   "rank": 0.4,
    "sources": [
     "How Your Pants Should Fit Now"
    ]
@@ -12315,6 +13007,7 @@
    ],
    "strength": "opinion",
    "support": 1,
+   "rank": 0.4,
    "sources": [
     "How To Wear A Hoodie – Style And Fashion Guide"
    ]
@@ -12331,6 +13024,7 @@
    ],
    "strength": "opinion",
    "support": 1,
+   "rank": 0.4,
    "sources": [
     "How To Wear A Hoodie – Style And Fashion Guide"
    ]
@@ -12350,6 +13044,7 @@
    ],
    "strength": "opinion",
    "support": 1,
+   "rank": 0.4,
    "sources": [
     "How To Wear A Hoodie – Style And Fashion Guide"
    ]
@@ -12368,6 +13063,7 @@
    ],
    "strength": "opinion",
    "support": 1,
+   "rank": 0.4,
    "sources": [
     "How To Wear A Hoodie – Style And Fashion Guide"
    ]
@@ -12386,6 +13082,7 @@
    ],
    "strength": "opinion",
    "support": 1,
+   "rank": 0.4,
    "sources": [
     "How To Wear A Hoodie – Style And Fashion Guide"
    ]
@@ -12405,6 +13102,7 @@
    ],
    "strength": "opinion",
    "support": 1,
+   "rank": 0.4,
    "sources": [
     "How To Wear A Hoodie – Style And Fashion Guide"
    ]
@@ -12422,6 +13120,7 @@
    ],
    "strength": "opinion",
    "support": 1,
+   "rank": 0.4,
    "sources": [
     "You Asked: What Is The Best Way To Wear An Overshirt?"
    ]
@@ -12440,6 +13139,7 @@
    ],
    "strength": "opinion",
    "support": 1,
+   "rank": 0.4,
    "sources": [
     "You Asked: What Is The Best Way To Wear An Overshirt?"
    ]
@@ -12458,6 +13158,7 @@
    ],
    "strength": "opinion",
    "support": 1,
+   "rank": 0.4,
    "sources": [
     "A Tie Guide: Everything You Need to Know Before Putting One On"
    ]
@@ -12476,6 +13177,7 @@
    ],
    "strength": "opinion",
    "support": 1,
+   "rank": 0.4,
    "sources": [
     "Should You Wear Socks With Loafers?"
    ]
@@ -12494,6 +13196,7 @@
    ],
    "strength": "opinion",
    "support": 1,
+   "rank": 0.4,
    "sources": [
     "Should You Wear Socks With Loafers?"
    ]
@@ -12512,6 +13215,7 @@
    ],
    "strength": "opinion",
    "support": 1,
+   "rank": 0.4,
    "sources": [
     "Should You Wear Socks With Loafers?"
    ]
@@ -12530,6 +13234,7 @@
    ],
    "strength": "opinion",
    "support": 1,
+   "rank": 0.4,
    "sources": [
     "옷 잘입고 싶다면, 일단 형사처럼 입어보자 (If You Want to Dress Well, Start by Dressing Like a Detective)"
    ]
@@ -12548,6 +13253,7 @@
    ],
    "strength": "opinion",
    "support": 1,
+   "rank": 0.4,
    "sources": [
     "옷 잘입고 싶다면, 일단 형사처럼 입어보자 (If You Want to Dress Well, Start by Dressing Like a Detective)"
    ]
@@ -12568,6 +13274,7 @@
    ],
    "strength": "opinion",
    "support": 1,
+   "rank": 0.4,
    "sources": [
     "옷 잘입고 싶다면, 일단 형사처럼 입어보자 (If You Want to Dress Well, Start by Dressing Like a Detective)"
    ]
@@ -12585,6 +13292,7 @@
    ],
    "strength": "opinion",
    "support": 1,
+   "rank": 0.4,
    "sources": [
     "옷 잘입고 싶다면, 일단 형사처럼 입어보자 (If You Want to Dress Well, Start by Dressing Like a Detective)"
    ]
@@ -12603,6 +13311,7 @@
    ],
    "strength": "opinion",
    "support": 1,
+   "rank": 0.4,
    "sources": [
     "How to Look Good in Both Skinny and Baggy Fits"
    ]
@@ -12620,6 +13329,7 @@
    ],
    "strength": "opinion",
    "support": 1,
+   "rank": 0.4,
    "sources": [
     "How to channel Cortis's Y2K thrift store style"
    ]
@@ -12637,6 +13347,7 @@
    ],
    "strength": "opinion",
    "support": 1,
+   "rank": 0.4,
    "sources": [
     "How to channel Cortis's Y2K thrift store style"
    ]
@@ -12655,6 +13366,7 @@
    ],
    "strength": "opinion",
    "support": 1,
+   "rank": 0.4,
    "sources": [
     "How to channel Cortis's Y2K thrift store style"
    ]
@@ -12672,6 +13384,7 @@
    ],
    "strength": "opinion",
    "support": 1,
+   "rank": 0.4,
    "sources": [
     "運動風穿搭成新潮流？看看男星們都怎樣穿衛衣風褸等單品 隨性同時展現活力 (Is Athleisure the New Trend? How Male Stars Wear Hoodies and Windbreakers)"
    ]
@@ -12690,6 +13403,7 @@
    ],
    "strength": "opinion",
    "support": 1,
+   "rank": 0.4,
    "sources": [
     "運動風穿搭成新潮流？看看男星們都怎樣穿衛衣風褸等單品 隨性同時展現活力 (Is Athleisure the New Trend? How Male Stars Wear Hoodies and Windbreakers)"
    ]
@@ -12708,6 +13422,7 @@
    ],
    "strength": "opinion",
    "support": 1,
+   "rank": 0.4,
    "sources": [
     "運動風穿搭成新潮流？看看男星們都怎樣穿衛衣風褸等單品 隨性同時展現活力 (Is Athleisure the New Trend? How Male Stars Wear Hoodies and Windbreakers)"
    ]

@@ -9,10 +9,12 @@ import json
 from collections import defaultdict
 from datetime import datetime, timezone
 
-from . import BIBLE
+from . import APP_BIBLE, BIBLE
 from .knowledge import load_examples, load_learned, load_rulebook, merged_tips
 from .model import Model, accuracy, cross_validated, example_rows, features
 from .outfit import Context, Outfit
+from .rules import LEATHER_FAMILY, SOFT_NEUTRALS
+from . import vocab
 from .vocab import OCCASIONS, TOPICS
 
 PROMPT_CHARS = 2500  # the stylist prompt stays around 600 tokens
@@ -55,7 +57,7 @@ def train(log=print):
         "rules": [{**{k: r[k] for k in ("id", "title", "why", "check") if k in r},
                    "params": r.get("params", {}), "weight": model.w[r["id"]], "prior": r["weight"],
                    "topics": r.get("topics", []), "occasions": r.get("occasions", [])} for r in rules],
-        "tips": [{k: t[k] for k in ("id", "text", "why", "topics", "occasions", "strength", "support", "sources") if k in t} for t in tips],
+        "tips": [{k: t[k] for k in ("id", "text", "why", "topics", "occasions", "strength", "support", "rank", "sources") if k in t} for t in tips],
         "sources": [{**rec["source"], "learned_at": rec.get("learned_at"), "tips": len(rec.get("tips", [])),
                      "outfits": len(rec.get("outfits", []))} for rec in learned],
         "examples": [{k: e[k] for k in ("outfit", "occasion", "feels", "wet", "verdict", "why", "source") if k in e} for e in core + found],
@@ -64,8 +66,44 @@ def train(log=print):
     BIBLE.mkdir(parents=True, exist_ok=True)
     (BIBLE / "fashion-bible.json").write_text(json.dumps(bible, indent=1, ensure_ascii=False) + "\n", encoding="utf-8")
     (BIBLE / "fashion-bible.md").write_text(markdown(bible), encoding="utf-8")
+    export_for_app(bible)
     report(bible, log)
     return bible
+
+
+def app_vocab():
+    """The words the rules are said in, so the app's copy of the checks needs nothing else."""
+    return {
+        "cats": {k: list(v) for k, v in vocab.CATS.items()},
+        "colors": {k: list(v) for k, v in vocab.COLORS.items()},
+        "styles": dict(vocab.STYLES),
+        "fits": dict(vocab.FITS),
+        "occasions": {k: list(v) for k, v in vocab.OCCASIONS.items()},
+        "material_tags": sorted(vocab.MATERIAL_TAGS),
+        "pattern_tags": sorted(vocab.PATTERN_TAGS),
+        "statement_tags": sorted(vocab.STATEMENT_TAGS),
+        "soft_neutrals": sorted(SOFT_NEUTRALS),
+        "leather_family": dict(LEATHER_FAMILY),
+    }
+
+
+def export_for_app(bible=None, path=None):
+    """The part of the bible the app needs, as one small file at the top of the repository
+    (fashion-bible.json): rules with their weights, tips, and the vocabulary. Left out: the
+    example outfits, the source list and which source said what, which only matter here."""
+    bible = bible or load_bible()
+    if bible is None:
+        raise FileNotFoundError("No bible yet: run  python -m fashion train")
+    slim = {
+        "name": bible["name"], "version": bible["version"], "built_at": bible["built_at"],
+        "model": {"bias": bible["model"]["bias"], "trained_on": bible["model"]["trained_on"], "accuracy": bible["model"]["accuracy"]},
+        "rules": [{k: r[k] for k in ("id", "title", "why", "check", "params", "weight", "occasions")} for r in bible["rules"]],
+        "tips": [{k: t[k] for k in ("id", "text", "why", "topics", "occasions", "strength", "support", "rank") if k in t} for t in bible["tips"]],
+        "vocab": app_vocab(),
+    }
+    out = path or APP_BIBLE
+    out.write_text(json.dumps(slim, separators=(",", ":"), ensure_ascii=False) + "\n", encoding="utf-8")
+    return out
 
 
 def report(bible, log):

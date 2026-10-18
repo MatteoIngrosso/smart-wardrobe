@@ -159,6 +159,7 @@ a.piece { color: inherit; text-decoration: none; }
 svg.kind { width: 34px; height: 34px; color: var(--accent); stroke-width: 1.5; }
 .piece span { font-size: 13px; line-height: 1.2; color: var(--muted); }
 .why { font-size: 15px; color: var(--muted); margin: 0; }
+.why.warn { color: var(--warn); }
 .score { font-size: 13px; font-weight: 700; color: var(--good); background: color-mix(in srgb, var(--good) 15%, transparent); padding: 4px 10px; border-radius: 999px; }
 
 .ai-box { display: grid; gap: 12px; }

@@ -8,7 +8,7 @@ from pathlib import Path
 from unittest import mock
 
 from fashion import __main__ as cli
-from fashion import bible, knowledge, learn
+from fashion import APP_BIBLE, bible, knowledge, learn, parity, vocab
 from fashion.knowledge import Search, merged_tips, similar
 from fashion.model import Model, example_rows
 from fashion.outfit import Context, Outfit, Piece
@@ -231,7 +231,7 @@ class Learning(unittest.TestCase):
         self.tmp = tempfile.TemporaryDirectory()
         tmp = Path(self.tmp.name)
         self.patches = [mock.patch.object(learn, "LEARNED", tmp / "learned"), mock.patch.object(knowledge, "LEARNED", tmp / "learned"),
-                        mock.patch.object(bible, "BIBLE", tmp / "bible")]
+                        mock.patch.object(bible, "BIBLE", tmp / "bible"), mock.patch.object(bible, "APP_BIBLE", tmp / "app-bible.json")]
         for p in self.patches:
             p.start()
         self.source = tmp / "suit-guide.txt"
@@ -300,6 +300,47 @@ class Learning(unittest.TestCase):
         self.assertEqual(len(ids), 9)
         self.assertIn("care-knits", ids)
         self.assertNotIn("care-knits", [t["id"] for t in learn.known_tips(limit=9)])
+
+
+class ForTheApp(unittest.TestCase):
+    """The app (stylist.js) reads a slim copy of the bible and runs its own copy of the checks."""
+
+    def test_the_slim_copy_is_current(self):
+        # Fails after training or editing the rulebook without running  python -m fashion export
+        self.assertTrue(APP_BIBLE.exists(), "run  python -m fashion export")
+        with tempfile.TemporaryDirectory() as d:
+            fresh = bible.export_for_app(path=Path(d) / "b.json")
+            self.assertEqual(json.loads(fresh.read_text(encoding="utf-8")), json.loads(APP_BIBLE.read_text(encoding="utf-8")),
+                             "fashion-bible.json is out of date: run  python -m fashion export")
+
+    def test_it_has_what_the_app_needs_and_nothing_else(self):
+        slim = json.loads(APP_BIBLE.read_text(encoding="utf-8"))
+        self.assertEqual(set(slim), {"name", "version", "built_at", "model", "rules", "tips", "vocab"})
+        self.assertTrue(all("rank" in t for t in slim["tips"]))
+        self.assertTrue(all({"id", "check", "params", "weight"} <= set(r) for r in slim["rules"]))
+        self.assertEqual(set(slim["vocab"]["cats"]), set(vocab.CATS))
+        self.assertEqual(slim["vocab"]["occasions"]["work"][0], "Work / meeting")
+
+    def test_parity_cases_are_current(self):
+        # The cases tools/stylist.test.mjs checks stylist.js against; regenerate with  python -m fashion parity
+        self.assertEqual(parity.build(), json.loads(parity.PATH.read_text(encoding="utf-8")),
+                         "tests/parity.json is out of date: run  python -m fashion parity")
+
+    def test_warmth_follows_the_wearers_offset(self):
+        o = Outfit.parse("tshirt white, hoodie grey, jeans denim")
+        plain = scores_of(o, Context(feels=12))["warmth"]
+        lighter = scores_of(o, Context(feels=12, offset=-2))["warmth"]
+        self.assertGreater(lighter, plain)
+
+    def test_export_command(self):
+        with tempfile.TemporaryDirectory() as d, mock.patch.object(bible, "APP_BIBLE", Path(d) / "b.json"):
+            code, out = CommandLine.run_cli(None, "export")
+            self.assertEqual(code, 0)
+            self.assertTrue((Path(d) / "b.json").exists())
+
+
+def scores_of(outfit, ctx):
+    return {r["id"]: s for r, s, _ in evaluate(RULES, outfit, ctx)}
 
 
 class CommandLine(unittest.TestCase):

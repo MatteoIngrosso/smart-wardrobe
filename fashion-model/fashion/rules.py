@@ -348,7 +348,7 @@ def warmth_for_weather(o, ctx):
     if ctx.feels is None or not o.tops:
         return None, None
     have = sum(p.warmth for p in o.tops)
-    gap = have - wanted_warmth(ctx.feels)
+    gap = have - wanted_warmth(ctx.feels) - ctx.offset
     if abs(gap) <= 1:
         return 1.0, None
     return clamp(1 - abs(gap) / 2.5), ("Too warm" if gap > 0 else "Not warm enough") + f" for {round(ctx.feels)}°C"

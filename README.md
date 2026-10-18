@@ -137,7 +137,7 @@ Choose the provider in Settings and paste a key; it stays on that device. Online
 | Recognising a new piece | Roughly 500–1,000 (estimate): front and back cut-outs sent as **one** 768×512 picture, JSON reply capped at 320 tokens, Gemini thinking off. Done once per piece and saved. |
 | Reading a price tag | Roughly 400–600 (estimate): one photo at 1024 px, JSON reply capped at 200 tokens. Only when you tap **Scan price tag**. |
 | Classifying a brand the list and Wikidata can't place | About 150, once per brand, saved on the device. |
-| Stylist question | About 1,000 in plus up to 800 out: the wardrobe is sent as one short numbered line per piece (about 15 tokens each) plus a few taste lines, and answers are capped at 24 short lines. |
+| Stylist question | About 1,000 in plus up to 800 out: the wardrobe is sent as one short numbered line per piece (about 15 tokens each) plus a few taste lines, and answers are capped at 24 short lines. The fashion bible adds about 400 tokens (its rules and the tips that fit the question). If an outfit in the answer breaks an important rule, one more request asks for a fix. |
 | Finding the fit of pieces saved before fit existed | About 300 per piece (one small picture, a one-word reply). Only when you tap **Find the fit of N pieces**. |
 
 Settings shows how many requests and tokens were used this month.
@@ -150,7 +150,9 @@ Settings shows how many requests and tokens were used this month.
 - `sample/`: resized copies of your photos (`*.jpg`), their cut-outs (`cut/*.webp`) and `seed.js`, which holds the catalogue data for them
 - `manifest.webmanifest`, `icon.svg`: let you install the app on the home screen
 - `tools/build_preview.py`: builds a one-page copy in `dist/` for the Claude preview
-- `fashion-model/`: a Python menswear model that learns from videos, magazines and styling rules and builds the "fashion bible" for the app (not used by the app yet, never served; see its README)
+- `stylist.js`, `fashion-bible.json`: the fashion bible inside the app. The rules, tips and weights of the Python model below; every outfit idea is scored by them and the AI stylist must follow them (see `fashion-model/README.md`, "In the app")
+- `fashion-model/`: a Python menswear model that learns from videos, magazines and styling rules and builds the "fashion bible" (never served; see its README). Training writes `fashion-bible.json` for the app
+- `tools/stylist.test.mjs`: checks that `stylist.js` judges outfits exactly like the Python model (`node --test tools/stylist.test.mjs`)
 
 ## How changes are made
 `main` always holds the working app. Every update goes on its own branch (for example `update/weather-offline`) with a pull request describing what changed, and is merged into `main` once it's checked.

@@ -102,4 +102,17 @@ Each source costs one Gemini call: a 15-minute video is about 5,000 to 8,000 tok
 - `bible/`: the fashion bible, rebuilt by every training
 - `tests/`: run `python -m unittest discover -s tests` from this folder
 
-The app doesn't use the bible yet; how it plugs in comes next.
+## In the app
+
+The app follows the bible. Everything it needs is in two files at the top of the repository:
+
+- `fashion-bible.json`: a slim copy of the bible (rules with their learnt weights, tips, and the app's vocabulary). `python -m fashion train` rewrites it every time; `python -m fashion export` rewrites it without retraining. The app downloads it, keeps a copy on the device so it also works offline, and picks up a newer one by itself.
+- `stylist.js`: the app's JavaScript copy of the 26 checks and the tip search. It reads the rules from `fashion-bible.json`, so teaching the model something new needs no change there. A change to a *check* (`fashion/rules.py`) does: change both, then run `python -m fashion parity` and `node --test tools/stylist.test.mjs` from the top of the repository. The Python tests fail if `tests/parity.json` or `fashion-bible.json` is out of date, and the JavaScript test fails if the two copies ever score an outfit differently.
+
+What the app does with it:
+
+- **Outfit ideas** (Today, Start from a piece, swaps, Discover): every candidate is scored by the bible's rules, together with the app's own weather comfort, rotation and taste. A candidate that breaks an important rule (weight 0.5 or more, broken by half or more) is only shown when nothing else is left, and then its card says what is off. Belts are matched to the shoes.
+- **Ask the stylist and Discover looks**: each request carries the mandatory rules (about 20 short lines) plus the few tips that best answer the question (found with the same search as `python -m fashion search`), roughly 400 tokens. The outfits that come back are checked against the same rules; if one breaks an important rule, the AI is asked once to fix it, and anything still broken is flagged on its card. Weather and occasion aren't checked on the AI's outfits, because the question may be about another day.
+- Settings has a Fashion bible card with what it knows.
+
+If the bible can't be loaded (first visit offline), the app falls back to its older built-in rules.
