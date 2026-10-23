@@ -2070,7 +2070,7 @@ function toGeminiSchema(s) {
 }
 // `search`: let Gemini look things up with Google Search (shops in a mall, real products);
 // `onSources` then gets the web pages it used ({ uri, title }).
-async function geminiGenerate({ system, text, image, schema, maxTokens, search, onSources }) {
+async function geminiGenerate({ system, text, image, schema, maxTokens, search, urlContext, onSources }) {
   const { geminiKey, geminiModel } = state.settings;
   const parts = [];
   if (image) parts.push({ inline_data: { mime_type: "image/jpeg", data: await blobToBase64(image) } });
@@ -2078,7 +2078,7 @@ async function geminiGenerate({ system, text, image, schema, maxTokens, search, 
   const body = {
     system_instruction: { parts: [{ text: system }] },
     contents: [{ role: "user", parts }],
-    ...(search ? { tools: [{ google_search: {} }] } : {}),
+    ...(search || urlContext ? { tools: [...(search ? [{ google_search: {} }] : []), ...(urlContext ? [{ url_context: {} }] : [])] } : {}),
     generationConfig: {
       maxOutputTokens: maxTokens,
       thinkingConfig: { thinkingBudget: 0 }, // no hidden "thinking" tokens for these short tasks
@@ -3287,8 +3287,9 @@ async function findProduct(codes, tag, step) {
   const fromCode = !!(Label.refInUrl(qrLink) || Label.refFromCode(codes.barcode));
   const built = Label.shopUrl(brand || qrLink || (fromCode && !brand ? "Pull&Bear" : ""), ref, state.settings.region);
   let best = null, why = "";
+  const code = ref ? ref.model + ref.colour : "";
   const open = async (url) => {
-    let page = await pageInfo(url, 30000);
+    let page = await pageInfo(url, 45000, code);
     if (!page?.image && !page?.noServer) page = (await microlinkInfo(url)) || page;
     if (page?.noServer) throw Object.assign(new Error("Product pages can only be opened on the hosted app."), { noServer: true });
     if (page?.error) why = page.error;
@@ -3354,6 +3355,73 @@ function wardrobeColour(text, category) {
   const col = COLORS[c] ? c : EXTRA_COLOURS[c]?.[1] || "";
   return category === "jeans" && ["blue", "light blue", "navy"].includes(col) && !/navy|dark/.test(Label.toEnglish(text)) ? "denim" : col;
 }
+// What the AI reads off the product page (the label rarely says the material or the fit):
+// the page's text when the server could read it (about 2,000 tokens), else Gemini opens the
+// page itself with URL context and searches Google for the reference.
+async function productDetails(page, link, tag, ref) {
+  const what = [tag?.brand, ref?.text && `reference ${ref.text}`].filter(Boolean).join(", ");
+  const ask = "Reply with exactly these lines, in English, leaving a value empty when the page doesn't say it:\n" +
+    "name: <product name as the shop writes it>\ntype: <garment type, e.g. jeans, hoodie>\ncolour: <colour>\nfit: <e.g. baggy, slim, regular>\n" +
+    "material: <composition, e.g. 100% cotton>\ndescription: <one short sentence about the piece>\nprice: <price with currency>";
+  let text;
+  if (page?.text) {
+    text = await aiGenerate({
+      system: "You read a clothing product page for a wardrobe app. Plain text only, no markdown.",
+      text: `Product page${what ? ` (${what})` : ""}:\n${page.text.slice(0, 6000)}\n\n${ask}`, maxTokens: 250,
+    });
+  } else if (link && state.settings.aiProvider !== "claude" && !state.previewAI) {
+    const q = {
+      system: "You read clothing product pages for a wardrobe app. Open the page with URL context; if it can't be opened, search Google for the product. Plain text only, no markdown.",
+      text: `Product page: ${link}${what ? `\n(${what})` : ""}\n\n${ask}\nphotos: <full addresses of the product's photos on the page, space separated>`, maxTokens: 500,
+    };
+    text = await aiGenerate({ ...q, search: true, urlContext: true }).catch(() => aiGenerate({ ...q, search: true }));
+  } else return null;
+  const out = {};
+  for (const line of text.split("\n")) {
+    const m = line.replace(/\*\*/g, "").match(/^\s*[-•]?\s*(name|type|colou?r|fit|material|description|price|photos)\s*:\s*(.*)$/i);
+    if (m) out[m[1].toLowerCase().replace("color", "colour")] = m[2].trim().replace(/^<.*>$|^(none|n\/a|unknown|not (stated|specified|available)|-)\.?$/i, "");
+  }
+  out.photos = (out.photos || "").match(/https:\/\/[^\s,<>"')]+/g) || [];
+  return out;
+}
+// Which of the shop's photos show the piece on its own, not worn: they're put on one numbered
+// sheet and the AI answers with the numbers (about 600 tokens). Best first: front, then back.
+const PIECE_SCHEMA = {
+  type: "object",
+  additionalProperties: false,
+  required: ["piece_only"],
+  properties: {
+    piece_only: { type: "array", items: { type: "integer" }, description: "Numbers of the photos that show only the garment, with no person, face, hands, legs or body visible: laid flat, on a hanger or floating. Best first: the full front view, then the full back view. Leave out close-ups of details." },
+  },
+};
+async function pieceOnlyPhotos(urls) {
+  const got = (await Promise.all(urls.slice(0, 8).map(async (url) => ({ url, blob: await productPhoto(url) })))).filter((x) => x.blob);
+  if (!got.length) return null; // none could be loaded: not the same as "all worn"
+  const cols = Math.min(4, got.length), w = 240, h = 320;
+  const c = newCanvas(cols * w, Math.ceil(got.length / cols) * h);
+  const ctx = c.getContext("2d");
+  ctx.fillStyle = "#fff";
+  ctx.fillRect(0, 0, c.width, c.height);
+  for (const [k, x] of got.entries()) {
+    const bmp = await createImageBitmap(x.blob);
+    const sc = Math.min(w / bmp.width, h / bmp.height), cx = (k % cols) * w, cy = Math.floor(k / cols) * h;
+    ctx.drawImage(bmp, cx + (w - bmp.width * sc) / 2, cy + (h - bmp.height * sc) / 2, bmp.width * sc, bmp.height * sc);
+    ctx.fillStyle = "#000";
+    ctx.fillRect(cx, cy, 44, 44);
+    ctx.fillStyle = "#fff";
+    ctx.font = "bold 30px sans-serif";
+    ctx.fillText(String(k + 1), cx + (k + 1 > 9 ? 4 : 13), cy + 33);
+  }
+  const text = await aiGenerate({
+    system: "You sort a clothing shop's product photos for a wardrobe app. Reply with JSON only.",
+    text: `These are ${got.length} numbered photos of one product. Which show the garment alone, not worn by anyone?`,
+    image: await canvasBlob(c, "image/jpeg", 0.85),
+    schema: PIECE_SCHEMA,
+    maxTokens: 60,
+  });
+  const nums = JSON.parse(text.replace(/^```(json)?|```$/g, "").trim()).piece_only || [];
+  return [...new Set(nums)].map((n) => got[n - 1]).filter(Boolean).slice(0, 2);
+}
 async function scanTag(d, file) {
   d.scanningTag = true;
   d.labelStep = "Reading the label…";
@@ -3371,11 +3439,16 @@ async function scanTag(d, file) {
     let found = { page: null, ref: Label.refFrom(r?.reference), why: "" };
     try { found = await findProduct(codes, r, step); } catch (e) { if (e.noServer) found.why = e.message; }
     const page = found.page;
-    const title = Label.cleanTitle(page?.title, r?.brand || page?.brand || "");
-    const words = Label.toEnglish(title);
-    const about = `${words} ${Label.toEnglish(page?.description)}`;
+    let info = null;
+    if (aiReady() && (page || found.link)) {
+      step("Reading the product details…");
+      info = await productDetails(page, found.link, r, found.ref).catch(() => null);
+    }
+    const title = Label.cleanTitle(page?.title, r?.brand || page?.brand || "") || info?.name || "";
+    const words = Label.toEnglish(`${info?.type || ""} ${title}`);
+    const about = `${words} ${Label.toEnglish(info?.fit)} ${Label.toEnglish(page?.description)} ${Label.toEnglish(info?.description)}`;
     // What the label says comes first, then the product page.
-    const said = (r?.brand || page?.brand || (Label.isPullBear(page?.url || Label.linkIn(qr)) ? "Pull&Bear" : "")).trim();
+    const said = (r?.brand || page?.brand || (Label.isPullBear(page?.url || found.link || Label.linkIn(qr)) ? "Pull&Bear" : "")).trim();
     const brand = brandInfo(said)?.name || said; // "PULL&BEAR" on the tag → "Pull&Bear"
     if (brand && !d.brand) d.brand = brand;
     if (!d.name && (title || r?.name)) d.name = cap((title || r.name).trim());
@@ -3384,41 +3457,62 @@ async function scanTag(d, file) {
     if (cat && !d.category) { d.category = cat; d.warmth = CAT[cat].warmth; }
     const fit = Label.fitIn(about);
     if (fit && !d.fit) d.fit = fitsFor(d).includes(fit) ? fit : fit === "baggy" && fitsFor(d).includes("oversized") ? "oversized" : fit === "oversized" && fitsFor(d).includes("baggy") ? "baggy" : "";
-    const price = r?.price > 0 ? r.price : parseFloat(String(page?.price || "").replace(",", "."));
-    if (price > 0) { d.price = String(price); d.currency = ((r?.price > 0 ? r.currency : page.price.split(" ")[1]) || "").toUpperCase(); }
+    const pagePrice = [page?.price, info?.price].find((p) => /\d/.test(p || "")) || "";
+    const price = r?.price > 0 ? r.price : parseFloat(pagePrice.replace(/[^\d.,]/g, "").replace(",", "."));
+    if (price > 0) { d.price = String(price); d.currency = ((r?.price > 0 ? r.currency : pagePrice.match(/[A-Z]{3}/)?.[0] || (/€/.test(pagePrice) ? "EUR" : "")) || "").toUpperCase(); }
     if (r?.size) d.size = r.size.trim();
-    if (r?.material) d.material = r.material.trim();
+    const material = r?.material || info?.material;
+    if (material && !d.material) d.material = material.trim().slice(0, 120);
+    const description = info?.description || "";
+    if (description && !d.notes) d.notes = description.slice(0, 300);
     if (found.link && !d.link) d.link = found.link;
     if (found.ref) d.reference = found.ref.text;
+    const known = page || info?.name;
     // Said under the Label button until the next scan, so it isn't missed like a toast.
-    d.labelNote = page ? "" : [
-      found.ref || qr ? `Couldn't open the product page${found.why ? `: ${found.why.replace(/\.$/, "")}` : ""}.` : "No QR code or reference found on that photo. Try again closer, with the QR code and the ART./REF number sharp.",
+    d.labelNote = known ? "" : [
+      found.ref || qr ? `Couldn't open the product page${found.why ? ` (${found.why.replace(/\.$/, "")})` : ""}.` : "No QR code or reference found on that photo. Try again closer, with the QR code and the ART./REF number sharp.",
       tag?.error ? `${aiName()} couldn't read the printed text: ${tag.error}` : "",
       found.ref ? `Reference ${found.ref.text}.` : "",
     ].filter(Boolean).join(" ");
-    const colour = wardrobeColour(r?.color || page?.color || title, d.category);
-    // The page's photo is in the shop's first colour, which may not be the one on the label.
-    const sameColour = Label.photoColourMatches(page?.image, found.ref);
+    const colour = wardrobeColour(r?.color || info?.colour || page?.color || title, d.category);
     if (colour && (fresh || !d.colors.length)) d.colors = [colour];
     refreshStyles();
     if (d.brand) lookupBrand(d.brand).then((learnt) => learnt && (refreshStyles(), rerenderAdd(d)));
-    if (fresh && page?.image) {
-      step("Getting the shop's photo…");
-      const blob = await productPhoto(page.image);
-      if (blob && draft === d) {
-        const p = { ...newPhoto(blob), manual: true, shop: true }; // shop photos are already upright
-        d.photos = [p];
+    // The shop's photos of this colour (their names hold model and colour), video stills last.
+    const code = found.ref ? found.ref.model + found.ref.colour : "";
+    const seen = new Set(); // the same photo in another size counts once
+    let urls = [...(page?.images || []), ...(info?.photos || [])].filter((u) => {
+      const key = /\.(jpe?g|png|webp)(\?|$)/i.test(u) ? u.split("?")[0] : u;
+      return /^https:\/\//.test(u) && !seen.has(key) && seen.add(key);
+    });
+    if (found.ref?.colour && urls.some((u) => u.includes(code))) urls = urls.filter((u) => u.includes(code));
+    urls.sort((a, b) => /poster/i.test(a) - /poster/i.test(b));
+    if (fresh && urls.length) {
+      let chosen = null;
+      if (aiReady()) {
+        step("Picking the photos of the piece on its own…");
+        chosen = await pieceOnlyPhotos(urls).catch(() => null);
+      }
+      if (!chosen) { // no AI to tell worn photos apart (or it failed): the shop's main photo
+        step("Getting the shop's photo…");
+        const blob = await productPhoto(urls[0]);
+        chosen = blob ? [{ url: urls[0], blob }] : [];
+      }
+      if (chosen.length && draft === d) {
+        d.photos = chosen.map((x) => ({ ...newPhoto(x.blob), manual: true, shop: true })); // shop photos are already upright
         d.active = 0;
-        d.shopPhoto = { site: page.site || "", otherColour: sameColour === false };
+        d.shopPhoto = { site: page?.site || Label.siteOf(found.link), otherColour: Label.photoColourMatches(chosen[0].url, found.ref) === false };
         d.keepColors = !!colour; // the label's colour wins over the colours in the photo
-        if (!colour) d.colors = await detectColors(blob).catch(() => []);
+        if (!colour) d.colors = await detectColors(chosen[0].blob).catch(() => []);
         d.scanningTag = false;
-        preparePhoto(p, d);
+        (async () => { for (const p of d.photos) await preparePhoto(p, d); })();
+      } else if (!chosen.length) {
+        d.labelNote = [d.labelNote, aiReady() ? "The shop's photos all show it worn, so none was kept: take a photo of the piece." : "The shop's photo couldn't be loaded: take a photo of the piece."].filter(Boolean).join(" ");
       }
     }
     if (draft === d) {
-      const what = [d.name || d.brand, page?.site && `from ${page.site}`].filter(Boolean).join(" ");
-      toast(page ? `Found ${what}` : found.ref ? `Read the label, but couldn't open the product page${fresh ? ". Take a photo of the piece" : ""}` : r || qr ? "Read the label" : aiReady() ? "Nothing readable on that label" : "No QR code found. Add a Gemini key in Settings to read the printed text too.");
+      const what = [d.name || d.brand, (page?.site || found.link) && `from ${page?.site || Label.siteOf(found.link)}`].filter(Boolean).join(" ");
+      toast(known ? `Found ${what}` : found.ref ? `Read the label, but couldn't open the product page${fresh ? ". Take a photo of the piece" : ""}` : r || qr ? "Read the label" : aiReady() ? "Nothing readable on that label" : "No QR code found. Add a Gemini key in Settings to read the printed text too.");
     }
   } catch (err) {
     if (draft === d) toast(err.message || "Couldn't read the label");
@@ -4178,9 +4272,10 @@ function photosHTML(b) {
 }
 // What a product page shows: its photo, name and price (worker/api.js, GET /api/page).
 // When the shop turns the server away, the server tries free link-preview services, which can take longer.
-async function pageInfo(url, wait = 12000) {
+// `code` (model and colour) asks for every photo of that product and the page's text too.
+async function pageInfo(url, wait = 12000, code = "") {
   try {
-    const r = await fetch(`api/page?url=${encodeURIComponent(url)}`, AbortSignal.timeout ? { signal: AbortSignal.timeout(wait) } : {});
+    const r = await fetch(`api/page?${new URLSearchParams({ url, ...(code ? { code } : {}) })}`, AbortSignal.timeout ? { signal: AbortSignal.timeout(wait) } : {});
     if (r.status === 404 && !(r.headers.get("Content-Type") || "").includes("json")) return { noServer: true };
     const j = await r.json().catch(() => ({}));
     return r.ok ? j : { error: j.error || `The app's server answered ${r.status}.` };

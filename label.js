@@ -58,6 +58,11 @@ export function photoColourMatches(image, ref) {
   return m[2] === ref.colour;
 }
 
+// "https://www.pullandbear.com/it/…" → "pullandbear.com"
+export function siteOf(url) {
+  try { return new URL(url).hostname.replace(/^www\./, ""); } catch { return ""; }
+}
+
 /* ---------- Product page text ---------- */
 
 // "Jeans baggy | Pull&Bear Italy" → "Jeans baggy"

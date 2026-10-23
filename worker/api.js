@@ -11,7 +11,7 @@
 //     HEAD/GET/PUT /api/blob/<key>        photos, stored once by content hash
 //     POST /api/ai/gemini/<model>         Gemini generateContent with the GEMINI_KEY secret
 //     POST /api/ai/claude/v1/messages     Claude Messages API with the CLAUDE_KEY secret
-//     GET  /api/page?url=…                a shop's product page: {url, title, image, images, description, price, site}
+//     GET  /api/page?url=…&code=…         a shop's product page: {url, title, image, images, description, price, site, text, tried}
 //     GET  /api/image?url=…               a product photo from a shop (to keep as a piece's picture)
 //     GET  /api/products?q=…&gl=it&hl=it  real products with photos (Google Shopping via SerpApi)
 //     POST /api/calendar                  {"url": "..."}: reads a calendar's private iCal link
@@ -56,7 +56,7 @@ export async function handleApi(request, env) {
   const method = request.method;
   try {
     if (path.startsWith("ai/")) return await ai(request, env, path.slice(3));
-    if (path === "page" && method === "GET") return await productPage(new URL(request.url).searchParams.get("url"));
+    if (path === "page" && method === "GET") return await productPage(new URL(request.url).searchParams);
     if (path === "image" && method === "GET") return await productImage(new URL(request.url).searchParams.get("url"));
     if (path === "products" && method === "GET") return await products(env, new URL(request.url).searchParams);
     if (path === "calendar" && method === "POST") return await calendar(request);
@@ -322,36 +322,55 @@ const BROWSER = {
 };
 const unescapeHtml = (s) => s.replace(/&(amp|quot|#39|#x27|#x2F|lt|gt);/gi, (m, e) => ({ amp: "&", quot: '"', "#39": "'", "#x27": "'", "#x2f": "/", lt: "<", gt: ">" })[e.toLowerCase()]);
 
-async function productPage(target) {
+// Some shops (Pull&Bear, Zara…) turn away requests from cloud servers like this one, or send
+// a "checking your browser" page instead. So after the shop itself, the page is read through
+// Google Translate's page proxy (Google's own servers fetch it) and through Jina Reader (free,
+// no key, opens it in a real browser). Only the shop's address is sent to them.
+// With `code` (model and colour from the label, e.g. 07660508434) the app wants every photo of
+// the product and the page's text, which only the page as a browser shows it has; Jina's reading
+// is asked for then. `tried` says how each way went, for the app to show when nothing worked.
+async function productPage(params) {
   let url;
-  try { url = new URL(target); } catch { return fail(400, "Bad URL"); }
+  try { url = new URL(params.get("url")); } catch { return fail(400, "Bad URL"); }
   if (!/^https?:$/.test(url.protocol)) return fail(400, "Bad URL");
-  let error, own;
-  try {
-    own = pageInfo(...(await readHtml(url, BROWSER)));
-    if (own.image) return json(own);
-    error = "The shop's page has no product photo.";
-  } catch (e) {
-    error = e.message;
+  const code = (params.get("code") || "").match(/^\d{6,14}$/)?.[0] || "";
+  const tried = [];
+  let best = null;
+  const merge = (info) => {
+    if (!best) { best = info; return; }
+    for (const k of ["title", "description", "color", "brand", "price", "site", "text"]) if (!best[k] && info[k]) best[k] = info[k];
+    best.images = [...new Set([...best.images, ...info.images])].slice(0, 12);
+    best.image = best.images[0] || "";
+  };
+  const ways = [
+    ["shop", () => readHtml(url, BROWSER, 8000).then(([html, page]) => pageInfo(html, page, code))],
+    ["Google", () => viaTranslate(url, code)],
+    ["Jina", () => (code ? viaJinaText(url, code) : viaJina(url))],
+  ];
+  for (const [via, run] of ways) {
+    try {
+      const info = await run();
+      tried.push(`${via}: ${info.images.length ? `${info.images.length} photo${info.images.length > 1 ? "s" : ""}` : info.title ? "no photo" : "empty page"}`);
+      merge(info);
+    } catch (e) {
+      tried.push(`${via}: ${e.message}`);
+    }
+    // Enough: a photo (and, when the gallery is wanted, the browser's reading too).
+    if (best?.image && (!code || via === "Jina" || best.text)) break;
   }
-  // Some shops (Pull&Bear, Zara…) turn away requests that come from cloud servers like this
-  // one. Jina Reader (free, no key) opens the page in a real browser instead; only the shop's
-  // address is sent to it. If that fails too, the app asks Microlink itself (see app.js).
-  try {
-    const info = await viaJina(url);
-    if (info?.image) return json({ ...info, via: "jina" });
-  } catch { /* the error below is the shop's */ }
-  return own?.title ? json(own) : fail(502, error);
+  if (!best?.image && !best?.title) return fail(502, tried.join(" · "));
+  return json({ ...best, tried });
 }
 // A page's HTML (only its first PAGE_BYTES: the tags we need are near the top) and where it ended up.
-async function readHtml(url, headers, htmlOnly = true) {
+async function readHtml(url, headers, wait = 9000, htmlOnly = true) {
   let r;
   try {
-    r = await fetch(url, { headers, redirect: "follow", signal: AbortSignal.timeout(9000), cf: { cacheTtl: 86400, cacheEverything: true } });
+    r = await fetch(url, { headers, redirect: "follow", signal: AbortSignal.timeout(wait), cf: { cacheTtl: 86400, cacheEverything: true } });
   } catch {
-    throw new Error("The shop didn't answer.");
+    throw new Error("no answer");
   }
-  if (!r.ok || (htmlOnly && !(r.headers.get("Content-Type") || "").includes("html"))) throw new Error(`The shop answered ${r.status}.`);
+  if (!r.ok) throw new Error(`answered ${r.status}`);
+  if (htmlOnly && !(r.headers.get("Content-Type") || "").includes("html")) throw new Error(`sent ${(r.headers.get("Content-Type") || "no page").split(";")[0]}`);
   const reader = r.body.getReader();
   const dec = new TextDecoder();
   let html = "";
@@ -363,13 +382,62 @@ async function readHtml(url, headers, htmlOnly = true) {
   reader.cancel().catch(() => {});
   return [html, new URL(r.url || url)];
 }
+// Google Translate serves any page from its own servers at <host with dashes>.translate.goog.
+// Links in it point back through Google; they're turned into the shop's own again.
+const viaGoogle = (u) => new URL(`https://${u.hostname.replace(/-/g, "--").replace(/\./g, "-")}.translate.goog${u.pathname}${u.search}${u.search ? "&" : "?"}_x_tr_sl=auto&_x_tr_tl=it&_x_tr_hl=it`);
+function fromGoogle(text) {
+  return text.replace(/https:\/\/([a-z0-9-]+)\.translate\.goog(\/[^"'\s<>)]*)?/gi, (m, host, rest = "") => {
+    const shop = host.replace(/--/g, "\0").replace(/-/g, ".").replace(/\0/g, "-");
+    try {
+      const u = new URL(`https://${shop}${unescapeHtml(rest)}`);
+      for (const k of [...u.searchParams.keys()]) if (k.startsWith("_x_tr_")) u.searchParams.delete(k);
+      return u.href;
+    } catch { return m; }
+  });
+}
+async function viaTranslate(url, code) {
+  const [html] = await readHtml(viaGoogle(url), BROWSER, 8000);
+  return pageInfo(fromGoogle(html), url, code);
+}
 async function viaJina(url) {
   // Jina Reader opens the page in a browser and, asked for HTML, sends the page as it rendered.
-  const [html] = await readHtml(new URL(`https://r.jina.ai/${url.href}`), { "X-Return-Format": "html", Accept: "text/html" }, false);
+  const [html] = await readHtml(new URL(`https://r.jina.ai/${url.href}`), { "X-Return-Format": "html", Accept: "text/html" }, 12000, false);
   return pageInfo(html, url);
 }
+// The page as text, as a browser shows it (web components included), with every photo on it:
+// the product's own photos are the ones whose file name holds its model and colour.
+async function viaJinaText(url, code) {
+  let r;
+  try {
+    r = await fetch(`https://r.jina.ai/${url.href}`, {
+      headers: { Accept: "text/plain", "X-With-Images-Summary": "true", "X-With-Shadow-Dom": "true", "X-Timeout": "15" },
+      signal: AbortSignal.timeout(22000),
+    });
+  } catch { throw new Error("no answer"); }
+  if (!r.ok) throw new Error(`answered ${r.status}`);
+  const text = (await r.text()).slice(0, 300_000);
+  const title = text.match(/^Title:\s*(.+)$/m)?.[1]?.trim() || "";
+  const images = productPhotos(text, code);
+  const body = text.replace(/^(Title|URL Source|Published Time|Warning):.*$/gm, "").replace(/!\[[^\]]*\]\([^)]*\)/g, "").replace(/\[([^\]]*)\]\([^)]*\)/g, "$1").replace(/\n{3,}/g, "\n\n").trim();
+  return { url: url.href, title: title.slice(0, 140), image: images[0] || "", images, description: "", color: "", brand: "", price: "", site: url.hostname.replace(/^www\./, ""), text: body.slice(0, 8000) };
+}
+// Photo addresses in a page that belong to the product (their name holds its code), one per
+// photo: the same photo in other sizes counts once, at full size.
+function productPhotos(text, code) {
+  if (!code) return [];
+  const found = new Map();
+  const re = new RegExp(`https?:\\/\\/[^"'\\s<>()\\\\]*${code}[^"'\\s<>()\\\\]*?\\.(?:jpe?g|png|webp)(?:\\?[^"'\\s<>()\\\\]*)?`, "gi");
+  for (const m of text.replace(/\\\//g, "/").matchAll(re)) {
+    let u;
+    try { u = new URL(unescapeHtml(m[0])); } catch { continue; }
+    for (const k of ["w", "h", "imwidth", "width", "f"]) u.searchParams.delete(k);
+    const key = u.pathname.replace(/\/[^/]*$/, "");
+    if (!found.has(key)) found.set(key, u.href.replace(/^http:/, "https:"));
+  }
+  return [...found.values()].slice(0, 12);
+}
 // What a product page shares for link previews (Open Graph tags, or schema.org Product data).
-function pageInfo(html, page) {
+function pageInfo(html, page, code = "") {
   const meta = (...names) => {
     for (const n of names) {
       const tag = html.match(new RegExp(`<meta[^>]+(?:property|name|itemprop)=["']${n}["'][^>]*>`, "i"))?.[0];
@@ -389,7 +457,7 @@ function pageInfo(html, page) {
   // Every photo the page shares (a page can have several og:image tags), main one first.
   const ogImages = [...html.matchAll(/<meta[^>]+(?:property|name)=["']og:image(?::secure_url)?["'][^>]*>/gi)]
     .map((t) => t[0].match(/content=(?:"([^"]*)"|'([^']*)')/i)).filter(Boolean).map((v) => unescapeHtml(v[1] || v[2] || ""));
-  const images = [...new Set([...ogImages, meta("twitter:image", "image"), ...ldImages].map(absolute).filter(Boolean))].slice(0, 6);
+  const images = [...new Set([...ogImages, meta("twitter:image", "image"), ...ldImages].map(absolute).filter(Boolean).concat(productPhotos(html, code)))].slice(0, 12);
   return {
     url: page.href,
     title: (meta("og:title", "twitter:title") || product?.name || html.match(/<title[^>]*>([^<]*)/i)?.[1] || "").trim().slice(0, 140),
