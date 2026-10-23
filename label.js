@@ -1,0 +1,105 @@
+// Adding a piece from its label: the helpers that don't need the network.
+// The app reads the label photo (QR code on the device, the printed text with the AI), finds
+// the shop's product page and fills the piece in from it. This file knows how shops write
+// their product references and pages, so it can be tested on its own.
+
+/* ---------- Product references ---------- */
+
+// Inditex labels (Pull&Bear, Zara, Bershka…) print the reference as model/quality/colour,
+// e.g. "REF 3660/516/833" or "03660 516 833". Pull&Bear's product pages use the first two
+// parts as "l03660516" and the colour as "?cS=833".
+export function refFrom(text) {
+  const t = String(text || "");
+  const m = t.match(/(?<!\d)0?(\d{4})\s*[/.\s-]\s*(\d{3})(?:\s*[/.\s-]\s*(\d{3}))?(?!\d)/) || t.match(/(?<!\d)0?(\d{4})(\d{3})(\d{3})?(?!\d)/);
+  if (!m) return null;
+  return { model: `0${m[1]}${m[2]}`, colour: m[3] || "", text: [m[1], m[2], m[3]].filter(Boolean).join("/") };
+}
+// The reference inside a Pull&Bear product link: …/baggy-jeans-l03660516?cS=833
+export function refInUrl(url) {
+  let u;
+  try { u = new URL(url); } catch { return null; }
+  const m = u.pathname.match(/-l(\d{8})(?:$|[/?#.])/);
+  if (!m) return null;
+  const colour = (u.searchParams.get("cS") || "").match(/^\d{3}$/)?.[0] || "";
+  return { model: m[1], colour, text: [m[1].slice(1, 5), m[1].slice(5), colour].filter(Boolean).join("/") };
+}
+
+const norm = (s) => String(s || "").toLowerCase().replace(/[^a-z0-9]/g, "");
+// "Pull&Bear", "Pull and Bear", "PULL&BEAR" or a pullandbear.com link.
+export const isPullBear = (s) => /pull(and)?bear/.test(norm(s));
+
+// The product page a reference leads to, for shops whose links can be built from it.
+// The words before "-l…" don't matter to the shop, so any name works.
+export function shopUrl(brand, ref, region = "it") {
+  if (!ref?.model) return "";
+  if (isPullBear(brand)) {
+    const country = region === "it" ? "it" : "us";
+    return `https://www.pullandbear.com/${country}/p-l${ref.model}${ref.colour ? `?cS=${ref.colour}` : ""}`;
+  }
+  return "";
+}
+// Inditex photo names hold model and colour (…/03660516833-M.jpg). The page's main photo is
+// in its first colour, so it may not be the colour on the label: true, false, or null (can't tell).
+export function photoColourMatches(image, ref) {
+  if (!ref?.colour) return null;
+  const m = String(image || "").match(/\/(\d{8})(\d{3})[-_]/);
+  if (!m || m[1] !== ref.model) return null;
+  return m[2] === ref.colour;
+}
+
+/* ---------- Product page text ---------- */
+
+// "Jeans baggy | Pull&Bear Italy" → "Jeans baggy"
+export function cleanTitle(title, brand = "") {
+  let t = String(title || "").replace(/\s+/g, " ").trim();
+  t = t.split(/\s[|–—]\s|\s-\s(?=[^-]*$)/)[0].trim();
+  if (brand) t = t.replace(new RegExp(`^${brand.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")}\\s*[-:·]?\\s*`, "i"), "");
+  return t.slice(0, 80);
+}
+
+// Shops in Italy write their pages in Italian. The app's own word lists are English, so the
+// words that say the type, colour and fit are turned into English first.
+const IT_WORDS = [
+  [/felpa con cappuccio|felpa cappuccio/, "hoodie"], [/felpa con zip|felpa zip/, "zip hoodie"], [/felpa/, "sweatshirt"],
+  [/sovracamicia/, "overshirt"], [/camicia|camicie/, "shirt"], [/maglietta|magliette/, "t-shirt"],
+  [/canotta/, "tank"], [/maglione|maglioni|\bmaglia\b|\bpullover\b/, "sweater"],
+  [/piumino|piumini/, "puffer"], [/cappotto|cappotti/, "coat"], [/impermeabile|giacca a vento/, "rain jacket"],
+  [/giubbotto|giubbino|giacca|giacche/, "jacket"],
+  [/pantaloncini|bermuda/, "shorts"], [/pantaloni della tuta|pantaloni tuta|\bjoggers?\b/, "joggers"], [/pantaloni|pantalone|\bchinos?\b/, "trousers"],
+  [/gonna/, "skirt"], [/stivali|stivaletti|anfibi/, "boots"], [/scarpe da ginnastica|\bsneakers?\b/, "sneakers"], [/mocassini|scarpe/, "shoes"],
+  [/berretto|cuffia/, "beanie"], [/cappellino/, "cap"], [/cappello/, "hat"], [/cintura|cinture/, "belt"], [/zaino/, "backpack"],
+  [/borsa|marsupio/, "bag"], [/portafoglio/, "wallet"], [/sciarpa/, "scarf"], [/guanti/, "gloves"], [/calzini|calze/, "socks"],
+  [/occhiali da sole/, "sunglasses"], [/collana|catenina/, "necklace"], [/bracciale/, "bracelet"], [/anello/, "ring"],
+  [/\bnero|\bnera|\bneri|\bnere/, "black"], [/\bbianc[oaih]+/, "white"], [/grigio|grigia|grigi/, "grey"], [/azzurr[oaie]/, "light blue"],
+  [/blu navy|blu scuro/, "navy"], [/\bblu\b/, "blue"], [/verde oliva/, "olive"], [/\bverd[ei]\b/, "green"], [/marrone|marroni|cioccolato/, "brown"],
+  [/\bross[oaie]\b/, "red"], [/\brosa\b/, "pink"], [/\bgiall[oaie]\b/, "yellow"], [/arancione/, "orange"], [/\bviola\b/, "purple"],
+  [/\bcrema\b|\bpanna\b/, "cream"], [/cammello/, "camel"], [/lavaggio chiaro|denim chiaro/, "light-wash"],
+  [/\bampi[oae]?\b|\blargh[ie]\b|\blarg[oa]\b/, "baggy"], [/\bdritt[oaie]\b/, "straight"], [/aderent[ei]/, "skinny"],
+  [/regolare|vestibilità regular/, "regular"], [/\bcort[oaie]\b|\bcrop\b|\bcropped\b/, "cropped"], [/a zampa|\bflared?\b/, "flared"],
+];
+export function toEnglish(text) {
+  let t = ` ${String(text || "").toLowerCase()} `;
+  for (const [re, en] of IT_WORDS) t = t.replace(new RegExp(re.source, "g"), ` ${en} `);
+  return t.replace(/\s+/g, " ").trim();
+}
+// The fit a product name or description gives: "Baggy jeans" → "baggy".
+export function fitIn(text) {
+  const t = toEnglish(text);
+  return [[/super baggy|baggy|balloon/, "baggy"], [/oversize/, "oversized"], [/wide/, "wide"], [/relaxed|loose/, "relaxed"],
+    [/skinny/, "skinny"], [/slim/, "slim"], [/straight/, "straight"], [/flared|bootcut/, "flared"], [/cropped/, "cropped"], [/regular/, "regular"]]
+    .find(([re]) => re.test(t))?.[1] || "";
+}
+
+/* ---------- QR codes ---------- */
+
+// What a QR code holds: a web link ("www.…" counts too), or nothing useful.
+export function linkIn(text) {
+  const t = String(text || "").trim();
+  const m = t.match(/https?:\/\/[^\s"<>]+/i) || t.match(/(?:^|\s)((?:www\.)?[a-z0-9-]+(?:\.[a-z0-9-]+)+\/[^\s"<>]*)/i);
+  if (!m) return "";
+  const raw = m[1] || m[0];
+  try {
+    const u = new URL(/^https?:/i.test(raw) ? raw : `https://${raw}`);
+    return /^https?:$/.test(u.protocol) ? u.href : "";
+  } catch { return ""; }
+}

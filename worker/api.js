@@ -11,7 +11,8 @@
 //     HEAD/GET/PUT /api/blob/<key>        photos, stored once by content hash
 //     POST /api/ai/gemini/<model>         Gemini generateContent with the GEMINI_KEY secret
 //     POST /api/ai/claude/v1/messages     Claude Messages API with the CLAUDE_KEY secret
-//     GET  /api/page?url=…                a shop's product page: {url, title, image, price, site}
+//     GET  /api/page?url=…                a shop's product page: {url, title, image, images, description, price, site}
+//     GET  /api/image?url=…               a product photo from a shop (to keep as a piece's picture)
 //     GET  /api/products?q=…&gl=it&hl=it  real products with photos (Google Shopping via SerpApi)
 //     POST /api/calendar                  {"url": "..."}: reads a calendar's private iCal link
 //
@@ -56,6 +57,7 @@ export async function handleApi(request, env) {
   try {
     if (path.startsWith("ai/")) return await ai(request, env, path.slice(3));
     if (path === "page" && method === "GET") return await productPage(new URL(request.url).searchParams.get("url"));
+    if (path === "image" && method === "GET") return await productImage(new URL(request.url).searchParams.get("url"));
     if (path === "products" && method === "GET") return await products(env, new URL(request.url).searchParams);
     if (path === "calendar" && method === "POST") return await calendar(request);
     if (path === "ping" && method === "GET") {
@@ -355,16 +357,45 @@ async function productPage(target) {
   const absolute = (u) => {
     try { return u ? new URL(u, page).href.replace(/^http:/, "https:") : ""; } catch { return ""; }
   };
-  const ldImage = [product?.image].flat().map((i) => (typeof i === "string" ? i : i?.url || i?.contentUrl)).find(Boolean);
+  const ldImages = [product?.image].flat().map((i) => (typeof i === "string" ? i : i?.url || i?.contentUrl)).filter(Boolean);
   const amount = meta("product:price:amount", "og:price:amount") || offer?.price || offer?.lowPrice || "";
   const currency = meta("product:price:currency", "og:price:currency") || offer?.priceCurrency || "";
+  // Every photo the page shares (a page can have several og:image tags), main one first.
+  const ogImages = [...html.matchAll(/<meta[^>]+(?:property|name)=["']og:image(?::secure_url)?["'][^>]*>/gi)]
+    .map((t) => t[0].match(/content=(?:"([^"]*)"|'([^']*)')/i)).filter(Boolean).map((v) => unescapeHtml(v[1] || v[2] || ""));
+  const images = [...new Set([...ogImages, meta("twitter:image", "image"), ...ldImages].map(absolute).filter(Boolean))].slice(0, 6);
   return json({
     url: page.href,
     title: (meta("og:title", "twitter:title") || product?.name || html.match(/<title[^>]*>([^<]*)/i)?.[1] || "").trim().slice(0, 140),
-    image: absolute(meta("og:image", "og:image:secure_url", "twitter:image", "image") || ldImage),
+    image: images[0] || "",
+    images,
+    description: (meta("og:description", "description") || product?.description || "").trim().slice(0, 300),
+    color: typeof product?.color === "string" ? product.color.slice(0, 40) : "",
+    brand: String(product?.brand?.name || product?.brand || "").slice(0, 60),
     price: amount ? `${amount} ${currency}`.trim() : "",
     site: meta("og:site_name") || page.hostname.replace(/^www\./, ""),
   });
+}
+
+// A product photo, so the app can keep it as the piece's picture (shops' photos can't be
+// copied by the browser itself). Only images, at most 8 MB.
+const IMAGE_BYTES = 8_000_000;
+async function productImage(target) {
+  let url;
+  try { url = new URL(target); } catch { return fail(400, "Bad URL"); }
+  if (url.protocol !== "https:") return fail(400, "Bad URL");
+  let r;
+  try {
+    r = await fetch(url, { headers: { ...BROWSER, Accept: "image/avif,image/webp,image/*,*/*;q=0.8" }, redirect: "follow", signal: AbortSignal.timeout(12000), cf: { cacheTtl: 86400, cacheEverything: true } });
+  } catch {
+    return fail(502, "The shop didn't send the photo.");
+  }
+  const type = r.headers.get("Content-Type") || "";
+  if (!r.ok || !type.startsWith("image/")) return fail(502, `The shop answered ${r.status}.`);
+  if (Number(r.headers.get("Content-Length") || 0) > IMAGE_BYTES) return fail(413, "That photo is too large.");
+  const body = await r.arrayBuffer();
+  if (body.byteLength > IMAGE_BYTES) return fail(413, "That photo is too large.");
+  return new Response(body, { headers: { "Content-Type": type, "Cache-Control": "private, max-age=86400" } });
 }
 function jsonLdProduct(html) {
   for (const m of html.matchAll(/<script[^>]+application\/ld\+json[^>]*>([\s\S]*?)<\/script>/gi)) {
