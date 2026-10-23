@@ -326,14 +326,32 @@ async function productPage(target) {
   let url;
   try { url = new URL(target); } catch { return fail(400, "Bad URL"); }
   if (!/^https?:$/.test(url.protocol)) return fail(400, "Bad URL");
+  let error, own;
+  try {
+    own = pageInfo(...(await readHtml(url, BROWSER)));
+    if (own.image) return json(own);
+    error = "The shop's page has no product photo.";
+  } catch (e) {
+    error = e.message;
+  }
+  // Some shops (Pull&Bear, Zara…) turn away requests that come from cloud servers like this
+  // one. Jina Reader (free, no key) opens the page in a real browser instead; only the shop's
+  // address is sent to it. If that fails too, the app asks Microlink itself (see app.js).
+  try {
+    const info = await viaJina(url);
+    if (info?.image) return json({ ...info, via: "jina" });
+  } catch { /* the error below is the shop's */ }
+  return own?.title ? json(own) : fail(502, error);
+}
+// A page's HTML (only its first PAGE_BYTES: the tags we need are near the top) and where it ended up.
+async function readHtml(url, headers, htmlOnly = true) {
   let r;
   try {
-    r = await fetch(url, { headers: BROWSER, redirect: "follow", signal: AbortSignal.timeout(9000), cf: { cacheTtl: 86400, cacheEverything: true } });
+    r = await fetch(url, { headers, redirect: "follow", signal: AbortSignal.timeout(9000), cf: { cacheTtl: 86400, cacheEverything: true } });
   } catch {
-    return fail(502, "The shop didn't answer.");
+    throw new Error("The shop didn't answer.");
   }
-  if (!r.ok || !(r.headers.get("Content-Type") || "").includes("html")) return fail(502, `The shop answered ${r.status}.`);
-  // The tags we need are near the top; don't read a whole 3 MB page.
+  if (!r.ok || (htmlOnly && !(r.headers.get("Content-Type") || "").includes("html"))) throw new Error(`The shop answered ${r.status}.`);
   const reader = r.body.getReader();
   const dec = new TextDecoder();
   let html = "";
@@ -343,7 +361,15 @@ async function productPage(target) {
     html += dec.decode(value, { stream: true });
   }
   reader.cancel().catch(() => {});
-  const page = new URL(r.url || url);
+  return [html, new URL(r.url || url)];
+}
+async function viaJina(url) {
+  // Jina Reader opens the page in a browser and, asked for HTML, sends the page as it rendered.
+  const [html] = await readHtml(new URL(`https://r.jina.ai/${url.href}`), { "X-Return-Format": "html", Accept: "text/html" }, false);
+  return pageInfo(html, url);
+}
+// What a product page shares for link previews (Open Graph tags, or schema.org Product data).
+function pageInfo(html, page) {
   const meta = (...names) => {
     for (const n of names) {
       const tag = html.match(new RegExp(`<meta[^>]+(?:property|name|itemprop)=["']${n}["'][^>]*>`, "i"))?.[0];
@@ -364,7 +390,7 @@ async function productPage(target) {
   const ogImages = [...html.matchAll(/<meta[^>]+(?:property|name)=["']og:image(?::secure_url)?["'][^>]*>/gi)]
     .map((t) => t[0].match(/content=(?:"([^"]*)"|'([^']*)')/i)).filter(Boolean).map((v) => unescapeHtml(v[1] || v[2] || ""));
   const images = [...new Set([...ogImages, meta("twitter:image", "image"), ...ldImages].map(absolute).filter(Boolean))].slice(0, 6);
-  return json({
+  return {
     url: page.href,
     title: (meta("og:title", "twitter:title") || product?.name || html.match(/<title[^>]*>([^<]*)/i)?.[1] || "").trim().slice(0, 140),
     image: images[0] || "",
@@ -374,7 +400,7 @@ async function productPage(target) {
     brand: String(product?.brand?.name || product?.brand || "").slice(0, 60),
     price: amount ? `${amount} ${currency}`.trim() : "",
     site: meta("og:site_name") || page.hostname.replace(/^www\./, ""),
-  });
+  };
 }
 
 // A product photo, so the app can keep it as the piece's picture (shops' photos can't be
@@ -384,18 +410,21 @@ async function productImage(target) {
   let url;
   try { url = new URL(target); } catch { return fail(400, "Bad URL"); }
   if (url.protocol !== "https:") return fail(400, "Bad URL");
-  let r;
-  try {
-    r = await fetch(url, { headers: { ...BROWSER, Accept: "image/avif,image/webp,image/*,*/*;q=0.8" }, redirect: "follow", signal: AbortSignal.timeout(12000), cf: { cacheTtl: 86400, cacheEverything: true } });
-  } catch {
-    return fail(502, "The shop didn't send the photo.");
+  // If the shop won't send it here, the free images.weserv.nl image cache fetches it instead.
+  let error = "The shop didn't send the photo.";
+  for (const from of [url.href, `https://images.weserv.nl/?${new URLSearchParams({ url: url.href, w: "1600", we: "1" })}`]) {
+    let r;
+    try {
+      r = await fetch(from, { headers: { ...BROWSER, Accept: "image/avif,image/webp,image/*,*/*;q=0.8" }, redirect: "follow", signal: AbortSignal.timeout(12000), cf: { cacheTtl: 86400, cacheEverything: true } });
+    } catch { continue; }
+    const type = r.headers.get("Content-Type") || "";
+    if (!r.ok || !type.startsWith("image/")) { error = `The shop answered ${r.status}.`; continue; }
+    if (Number(r.headers.get("Content-Length") || 0) > IMAGE_BYTES) return fail(413, "That photo is too large.");
+    const body = await r.arrayBuffer();
+    if (body.byteLength > IMAGE_BYTES) return fail(413, "That photo is too large.");
+    return new Response(body, { headers: { "Content-Type": type, "Cache-Control": "private, max-age=86400" } });
   }
-  const type = r.headers.get("Content-Type") || "";
-  if (!r.ok || !type.startsWith("image/")) return fail(502, `The shop answered ${r.status}.`);
-  if (Number(r.headers.get("Content-Length") || 0) > IMAGE_BYTES) return fail(413, "That photo is too large.");
-  const body = await r.arrayBuffer();
-  if (body.byteLength > IMAGE_BYTES) return fail(413, "That photo is too large.");
-  return new Response(body, { headers: { "Content-Type": type, "Cache-Control": "private, max-age=86400" } });
+  return fail(502, error);
 }
 function jsonLdProduct(html) {
   for (const m of html.matchAll(/<script[^>]+application\/ld\+json[^>]*>([\s\S]*?)<\/script>/gi)) {

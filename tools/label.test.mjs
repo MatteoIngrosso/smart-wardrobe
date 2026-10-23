@@ -60,3 +60,16 @@ test("links in QR codes", () => {
   assert.equal(L.linkIn("javascript:alert(1)"), "");
   assert.equal(L.linkIn(""), "");
 });
+
+test("Pull&Bear QR codes and barcodes", () => {
+  // From a real tag: ART. 7660 / 508 / 434, size 36.
+  const want = { model: "07660508", colour: "434", text: "7660/508/434" };
+  assert.deepEqual(L.refInUrl("https://www.pullandbear.com/qr/0766050843436"), want);
+  assert.ok(L.isTagLink("https://www.pullandbear.com/qr/0766050843436"));
+  assert.equal(L.isTagLink("https://www.pullandbear.com/it/jeans-baggy-relax-fit-l07660508"), false);
+  assert.deepEqual(L.refFromCode("07660508434368"), want);
+  assert.deepEqual(L.refFromCode("0766050843436"), want);
+  assert.equal(L.refFromCode("8445678123456"), null, "an ordinary EAN isn't a reference");
+  assert.equal(L.shopUrl("Pull&Bear", want, "it"), "https://www.pullandbear.com/it/p-l07660508?cS=434");
+  assert.deepEqual(L.refFrom("ART.   7660 / 508 / 434"), want);
+});

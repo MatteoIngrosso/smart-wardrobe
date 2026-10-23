@@ -2984,6 +2984,7 @@ function renderAdd() {
             <button class="btn" data-act="scan-tag" ${d.scanningTag ? "disabled" : ""}>${d.scanningTag ? `<span class="spinner"></span>${esc(d.labelStep || "Reading the label…")}` : `${ICON_TAG}Scan the label`}</button>
             <span class="muted small">${aiReady() ? `Reads the QR code, and ${aiName()} reads brand, price, size and material from a photo of the tag or label.` : "Reads the QR code on the tag. Add a Gemini key in Settings to read the printed text too, or type it in."}</span>
           </div>
+          ${d.labelNote ? `<p class="muted small" style="margin:0">${esc(d.labelNote)}</p>` : ""}
           ${d.link ? `<a class="btn ghost" href="${esc(d.link)}" target="_blank" rel="noopener">Product page on ${esc(site(d.link))}${d.reference ? ` · ref ${esc(d.reference)}` : ""} ↗</a>` : ""}
           <div class="tag-fields">
             <input class="input" data-input="price" inputmode="decimal" value="${esc(d.price ?? "")}" placeholder="Price${d.currency ? ` (${esc(d.currency)})` : ""}" aria-label="Price">
@@ -3216,9 +3217,10 @@ tagInput.onchange = () => {
   scanTag(draft, f);
 };
 
-// QR codes are read on the device: by the browser where it can (Android, Mac), else by jsQR
-// (vendor/jsqr.min.js, Apache 2.0, loaded the first time). A label photo usually shows the
-// code small, so it's tried at a few sizes.
+// Codes are read on the device: by the browser where it can (Android, Mac: QR codes and
+// barcodes), else by jsQR (vendor/jsqr.min.js, Apache 2.0, loaded the first time; QR only).
+// On a label photo the QR code is small next to other marks, so after the whole photo jsQR
+// looks at overlapping parts of it, the way you'd hold a scanner closer.
 let jsQRLoad;
 const loadJsQR = () => (jsQRLoad ||= new Promise((ok, no) => {
   if (window.jsQR) return ok(window.jsQR);
@@ -3227,24 +3229,42 @@ const loadJsQR = () => (jsQRLoad ||= new Promise((ok, no) => {
   s.onerror = () => { jsQRLoad = null; no(new Error("jsQR didn't load")); };
   document.head.append(s);
 }));
-async function readQR(file) {
+// → { qr, barcode }: the QR code's text and the barcode's digits, each "" if not found.
+async function readCodes(file) {
   const bmp = await createImageBitmap(file, { imageOrientation: "from-image" }).catch(() => createImageBitmap(file));
+  const out = { qr: "", barcode: "" };
   if ("BarcodeDetector" in window) {
     try {
-      const hit = (await new BarcodeDetector({ formats: ["qr_code"] }).detect(bmp)).map((c) => c.rawValue).find(Boolean);
-      if (hit) return hit;
-    } catch { /* this browser has no QR reader */ }
+      const formats = (await BarcodeDetector.getSupportedFormats?.()) || ["qr_code"];
+      const codes = await new BarcodeDetector({ formats: ["qr_code", "ean_13", "code_128", "itf", "upc_a"].filter((f) => formats.includes(f)) }).detect(bmp);
+      out.qr = codes.find((c) => c.format === "qr_code")?.rawValue || "";
+      out.barcode = codes.find((c) => c.format !== "qr_code" && /^\d{8,14}$/.test(c.rawValue))?.rawValue || "";
+      if (out.qr) return out;
+    } catch { /* this browser can't read codes */ }
   }
   const jsQR = await loadJsQR();
-  for (const max of [1200, 2000, 800]) {
-    const scale = Math.min(1, max / Math.max(bmp.width, bmp.height));
-    const c = newCanvas(Math.round(bmp.width * scale), Math.round(bmp.height * scale));
+  const scale = Math.min(1, 2400 / Math.max(bmp.width, bmp.height));
+  const W = Math.round(bmp.width * scale), H = Math.round(bmp.height * scale);
+  const full = newCanvas(W, H);
+  full.getContext("2d").drawImage(bmp, 0, 0, W, H);
+  const look = (x, y, w, h, max) => {
+    const k = Math.min(1, max / Math.max(w, h));
+    const c = newCanvas(Math.round(w * k), Math.round(h * k));
     const ctx = c.getContext("2d", { willReadFrequently: true });
-    ctx.drawImage(bmp, 0, 0, c.width, c.height);
-    const code = jsQR(ctx.getImageData(0, 0, c.width, c.height).data, c.width, c.height, { inversionAttempts: "attemptBoth" });
-    if (code?.data) return code.data;
+    ctx.drawImage(full, x, y, w, h, 0, 0, c.width, c.height);
+    return jsQR(ctx.getImageData(0, 0, c.width, c.height).data, c.width, c.height, { inversionAttempts: "attemptBoth" })?.data || "";
+  };
+  const tries = [[0, 0, W, H, 1200], [0, 0, W, H, 2400]];
+  for (const n of [2, 3]) { // parts a half, then a third of the photo, overlapping by half
+    const w = W / n, h = H / n;
+    for (let y = 0; y + h <= H + 1; y += h / 2) for (let x = 0; x + w <= W + 1; x += w / 2) tries.push([x, y, w, h, 1000]);
   }
-  return "";
+  for (const t of tries) {
+    out.qr = look(...t);
+    if (out.qr) break;
+    await new Promise((r) => setTimeout(r)); // keep the screen responsive between parts
+  }
+  return out;
 }
 async function readTagText(file) {
   const text = await aiGenerate({
@@ -3256,44 +3276,69 @@ async function readTagText(file) {
   });
   return JSON.parse(text.replace(/^```(json)?|```$/g, "").trim());
 }
-// The shop's page for the piece on the label: { page, ref }. Tries the QR link, then a link
-// built from the reference, then Google Shopping, then the AI with Google Search.
-async function findProduct(qr, tag, step) {
-  const link = Label.linkIn(qr);
+// The shop's page for the piece on the label: { page, ref, link, why }. Tries the QR link,
+// then a link built from the reference, then Google Shopping, then the AI with Google Search.
+// `why` says what went wrong when no page could be read.
+async function findProduct(codes, tag, step) {
+  const qrLink = Label.linkIn(codes.qr);
   const brand = tag?.brand || "";
-  const ref = Label.refFrom(tag?.reference) || Label.refInUrl(link) || (!link && Label.refFrom(qr)) || null;
-  let best = null;
+  const ref = Label.refFrom(tag?.reference) || Label.refInUrl(qrLink) || Label.refFromCode(codes.barcode) || (!qrLink && Label.refFrom(codes.qr)) || null;
+  // A Pull&Bear tag's QR stands for the tag, not a page: its reference says which page.
+  const fromCode = !!(Label.refInUrl(qrLink) || Label.refFromCode(codes.barcode));
+  const built = Label.shopUrl(brand || qrLink || (fromCode && !brand ? "Pull&Bear" : ""), ref, state.settings.region);
+  let best = null, why = "";
   const open = async (url) => {
-    const page = await pageInfo(url);
+    let page = await pageInfo(url, 30000);
+    if (!page?.image && !page?.noServer) page = (await microlinkInfo(url)) || page;
     if (page?.noServer) throw Object.assign(new Error("Product pages can only be opened on the hosted app."), { noServer: true });
+    if (page?.error) why = page.error;
+    // A page built from a barcode alone must really be that product.
+    if (url === built && !brand && page?.url && !page.url.includes(`l${ref.model}`)) return false;
     if (page?.title && (!best || (page.image && !best.image))) best = page;
     return !!page?.image;
   };
+  const done = () => ({ page: best, ref, link: best?.url || built || (Label.isTagLink(qrLink) ? "" : qrLink), why });
   step("Opening the product page…");
-  for (const url of [link, Label.shopUrl(brand || link, ref, state.settings.region)].filter(Boolean)) if (await open(url)) return { page: best, ref };
+  for (const url of [...new Set([Label.isTagLink(qrLink) ? "" : qrLink, built].filter(Boolean))]) if (await open(url)) return done();
   const words = [brand, tag?.name, ref?.text || tag?.reference].filter(Boolean).join(" ");
-  if (!brand || words === brand) return { page: best, ref };
+  if (!brand || words === brand) return done();
   if (productsOn()) {
     step("Looking it up on Google Shopping…");
     const it = state.settings.region === "it";
     const r = await fetch(`api/products?${new URLSearchParams({ q: words, gl: it ? "it" : "us", hl: it ? "it" : "en" })}`).catch(() => null);
     const items = (await r?.json().catch(() => null))?.items || [];
     const hit = items.find((p) => normBrand(p.shop).includes(normBrand(brand)) || normBrand(p.title).includes(normBrand(brand)));
-    if (hit && (await open(hit.url))) return { page: best, ref };
+    if (hit && (await open(hit.url))) return done();
     if (hit && !best?.image) best = { url: hit.url, title: hit.title, image: hit.image, images: [hit.image], price: hit.price, site: hit.shop };
-    if (best?.image) return { page: best, ref };
+    if (best?.image) return done();
   }
-  if (aiReady()) {
+  if (aiReady() && !built) { // a built link is the right page already; searching would find the same one
     step("Searching the shop's website…");
     let sources = [];
     const text = await aiGenerate({
       system: "You find the official product page of a piece of clothing from what its label says. Use Google Search. Reply with the product page URL only.",
-      text: `${words}${link ? ` (its QR code links to ${link})` : ""}`,
+      text: `${words}${qrLink ? ` (its QR code links to ${qrLink})` : ""}`,
       search: true, maxTokens: 120, onSources: (w) => (sources = w),
     }).catch(() => "");
     for (const url of [...new Set([Label.linkIn(text), ...sources.map((s) => s.uri)].filter(Boolean))].slice(0, 3)) if (await open(url)) break;
   }
-  return { page: best, ref };
+  return done();
+}
+// Microlink, a free link-preview service (50 pages a day without a key), opens pages for shops
+// that turn the app's server away. Asked from this device, so the 50 are this device's own.
+async function microlinkInfo(url) {
+  try {
+    const r = await fetch(`https://api.microlink.io/?${new URLSearchParams({ url })}`, AbortSignal.timeout ? { signal: AbortSignal.timeout(20000) } : {});
+    const d = (await r.json()).data;
+    const image = /^https:\/\//.test(d?.image?.url || "") ? d.image.url : "";
+    if (!image) return null;
+    let host = "";
+    try { host = new URL(d.url).hostname; } catch { /* no address given */ }
+    return {
+      url: host === new URL(url).hostname ? url : d.url || url, title: String(d.title || "").slice(0, 140), image, images: [image],
+      description: String(d.description || "").slice(0, 300), color: "", brand: "", price: "", site: d.publisher || host.replace(/^www\./, ""),
+    };
+  } catch { return null; }
 }
 // A shop's photo, fetched through the app's server (shops don't let other sites copy them).
 async function productPhoto(url) {
@@ -3316,14 +3361,15 @@ async function scanTag(d, file) {
   rerenderAdd(d);
   const fresh = !d.photos.length;
   try {
-    const [qr, tag] = await Promise.all([
-      readQR(file).catch(() => ""),
+    const [codes, tag] = await Promise.all([
+      readCodes(file).catch(() => ({ qr: "", barcode: "" })),
       aiReady() ? readTagText(file).catch((e) => ({ error: e.message })) : null,
     ]);
-    if (tag?.error && !qr) throw new Error(tag.error);
+    const qr = codes.qr;
+    if (tag?.error && !qr && !codes.barcode) throw new Error(tag.error);
     const r = tag?.error ? null : tag;
-    let found = { page: null, ref: Label.refFrom(r?.reference) };
-    try { found = await findProduct(qr, r, step); } catch (e) { if (e.noServer) toast(e.message); }
+    let found = { page: null, ref: Label.refFrom(r?.reference), why: "" };
+    try { found = await findProduct(codes, r, step); } catch (e) { if (e.noServer) found.why = e.message; }
     const page = found.page;
     const title = Label.cleanTitle(page?.title, r?.brand || page?.brand || "");
     const words = Label.toEnglish(title);
@@ -3342,8 +3388,14 @@ async function scanTag(d, file) {
     if (price > 0) { d.price = String(price); d.currency = ((r?.price > 0 ? r.currency : page.price.split(" ")[1]) || "").toUpperCase(); }
     if (r?.size) d.size = r.size.trim();
     if (r?.material) d.material = r.material.trim();
-    if (page?.url) d.link = page.url;
+    if (found.link && !d.link) d.link = found.link;
     if (found.ref) d.reference = found.ref.text;
+    // Said under the Label button until the next scan, so it isn't missed like a toast.
+    d.labelNote = page ? "" : [
+      found.ref || qr ? `Couldn't open the product page${found.why ? `: ${found.why.replace(/\.$/, "")}` : ""}.` : "No QR code or reference found on that photo. Try again closer, with the QR code and the ART./REF number sharp.",
+      tag?.error ? `${aiName()} couldn't read the printed text: ${tag.error}` : "",
+      found.ref ? `Reference ${found.ref.text}.` : "",
+    ].filter(Boolean).join(" ");
     const colour = wardrobeColour(r?.color || page?.color || title, d.category);
     // The page's photo is in the shop's first colour, which may not be the one on the label.
     const sameColour = Label.photoColourMatches(page?.image, found.ref);
@@ -3366,7 +3418,7 @@ async function scanTag(d, file) {
     }
     if (draft === d) {
       const what = [d.name || d.brand, page?.site && `from ${page.site}`].filter(Boolean).join(" ");
-      toast(page ? `Found ${what}` : r || qr ? `Read the label${fresh ? ". No product page found, so take a photo of the piece" : ""}` : aiReady() ? "Nothing readable on that label" : "No QR code found. Add a Gemini key in Settings to read the printed text too.");
+      toast(page ? `Found ${what}` : found.ref ? `Read the label, but couldn't open the product page${fresh ? ". Take a photo of the piece" : ""}` : r || qr ? "Read the label" : aiReady() ? "Nothing readable on that label" : "No QR code found. Add a Gemini key in Settings to read the printed text too.");
     }
   } catch (err) {
     if (draft === d) toast(err.message || "Couldn't read the label");
@@ -4125,12 +4177,14 @@ function photosHTML(b) {
   </div>`;
 }
 // What a product page shows: its photo, name and price (worker/api.js, GET /api/page).
-async function pageInfo(url) {
+// When the shop turns the server away, the server tries free link-preview services, which can take longer.
+async function pageInfo(url, wait = 12000) {
   try {
-    const r = await fetch(`api/page?url=${encodeURIComponent(url)}`, AbortSignal.timeout ? { signal: AbortSignal.timeout(12000) } : {});
+    const r = await fetch(`api/page?url=${encodeURIComponent(url)}`, AbortSignal.timeout ? { signal: AbortSignal.timeout(wait) } : {});
     if (r.status === 404 && !(r.headers.get("Content-Type") || "").includes("json")) return { noServer: true };
-    return r.ok ? await r.json() : null;
-  } catch { return null; }
+    const j = await r.json().catch(() => ({}));
+    return r.ok ? j : { error: j.error || `The app's server answered ${r.status}.` };
+  } catch { return { error: "The product page took too long to open." }; }
 }
 async function realPhotos(b) {
   if (!productsOn() && !aiReady()) return toast("Real photos need a SerpApi key on the server (see Settings > Look) or an AI key.");
