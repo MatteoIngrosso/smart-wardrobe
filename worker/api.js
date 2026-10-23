@@ -14,6 +14,9 @@
 //     GET  /api/page?url=…&code=…         a shop's product page: {url, title, image, images, description, price, site, text, tried}
 //     GET  /api/image?url=…               a product photo from a shop (to keep as a piece's picture)
 //     GET  /api/products?q=…&gl=it&hl=it  real products with photos (Google Shopping via SerpApi)
+//     GET  /api/photos?q=…&gl=it&hl=it    photos for a search, e.g. a label's reference (Google Images via SerpApi)
+//     POST /api/lens?q=…&country=it&hl=it a photo (JPEG body): the products in it, {items} (Google Lens via SerpApi)
+//     GET  /lens/<name>.jpg               that photo, for Google Lens to fetch: no sign-in, gone once Lens has answered
 //     POST /api/calendar                  {"url": "..."}: reads a calendar's private iCal link
 //
 // Settings (see README, "Putting it online"):
@@ -21,7 +24,8 @@
 //     APP_PASSWORD  secret: the password for the sign-in page. Without it nothing is served.
 //     GEMINI_KEY    optional secret
 //     CLAUDE_KEY    optional secret
-//     SERPAPI_KEY   optional secret: product photos in Discover (free plan, 250 searches a month)
+//     SERPAPI_KEY   optional secret: product photos in Discover, Google Images and Google Lens for
+//                   adding pieces (free plan, 250 searches a month)
 
 const COLS = new Set(["items", "log", "kv"]);
 const BLOB_KEY = /^[0-9a-z-]{4,80}\.(jpg|webp|png|bin)$/;
@@ -42,6 +46,7 @@ export default {
   async fetch(request, env) {
     const url = new URL(request.url);
     if (PUBLIC.has(url.pathname)) return env.ASSETS.fetch(request);
+    if (url.pathname.startsWith("/lens/")) return lensPhoto(env, url.pathname.slice("/lens/".length));
     if (!env.APP_PASSWORD) return loginPage(503, "", "Almost there: add the APP_PASSWORD secret in the Worker's settings, then reload.");
     if (url.pathname === "/login") return request.method === "POST" ? login(request, env) : loginPage(200);
     if (url.pathname === "/logout") return redirect("/login", sessionCookie("", 0));
@@ -59,6 +64,7 @@ export async function handleApi(request, env) {
     if (path === "page" && method === "GET") return await productPage(new URL(request.url).searchParams);
     if (path === "image" && method === "GET") return await productImage(new URL(request.url).searchParams.get("url"));
     if (path === "products" && method === "GET") return await products(env, new URL(request.url).searchParams);
+    if (path === "photos" && method === "GET") return await photoSearch(env, new URL(request.url).searchParams);
     if (path === "calendar" && method === "POST") return await calendar(request);
     if (path === "ping" && method === "GET") {
       const keys = { gemini: !!env.GEMINI_KEY, claude: !!env.CLAUDE_KEY, products: !!env.SERPAPI_KEY };
@@ -75,6 +81,7 @@ export async function handleApi(request, env) {
       return json({ missing: keys.filter((k) => !have.has(k)) });
     }
     if (path.startsWith("blob/")) return await blob(request, env.DB, path.slice(5));
+    if (path === "lens" && method === "POST") return await lens(request, env);
     return fail(404, "Not found");
   } catch (e) {
     return fail(e.status || 500, e.status ? e.message : "Server error");
@@ -160,6 +167,7 @@ function ready(db) {
     db.prepare("CREATE TABLE IF NOT EXISTS blobs (key TEXT PRIMARY KEY, type TEXT NOT NULL, body BLOB NOT NULL)"),
     db.prepare("CREATE TABLE IF NOT EXISTS login_fails (ip TEXT PRIMARY KEY, n INTEGER NOT NULL, at INTEGER NOT NULL)"),
     db.prepare("CREATE TABLE IF NOT EXISTS products (q TEXT PRIMARY KEY, data TEXT NOT NULL, at INTEGER NOT NULL)"),
+    db.prepare("CREATE TABLE IF NOT EXISTS lens (name TEXT PRIMARY KEY, body BLOB NOT NULL, at INTEGER NOT NULL)"),
   ]).catch((e) => { schema = null; throw e; });
   return schema;
 }
@@ -528,11 +536,7 @@ async function products(env, params) {
     const row = await env.DB.prepare("SELECT data, at FROM products WHERE q = ?").bind(key).first();
     if (row && Date.now() - row.at < PRODUCT_DAYS * 864e5) return json({ items: JSON.parse(row.data), cached: true });
   }
-  const r = await fetch(`https://serpapi.com/search.json?${new URLSearchParams({ engine: "google_shopping", q, gl, hl, api_key: env.SERPAPI_KEY })}`, { signal: AbortSignal.timeout(20000) });
-  const j = await r.json().catch(() => ({}));
-  // "No results" is an answer worth keeping; anything else (no searches left, bad key) isn't.
-  if (j.error && !/hasn't returned any results/i.test(j.error)) return fail(502, `SerpApi: ${j.error}`);
-  if (!r.ok && !j.error) return fail(502, `SerpApi answered ${r.status}.`);
+  const j = await serpApi(env, { engine: "google_shopping", q, gl, hl });
   const items = (j.shopping_results || []).map((x) => ({
     title: String(x.title || "").slice(0, 140),
     price: x.price || "",
@@ -542,4 +546,97 @@ async function products(env, params) {
   })).filter((x) => x.image && x.url).slice(0, 8);
   if (env.DB) await env.DB.prepare("INSERT OR REPLACE INTO products (q, data, at) VALUES (?, ?, ?)").bind(key, JSON.stringify(items), Date.now()).run();
   return json({ items, cached: false });
+}
+// One SerpApi search. "No results" is an answer (worth keeping); anything else that went wrong
+// (no searches left this month, a bad key) is an error, said as "SerpApi: …".
+async function serpApi(env, params, wait = 20000) {
+  let r;
+  try {
+    r = await fetch(`https://serpapi.com/search.json?${new URLSearchParams({ ...params, api_key: env.SERPAPI_KEY })}`, { signal: AbortSignal.timeout(wait) });
+  } catch {
+    throw Object.assign(new Error("SerpApi didn't answer."), { status: 502 });
+  }
+  const j = await r.json().catch(() => ({}));
+  if (j.error && !/hasn't returned any results/i.test(j.error)) throw Object.assign(new Error(`SerpApi: ${j.error}`), { status: 502 });
+  if (!r.ok && !j.error) throw Object.assign(new Error(`SerpApi answered ${r.status}.`), { status: 502 });
+  return j;
+}
+const firstHttps = (...urls) => urls.find((u) => /^https:\/\//.test(u || "")) || "";
+const place = (params, name, fallback) => (/^[a-z]{2}$/.test(params.get(name) || "") ? params.get(name) : fallback);
+
+/* ---------- Google Images and Google Lens (adding a piece) ---------- */
+// Some shops (Pull&Bear, Zara…) show their product pages to no server at all, but Google
+// already has their photos. These go through SerpApi too, with the same key and free searches.
+
+// Photos for a search, e.g. a label's reference ("Pull&Bear 07660508434"): the shop's own
+// photo and Google's small copy of it, which always loads. Kept two weeks, like products.
+async function photoSearch(env, params) {
+  if (!env.SERPAPI_KEY) return fail(404, "No SERPAPI_KEY is saved on the server.");
+  const q = (params.get("q") || "").trim().replace(/\s+/g, " ").slice(0, 120);
+  if (!q) return fail(400, "What should be searched?");
+  const gl = place(params, "gl", "us"), hl = place(params, "hl", "en");
+  const key = `photos|${gl}|${hl}|${q.toLowerCase()}`;
+  if (env.DB) {
+    await ready(env.DB);
+    const row = await env.DB.prepare("SELECT data, at FROM products WHERE q = ?").bind(key).first();
+    if (row && Date.now() - row.at < PRODUCT_DAYS * 864e5) return json({ items: JSON.parse(row.data), cached: true });
+  }
+  const j = await serpApi(env, { engine: "google_images", q, gl, hl });
+  const items = (j.images_results || []).map((x) => ({
+    title: String(x.title || "").slice(0, 140),
+    image: firstHttps(x.original),
+    thumb: firstHttps(x.thumbnail),
+    url: firstHttps(x.link),
+    shop: String(x.source || "").slice(0, 60),
+  })).filter((x) => x.image || x.thumb).slice(0, 30);
+  if (env.DB) await env.DB.prepare("INSERT OR REPLACE INTO products (q, data, at) VALUES (?, ?, ?)").bind(key, JSON.stringify(items), Date.now()).run();
+  return json({ items, cached: false });
+}
+
+// Google Lens: the products in a photo (of a piece, or its label), with shop, price and photo.
+// Lens only takes a photo at a public address, so the photo is kept here under a random name
+// (GET /lens/<name>.jpg, the one address that works without signing in) and deleted as soon
+// as Lens has answered; any left over are deleted after ten minutes.
+const LENS_MS = 10 * 60_000;
+async function lens(request, env) {
+  if (!env.SERPAPI_KEY) return fail(404, "No SERPAPI_KEY is saved on the server.");
+  const body = await request.arrayBuffer();
+  if (!body.byteLength) return fail(400, "No photo");
+  if (body.byteLength > MAX_BLOB) return fail(413, "Photo too large");
+  const params = new URL(request.url).searchParams;
+  const name = toHex(crypto.getRandomValues(new Uint8Array(16)));
+  const now = Date.now();
+  await env.DB.batch([
+    env.DB.prepare("DELETE FROM lens WHERE at < ?").bind(now - LENS_MS),
+    env.DB.prepare("INSERT INTO lens (name, body, at) VALUES (?, ?, ?)").bind(name, body, now),
+  ]);
+  try {
+    const q = (params.get("q") || "").trim().replace(/\s+/g, " ").slice(0, 120);
+    const search = { engine: "google_lens", url: `${new URL(request.url).origin}/lens/${name}.jpg`, hl: place(params, "hl", "en"), country: place(params, "country", "us"), ...(q ? { q } : {}) };
+    // The shopping results first; if Lens sees nothing to buy, everything it matched.
+    let items = lensItems(await serpApi(env, { ...search, type: "products" }, 40000));
+    if (!items.length) items = lensItems(await serpApi(env, search, 40000));
+    return json({ items });
+  } finally {
+    await env.DB.prepare("DELETE FROM lens WHERE name = ?").bind(name).run().catch(() => {});
+  }
+}
+function lensItems(j) {
+  const seen = new Set();
+  return [...(j.visual_matches || []), ...(j.products || []), ...(j.exact_matches || [])].map((x) => ({
+    title: String(x.title || "").slice(0, 140),
+    url: /^https?:\/\//.test(x.link || "") ? x.link : "",
+    shop: String(x.source || "").slice(0, 60),
+    image: firstHttps(x.image, x.thumbnail),
+    thumb: firstHttps(x.thumbnail, x.image),
+    price: String(x.price?.value || (x.price?.extracted_value ? `${x.price.extracted_value} ${x.price.currency || ""}` : "")).trim(),
+  })).filter((x) => x.url && x.thumb && !seen.has(x.url) && seen.add(x.url)).slice(0, 24);
+}
+async function lensPhoto(env, file) {
+  const name = file.match(/^([0-9a-f]{32})\.jpg$/)?.[1];
+  if (!name || !env.DB) return new Response("Not found", { status: 404 });
+  await ready(env.DB);
+  const row = await env.DB.prepare("SELECT body FROM lens WHERE name = ? AND at > ?").bind(name, Date.now() - LENS_MS).first();
+  if (!row) return new Response("Not found", { status: 404 });
+  return new Response(new Uint8Array(row.body), { headers: { "Content-Type": "image/jpeg", "Cache-Control": "no-store" } });
 }

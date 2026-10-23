@@ -79,3 +79,12 @@ test("shop names from links", () => {
   assert.equal(L.siteOf("https://shop.example.it/x"), "shop.example.it");
   assert.equal(L.siteOf("not a link"), "");
 });
+
+test("photos of a reference", () => {
+  const ref = { model: "07660508", colour: "434", text: "7660/508/434" };
+  assert.ok(L.codeIn("https://static.pullandbear.net/assets/public/cf05/452f/57df40f8a431/006ac5a1063d/07660508434-M/07660508434-M.jpg?ts=1", ref));
+  assert.ok(L.codeIn("https://static.zara.net/photos///2026/I/0/2/p/7660/508/434/2/w/750/7660508434_1_1_1.jpg", ref));
+  assert.equal(L.codeIn("https://static.pullandbear.net/x/07660508833-M.jpg", ref), false, "another colour");
+  assert.equal(L.codeIn("https://x/176605084341.jpg", ref), false, "part of a longer number");
+  assert.equal(L.codeIn("https://x/07660508434.jpg", { model: "07660508", colour: "" }), false);
+});

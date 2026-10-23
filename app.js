@@ -2902,6 +2902,7 @@ function brandTyped(value) {
 const ICON_CAMERA = `<svg viewBox="0 0 24 24"><path d="M3 8a2 2 0 0 1 2-2h2l2-2h6l2 2h2a2 2 0 0 1 2 2v10a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><circle cx="12" cy="13" r="4"/></svg>`;
 const ICON_GALLERY = `<svg viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="16" rx="2"/><circle cx="9" cy="10" r="2"/><path d="m21 16-5-5-9 9"/></svg>`;
 const ICON_TAG = `<svg viewBox="0 0 24 24"><path d="M3 12V4a1 1 0 0 1 1-1h8l9 9-9 9z"/><circle cx="8" cy="8" r="1.5"/></svg>`;
+const ICON_LENS = `<svg viewBox="0 0 24 24"><path d="M4 8V6a2 2 0 0 1 2-2h2M16 4h2a2 2 0 0 1 2 2v2M20 16v2a2 2 0 0 1-2 2h-2M8 20H6a2 2 0 0 1-2-2v-2"/><circle cx="12" cy="12" r="3.5"/></svg>`;
 const ICON_SCISSORS = `<svg viewBox="0 0 24 24"><circle cx="6" cy="6" r="3"/><circle cx="6" cy="18" r="3"/><path d="M8.1 8.1 20 20M8.1 15.9 20 4"/></svg>`;
 const ICON_ROTATE =`<svg viewBox="0 0 24 24"><path d="M20 11a8 8 0 1 0-2.3 5.7"/><path d="M20 4v7h-7"/></svg>`;
 
@@ -2928,6 +2929,7 @@ function renderAdd() {
         <button class="btn primary big" data-act="shoot">${ICON_CAMERA}<span class="big-label">Take photos<small>Front, then back</small></span></button>
         <button class="btn big" data-act="gallery">${ICON_GALLERY}<span class="big-label">Choose from gallery<small>Front and back photos are paired up</small></span></button>
         <button class="btn big" data-act="scan-label">${ICON_TAG}<span class="big-label">Scan the label<small>Fills it in from the shop</small></span></button>
+        <button class="btn big" data-act="lens-start">${ICON_LENS}<span class="big-label">Google Lens<small>Finds it in the shops</small></span></button>
       </div>
       <ol class="how">
         <li>Lay the piece flat on a plain surface, collar or waistband at the top.</li>
@@ -2969,9 +2971,10 @@ function renderAdd() {
           ${d.photos.map((p, k) => `<div class="mini ${k === d.active ? "on" : ""}"><img class="pic-bg" src="${photoURL(shown(p))}" data-photo="${k}" alt="">${p.busy ? '<div class="mini-busy"><div class="spinner"></div></div>' : ""}<button class="x" data-rmphoto="${k}" aria-label="Remove photo">×</button></div>`).join("")}
           <button class="add-photo" data-act="more-photo" aria-label="Add photo">+</button>
         </div>
-        ${d.photos[0]?.shop ? `<p class="muted small" style="margin:0">Photo from ${esc(d.shopPhoto.site || "the shop")}.${d.shopPhoto.otherColour ? " It shows the piece in another colour: add your own photo with + and remove this one." : " Add your own with +."}</p>` : ""}`}
+        ${d.photos[0]?.shop ? `<p class="muted small" style="margin:0">Photo from ${esc(d.shopPhoto.site || "the shop")}.${d.shopPhoto.otherColour ? " It shows the piece in another colour: add your own photo with + and remove this one." : d.photos.some((p) => !p.shop) ? " Yours are after it." : " Add your own with +."}</p>` : ""}`}
       </div>
       <div class="stack">
+        ${lensHTML(d)}
         <div class="field"><label for="f-name">Name</label><input id="f-name" class="input" data-input="name" value="${esc(d.name || "")}" placeholder="${esc(autoName(d) || "e.g. Navy cable-knit sweater")}"></div>
         <div class="field"><label>Type</label>${Object.entries(SLOTS).map(([slot, label]) => `<div class="type-group"><span class="muted small">${label}</span><div class="chips">${CATS.filter((c) => c.slot === slot).map((c) => `<button class="chip" aria-pressed="${d.category === c.id}" data-cat="${c.id}">${c.label}</button>`).join("")}</div></div>`).join("")}</div>
         <div class="field"><label for="f-brand">Brand</label>
@@ -2982,7 +2985,8 @@ function renderAdd() {
         <div class="field"><label>Label <span style="text-transform:none;font-weight:400">(optional)</span></label>
           <div class="row">
             <button class="btn" data-act="scan-tag" ${d.scanningTag ? "disabled" : ""}>${d.scanningTag ? `<span class="spinner"></span>${esc(d.labelStep || "Reading the label…")}` : `${ICON_TAG}Scan the label`}</button>
-            <span class="muted small">${aiReady() ? `Reads the QR code, and ${aiName()} reads brand, price, size and material from a photo of the tag or label.` : "Reads the QR code on the tag. Add a Gemini key in Settings to read the printed text too, or type it in."}</span>
+            <button class="btn" data-act="lens" ${d.scanningTag || d.lens?.busy ? "disabled" : ""}>${d.lens?.busy ? `<span class="spinner"></span>Searching with Google Lens…` : `${ICON_LENS}Google Lens`}</button>
+            <span class="muted small">${aiReady() ? `Reads the QR code, and ${aiName()} reads brand, price, size and material from a photo of the tag or label. Google Lens finds the piece in the shops from its photo.` : "Reads the QR code on the tag. Add a Gemini key in Settings to read the printed text too, or type it in."}</span>
           </div>
           ${d.labelNote ? `<p class="muted small" style="margin:0">${esc(d.labelNote)}</p>` : ""}
           ${d.link ? `<a class="btn ghost" href="${esc(d.link)}" target="_blank" rel="noopener">Product page on ${esc(site(d.link))}${d.reference ? ` · ref ${esc(d.reference)}` : ""} ↗</a>` : ""}
@@ -3208,6 +3212,23 @@ document.body.append(tagInput);
 const tryInput = Object.assign(document.createElement("input"), { type: "file", accept: "image/*", capture: "environment", hidden: true });
 document.body.append(tryInput);
 tryInput.onchange = () => { const f = tryInput.files[0]; tryInput.value = ""; if (f) tryPhoto(f); };
+// Google Lens from the start of Add: the photo becomes the new piece's and is searched at once.
+// Inside a piece without photos it joins the piece.
+const lensInput = Object.assign(document.createElement("input"), { type: "file", accept: "image/*", capture: "environment", hidden: true });
+document.body.append(lensInput);
+lensInput.onchange = async () => {
+  const f = lensInput.files[0];
+  lensInput.value = "";
+  if (!f) return;
+  const blob = await resizeImage(f);
+  if (draft && (draft.photos.length || draft.id || draft.fromLabel)) {
+    const p = newPhoto(blob);
+    draft.photos.push(p);
+    draft.active = draft.photos.length - 1;
+    preparePhoto(p, draft);
+  } else startDraft([blob]); // sets the new draft at once, then removes the background and recognises it
+  lensSearch(draft, blob);
+};
 tagInput.onchange = () => {
   const f = tagInput.files[0];
   tagInput.value = "";
@@ -3355,31 +3376,34 @@ function wardrobeColour(text, category) {
   const col = COLORS[c] ? c : EXTRA_COLOURS[c]?.[1] || "";
   return category === "jeans" && ["blue", "light blue", "navy"].includes(col) && !/navy|dark/.test(Label.toEnglish(text)) ? "denim" : col;
 }
-// What the AI reads off the product page (the label rarely says the material or the fit):
-// the page's text when the server could read it (about 2,000 tokens), else Gemini opens the
-// page itself with URL context and searches Google for the reference.
+// What the AI finds about the product (the label rarely says the material or the fit). Shops
+// like Pull&Bear hide their pages from servers, so Gemini also searches Google for it, with
+// whatever the shop's page showed as a start (about 1,500 tokens). Claude reads the page only.
 async function productDetails(page, link, tag, ref) {
   const what = [tag?.brand, ref?.text && `reference ${ref.text}`].filter(Boolean).join(", ");
-  const ask = "Reply with exactly these lines, in English, leaving a value empty when the page doesn't say it:\n" +
-    "name: <product name as the shop writes it>\ntype: <garment type, e.g. jeans, hoodie>\ncolour: <colour>\nfit: <e.g. baggy, slim, regular>\n" +
+  const ask = "Reply with exactly these lines, in English, leaving a value empty when no source says it:\n" +
+    "name: <product name as the shop writes it>\nbrand: <brand>\ntype: <garment type, e.g. jeans, hoodie>\ncolour: <colour>\nfit: <e.g. baggy, slim, regular>\n" +
     "material: <composition, e.g. 100% cotton>\ndescription: <one short sentence about the piece>\nprice: <price with currency>";
+  const shown = page?.text ? page.text.slice(0, 4000) : [page?.title, page?.description].filter(Boolean).join("\n");
   let text;
-  if (page?.text) {
+  if (state.settings.aiProvider !== "claude" && !state.previewAI && (link || what)) {
+    const open = !!link && !page?.text; // the page's own text is better than Gemini's try at opening it
+    const q = {
+      system: "You find a clothing product's details for a wardrobe app. Search Google for the product (its reference and name)" + (open ? " and open its page with URL context" : "") + ". Never guess: leave a value empty if no source says it. Plain text only, no markdown.",
+      text: `Product page: ${link || "unknown"}${what ? `\n(${what})` : ""}${shown ? `\nWhat the shop's page showed (it may be incomplete):\n${shown}` : ""}\n\n${ask}${open ? "\nphotos: <full addresses of the product's photos on the page, space separated>" : ""}`,
+      maxTokens: 450,
+    };
+    text = await aiGenerate({ ...q, search: true, urlContext: open }).catch(() => aiGenerate({ ...q, search: true }));
+  } else if (shown) {
     text = await aiGenerate({
       system: "You read a clothing product page for a wardrobe app. Plain text only, no markdown.",
-      text: `Product page${what ? ` (${what})` : ""}:\n${page.text.slice(0, 6000)}\n\n${ask}`, maxTokens: 250,
+      text: `Product page${what ? ` (${what})` : ""}:\n${shown}\n\n${ask}`, maxTokens: 250,
     });
-  } else if (link && state.settings.aiProvider !== "claude" && !state.previewAI) {
-    const q = {
-      system: "You read clothing product pages for a wardrobe app. Open the page with URL context; if it can't be opened, search Google for the product. Plain text only, no markdown.",
-      text: `Product page: ${link}${what ? `\n(${what})` : ""}\n\n${ask}\nphotos: <full addresses of the product's photos on the page, space separated>`, maxTokens: 500,
-    };
-    text = await aiGenerate({ ...q, search: true, urlContext: true }).catch(() => aiGenerate({ ...q, search: true }));
   } else return null;
   const out = {};
   for (const line of text.split("\n")) {
-    const m = line.replace(/\*\*/g, "").match(/^\s*[-•]?\s*(name|type|colou?r|fit|material|description|price|photos)\s*:\s*(.*)$/i);
-    if (m) out[m[1].toLowerCase().replace("color", "colour")] = m[2].trim().replace(/^<.*>$|^(none|n\/a|unknown|not (stated|specified|available)|-)\.?$/i, "");
+    const m = line.replace(/\*\*/g, "").match(/^\s*[-•]?\s*(name|brand|type|colou?r|fit|material|description|price|photos)\s*:\s*(.*)$/i);
+    if (m) out[m[1].toLowerCase().replace("color", "colour")] = m[2].trim().replace(/^<.*>$|^(none|n\/a|unknown|not (stated|specified|available|found)|-)\.?$/i, "");
   }
   out.photos = (out.photos || "").match(/https:\/\/[^\s,<>"')]+/g) || [];
   return out;
@@ -3394,8 +3418,10 @@ const PIECE_SCHEMA = {
     piece_only: { type: "array", items: { type: "integer" }, description: "Numbers of the photos that show only the garment, with no person, face, hands, legs or body visible: laid flat, on a hanger or floating. Best first: the full front view, then the full back view. Leave out close-ups of details." },
   },
 };
-async function pieceOnlyPhotos(urls) {
-  const got = (await Promise.all(urls.slice(0, 8).map(async (url) => ({ url, blob: await productPhoto(url) })))).filter((x) => x.blob);
+// A candidate photo is { url, thumb }: thumb is Google's small copy, used if the shop's won't load.
+const shopPhoto = async (x) => (await productPhoto(x.url)) || (x.thumb ? await productPhoto(x.thumb) : null);
+async function pieceOnlyPhotos(list) {
+  const got = (await Promise.all(list.slice(0, 8).map(async (x) => ({ url: x.url, blob: await shopPhoto(x) })))).filter((x) => x.blob);
   if (!got.length) return null; // none could be loaded: not the same as "all worn"
   const cols = Math.min(4, got.length), w = 240, h = 320;
   const c = newCanvas(cols * w, Math.ceil(got.length / cols) * h);
@@ -3422,6 +3448,95 @@ async function pieceOnlyPhotos(urls) {
   const nums = JSON.parse(text.replace(/^```(json)?|```$/g, "").trim()).piece_only || [];
   return [...new Set(nums)].map((n) => got[n - 1]).filter(Boolean).slice(0, 2);
 }
+// The shop's photos from its page, as candidates: only this colour's when their names say it,
+// the same photo in another size once, video stills last.
+function photoCandidates(urls, ref) {
+  const seen = new Set();
+  let list = urls.filter((u) => {
+    const key = /\.(jpe?g|png|webp)(\?|$)/i.test(u) ? u.split("?")[0] : u;
+    return /^https:\/\//.test(u) && !seen.has(key) && seen.add(key);
+  });
+  if (ref?.colour && list.some((u) => Label.codeIn(u, ref))) list = list.filter((u) => Label.codeIn(u, ref));
+  return list.sort((a, b) => /poster/i.test(a) - /poster/i.test(b)).map((url) => ({ url }));
+}
+// The shop's own photos of a reference, through Google Images, for shops that show their pages
+// to no server (one search, kept two weeks on the server). Only photos named after the
+// reference, or from its product page, so they're surely this piece in this colour.
+async function galleryPhotos(ref, brand) {
+  if (!productsOn() || !ref?.colour) return [];
+  const it = state.settings.region === "it";
+  for (const q of [`${brand} ${ref.model}${ref.colour}`, `${brand} ${ref.text}`]) {
+    const r = await fetch(`api/photos?${new URLSearchParams({ q: q.trim(), gl: it ? "it" : "us", hl: it ? "it" : "en" })}`).catch(() => null);
+    const j = await r?.json().catch(() => null);
+    if (!r?.ok) {
+      if (/^SerpApi/.test(j?.error || "")) productsDown = j.error;
+      return [];
+    }
+    const hits = (j.items || []).filter((x) => {
+      const page = Label.refInUrl(x.url);
+      return Label.codeIn(x.image, ref) || (page?.model === ref.model && (!page.colour || page.colour === ref.colour));
+    });
+    if (hits.length) return hits.map((x) => ({ url: x.image || x.thumb, thumb: x.thumb }));
+  }
+  return [];
+}
+// Puts the shop's photos of the piece on its own first (`replace`: instead of the piece's
+// photos). Says why when none could be kept.
+async function useShopPhotos(d, list, { site, ref, colour, replace, step }) {
+  let chosen = null;
+  if (aiReady()) {
+    step("Picking the photos of the piece on its own…");
+    chosen = await pieceOnlyPhotos(list).catch(() => null);
+  }
+  if (!chosen) { // no AI to tell worn photos apart (or it failed): the shop's main photo
+    step("Getting the shop's photo…");
+    const blob = await shopPhoto(list[0]);
+    chosen = blob ? [{ url: list[0].url, blob }] : [];
+  }
+  if (!chosen.length) return aiReady() ? "The shop's photos all show it worn, so none was kept: take a photo of the piece." : "The shop's photo couldn't be loaded: take a photo of the piece.";
+  if (draft !== d) return "";
+  const shop = chosen.map((x) => ({ ...newPhoto(x.blob), manual: true, shop: true })); // shop photos are already upright
+  d.photos = replace ? shop : [...shop, ...d.photos.filter((p) => !p.shop)];
+  d.active = 0;
+  d.shopPhoto = { site, otherColour: Label.photoColourMatches(chosen[0].url, ref) === false };
+  if (replace) {
+    d.keepColors = !!colour; // the label's colour wins over the colours in the photo
+    if (!colour) d.colors = await detectColors(chosen[0].blob).catch(() => []);
+  } else d.keepColors = d.keepColors || !!d.colors.length; // the colours already come from your own photo
+  d.scanningTag = false;
+  (async () => { for (const p of shop) await preparePhoto(p, d); })();
+  return "";
+}
+// Fills a piece in from what's known about the product: its label (tag), the shop's page and
+// what the AI found (info). Only fields still empty, unless `override` (a match picked in
+// Google Lens: you chose that product). Returns the colour the shop gives, in wardrobe terms.
+function fillFromProduct(d, { tag: r, page, info, ref, link, qr = "", override = false }) {
+  const title = Label.cleanTitle(page?.title, r?.brand || page?.brand || info?.brand || "");
+  const name = override ? info?.name || title : title || info?.name || "";
+  const words = Label.toEnglish(`${info?.type || ""} ${name}`);
+  const about = `${words} ${Label.toEnglish(info?.fit)} ${Label.toEnglish(page?.description)} ${Label.toEnglish(info?.description)}`;
+  // What the label says comes first, then the product page.
+  const said = (r?.brand || page?.brand || info?.brand || (Label.isPullBear(page?.url || link || Label.linkIn(qr)) ? "Pull&Bear" : "")).trim();
+  const brand = brandInfo(said)?.name || said; // "PULL&BEAR" on the tag → "Pull&Bear"
+  if (brand && (override || !d.brand)) d.brand = brand;
+  if ((override || !d.name) && (name || r?.name)) d.name = cap((name || r.name).trim());
+  const kind = BUY_KINDS.find(([re]) => re.test(words)) || BUY_KINDS.find(([re]) => re.test(about));
+  const cat = CAT[r?.category] ? r.category : kind?.[1];
+  if (cat && (override || !d.category)) { d.category = cat; d.warmth = CAT[cat].warmth; }
+  const fit = Label.fitIn(about);
+  if (fit && (override || !d.fit)) d.fit = fitsFor(d).includes(fit) ? fit : fit === "baggy" && fitsFor(d).includes("oversized") ? "oversized" : fit === "oversized" && fitsFor(d).includes("baggy") ? "baggy" : d.fit;
+  const pagePrice = [page?.price, info?.price].find((p) => /\d/.test(p || "")) || "";
+  const price = r?.price > 0 ? r.price : parseFloat(pagePrice.replace(/[^\d.,]/g, "").replace(",", "."));
+  if (price > 0 && (r?.price > 0 || override || !d.price)) { d.price = String(price); d.currency = ((r?.price > 0 ? r.currency : pagePrice.match(/[A-Z]{3}/)?.[0] || (/€/.test(pagePrice) ? "EUR" : "")) || "").toUpperCase(); }
+  if (r?.size) d.size = r.size.trim();
+  const material = r?.material || info?.material;
+  if (material && (override || !d.material)) d.material = material.trim().slice(0, 120);
+  const description = info?.description || "";
+  if (description && !d.notes) d.notes = description.slice(0, 300);
+  if (link && (override || !d.link)) d.link = link;
+  if (ref) d.reference = ref.text;
+  return wardrobeColour(r?.color || info?.colour || page?.color || name, d.category);
+}
 async function scanTag(d, file) {
   d.scanningTag = true;
   d.labelStep = "Reading the label…";
@@ -3440,75 +3555,33 @@ async function scanTag(d, file) {
     try { found = await findProduct(codes, r, step); } catch (e) { if (e.noServer) found.why = e.message; }
     const page = found.page;
     let info = null;
-    if (aiReady() && (page || found.link)) {
+    if (aiReady() && (page || found.link || (found.ref && r?.brand))) {
       step("Reading the product details…");
       info = await productDetails(page, found.link, r, found.ref).catch(() => null);
     }
-    const title = Label.cleanTitle(page?.title, r?.brand || page?.brand || "") || info?.name || "";
-    const words = Label.toEnglish(`${info?.type || ""} ${title}`);
-    const about = `${words} ${Label.toEnglish(info?.fit)} ${Label.toEnglish(page?.description)} ${Label.toEnglish(info?.description)}`;
-    // What the label says comes first, then the product page.
-    const said = (r?.brand || page?.brand || (Label.isPullBear(page?.url || found.link || Label.linkIn(qr)) ? "Pull&Bear" : "")).trim();
-    const brand = brandInfo(said)?.name || said; // "PULL&BEAR" on the tag → "Pull&Bear"
-    if (brand && !d.brand) d.brand = brand;
-    if (!d.name && (title || r?.name)) d.name = cap((title || r.name).trim());
-    const kind = BUY_KINDS.find(([re]) => re.test(words)) || BUY_KINDS.find(([re]) => re.test(about));
-    const cat = CAT[r?.category] ? r.category : kind?.[1];
-    if (cat && !d.category) { d.category = cat; d.warmth = CAT[cat].warmth; }
-    const fit = Label.fitIn(about);
-    if (fit && !d.fit) d.fit = fitsFor(d).includes(fit) ? fit : fit === "baggy" && fitsFor(d).includes("oversized") ? "oversized" : fit === "oversized" && fitsFor(d).includes("baggy") ? "baggy" : "";
-    const pagePrice = [page?.price, info?.price].find((p) => /\d/.test(p || "")) || "";
-    const price = r?.price > 0 ? r.price : parseFloat(pagePrice.replace(/[^\d.,]/g, "").replace(",", "."));
-    if (price > 0) { d.price = String(price); d.currency = ((r?.price > 0 ? r.currency : pagePrice.match(/[A-Z]{3}/)?.[0] || (/€/.test(pagePrice) ? "EUR" : "")) || "").toUpperCase(); }
-    if (r?.size) d.size = r.size.trim();
-    const material = r?.material || info?.material;
-    if (material && !d.material) d.material = material.trim().slice(0, 120);
-    const description = info?.description || "";
-    if (description && !d.notes) d.notes = description.slice(0, 300);
-    if (found.link && !d.link) d.link = found.link;
-    if (found.ref) d.reference = found.ref.text;
-    const known = page || info?.name;
+    const colour = fillFromProduct(d, { tag: r, page, info, ref: found.ref, link: found.link, qr });
+    const known = page?.title || info?.name;
     // Said under the Label button until the next scan, so it isn't missed like a toast.
     d.labelNote = known ? "" : [
       found.ref || qr ? `Couldn't open the product page${found.why ? ` (${found.why.replace(/\.$/, "")})` : ""}.` : "No QR code or reference found on that photo. Try again closer, with the QR code and the ART./REF number sharp.",
       tag?.error ? `${aiName()} couldn't read the printed text: ${tag.error}` : "",
       found.ref ? `Reference ${found.ref.text}.` : "",
     ].filter(Boolean).join(" ");
-    const colour = wardrobeColour(r?.color || info?.colour || page?.color || title, d.category);
     if (colour && (fresh || !d.colors.length)) d.colors = [colour];
     refreshStyles();
     if (d.brand) lookupBrand(d.brand).then((learnt) => learnt && (refreshStyles(), rerenderAdd(d)));
-    // The shop's photos of this colour (their names hold model and colour), video stills last.
-    const code = found.ref ? found.ref.model + found.ref.colour : "";
-    const seen = new Set(); // the same photo in another size counts once
-    let urls = [...(page?.images || []), ...(info?.photos || [])].filter((u) => {
-      const key = /\.(jpe?g|png|webp)(\?|$)/i.test(u) ? u.split("?")[0] : u;
-      return /^https:\/\//.test(u) && !seen.has(key) && seen.add(key);
-    });
-    if (found.ref?.colour && urls.some((u) => u.includes(code))) urls = urls.filter((u) => u.includes(code));
-    urls.sort((a, b) => /poster/i.test(a) - /poster/i.test(b));
-    if (fresh && urls.length) {
-      let chosen = null;
-      if (aiReady()) {
-        step("Picking the photos of the piece on its own…");
-        chosen = await pieceOnlyPhotos(urls).catch(() => null);
+    if (fresh) {
+      let list = photoCandidates([...(page?.images || []), ...(info?.photos || [])], found.ref);
+      if (!list.length && found.ref && productsOn()) {
+        step("Finding the shop's photos on Google…");
+        list = await galleryPhotos(found.ref, d.brand);
       }
-      if (!chosen) { // no AI to tell worn photos apart (or it failed): the shop's main photo
-        step("Getting the shop's photo…");
-        const blob = await productPhoto(urls[0]);
-        chosen = blob ? [{ url: urls[0], blob }] : [];
-      }
-      if (chosen.length && draft === d) {
-        d.photos = chosen.map((x) => ({ ...newPhoto(x.blob), manual: true, shop: true })); // shop photos are already upright
-        d.active = 0;
-        d.shopPhoto = { site: page?.site || Label.siteOf(found.link), otherColour: Label.photoColourMatches(chosen[0].url, found.ref) === false };
-        d.keepColors = !!colour; // the label's colour wins over the colours in the photo
-        if (!colour) d.colors = await detectColors(chosen[0].blob).catch(() => []);
-        d.scanningTag = false;
-        (async () => { for (const p of d.photos) await preparePhoto(p, d); })();
-      } else if (!chosen.length) {
-        d.labelNote = [d.labelNote, aiReady() ? "The shop's photos all show it worn, so none was kept: take a photo of the piece." : "The shop's photo couldn't be loaded: take a photo of the piece."].filter(Boolean).join(" ");
-      }
+      const note = list.length
+        ? await useShopPhotos(d, list, { site: page?.site || Label.siteOf(found.link), ref: found.ref, colour, replace: true, step })
+        : !known ? ""
+        : productsOn() ? "Google has no photos of this one yet: take a photo of the piece, then Google Lens can find its shop photos."
+        : "The shop doesn't show its photos to the app's server. With the free SerpApi key on the server (see Settings > Look) they come through Google instead. For now, take a photo of the piece.";
+      if (note) d.labelNote = [d.labelNote, note].filter(Boolean).join(" ");
     }
     if (draft === d) {
       const what = [d.name || d.brand, (page?.site || found.link) && `from ${page?.site || Label.siteOf(found.link)}`].filter(Boolean).join(" ");
@@ -3516,6 +3589,83 @@ async function scanTag(d, file) {
     }
   } catch (err) {
     if (draft === d) toast(err.message || "Couldn't read the label");
+  }
+  d.scanningTag = false;
+  d.labelStep = "";
+  rerenderAdd(d);
+}
+
+/* ---------- Google Lens ----------
+   A photo of the piece finds it in the shops, like Google Lens on a phone: one SerpApi search
+   (free plan, 250 a month), no AI tokens. You tap the one you have; then the AI reads its
+   details and the shop's photos of the piece on its own go first. */
+const LENS_OFF = "Google Lens needs the free SerpApi key on the server: add it as the SERPAPI_KEY secret (Settings > Look says how).";
+async function lensSearch(d, blob) {
+  if (!state.serverKeys.products) { d.labelNote = LENS_OFF; return rerenderAdd(d); }
+  d.lens = { busy: true, items: [] };
+  d.labelNote = "";
+  rerenderAdd(d);
+  try {
+    const it = state.settings.region === "it";
+    const r = await fetch(`api/lens?${new URLSearchParams({ hl: it ? "it" : "en", country: it ? "it" : "us" })}`, {
+      method: "POST", headers: { "Content-Type": "image/jpeg" }, body: await resizeImage(blob, 1024),
+      ...(AbortSignal.timeout ? { signal: AbortSignal.timeout(90000) } : {}),
+    });
+    const j = await r.json().catch(() => ({}));
+    if (!r.ok) throw new Error(j.error || `The app's server answered ${r.status}.`);
+    d.lens = { items: j.items || [] };
+    if (!d.lens.items.length) d.labelNote = "Google Lens found no shop selling it. Try again with the whole piece in the photo, flat and in good light.";
+  } catch (e) {
+    d.lens = null;
+    if (/^SerpApi/.test(e.message)) productsDown = e.message;
+    d.labelNote = `Google Lens didn't work: ${e.message.replace(/\.$/, "")}.`;
+  }
+  rerenderAdd(d);
+}
+// Google Lens's matches, above the form: tap the one you have. Once picked they fold into one line.
+function lensHTML(d) {
+  const l = d.lens;
+  if (!l) return "";
+  if (l.busy) return `<div class="row"><div class="spinner"></div><span class="muted">Searching the shops with Google Lens…</span></div>`;
+  if (!l.items.length) return "";
+  const picked = l.items[l.picked];
+  if (picked && !l.open) return `<div class="row"><span class="muted small" style="flex:1;min-width:0">From Google Lens: ${esc([picked.title, picked.shop].filter(Boolean).join(" · "))}</span><button class="chip" data-act="lens-more">Other matches</button></div>`;
+  return `<div class="field"><label>Google Lens found <span style="text-transform:none;font-weight:400">(tap the one you have)</span></label>
+    <div class="real">${l.items.map((m, k) => `<button class="real-card lens-card" data-lens="${k}" aria-pressed="${l.picked === k}" ${d.scanningTag ? "disabled" : ""}><img class="real-img" src="${esc(m.thumb)}" referrerpolicy="no-referrer" loading="lazy" alt=""><b>${esc(m.title)}</b><span class="muted small">${esc([m.shop, m.price].filter(Boolean).join(" · "))}</span></button>`).join("")}</div></div>`;
+}
+async function pickLens(d, k) {
+  const m = d.lens?.items?.[k];
+  if (!m || d.scanningTag) return;
+  d.lens.picked = k;
+  d.lens.open = false;
+  d.scanningTag = true;
+  const step = (s) => { d.labelStep = s; rerenderAdd(d); };
+  try {
+    const ref = Label.refInUrl(m.url);
+    const site = m.shop || Label.siteOf(m.url);
+    step("Opening the product page…");
+    const got = await pageInfo(m.url, 20000, ref?.colour ? ref.model + ref.colour : ""); // shops that block the server are skipped after 20 s
+    const lensPage = { url: m.url, title: m.title, image: m.image, images: [m.image].filter(Boolean), price: m.price, site, description: "" };
+    const page = got?.title ? { ...lensPage, ...got, images: [...(got.images || []), ...lensPage.images], price: got.price || m.price, site: got.site || site } : lensPage;
+    let info = null;
+    if (aiReady()) {
+      step("Reading the product details…");
+      info = await productDetails(page, m.url, null, ref).catch(() => null);
+    }
+    const colour = fillFromProduct(d, { page, info, ref, link: m.url, override: true });
+    if (colour && !d.colors.length) d.colors = [colour];
+    refreshStyles();
+    if (d.brand) lookupBrand(d.brand).then((learnt) => learnt && (refreshStyles(), rerenderAdd(d)));
+    let list = photoCandidates([...page.images, ...(info?.photos || [])], ref).map((x) => (x.url === m.image ? { ...x, thumb: m.thumb } : x));
+    if (ref?.colour && list.length < 3 && productsOn()) { // Lens shows one photo; the shop has its whole gallery on Google
+      step("Finding the shop's photos on Google…");
+      const more = (await galleryPhotos(ref, d.brand)).filter((x) => !list.some((y) => y.url.split("?")[0] === x.url.split("?")[0]));
+      list = [...list, ...more];
+    }
+    d.labelNote = list.length ? await useShopPhotos(d, list, { site: page.site, ref, colour, replace: !d.photos.length, step }) : "";
+    if (draft === d) toast(`Filled in from ${page.site || "the shop"}`);
+  } catch (e) {
+    if (draft === d) toast(e.message || "Couldn't read that product");
   }
   d.scanningTag = false;
   d.labelStep = "";
@@ -4499,9 +4649,9 @@ function renderSettings() {
         <div class="field"><label>Shops</label><div class="chips">${[["it", "Italy"], ["com", "International"]].map(([k, l]) => `<button class="chip" aria-pressed="${s.region === k}" data-region="${k}">${l}</button>`).join("")}</div></div>
         <div class="field"><label>Shop for</label><div class="chips">${[["men", "Men"], ["women", "Women"]].map(([k, l]) => `<button class="chip" aria-pressed="${s.gender === k}" data-gender="${k}">${l}</button>`).join("")}</div><span class="muted small">Shopping ideas, shop links, product photos and new looks are for ${s.gender === "women" ? "women" : "men"}.</span></div>
         <div class="field"><label>Product photos</label><span class="muted small">${productsOn()
-          ? "On: Discover shows real products from Google Shopping (through SerpApi, saved on your server). Each search is kept for two weeks, so the free 250 searches a month go a long way."
+          ? "On: Discover shows real products from Google Shopping, and Add can find a piece with Google Lens and the shop's photos of a label through Google Images (all through SerpApi, saved on your server). Shopping and image searches are kept for two weeks, so the free 250 searches a month go a long way."
           : state.serverKeys.products ? `Paused: ${esc(productsDown)} Discover shows drawings until it works again.`
-          : "Off: Discover shows drawings. For real product photos, add a free SerpApi key to the Worker as the SERPAPI_KEY secret (see the README, “Product photos”)."}</span></div>
+          : "Off: Discover shows drawings, and Google Lens in Add is off. For real product photos and Google Lens, sign up for free at serpapi.com, copy your API key and add it to the Worker as the SERPAPI_KEY secret: Cloudflare > Workers & Pages > smart-wardrobe > Settings > Variables and Secrets > Add, type Secret (see the README, “Product photos”)."}</span></div>
       </section>
       <section class="card stack">
         <h2 style="margin:0">Data</h2>
@@ -4835,6 +4985,7 @@ document.addEventListener("click", async (e) => {
   }
   if (ds.cutview && draft) { draft.photos[draft.active].useCut = ds.cutview === "1"; return render(); }
   if (ds.photo && draft) { draft.active = +ds.photo; return render(); }
+  if (ds.lens != null && draft) return pickLens(draft, +ds.lens);
   if (ds.rmphoto && draft) {
     draft.photos.splice(+ds.rmphoto, 1);
     draft.active = 0;
@@ -5020,6 +5171,13 @@ document.addEventListener("click", async (e) => {
     case "save-next": return saveDraft(true);
     case "ai-tag": return recognise(draft);
     case "scan-tag": case "scan-label": return tagInput.click();
+    case "lens-more": draft.lens.open = true; return rerenderAdd(draft);
+    case "lens-start": return state.serverKeys.products ? lensInput.click() : toast(LENS_OFF);
+    case "lens": {
+      const p = draft?.photos[draft.active] || draft?.photos[0];
+      if (!state.serverKeys.products) { draft.labelNote = LENS_OFF; return rerenderAdd(draft); }
+      return p ? lensSearch(draft, p.orig) : lensInput.click();
+    }
     case "label-shoot": addingExtraPhoto = true; return camInput.click();
     case "cut-all": return cutAll();
     case "recognise-all": return recogniseAll();
