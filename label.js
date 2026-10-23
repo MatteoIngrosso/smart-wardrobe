@@ -58,6 +58,13 @@ export function photoColourMatches(image, ref) {
   return m[2] === ref.colour;
 }
 
+// Whether a photo (or link) is of this reference: Inditex photo names hold model and colour,
+// with or without the leading 0 (Pull&Bear …/07660508434-M.jpg, Zara …/7660508434_1_1_8.jpg).
+export function codeIn(url, ref) {
+  if (!ref?.model || !ref.colour) return false;
+  return new RegExp(`(?<!\\d)0?${ref.model.slice(1)}${ref.colour}(?!\\d)`).test(String(url || ""));
+}
+
 // "https://www.pullandbear.com/it/…" → "pullandbear.com"
 export function siteOf(url) {
   try { return new URL(url).hostname.replace(/^www\./, ""); } catch { return ""; }
