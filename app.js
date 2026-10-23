@@ -5,6 +5,7 @@
 // once, and when you ask the stylist something.
 import { parseICS, eventsBetween, guessOccasion, titleKey } from "./calendar.js";
 import * as Style from "./stylist.js";
+import * as Label from "./label.js";
 
 /* ======================================================================
    Reference data
@@ -2676,6 +2677,7 @@ function openItem(id, showOriginal = false) {
       ${i.price ? `<div><b>Price</b>${fmtPrice(i.price, i.currency)}${i.wearCount ? ` · ${fmtPrice(i.price / i.wearCount, i.currency)} per wear` : ""}</div>` : ""}
       ${i.size ? `<div><b>Size</b>${esc(i.size)}</div>` : ""}
       ${i.material ? `<div><b>Material</b>${esc(i.material)}</div>` : ""}
+      ${i.link && /^https?:\/\//.test(i.link) ? `<div><b>Shop</b><a href="${esc(i.link)}" target="_blank" rel="noopener">Product page ↗</a>${i.reference ? ` · ref ${esc(i.reference)}` : ""}</div>` : ""}
     </div>
     ${fitsFor(i).length ? `<div class="field" style="margin-bottom:14px"><label>Fit</label><div class="chips">${fitsFor(i).map((f) => `<button class="chip" aria-pressed="${i.fit === f}" data-setfit="${i.id}:${f}">${FITS[f].label}</button>`).join("")}</div></div>` : ""}
     ${i.tags?.length ? `<div class="chips" style="margin-bottom:14px">${i.tags.map((t) => `<span class="chip">${esc(t)}</span>`).join("")}</div>` : ""}
@@ -2889,12 +2891,13 @@ function renderAdd() {
       </div>`;
     return;
   }
-  if (!d.photos.length && !d.id) {
+  if (!d.photos.length && !d.id && !d.fromLabel) {
     main.innerHTML = `
-      <div class="head"><div><h1>Add clothes</h1><p class="sub">Two photos per piece: the front, then the back. The app does the rest.</p></div></div>
+      <div class="head"><div><h1>Add clothes</h1><p class="sub">Two photos per piece: the front, then the back. The app does the rest. Just bought it? Snap the label instead.</p></div></div>
       <div class="add-start">
         <button class="btn primary big" data-act="shoot">${ICON_CAMERA}<span class="big-label">Take photos<small>Front, then back</small></span></button>
         <button class="btn big" data-act="gallery">${ICON_GALLERY}<span class="big-label">Choose from gallery<small>Front and back photos are paired up</small></span></button>
+        <button class="btn big" data-act="scan-label">${ICON_TAG}<span class="big-label">Scan the label<small>Fills it in from the shop</small></span></button>
       </div>
       <ol class="how">
         <li>Lay the piece flat on a plain surface, collar or waistband at the top.</li>
@@ -2904,18 +2907,23 @@ function renderAdd() {
     return;
   }
   const cur = d.photos[d.active] || d.photos[0];
-  const working = d.photos.some((p) => p.busy) || d.analysing;
-  const status = d.photos.some((p) => p.busy) ? "Removing backgrounds and straightening…" : d.analysing ? `Recognising with ${aiName()}…` : "";
+  const working = d.photos.some((p) => p.busy) || d.analysing || d.scanningTag;
+  const status = d.scanningTag ? d.labelStep || "Reading the label…" : d.photos.some((p) => p.busy) ? "Removing backgrounds and straightening…" : d.analysing ? `Recognising with ${aiName()}…` : "";
+  const site = (u) => { try { return new URL(u).hostname.replace(/^www\./, ""); } catch { return ""; } };
   main.innerHTML = `
     <div class="head">
       <div><h1>${d.id ? "Edit piece" : "New piece"}</h1>${status ? `<p class="sub row" style="gap:10px"><span class="spinner"></span>${status}</p>` : queue.length ? `<p class="sub">${queue.length} more piece${queue.length > 1 ? "s" : ""} waiting</p>` : ""}</div>
       <div class="row">
-        ${aiReady() && !working ? `<button class="btn" data-act="ai-tag"><svg viewBox="0 0 24 24"><path d="M12 3l1.8 4.7L18.5 9.5l-4.7 1.8L12 16l-1.8-4.7L5.5 9.5l4.7-1.8z"/></svg>Recognise again</button>` : ""}
+        ${aiReady() && !working && cur ? `<button class="btn" data-act="ai-tag"><svg viewBox="0 0 24 24"><path d="M12 3l1.8 4.7L18.5 9.5l-4.7 1.8L12 16l-1.8-4.7L5.5 9.5l4.7-1.8z"/></svg>Recognise again</button>` : ""}
         <button class="btn ghost" data-act="cancel-add">Cancel</button>
       </div>
     </div>
     <div class="add-grid">
       <div class="photos">
+        ${!cur ? `<div class="photo-wrap no-photo">${d.scanningTag
+          ? `<div class="busy"><div class="spinner"></div><span>${esc(d.labelStep || "Reading the label…")}</span></div>`
+          : `<div class="stack" style="align-items:center;text-align:center;padding:24px"><p class="muted" style="margin:0">No photo from the shop. Take one of the piece, or pick one.</p>
+              <button class="btn primary" data-act="label-shoot">${ICON_CAMERA}Take a photo</button><button class="btn" data-act="more-photo">${ICON_GALLERY}Choose from gallery</button></div>`}</div>` : `
         <div class="photo-wrap">
           <img class="photo-main pic-bg" src="${photoURL(shown(cur))}" alt="">
           ${cur.busy ? `<div class="busy"><div class="spinner"></div><span>Removing background…</span></div>` : ""}
@@ -2930,6 +2938,7 @@ function renderAdd() {
           ${d.photos.map((p, k) => `<div class="mini ${k === d.active ? "on" : ""}"><img class="pic-bg" src="${photoURL(shown(p))}" data-photo="${k}" alt="">${p.busy ? '<div class="mini-busy"><div class="spinner"></div></div>' : ""}<button class="x" data-rmphoto="${k}" aria-label="Remove photo">×</button></div>`).join("")}
           <button class="add-photo" data-act="more-photo" aria-label="Add photo">+</button>
         </div>
+        ${d.photos[0]?.shop ? `<p class="muted small" style="margin:0">Photo from ${esc(d.shopPhoto.site || "the shop")}.${d.shopPhoto.otherColour ? " It shows the piece in another colour: add your own photo with + and remove this one." : " Add your own with +."}</p>` : ""}`}
       </div>
       <div class="stack">
         <div class="field"><label for="f-name">Name</label><input id="f-name" class="input" data-input="name" value="${esc(d.name || "")}" placeholder="${esc(autoName(d) || "e.g. Navy cable-knit sweater")}"></div>
@@ -2939,11 +2948,12 @@ function renderAdd() {
           <datalist id="brand-list">${BRAND_LIST.map(([n]) => `<option value="${esc(n)}"></option>`).join("")}</datalist>
           <span class="muted small" id="brand-hint">${esc(brandHint(d.brand))}</span>
         </div>
-        <div class="field"><label>Price tag <span style="text-transform:none;font-weight:400">(optional)</span></label>
+        <div class="field"><label>Label <span style="text-transform:none;font-weight:400">(optional)</span></label>
           <div class="row">
-            <button class="btn" data-act="scan-tag" ${d.scanningTag ? "disabled" : ""}>${d.scanningTag ? '<span class="spinner"></span>Reading the tag…' : `${ICON_TAG}Scan price tag`}</button>
-            <span class="muted small">${aiReady() ? `${aiName()} reads brand, price, size and material from a photo of the tag or label.` : "Add a Gemini key in Settings to read tags from a photo, or type them in."}</span>
+            <button class="btn" data-act="scan-tag" ${d.scanningTag ? "disabled" : ""}>${d.scanningTag ? `<span class="spinner"></span>${esc(d.labelStep || "Reading the label…")}` : `${ICON_TAG}Scan the label`}</button>
+            <span class="muted small">${aiReady() ? `Reads the QR code, and ${aiName()} reads brand, price, size and material from a photo of the tag or label.` : "Reads the QR code on the tag. Add a Gemini key in Settings to read the printed text too, or type it in."}</span>
           </div>
+          ${d.link ? `<a class="btn ghost" href="${esc(d.link)}" target="_blank" rel="noopener">Product page on ${esc(site(d.link))}${d.reference ? ` · ref ${esc(d.reference)}` : ""} ↗</a>` : ""}
           <div class="tag-fields">
             <input class="input" data-input="price" inputmode="decimal" value="${esc(d.price ?? "")}" placeholder="Price${d.currency ? ` (${esc(d.currency)})` : ""}" aria-label="Price">
             <input class="input" data-input="size" value="${esc(d.size || "")}" placeholder="Size" aria-label="Size">
@@ -2959,10 +2969,10 @@ function renderAdd() {
         <div class="row">
           ${d.id
             ? `<button class="btn primary big" data-act="save" ${d.category ? "" : "disabled"}>Save changes</button>`
-            : `<button class="btn primary big" data-act="save-next" ${d.category && !working ? "" : "disabled"}>${queue.length ? `Save, next piece (${queue.length} left)` : "Save and add the next piece"}</button>
-               <button class="btn big" data-act="save" ${d.category && !working ? "" : "disabled"}>Save</button>`}
+            : `<button class="btn primary big" data-act="save-next" ${d.category && cur && !working ? "" : "disabled"}>${queue.length ? `Save, next piece (${queue.length} left)` : "Save and add the next piece"}</button>
+               <button class="btn big" data-act="save" ${d.category && cur && !working ? "" : "disabled"}>Save</button>`}
         </div>
-        ${!d.category && !working ? `<p class="muted small" style="margin:0">Pick the type to save.</p>` : ""}
+        ${!working && (!d.category || !cur) ? `<p class="muted small" style="margin:0">${!cur ? "Add a photo" : "Pick the type"}${!cur && !d.category ? " and pick the type" : ""} to save.</p>` : ""}
       </div>
     </div>`;
 }
@@ -2998,7 +3008,7 @@ async function preparePhoto(p, d, cut = state.settings.autoCutout) {
     }
     if (p.cutSrc && !p.manual) p.rot = await uprightAngle(p.cutSrc, kindOf(d.category));
     await applyRotation(p);
-    if (d.photos[0] === p) d.colors = await detectColors(shown(p)).catch(() => d.colors);
+    if (d.photos[0] === p && !d.keepColors) d.colors = await detectColors(shown(p)).catch(() => d.colors);
   } catch {
     if (draft === d && view === "add") toast("Couldn't separate the garment from the background");
   }
@@ -3056,15 +3066,23 @@ async function recognise(d) {
   rerenderAdd(d);
 }
 
-// Price tag or care label: one photo, read by the AI (about 400 tokens). The photo itself isn't kept.
+/* ---------- Add from the label ---------- */
+// One photo of the label or price tag fills the piece in. The QR code is read on the device
+// (no tokens). With an AI key the printed text is read too: brand, reference, price, size,
+// material (about 400 tokens). The shop's product page then gives the name and its photo,
+// which becomes the piece's picture. Pull&Bear pages are found from the reference alone;
+// other shops through the QR link, Google Shopping (SerpApi, no tokens) or the AI searching
+// Google for the reference (about 300 tokens). The label photo itself isn't kept.
 const TAG_LABEL_SCHEMA = {
   type: "object",
   additionalProperties: false,
-  required: ["brand", "name", "category", "price", "currency", "size", "material"],
+  required: ["brand", "name", "reference", "category", "color", "price", "currency", "size", "material"],
   properties: {
     brand: { type: "string", description: "Brand printed on the tag; empty if none" },
     name: { type: "string", description: "Product name or short description if printed, e.g. 'Slim fit chinos'; empty if none" },
+    reference: { type: "string", description: "Product reference or style number as printed, e.g. '3660/516/833' or 'REF 7683 515 400'; not the barcode number; empty if none" },
     category: { type: "string", enum: [...CATS.map((c) => c.id), ""], description: "Type of garment if the tag makes it clear; empty if not" },
+    color: { type: "string", description: "Colour name if printed, in English, e.g. 'mid blue'; empty if none" },
     price: { type: "number", description: "Current selling price (the discounted one if there are two); 0 if none" },
     currency: { type: "string", description: "ISO code such as EUR, GBP, USD; empty if no price" },
     size: { type: "string", description: "Size as printed, e.g. M, 32/32, EU 42; empty if none" },
@@ -3076,32 +3094,172 @@ document.body.append(tagInput);
 const tryInput = Object.assign(document.createElement("input"), { type: "file", accept: "image/*", capture: "environment", hidden: true });
 document.body.append(tryInput);
 tryInput.onchange = () => { const f = tryInput.files[0]; tryInput.value = ""; if (f) tryPhoto(f); };
-tagInput.onchange = () => { const f = tagInput.files[0]; tagInput.value = ""; if (f && draft) scanTag(draft, f); };
+tagInput.onchange = () => {
+  const f = tagInput.files[0];
+  tagInput.value = "";
+  if (!f) return;
+  // From the start of Add, the label makes a new piece; inside a piece, it fills in what's missing.
+  if (!draft || (!draft.photos.length && !draft.id && !draft.fromLabel)) { draft = { ...newDraft(), fromLabel: true }; go("add"); }
+  scanTag(draft, f);
+};
+
+// QR codes are read on the device: by the browser where it can (Android, Mac), else by jsQR
+// (vendor/jsqr.min.js, Apache 2.0, loaded the first time). A label photo usually shows the
+// code small, so it's tried at a few sizes.
+let jsQRLoad;
+const loadJsQR = () => (jsQRLoad ||= new Promise((ok, no) => {
+  if (window.jsQR) return ok(window.jsQR);
+  const s = Object.assign(document.createElement("script"), { src: "vendor/jsqr.min.js" });
+  s.onload = () => (window.jsQR ? ok(window.jsQR) : no(new Error("jsQR didn't load")));
+  s.onerror = () => { jsQRLoad = null; no(new Error("jsQR didn't load")); };
+  document.head.append(s);
+}));
+async function readQR(file) {
+  const bmp = await createImageBitmap(file, { imageOrientation: "from-image" }).catch(() => createImageBitmap(file));
+  if ("BarcodeDetector" in window) {
+    try {
+      const hit = (await new BarcodeDetector({ formats: ["qr_code"] }).detect(bmp)).map((c) => c.rawValue).find(Boolean);
+      if (hit) return hit;
+    } catch { /* this browser has no QR reader */ }
+  }
+  const jsQR = await loadJsQR();
+  for (const max of [1200, 2000, 800]) {
+    const scale = Math.min(1, max / Math.max(bmp.width, bmp.height));
+    const c = newCanvas(Math.round(bmp.width * scale), Math.round(bmp.height * scale));
+    const ctx = c.getContext("2d", { willReadFrequently: true });
+    ctx.drawImage(bmp, 0, 0, c.width, c.height);
+    const code = jsQR(ctx.getImageData(0, 0, c.width, c.height).data, c.width, c.height, { inversionAttempts: "attemptBoth" });
+    if (code?.data) return code.data;
+  }
+  return "";
+}
+async function readTagText(file) {
+  const text = await aiGenerate({
+    system: "You read clothing price tags and labels for a wardrobe app. Reply with JSON only. Leave a field empty (or 0) rather than guess.",
+    text: "Read this tag or label.",
+    image: await resizeImage(file, 1024),
+    schema: TAG_LABEL_SCHEMA,
+    maxTokens: 220,
+  });
+  return JSON.parse(text.replace(/^```(json)?|```$/g, "").trim());
+}
+// The shop's page for the piece on the label: { page, ref }. Tries the QR link, then a link
+// built from the reference, then Google Shopping, then the AI with Google Search.
+async function findProduct(qr, tag, step) {
+  const link = Label.linkIn(qr);
+  const brand = tag?.brand || "";
+  const ref = Label.refFrom(tag?.reference) || Label.refInUrl(link) || (!link && Label.refFrom(qr)) || null;
+  let best = null;
+  const open = async (url) => {
+    const page = await pageInfo(url);
+    if (page?.noServer) throw Object.assign(new Error("Product pages can only be opened on the hosted app."), { noServer: true });
+    if (page?.title && (!best || (page.image && !best.image))) best = page;
+    return !!page?.image;
+  };
+  step("Opening the product page…");
+  for (const url of [link, Label.shopUrl(brand || link, ref, state.settings.region)].filter(Boolean)) if (await open(url)) return { page: best, ref };
+  const words = [brand, tag?.name, ref?.text || tag?.reference].filter(Boolean).join(" ");
+  if (!brand || words === brand) return { page: best, ref };
+  if (productsOn()) {
+    step("Looking it up on Google Shopping…");
+    const it = state.settings.region === "it";
+    const r = await fetch(`api/products?${new URLSearchParams({ q: words, gl: it ? "it" : "us", hl: it ? "it" : "en" })}`).catch(() => null);
+    const items = (await r?.json().catch(() => null))?.items || [];
+    const hit = items.find((p) => normBrand(p.shop).includes(normBrand(brand)) || normBrand(p.title).includes(normBrand(brand)));
+    if (hit && (await open(hit.url))) return { page: best, ref };
+    if (hit && !best?.image) best = { url: hit.url, title: hit.title, image: hit.image, images: [hit.image], price: hit.price, site: hit.shop };
+    if (best?.image) return { page: best, ref };
+  }
+  if (aiReady()) {
+    step("Searching the shop's website…");
+    let sources = [];
+    const text = await aiGenerate({
+      system: "You find the official product page of a piece of clothing from what its label says. Use Google Search. Reply with the product page URL only.",
+      text: `${words}${link ? ` (its QR code links to ${link})` : ""}`,
+      search: true, maxTokens: 120, onSources: (w) => (sources = w),
+    }).catch(() => "");
+    for (const url of [...new Set([Label.linkIn(text), ...sources.map((s) => s.uri)].filter(Boolean))].slice(0, 3)) if (await open(url)) break;
+  }
+  return { page: best, ref };
+}
+// A shop's photo, fetched through the app's server (shops don't let other sites copy them).
+async function productPhoto(url) {
+  try {
+    const r = await fetch(`api/image?url=${encodeURIComponent(url)}`, AbortSignal.timeout ? { signal: AbortSignal.timeout(15000) } : {});
+    if (!r.ok || !(r.headers.get("Content-Type") || "").startsWith("image/")) return null;
+    return await resizeImage(await r.blob(), 1400);
+  } catch { return null; }
+}
+// "Blu" on a pair of jeans means denim; colours shops use and the wardrobe doesn't become the closest one.
+function wardrobeColour(text, category) {
+  const c = colourIn(Label.toEnglish(text));
+  const col = COLORS[c] ? c : EXTRA_COLOURS[c]?.[1] || "";
+  return category === "jeans" && ["blue", "light blue", "navy"].includes(col) && !/navy|dark/.test(Label.toEnglish(text)) ? "denim" : col;
+}
 async function scanTag(d, file) {
   d.scanningTag = true;
+  d.labelStep = "Reading the label…";
+  const step = (s) => { d.labelStep = s; rerenderAdd(d); };
   rerenderAdd(d);
+  const fresh = !d.photos.length;
   try {
-    const text = await aiGenerate({
-      system: "You read clothing price tags and labels for a wardrobe app. Reply with JSON only. Leave a field empty (or 0) rather than guess.",
-      text: "Read this tag or label.",
-      image: await resizeImage(file, 1024),
-      schema: TAG_LABEL_SCHEMA,
-      maxTokens: 200,
-    });
-    const r = JSON.parse(text.replace(/^```(json)?|```$/g, "").trim());
-    if (r.brand && !d.brand) d.brand = r.brand.trim();
-    if (r.name && !d.name) d.name = r.name.trim();
-    if (CAT[r.category] && !d.category) { d.category = r.category; d.warmth = CAT[r.category].warmth; }
-    if (r.price > 0) { d.price = String(r.price); d.currency = (r.currency || "").toUpperCase(); }
-    if (r.size) d.size = r.size.trim();
-    if (r.material) d.material = r.material.trim();
+    const [qr, tag] = await Promise.all([
+      readQR(file).catch(() => ""),
+      aiReady() ? readTagText(file).catch((e) => ({ error: e.message })) : null,
+    ]);
+    if (tag?.error && !qr) throw new Error(tag.error);
+    const r = tag?.error ? null : tag;
+    let found = { page: null, ref: Label.refFrom(r?.reference) };
+    try { found = await findProduct(qr, r, step); } catch (e) { if (e.noServer) toast(e.message); }
+    const page = found.page;
+    const title = Label.cleanTitle(page?.title, r?.brand || page?.brand || "");
+    const words = Label.toEnglish(title);
+    const about = `${words} ${Label.toEnglish(page?.description)}`;
+    // What the label says comes first, then the product page.
+    const said = (r?.brand || page?.brand || (Label.isPullBear(page?.url || Label.linkIn(qr)) ? "Pull&Bear" : "")).trim();
+    const brand = brandInfo(said)?.name || said; // "PULL&BEAR" on the tag → "Pull&Bear"
+    if (brand && !d.brand) d.brand = brand;
+    if (!d.name && (title || r?.name)) d.name = cap((title || r.name).trim());
+    const kind = BUY_KINDS.find(([re]) => re.test(words)) || BUY_KINDS.find(([re]) => re.test(about));
+    const cat = CAT[r?.category] ? r.category : kind?.[1];
+    if (cat && !d.category) { d.category = cat; d.warmth = CAT[cat].warmth; }
+    const fit = Label.fitIn(about);
+    if (fit && !d.fit) d.fit = fitsFor(d).includes(fit) ? fit : fit === "baggy" && fitsFor(d).includes("oversized") ? "oversized" : fit === "oversized" && fitsFor(d).includes("baggy") ? "baggy" : "";
+    const price = r?.price > 0 ? r.price : parseFloat(String(page?.price || "").replace(",", "."));
+    if (price > 0) { d.price = String(price); d.currency = ((r?.price > 0 ? r.currency : page.price.split(" ")[1]) || "").toUpperCase(); }
+    if (r?.size) d.size = r.size.trim();
+    if (r?.material) d.material = r.material.trim();
+    if (page?.url) d.link = page.url;
+    if (found.ref) d.reference = found.ref.text;
+    const colour = wardrobeColour(r?.color || page?.color || title, d.category);
+    // The page's photo is in the shop's first colour, which may not be the one on the label.
+    const sameColour = Label.photoColourMatches(page?.image, found.ref);
+    if (colour && (fresh || !d.colors.length)) d.colors = [colour];
     refreshStyles();
     if (d.brand) lookupBrand(d.brand).then((learnt) => learnt && (refreshStyles(), rerenderAdd(d)));
-    if (draft === d) toast([r.brand, r.price > 0 && fmtPrice(r.price, r.currency), r.size].filter(Boolean).join(" · ") || "Nothing readable on that tag");
+    if (fresh && page?.image) {
+      step("Getting the shop's photo…");
+      const blob = await productPhoto(page.image);
+      if (blob && draft === d) {
+        const p = { ...newPhoto(blob), manual: true, shop: true }; // shop photos are already upright
+        d.photos = [p];
+        d.active = 0;
+        d.shopPhoto = { site: page.site || "", otherColour: sameColour === false };
+        d.keepColors = !!colour; // the label's colour wins over the colours in the photo
+        if (!colour) d.colors = await detectColors(blob).catch(() => []);
+        d.scanningTag = false;
+        preparePhoto(p, d);
+      }
+    }
+    if (draft === d) {
+      const what = [d.name || d.brand, page?.site && `from ${page.site}`].filter(Boolean).join(" ");
+      toast(page ? `Found ${what}` : r || qr ? `Read the label${fresh ? ". No product page found, so take a photo of the piece" : ""}` : aiReady() ? "Nothing readable on that label" : "No QR code found. Add a Gemini key in Settings to read the printed text too.");
+    }
   } catch (err) {
-    if (draft === d) toast(err.message || "Couldn't read the tag");
+    if (draft === d) toast(err.message || "Couldn't read the label");
   }
   d.scanningTag = false;
+  d.labelStep = "";
   rerenderAdd(d);
 }
 function fmtPrice(n, currency) {
@@ -3234,6 +3392,7 @@ async function saveDraft(next = false) {
     fit: (fitsFor(d).includes(d.fit) ? d.fit : "") || guessFit({ category: d.category, tags }),
     price: parseFloat(String(d.price ?? "").replace(",", ".")) || undefined, currency: d.currency || undefined,
     size: (d.size || "").trim() || undefined, material: (d.material || "").trim() || undefined,
+    link: d.link || undefined, reference: d.reference || undefined,
     photos: d.photos.map(shown),
     originals: anyCut ? d.photos.map((p) => p.orig) : undefined,
     aiChecked: existing?.aiChecked || d.photos.some((p) => p.aiChecked) || undefined,
@@ -4590,7 +4749,8 @@ document.addEventListener("click", async (e) => {
     case "save": return saveDraft(false);
     case "save-next": return saveDraft(true);
     case "ai-tag": return recognise(draft);
-    case "scan-tag": return aiReady() ? tagInput.click() : toast(NO_AI);
+    case "scan-tag": case "scan-label": return tagInput.click();
+    case "label-shoot": addingExtraPhoto = true; return camInput.click();
     case "cut-all": return cutAll();
     case "recognise-all": return recogniseAll();
     case "fit-all": return fitAll();
