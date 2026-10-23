@@ -73,3 +73,9 @@ test("Pull&Bear QR codes and barcodes", () => {
   assert.equal(L.shopUrl("Pull&Bear", want, "it"), "https://www.pullandbear.com/it/p-l07660508?cS=434");
   assert.deepEqual(L.refFrom("ART.   7660 / 508 / 434"), want);
 });
+
+test("shop names from links", () => {
+  assert.equal(L.siteOf("https://www.pullandbear.com/it/p-l07660508?cS=434"), "pullandbear.com");
+  assert.equal(L.siteOf("https://shop.example.it/x"), "shop.example.it");
+  assert.equal(L.siteOf("not a link"), "");
+});
