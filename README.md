@@ -111,6 +111,8 @@ Older signals count half as much after 60 days, so the ideas follow your taste a
 ### Background removal (no AI tokens)
 Runs on the tablet. The first time, the app downloads an AI cut-out model (about 40 MB, `@imgly/background-removal`) and the browser keeps it. Without internet it uses a quick colour-based cut-out, which works best on a plain surface that contrasts with the garment. The original photo is always kept.
 
+**Fix cut-out** (on the Add screen, also when editing a saved piece) opens a full-screen editor to correct it by hand, like in Photoshop: **Erase** paints away background that was left in, **Restore** paints back parts of the piece that were cut off, **Cut around** drops everything outside a loop you draw round the piece, and **Move** pans. Pinch to zoom, undo and redo every stroke, **Start over** goes back to the automatic cut-out. Removed parts show in red so you can see exactly what goes. On a PC: mouse wheel zooms, right-drag moves, Ctrl+Z / Ctrl+Y undo and redo, E / R / L / M pick the tool, [ and ] change the brush size. Pieces remember how their cut-out sits on the original photo, so a later fix starts from your last one; pieces saved before this are cut out again from the original the first time (offline, the editor works on the cut-out itself).
+
 The sample photos were cut out ahead of time with the `u2net` model, with the mattress showing between trouser legs and feet at the hem cleaned off.
 
 ### Upright photos (no AI tokens)
@@ -147,6 +149,7 @@ Settings shows how many requests and tokens were used this month.
 - `calendar.js`: reads iCal calendar feeds (events, repeats, time zones) and guesses each event's occasion
 - `label.js`: adding a piece from its label: product references, Pull&Bear links, product page titles (Italian words included) and QR links
 - `vendor/jsqr.min.js`: jsQR 1.4.0 (Apache 2.0), reads QR codes where the browser can't
+- `cutout-editor.js`: the full-screen editor behind **Fix cut-out** (erase, restore, cut around, pinch zoom, undo)
 - `server.py`: serves the app and keeps the shared wardrobe in `data/` (Python 3 standard library only)
 - `worker/api.js`, `wrangler.jsonc`, `.assetsignore`: the same sync API as a Cloudflare Worker, plus the AI pass-through that keeps keys off the devices
 - `sample/`: resized copies of your photos (`*.jpg`), their cut-outs (`cut/*.webp`) and `seed.js`, which holds the catalogue data for them
