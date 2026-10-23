@@ -6,6 +6,7 @@
 import { parseICS, eventsBetween, guessOccasion, titleKey } from "./calendar.js";
 import * as Style from "./stylist.js";
 import * as Label from "./label.js";
+import { editCutout } from "./cutout-editor.js";
 
 /* ======================================================================
    Reference data
@@ -868,8 +869,10 @@ async function basicCutout(blob) {
 }
 
 // Crop to the garment and centre it on a transparent 3:4 canvas.
-async function framePiece(blob) {
-  const bmp = await createImageBitmap(blob);
+const framePiece = async (src) => (await frameGeo(src)).blob;
+// The same, plus where each pixel of `src` (a blob or canvas) lands in the result.
+async function frameGeo(src) {
+  const bmp = src instanceof Blob ? await createImageBitmap(src) : src;
   const s = 200 / Math.max(bmp.width, bmp.height);
   const sw = Math.max(1, Math.round(bmp.width * s)), sh = Math.max(1, Math.round(bmp.height * s));
   const sctx = newCanvas(sw, sh).getContext("2d", { willReadFrequently: true });
@@ -877,7 +880,7 @@ async function framePiece(blob) {
   const a = sctx.getImageData(0, 0, sw, sh).data;
   let x0 = sw, y0 = sh, x1 = -1, y1 = -1;
   for (let y = 0; y < sh; y++) for (let x = 0; x < sw; x++) if (a[(y * sw + x) * 4 + 3] > 40) { x0 = Math.min(x0, x); x1 = Math.max(x1, x); y0 = Math.min(y0, y); y1 = Math.max(y1, y); }
-  if (x1 < 0) return blob;
+  if (x1 < 0) return { blob: src instanceof Blob ? src : await canvasBlob(src, "image/png"), m: new DOMMatrix() };
   const bx = Math.max(0, (x0 - 1) / s), by = Math.max(0, (y0 - 1) / s);
   const bwid = Math.min(bmp.width - bx, (x1 - x0 + 3) / s), bhei = Math.min(bmp.height - by, (y1 - y0 + 3) / s);
   const m = Math.max(bwid, bhei) * 0.06;
@@ -887,16 +890,21 @@ async function framePiece(blob) {
   const ctx = c.getContext("2d");
   ctx.imageSmoothingQuality = "high";
   ctx.drawImage(bmp, bx, by, bwid, bhei, (W - bwid) / 2 * scale, (H - bhei) / 2 * scale, bwid * scale, bhei * scale);
-  return canvasBlob(c, "image/webp", 0.86);
+  return { blob: await canvasBlob(c, "image/webp", 0.86), m: new DOMMatrix().scale(scale).translate((W - bwid) / 2 - bx, (H - bhei) / 2 - by) };
 }
 
-// Returns { blob, engine } or throws if no method could find the garment.
+// Returns { blob, raw, engine } or throws if no method could find the garment.
+// `raw` is the cut-out before framing, pixel for pixel on top of the photo: the hand editor starts from it.
 async function removeBackground(blob) {
-  try {
-    return { blob: await framePiece(await aiCutout(blob)), engine: "ai" };
-  } catch {
-    return { blob: await framePiece(await basicCutout(blob)), engine: "basic" };
+  let raw, engine = "ai";
+  try { raw = await aiCutout(blob); } catch { raw = await basicCutout(blob); engine = "basic"; }
+  const [a, b] = await Promise.all([createImageBitmap(blob), createImageBitmap(raw)]);
+  if (a.width !== b.width || a.height !== b.height) {
+    const c = newCanvas(a.width, a.height);
+    c.getContext("2d").drawImage(b, 0, 0, a.width, a.height);
+    raw = await canvasBlob(c, "image/png");
   }
+  return { blob: await framePiece(raw), raw, engine };
 }
 
 /* ---------- Standing pieces upright (on the device, no tokens) ---------- */
@@ -1004,21 +1012,41 @@ const kindOf = (category) => {
   return slot === "bottom" ? "bottom" : ["base", "mid", "outer"].includes(slot) ? "top" : "";
 };
 
+// A clockwise turn of a w×h image by `deg`: the canvas grows to fit, `m` maps old pixels to new ones.
+function turnGeo(w, h, deg) {
+  const r = (deg * Math.PI) / 180, cos = Math.abs(Math.cos(r)), sin = Math.abs(Math.sin(r));
+  const W = Math.round(w * cos + h * sin), H = Math.round(w * sin + h * cos);
+  return { W, H, m: new DOMMatrix().translate(W / 2, H / 2).rotate(deg).translate(-w / 2, -h / 2) };
+}
+function turnCanvas(bmp, deg) {
+  const g = turnGeo(bmp.width, bmp.height, deg);
+  const c = newCanvas(g.W, g.H);
+  const ctx = c.getContext("2d");
+  ctx.imageSmoothingQuality = "high";
+  ctx.setTransform(g.m);
+  ctx.drawImage(bmp, 0, 0);
+  return { c, m: g.m };
+}
+const quarterOf = (deg) => (((Math.round(deg / 90) * 90) % 360) + 360) % 360;
 // Turn an image clockwise. Cut-outs are re-framed afterwards; photos only turn in quarter steps.
 async function rotateImage(blob, deg, cutout) {
   if (!cutout) deg = Math.round(deg / 90) * 90;
   deg = ((Math.round(deg) % 360) + 360) % 360;
   if (!deg) return blob;
-  const bmp = await createImageBitmap(blob);
-  const r = (deg * Math.PI) / 180, cos = Math.abs(Math.cos(r)), sin = Math.abs(Math.sin(r));
-  const c = newCanvas(Math.round(bmp.width * cos + bmp.height * sin), Math.round(bmp.width * sin + bmp.height * cos));
-  const ctx = c.getContext("2d");
-  ctx.imageSmoothingQuality = "high";
-  ctx.translate(c.width / 2, c.height / 2);
-  ctx.rotate(r);
-  ctx.drawImage(bmp, -bmp.width / 2, -bmp.height / 2);
-  return cutout ? framePiece(await canvasBlob(c, "image/png")) : canvasBlob(c, "image/jpeg", 0.85);
+  const { c } = turnCanvas(await createImageBitmap(blob), deg);
+  return cutout ? framePiece(c) : canvasBlob(c, "image/jpeg", 0.85);
 }
+// The framed cut-out of a photo turned by `rot`, from its raw cut-out (see removeBackground),
+// and `geo`: where each pixel of the upright photo (the photo turned in quarter steps, as kept
+// in `originals`) lands in the cut-out. Saved with the piece, it lets the cut-out be fixed by hand later.
+async function makeCut(raw, rot) {
+  const bmp = raw instanceof Blob ? await createImageBitmap(raw) : raw;
+  const t = turnCanvas(bmp, rot);
+  const f = await frameGeo(t.c);
+  const toOrig = turnGeo(bmp.width, bmp.height, quarterOf(rot)).m;
+  return { blob: f.blob, geo: f.m.multiply(t.m).multiply(toOrig.inverse()) };
+}
+const geoList = (m) => m && [m.a, m.b, m.c, m.d, m.e, m.f].map((v) => Math.round(v * 1e5) / 1e5);
 
 /* ======================================================================
    Weather (Open-Meteo, no key needed)
@@ -2732,8 +2760,9 @@ function pairingsFor(item, limit = 6) {
 }
 
 /* ---------- Add / edit ---------- */
-// A draft photo keeps the photo as taken (src) and its cut-out (cutSrc), plus what is shown
-// after turning it upright by `rot` degrees: orig (photo) and cut (cut-out).
+// A draft photo keeps the photo as taken (src) and its cut-out (cutSrc; raw is the same before
+// framing), plus what is shown after turning it upright by `rot` degrees: orig (photo) and cut
+// (cut-out), and geo, which maps orig onto cut (see makeCut).
 const shown = (p) => (p.useCut && p.cut ? p.cut : p.orig);
 const newPhoto = (src) => ({ src, orig: src, cutSrc: null, cut: null, useCut: false, rot: 0 });
 function newDraft() {
@@ -2873,6 +2902,7 @@ function brandTyped(value) {
 const ICON_CAMERA = `<svg viewBox="0 0 24 24"><path d="M3 8a2 2 0 0 1 2-2h2l2-2h6l2 2h2a2 2 0 0 1 2 2v10a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><circle cx="12" cy="13" r="4"/></svg>`;
 const ICON_GALLERY = `<svg viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="16" rx="2"/><circle cx="9" cy="10" r="2"/><path d="m21 16-5-5-9 9"/></svg>`;
 const ICON_TAG = `<svg viewBox="0 0 24 24"><path d="M3 12V4a1 1 0 0 1 1-1h8l9 9-9 9z"/><circle cx="8" cy="8" r="1.5"/></svg>`;
+const ICON_SCISSORS = `<svg viewBox="0 0 24 24"><circle cx="6" cy="6" r="3"/><circle cx="6" cy="18" r="3"/><path d="M8.1 8.1 20 20M8.1 15.9 20 4"/></svg>`;
 const ICON_ROTATE =`<svg viewBox="0 0 24 24"><path d="M20 11a8 8 0 1 0-2.3 5.7"/><path d="M20 4v7h-7"/></svg>`;
 
 function renderAdd() {
@@ -2926,11 +2956,12 @@ function renderAdd() {
               <button class="btn primary" data-act="label-shoot">${ICON_CAMERA}Take a photo</button><button class="btn" data-act="more-photo">${ICON_GALLERY}Choose from gallery</button></div>`}</div>` : `
         <div class="photo-wrap">
           <img class="photo-main pic-bg" src="${photoURL(shown(cur))}" alt="">
-          ${cur.busy ? `<div class="busy"><div class="spinner"></div><span>Removing background…</span></div>` : ""}
+          ${cur.busy ? `<div class="busy"><div class="spinner"></div><span>${esc(cur.busyText || "Removing background…")}</span></div>` : ""}
           ${d.photos.length > 1 ? `<span class="photo-tag">${d.active === 0 ? "Front" : d.active === 1 ? "Back" : `Photo ${d.active + 1}`}</span>` : ""}
         </div>
         <div class="row">
           ${cur.busy ? "" : `<button class="chip" data-act="rotate">${ICON_ROTATE}Turn</button>`}
+          ${cur.cut && cur.useCut && !cur.busy ? `<button class="chip" data-act="fix-cut">${ICON_SCISSORS}Fix cut-out</button>` : ""}
           ${cur.cut ? `<button class="chip" data-cutview="${cur.useCut ? 0 : 1}">${cur.useCut ? "Use original photo" : "Use cut-out"}</button>` : cur.busy ? "" : `<button class="chip" data-act="cutout">Remove background</button>`}
           ${cur.engine === "basic" && cur.useCut ? `<span class="muted small">Quick cut-out. The AI cut-out needs internet the first time.</span>` : ""}
         </div>
@@ -2995,7 +3026,8 @@ const rerenderAdd = (d) => { if (draft === d && view === "add") render(); };
 
 async function applyRotation(p) {
   p.orig = await rotateImage(p.src, p.rot, false);
-  if (p.cutSrc) p.cut = await rotateImage(p.cutSrc, p.rot, true);
+  if (p.raw) { const c = await makeCut(p.raw, p.rot); p.cut = c.blob; p.geo = c.geo; }
+  else if (p.cutSrc) { p.cut = await rotateImage(p.cutSrc, p.rot, true); p.geo = null; }
 }
 // Cut the background out and stand the piece upright.
 async function preparePhoto(p, d, cut = state.settings.autoCutout) {
@@ -3004,7 +3036,7 @@ async function preparePhoto(p, d, cut = state.settings.autoCutout) {
   try {
     if (cut && !p.cutSrc) {
       const r = await removeBackground(p.src);
-      p.cutSrc = r.blob; p.engine = r.engine; p.useCut = true;
+      p.cutSrc = r.blob; p.raw = r.raw; p.engine = r.engine; p.useCut = true;
     }
     if (p.cutSrc && !p.manual) p.rot = await uprightAngle(p.cutSrc, kindOf(d.category));
     await applyRotation(p);
@@ -3023,6 +3055,87 @@ async function reorient(d) {
     if (Math.abs(rot - p.rot) > 2) { p.rot = rot; await applyRotation(p); }
   }
   rerenderAdd(d);
+}
+// Fix a cut-out by hand (cutout-editor.js). The editor gets the upright photo and what is kept of it.
+async function fixCutout(d, p) {
+  if (!p?.cut || p.busy) return;
+  p.busy = true;
+  p.busyText = "Opening the editor…";
+  rerenderAdd(d);
+  let photo, mask, start, note = "";
+  try {
+    start = await rawFor(p, d).catch(() => null);
+    if (start) {
+      photo = await createImageBitmap(await rotateImage(p.src, start.rot, false));
+      mask = turnCanvas(await createImageBitmap(start.raw), quarterOf(start.rot)).c;
+    } else {
+      // The original photo couldn't be cut out again (offline): edit the cut-out itself.
+      photo = await createImageBitmap(p.cut);
+      mask = newCanvas(photo.width, photo.height);
+      mask.getContext("2d").drawImage(photo, 0, 0);
+      note = "Offline: Restore only brings back what you erased here.";
+    }
+  } catch {
+    toast("Couldn't open the editor for this photo");
+  }
+  p.busy = false;
+  p.busyText = "";
+  rerenderAdd(d);
+  if (!mask) return;
+  const kept = await editCutout(photo, mask, { note });
+  if (!kept) return;
+  p.busy = true;
+  p.busyText = "Saving the cut-out…";
+  rerenderAdd(d);
+  try {
+    // The kept pixels of the upright photo, turned back to the photo as taken.
+    const kctx = kept.getContext("2d");
+    kctx.globalCompositeOperation = "source-in";
+    kctx.drawImage(photo, 0, 0);
+    if (start) {
+      const src = await createImageBitmap(p.src);
+      const back = newCanvas(src.width, src.height);
+      const bctx = back.getContext("2d");
+      bctx.setTransform(turnGeo(src.width, src.height, quarterOf(start.rot)).m.inverse());
+      bctx.drawImage(kept, 0, 0);
+      p.raw = await canvasBlob(back, "image/png");
+      p.cutSrc = await framePiece(p.raw);
+      p.rot = start.rot;
+    } else p.cutSrc = await rotateImage(await framePiece(kept), -p.rot, true);
+    p.useCut = true;
+    p.manual = true;
+    p.engine = "hand";
+    await applyRotation(p);
+    if (d.photos[0] === p && !d.keepColors) d.colors = await detectColors(shown(p)).catch(() => d.colors);
+  } catch {
+    toast("Couldn't save the cut-out");
+  }
+  p.busy = false;
+  p.busyText = "";
+  rerenderAdd(d);
+}
+// The raw cut-out of a photo (see removeBackground) and the turn it is shown with.
+async function rawFor(p, d) {
+  if (p.raw) return { raw: p.raw, rot: p.rot };
+  const src = await createImageBitmap(p.src);
+  if (p.geo) {
+    // Saved with the piece: put the cut-out back over the photo as taken.
+    const toCut = p.geo.multiply(turnGeo(src.width, src.height, quarterOf(p.rot)).m);
+    const c = newCanvas(src.width, src.height);
+    const ctx = c.getContext("2d");
+    ctx.setTransform(toCut.inverse());
+    ctx.drawImage(await createImageBitmap(p.cut), 0, 0);
+    ctx.resetTransform();
+    ctx.globalCompositeOperation = "source-in";
+    ctx.drawImage(src, 0, 0);
+    return { raw: await canvasBlob(c, "image/png"), rot: p.rot };
+  }
+  // Saved before the editor existed: cut the original photo out again, keeping the slight tilt
+  // that stands it upright (the original is only turned in quarter steps).
+  const r = await removeBackground(p.src);
+  const a = await uprightAngle(r.blob, kindOf(d.category));
+  const tilt = ((((a + 45) % 90) + 90) % 90) - 45;
+  return { raw: r.raw, rot: quarterOf(p.rot) + tilt };
 }
 async function startDraft(srcs) {
   draft = newDraft();
@@ -3395,6 +3508,7 @@ async function saveDraft(next = false) {
     link: d.link || undefined, reference: d.reference || undefined,
     photos: d.photos.map(shown),
     originals: anyCut ? d.photos.map((p) => p.orig) : undefined,
+    cutGeo: anyCut && d.photos.some((p) => p.useCut && p.geo) ? d.photos.map((p) => (p.useCut && p.cut ? geoList(p.geo) : null) || null) : undefined,
     aiChecked: existing?.aiChecked || d.photos.some((p) => p.aiChecked) || undefined,
   };
   await store.put("items", item);
@@ -4307,15 +4421,18 @@ async function cutAll() {
   for (const it of todo) {
     toast(`Removing backgrounds… ${done + 1} of ${todo.length}`);
     try {
-      const cuts = [], originals = [];
+      const cuts = [], originals = [], geos = [];
       for (const p of it.photos) {
-        const cut = (await removeBackground(p)).blob;
-        const rot = await uprightAngle(cut, kindOf(it.category));
-        cuts.push(await rotateImage(cut, rot, true));
+        const r = await removeBackground(p);
+        const rot = await uprightAngle(r.blob, kindOf(it.category));
+        const c = await makeCut(r.raw, rot);
+        cuts.push(c.blob);
+        geos.push(geoList(c.geo));
         originals.push(await rotateImage(p, rot, false));
       }
       it.originals = originals;
       it.photos = cuts;
+      it.cutGeo = geos;
       await store.put("items", it);
       done++;
     } catch { /* keep the original photo */ }
@@ -4336,6 +4453,7 @@ async function recogniseAll() {
         if (!it.photos[k] || !TURN_FOR[side]) continue;
         it.photos[k] = await rotateImage(it.photos[k], TURN_FOR[side], !!it.originals);
         if (it.originals?.[k]) it.originals[k] = await rotateImage(it.originals[k], TURN_FOR[side], false);
+        if (it.cutGeo?.[k]) it.cutGeo[k] = null; // the hand editor cuts this one again from the original
       }
       const st = (r.styles || []).filter((s) => STYLES[s]);
       if (st.length) { it.styles = st.slice(0, 3); it.formality = formalityOf(it.styles); }
@@ -4657,7 +4775,9 @@ document.addEventListener("click", async (e) => {
     const it = state.items.find((i) => i.id === ds.edit);
     draft = {
       ...newDraft(), ...it,
-      photos: (it.photos || []).map((p, k) => (it.originals?.[k] ? { ...newPhoto(it.originals[k]), cutSrc: p, cut: p, useCut: true, manual: true } : { ...newPhoto(p), manual: true })),
+      photos: (it.photos || []).map((p, k) => (it.originals?.[k]
+        ? { ...newPhoto(it.originals[k]), cutSrc: p, cut: p, useCut: true, manual: true, geo: it.cutGeo?.[k] ? new DOMMatrix(it.cutGeo[k]) : null }
+        : { ...newPhoto(p), manual: true })),
       active: 0, tags: (it.tags || []).join(", "), colors: [...(it.colors || [])], styles: [...(it.styles || [])], stylesTouched: true,
       notes: it.notes || "", brand: it.brand || "", fit: it.fit || "",
     };
@@ -4738,6 +4858,7 @@ document.addEventListener("click", async (e) => {
     case "gallery": addingExtraPhoto = false; return galInput.click();
     case "more-photo": addingExtraPhoto = true; return galInput.click();
     case "cutout": return preparePhoto(draft.photos[draft.active], draft, true);
+    case "fix-cut": return fixCutout(draft, draft.photos[draft.active]);
     case "rotate": {
       const d = draft, p = d.photos[d.active];
       p.rot = (p.rot + 90) % 360;
