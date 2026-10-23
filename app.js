@@ -707,6 +707,25 @@ async function resizeImage(file, max = 1100) {
   return canvasBlob(c, "image/jpeg", 0.82);
 }
 
+// Whether a photo already has a plain light background (shop photos usually do): the frame
+// around its edge is near-white, grey or even, with no colours of a room or a bed.
+async function plainBackground(blob) {
+  try {
+    const n = 48;
+    const ctx = newCanvas(n, n).getContext("2d", { willReadFrequently: true });
+    ctx.drawImage(await createImageBitmap(blob), 0, 0, n, n);
+    const { data } = ctx.getImageData(0, 0, n, n);
+    const lum = [];
+    for (let y = 0; y < n; y++) for (let x = 0; x < n; x++) {
+      if (x > 2 && x < n - 3 && y > 2 && y < n - 3) continue; // only the outer edge
+      const i = (y * n + x) * 4, r = data[i], g = data[i + 1], b = data[i + 2];
+      if (Math.max(r, g, b) - Math.min(r, g, b) > 24) return false;
+      lum.push((r + g + b) / 3);
+    }
+    const mean = lum.reduce((a, v) => a + v, 0) / lum.length;
+    return mean > 200 && Math.sqrt(lum.reduce((a, v) => a + (v - mean) ** 2, 0) / lum.length) < 12;
+  } catch { return false; }
+}
 // Guess the garment colours. On a cut-out photo only the garment pixels count;
 // on a normal photo we sample the centre.
 async function detectColors(blob) {
@@ -3504,7 +3523,8 @@ async function useShopPhotos(d, list, { site, ref, colour, replace, step }) {
     if (!colour) d.colors = await detectColors(chosen[0].blob).catch(() => []);
   } else d.keepColors = d.keepColors || !!d.colors.length; // the colours already come from your own photo
   d.scanningTag = false;
-  (async () => { for (const p of shop) await preparePhoto(p, d); })();
+  // Shop photos are usually on a plain light background already: removing it would gain nothing.
+  (async () => { for (const p of shop) await preparePhoto(p, d, state.settings.autoCutout && !(await plainBackground(p.src))); })();
   return "";
 }
 // Fills a piece in from what's known about the product: its label (tag), the shop's page and
@@ -3519,10 +3539,12 @@ function fillFromProduct(d, { tag: r, page, info, ref, link, qr = "", override =
   const said = (r?.brand || page?.brand || info?.brand || (Label.isPullBear(page?.url || link || Label.linkIn(qr)) ? "Pull&Bear" : "")).trim();
   const brand = brandInfo(said)?.name || said; // "PULL&BEAR" on the tag → "Pull&Bear"
   if (brand && (override || !d.brand)) d.brand = brand;
-  if ((override || !d.name) && (name || r?.name)) d.name = cap((name || r.name).trim());
   const kind = BUY_KINDS.find(([re]) => re.test(words)) || BUY_KINDS.find(([re]) => re.test(about));
   const cat = CAT[r?.category] ? r.category : kind?.[1];
   if (cat && (override || !d.category)) { d.category = cat; d.warmth = CAT[cat].warmth; }
+  // The wardrobe's own simple name ("Light blue Pull&Bear jeans") is kept: shops' product
+  // names often don't fit. The shop's name is only used when the type is unknown.
+  if (!d.name && !d.category && (name || r?.name)) d.name = cap((name || r.name).trim());
   const fit = Label.fitIn(about);
   if (fit && (override || !d.fit)) d.fit = fitsFor(d).includes(fit) ? fit : fit === "baggy" && fitsFor(d).includes("oversized") ? "oversized" : fit === "oversized" && fitsFor(d).includes("baggy") ? "baggy" : d.fit;
   const pagePrice = [page?.price, info?.price].find((p) => /\d/.test(p || "")) || "";
@@ -3532,7 +3554,7 @@ function fillFromProduct(d, { tag: r, page, info, ref, link, qr = "", override =
   const material = r?.material || info?.material;
   if (material && (override || !d.material)) d.material = material.trim().slice(0, 120);
   const description = info?.description || "";
-  if (description && !d.notes) d.notes = description.slice(0, 300);
+  if (!d.notes && (name || description)) d.notes = [name && d.name !== cap(name.trim()) && `Shop name: ${name.trim()}.`, description].filter(Boolean).join(" ").slice(0, 300);
   if (link && (override || !d.link)) d.link = link;
   if (ref) d.reference = ref.text;
   return wardrobeColour(r?.color || info?.colour || page?.color || name, d.category);
@@ -3584,7 +3606,7 @@ async function scanTag(d, file) {
       if (note) d.labelNote = [d.labelNote, note].filter(Boolean).join(" ");
     }
     if (draft === d) {
-      const what = [d.name || d.brand, (page?.site || found.link) && `from ${page?.site || Label.siteOf(found.link)}`].filter(Boolean).join(" ");
+      const what = [d.name || autoName(d) || d.brand, (page?.site || found.link) && `from ${page?.site || Label.siteOf(found.link)}`].filter(Boolean).join(" ");
       toast(known ? `Found ${what}` : found.ref ? `Read the label, but couldn't open the product page${fresh ? ". Take a photo of the piece" : ""}` : r || qr ? "Read the label" : aiReady() ? "Nothing readable on that label" : "No QR code found. Add a Gemini key in Settings to read the printed text too.");
     }
   } catch (err) {
