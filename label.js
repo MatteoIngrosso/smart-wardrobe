@@ -14,15 +14,26 @@ export function refFrom(text) {
   if (!m) return null;
   return { model: `0${m[1]}${m[2]}`, colour: m[3] || "", text: [m[1], m[2], m[3]].filter(Boolean).join("/") };
 }
-// The reference inside a Pull&Bear product link: …/baggy-jeans-l03660516?cS=833
+const refOf = (model, colour = "") => ({ model, colour, text: [model.slice(1, 5), model.slice(5), colour].filter(Boolean).join("/") });
+// The reference inside a Pull&Bear link: a product page (…/baggy-jeans-l03660516?cS=833) or
+// the QR code on the tag (pullandbear.com/qr/0766050843436: model, quality, colour, size).
 export function refInUrl(url) {
   let u;
   try { u = new URL(url); } catch { return null; }
+  const qr = u.pathname.match(/\/qr\/(0\d{12,13})\/?$/);
+  if (qr) return refFromCode(qr[1]);
   const m = u.pathname.match(/-l(\d{8})(?:$|[/?#.])/);
   if (!m) return null;
-  const colour = (u.searchParams.get("cS") || "").match(/^\d{3}$/)?.[0] || "";
-  return { model: m[1], colour, text: [m[1].slice(1, 5), m[1].slice(5), colour].filter(Boolean).join("/") };
+  return refOf(m[1], (u.searchParams.get("cS") || "").match(/^\d{3}$/)?.[0] || "");
 }
+// Inditex codes and barcodes start with the reference too: 07660508434368 is model 7660,
+// quality 508, colour 434, size 36 and a check digit.
+export function refFromCode(code) {
+  const m = String(code || "").trim().match(/^(0\d{7})(\d{3})\d{2,3}$/);
+  return m ? refOf(m[1], m[2]) : null;
+}
+// A QR link that only stands for the tag (not a page worth opening), like Pull&Bear's /qr/ codes.
+export const isTagLink = (url) => /pullandbear\.com\/qr\//i.test(String(url || ""));
 
 const norm = (s) => String(s || "").toLowerCase().replace(/[^a-z0-9]/g, "");
 // "Pull&Bear", "Pull and Bear", "PULL&BEAR" or a pullandbear.com link.
