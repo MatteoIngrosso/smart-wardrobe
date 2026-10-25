@@ -88,3 +88,25 @@ test("photos of a reference", () => {
   assert.equal(L.codeIn("https://x/176605084341.jpg", ref), false, "part of a longer number");
   assert.equal(L.codeIn("https://x/07660508434.jpg", { model: "07660508", colour: "" }), false);
 });
+
+test("H&M tags: no brand, just the article line", () => {
+  // From a real tag: € 15.99, sizes S M L XL, article line "1101074 049 73 4 5828".
+  const want = { shop: "hm", model: "1101074", colour: "049", text: "1101074 049" };
+  assert.deepEqual(L.refFrom("1101074 049 73 4 5828"), want);
+  assert.deepEqual(L.refFrom("1101074 049"), want);
+  assert.deepEqual(L.refFrom("1101074049", "H&M"), want);
+  assert.equal(L.refFrom("7660/508/434", "H&M"), null, "not an H&M reference");
+  assert.equal(L.brandOfRef(want), "H&M");
+  assert.equal(L.brandOfRef(L.refFrom("ART. 7660 / 508 / 434")), "");
+  assert.equal(L.shopUrl("", want, "it"), "https://www2.hm.com/it_it/productpage.1101074049.html");
+  assert.equal(L.shopUrl("H&M", want, "com"), "https://www2.hm.com/en_us/productpage.1101074049.html");
+  assert.deepEqual(L.refInUrl("https://www2.hm.com/it_it/productpage.1101074049.html"), want);
+  assert.ok(L.codeIn("https://www2.hm.com/it_it/productpage.1101074049.html", want));
+  assert.equal(L.photoColourMatches("https://image.hm.com/assets/hm/2a/3b/2a3b.jpg", want), null);
+  for (const s of ["H&M", "h & m", "HM", "www2.hm.com", "Hennes & Mauritz"]) assert.ok(L.isHM(s), s);
+  for (const s of ["Hummel", "Pull&Bear", "", "hmm"]) assert.equal(L.isHM(s), false, s);
+});
+
+test("shop names drop www2 too", () => {
+  assert.equal(L.siteOf("https://www2.hm.com/it_it/productpage.1101074049.html"), "hm.com");
+});

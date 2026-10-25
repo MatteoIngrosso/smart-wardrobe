@@ -8,8 +8,13 @@
 // Inditex labels (Pull&Bear, Zara, Bershka…) print the reference as model/quality/colour,
 // e.g. "REF 3660/516/833" or "03660 516 833". Pull&Bear's product pages use the first two
 // parts as "l03660516" and the colour as "?cS=833".
-export function refFrom(text) {
+// H&M tags print no brand at all, only the article and its colour variant followed by size
+// and other codes: "1101074 049 73 4 5828" is article 1101074, colour 049 (shop: "hm").
+export function refFrom(text, brand = "") {
   const t = String(text || "");
+  const hm = t.match(/(?<!\d)(\d{7})\s+(\d{3})(?!\d)/) || (isHM(brand) ? t.match(/(?<!\d)(\d{7})(\d{3})(?!\d)/) : null);
+  if (hm) return { shop: "hm", model: hm[1], colour: hm[2], text: `${hm[1]} ${hm[2]}` };
+  if (isHM(brand)) return null;
   const m = t.match(/(?<!\d)0?(\d{4})\s*[/.\s-]\s*(\d{3})(?:\s*[/.\s-]\s*(\d{3}))?(?!\d)/) || t.match(/(?<!\d)0?(\d{4})(\d{3})(\d{3})?(?!\d)/);
   if (!m) return null;
   return { model: `0${m[1]}${m[2]}`, colour: m[3] || "", text: [m[1], m[2], m[3]].filter(Boolean).join("/") };
@@ -20,6 +25,8 @@ const refOf = (model, colour = "") => ({ model, colour, text: [model.slice(1, 5)
 export function refInUrl(url) {
   let u;
   try { u = new URL(url); } catch { return null; }
+  const hm = /(^|\.)hm\.com$/.test(u.hostname) && u.pathname.match(/productpage\.(\d{7})(\d{3})\.html$/);
+  if (hm) return { shop: "hm", model: hm[1], colour: hm[2], text: `${hm[1]} ${hm[2]}` };
   const qr = u.pathname.match(/\/qr\/(0\d{12,13})\/?$/);
   if (qr) return refFromCode(qr[1]);
   const m = u.pathname.match(/-l(\d{8})(?:$|[/?#.])/);
@@ -38,11 +45,16 @@ export const isTagLink = (url) => /pullandbear\.com\/qr\//i.test(String(url || "
 const norm = (s) => String(s || "").toLowerCase().replace(/[^a-z0-9]/g, "");
 // "Pull&Bear", "Pull and Bear", "PULL&BEAR" or a pullandbear.com link.
 export const isPullBear = (s) => /pull(and)?bear/.test(norm(s));
+// "H&M", "Hennes & Mauritz" or an hm.com link.
+export const isHM = (s) => norm(s) === "hm" || /hennes|^(https?)?(www2?)?hmcom/.test(norm(s));
+// The brand a reference gives away when the tag doesn't print one (H&M's article line).
+export const brandOfRef = (ref) => (ref?.shop === "hm" ? "H&M" : "");
 
 // The product page a reference leads to, for shops whose links can be built from it.
 // The words before "-l…" don't matter to the shop, so any name works.
 export function shopUrl(brand, ref, region = "it") {
   if (!ref?.model) return "";
+  if (ref.shop === "hm") return ref.colour ? `https://www2.hm.com/${region === "it" ? "it_it" : "en_us"}/productpage.${ref.model}${ref.colour}.html` : "";
   if (isPullBear(brand)) {
     const country = region === "it" ? "it" : "us";
     return `https://www.pullandbear.com/${country}/p-l${ref.model}${ref.colour ? `?cS=${ref.colour}` : ""}`;
@@ -52,22 +64,24 @@ export function shopUrl(brand, ref, region = "it") {
 // Inditex photo names hold model and colour (…/03660516833-M.jpg). The page's main photo is
 // in its first colour, so it may not be the colour on the label: true, false, or null (can't tell).
 export function photoColourMatches(image, ref) {
-  if (!ref?.colour) return null;
+  if (!ref?.colour || ref.shop === "hm") return null; // H&M's photo names are random
   const m = String(image || "").match(/\/(\d{8})(\d{3})[-_]/);
   if (!m || m[1] !== ref.model) return null;
   return m[2] === ref.colour;
 }
 
 // Whether a photo (or link) is of this reference: Inditex photo names hold model and colour,
-// with or without the leading 0 (Pull&Bear …/07660508434-M.jpg, Zara …/7660508434_1_1_8.jpg).
+// with or without the leading 0 (Pull&Bear …/07660508434-M.jpg, Zara …/7660508434_1_1_8.jpg);
+// H&M's links hold article and colour (…/productpage.1101074049.html).
 export function codeIn(url, ref) {
   if (!ref?.model || !ref.colour) return false;
-  return new RegExp(`(?<!\\d)0?${ref.model.slice(1)}${ref.colour}(?!\\d)`).test(String(url || ""));
+  const code = ref.shop === "hm" ? ref.model + ref.colour : `0?${ref.model.slice(1)}${ref.colour}`;
+  return new RegExp(`(?<!\\d)${code}(?!\\d)`).test(String(url || ""));
 }
 
-// "https://www.pullandbear.com/it/…" → "pullandbear.com"
+// "https://www.pullandbear.com/it/…" → "pullandbear.com", "https://www2.hm.com/…" → "hm.com"
 export function siteOf(url) {
-  try { return new URL(url).hostname.replace(/^www\./, ""); } catch { return ""; }
+  try { return new URL(url).hostname.replace(/^www\d*\./, ""); } catch { return ""; }
 }
 
 /* ---------- Product page text ---------- */

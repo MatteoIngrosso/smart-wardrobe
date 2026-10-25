@@ -2960,7 +2960,7 @@ function renderAdd() {
   const cur = d.photos[d.active] || d.photos[0];
   const working = d.photos.some((p) => p.busy) || d.analysing || d.scanningTag;
   const status = d.scanningTag ? d.labelStep || "Reading the label…" : d.photos.some((p) => p.busy) ? "Removing backgrounds and straightening…" : d.analysing ? `Recognising with ${aiName()}…` : "";
-  const site = (u) => { try { return new URL(u).hostname.replace(/^www\./, ""); } catch { return ""; } };
+  const site = (u) => { try { return new URL(u).hostname.replace(/^www\d*\./, ""); } catch { return ""; } };
   main.innerHTML = `
     <div class="head">
       <div><h1>${d.id ? "Edit piece" : "New piece"}</h1>${status ? `<p class="sub row" style="gap:10px"><span class="spinner"></span>${status}</p>` : queue.length ? `<p class="sub">${queue.length} more piece${queue.length > 1 ? "s" : ""} waiting</p>` : ""}</div>
@@ -3215,14 +3215,14 @@ const TAG_LABEL_SCHEMA = {
   additionalProperties: false,
   required: ["brand", "name", "reference", "category", "color", "price", "currency", "size", "material"],
   properties: {
-    brand: { type: "string", description: "Brand printed on the tag; empty if none" },
+    brand: { type: "string", description: "Brand printed on the tag. If none is printed but the tag is surely a known chain's, that brand (H&M tags print no brand: just the price, 'TAILLE/TAGLIA/MAAT' sizes and an article line like '1101074 049 73 4 5828'). Else empty" },
     name: { type: "string", description: "Product name or short description if printed, e.g. 'Slim fit chinos'; empty if none" },
-    reference: { type: "string", description: "Product reference or style number as printed, e.g. '3660/516/833' or 'REF 7683 515 400'; not the barcode number; empty if none" },
+    reference: { type: "string", description: "Product reference, article or style number as printed, with its spaces and slashes, e.g. '3660/516/833', 'REF 7683 515 400', or H&M's whole article line '1101074 049 73 4 5828'; not the barcode number; empty if none" },
     category: { type: "string", enum: [...CATS.map((c) => c.id), ""], description: "Type of garment if the tag makes it clear; empty if not" },
     color: { type: "string", description: "Colour name if printed, in English, e.g. 'mid blue'; empty if none" },
     price: { type: "number", description: "Current selling price (the discounted one if there are two); 0 if none" },
     currency: { type: "string", description: "ISO code such as EUR, GBP, USD; empty if no price" },
-    size: { type: "string", description: "Size as printed, e.g. M, 32/32, EU 42; empty if none" },
+    size: { type: "string", description: "This piece's size, e.g. M, 32/32, EU 42. Tags that list several sizes mark this one in bold, circled or ticked: give only that one. Empty if none" },
     material: { type: "string", description: "Composition, e.g. '100% cotton'; empty if none" },
   },
 };
@@ -3321,8 +3321,9 @@ async function readTagText(file) {
 // `why` says what went wrong when no page could be read.
 async function findProduct(codes, tag, step) {
   const qrLink = Label.linkIn(codes.qr);
-  const brand = tag?.brand || "";
-  const ref = Label.refFrom(tag?.reference) || Label.refInUrl(qrLink) || Label.refFromCode(codes.barcode) || (!qrLink && Label.refFrom(codes.qr)) || null;
+  const said = tag?.brand || "";
+  const ref = Label.refFrom(tag?.reference, said) || Label.refInUrl(qrLink) || Label.refFromCode(codes.barcode) || (!qrLink && Label.refFrom(codes.qr, said)) || null;
+  const brand = said || Label.brandOfRef(ref); // H&M tags print no brand, but their article line gives it away
   // A Pull&Bear tag's QR stands for the tag, not a page: its reference says which page.
   const fromCode = !!(Label.refInUrl(qrLink) || Label.refFromCode(codes.barcode));
   const built = Label.shopUrl(brand || qrLink || (fromCode && !brand ? "Pull&Bear" : ""), ref, state.settings.region);
@@ -3342,8 +3343,8 @@ async function findProduct(codes, tag, step) {
   step("Opening the product page…");
   for (const url of [...new Set([Label.isTagLink(qrLink) ? "" : qrLink, built].filter(Boolean))]) if (await open(url)) return done();
   const words = [brand, tag?.name, ref?.text || tag?.reference].filter(Boolean).join(" ");
-  if (!brand || words === brand) return done();
-  if (productsOn()) {
+  if (!tag?.name && !ref && !tag?.reference) return done(); // nothing to look for
+  if (productsOn() && brand) {
     step("Looking it up on Google Shopping…");
     const it = state.settings.region === "it";
     const r = await fetch(`api/products?${new URLSearchParams({ q: words, gl: it ? "it" : "us", hl: it ? "it" : "en" })}`).catch(() => null);
@@ -3357,8 +3358,9 @@ async function findProduct(codes, tag, step) {
     step("Searching the shop's website…");
     let sources = [];
     const text = await aiGenerate({
-      system: "You find the official product page of a piece of clothing from what its label says. Use Google Search. Reply with the product page URL only.",
-      text: `${words}${qrLink ? ` (its QR code links to ${qrLink})` : ""}`,
+      system: "You find the official product page of a piece of clothing from what its label says. Use Google Search. If no brand is printed, work it out from the reference's format and what the search finds. Reply with the product page URL only.",
+      text: [brand ? `Brand: ${brand}` : "No brand printed on the tag", tag?.name && `Name: ${tag.name}`, (tag?.reference || ref?.text) && `Reference: ${tag?.reference || ref.text}`,
+        tag?.price > 0 && `Price: ${tag.price} ${tag.currency || ""}`.trim(), qrLink && `Its QR code links to ${qrLink}`].filter(Boolean).join("\n"),
       search: true, maxTokens: 120, onSources: (w) => (sources = w),
     }).catch(() => "");
     for (const url of [...new Set([Label.linkIn(text), ...sources.map((s) => s.uri)].filter(Boolean))].slice(0, 3)) if (await open(url)) break;
@@ -3554,7 +3556,8 @@ function fillFromProduct(d, { tag: r, page, info, ref, link, qr = "", override =
   const material = r?.material || info?.material;
   if (material && (override || !d.material)) d.material = material.trim().slice(0, 120);
   const description = info?.description || "";
-  if (!d.notes && (name || description)) d.notes = [name && d.name !== cap(name.trim()) && `Shop name: ${name.trim()}.`, description].filter(Boolean).join(" ").slice(0, 300);
+  const shopName = (info?.name || name).trim();
+  if (!d.notes && (shopName || description)) d.notes = [shopName && d.name !== cap(shopName) && `Shop name: ${shopName}.`, description].filter(Boolean).join(" ").slice(0, 300);
   if (link && (override || !d.link)) d.link = link;
   if (ref) d.reference = ref.text;
   return wardrobeColour(r?.color || info?.colour || page?.color || name, d.category);
@@ -3573,7 +3576,8 @@ async function scanTag(d, file) {
     const qr = codes.qr;
     if (tag?.error && !qr && !codes.barcode) throw new Error(tag.error);
     const r = tag?.error ? null : tag;
-    let found = { page: null, ref: Label.refFrom(r?.reference), why: "" };
+    if (r && !r.brand) r.brand = Label.brandOfRef(Label.refFrom(r.reference)); // H&M: no brand on the tag
+    let found = { page: null, ref: Label.refFrom(r?.reference, r?.brand), why: "" };
     try { found = await findProduct(codes, r, step); } catch (e) { if (e.noServer) found.why = e.message; }
     const page = found.page;
     let info = null;
@@ -3594,9 +3598,10 @@ async function scanTag(d, file) {
     if (d.brand) lookupBrand(d.brand).then((learnt) => learnt && (refreshStyles(), rerenderAdd(d)));
     if (fresh) {
       let list = photoCandidates([...(page?.images || []), ...(info?.photos || [])], found.ref);
-      if (!list.length && found.ref && productsOn()) {
+      if (list.length < 3 && found.ref && productsOn()) { // a page shares one or two photos; Google has the whole gallery
         step("Finding the shop's photos on Google…");
-        list = await galleryPhotos(found.ref, d.brand);
+        const more = (await galleryPhotos(found.ref, d.brand)).filter((x) => !list.some((y) => y.url.split("?")[0] === x.url.split("?")[0]));
+        list = [...list, ...more];
       }
       const note = list.length
         ? await useShopPhotos(d, list, { site: page?.site || Label.siteOf(found.link), ref: found.ref, colour, replace: true, step })
