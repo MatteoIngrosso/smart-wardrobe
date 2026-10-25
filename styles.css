@@ -439,3 +439,12 @@ details summary { cursor: pointer; }
 .cutfix-size i { flex: 0 0 auto; border-radius: 50%; background: var(--text); }
 .cutfix .icon-btn:disabled { opacity: .35; }
 .cutfix-note { color: var(--warn); }
+
+/* Must-Buy: Yes / No on every suggestion, and how many new outfits a piece unlocks */
+.verdict { display: flex; flex-wrap: wrap; align-items: center; gap: 10px; margin-top: 12px; }
+.verdict .btn { min-width: 110px; }
+.verdict .btn.primary { flex: 0 1 220px; }
+.multi { display: flex; align-items: baseline; gap: 10px; margin: 10px 0 2px; }
+.multi b { font-size: 30px; font-weight: 700; font-variant-numeric: tabular-nums; letter-spacing: -.02em; }
+.multi span { color: var(--muted); font-size: 14px; }
+.linkish { border: 0; background: none; padding: 0; font: inherit; color: var(--text); text-decoration: underline; cursor: pointer; }

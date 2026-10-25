@@ -23,7 +23,7 @@ from http.server import SimpleHTTPRequestHandler, ThreadingHTTPServer
 from urllib.parse import parse_qs, urlparse
 
 APP = os.path.dirname(os.path.abspath(__file__))
-COLS = {"items", "log", "kv"}
+COLS = {"items", "log", "kv", "wants", "scents", "events"}
 BLOB_KEY = re.compile(r"^[0-9a-z-]{4,80}\.(jpg|webp|png|bin)$")
 BLOB_TYPE = {"jpg": "image/jpeg", "webp": "image/webp", "png": "image/png", "bin": "application/octet-stream"}
 MAX_BLOB = 25 * 1024 * 1024
