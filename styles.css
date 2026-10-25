@@ -457,3 +457,16 @@ details summary { cursor: pointer; }
 .need .input { min-height: 52px; font-size: 17px; }
 .touch { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 10px; margin-top: 12px; padding: 10px 12px; border-radius: 12px; background: var(--surface-2); font-size: 15px; }
 .touch span { flex: 1 1 220px; }
+/* Events */
+.ev-form { display: flex; flex-wrap: wrap; gap: 12px; }
+.ev-form .field { flex: 1 1 150px; display: flex; flex-direction: column; gap: 6px; margin: 0; }
+.ev-form .field span { font-size: 13px; color: var(--muted); }
+.event-row { display: grid; grid-template-columns: 1fr auto; gap: 2px 12px; align-items: center; width: 100%; text-align: left; padding: 14px 16px; min-height: 64px; border: 1px solid var(--line); border-radius: 14px; background: var(--surface); color: var(--text); font: inherit; cursor: pointer; }
+.event-row b { font-size: 17px; }
+.event-row .muted { grid-column: 1; }
+.event-row .ev-status { grid-column: 2; grid-row: 1 / span 2; font-size: 14px; color: var(--muted); white-space: nowrap; }
+.event-row .ev-status.ok { color: var(--good); font-weight: 600; }
+.ev-tips { margin: 0; padding-left: 20px; color: var(--muted); font-size: 15px; }
+.event-plan .pieces { display: grid; grid-template-columns: repeat(auto-fill, minmax(96px, 140px)); gap: 10px; }
+.event-plan .pieces.extras { grid-template-columns: repeat(auto-fill, minmax(64px, 84px)); }
+.event-plan .pieces.extras span { font-size: 12px; }

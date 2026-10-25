@@ -192,11 +192,11 @@ const SEED_VERSION = 3;
    Storage (IndexedDB)
    ====================================================================== */
 const db = await new Promise((resolve, reject) => {
-  const req = indexedDB.open("smart-wardrobe", 2);
+  const req = indexedDB.open("smart-wardrobe", 3);
   req.onupgradeneeded = () => {
     const d = req.result;
-    // Version 2 adds "wants": Must-Buy, and suggestions you said no to.
-    for (const [name, opts] of [["items", { keyPath: "id" }], ["log", { keyPath: "id", autoIncrement: true }], ["kv"], ["wants", { keyPath: "id" }]]) {
+    // Version 2 adds "wants": Must-Buy, and suggestions you said no to. Version 3: "events".
+    for (const [name, opts] of [["items", { keyPath: "id" }], ["log", { keyPath: "id", autoIncrement: true }], ["kv"], ["wants", { keyPath: "id" }], ["events", { keyPath: "id" }]]) {
       if (!d.objectStoreNames.contains(name)) d.createObjectStore(name, opts);
     }
   };
@@ -259,6 +259,7 @@ const state = {
   usage: { month: "", requests: 0, input: 0, output: 0 },
   wishlist: [], // before Must-Buy: moved into `wants` once (see moveWishlist)
   audit: null, // shared: the last full audit { at, items, summary, ideas }
+  events: [], // shared: events you're dressing for (see Events)
   wants: [], // shared: every suggestion you answered: Must-Buy (yes), no, bought (see Must-Buy)
   whyNo: null, // the suggestion whose "Why not?" is open
   buying: null, // the Must-Buy piece you tapped "Bought it" on: the next piece you add starts as it
@@ -283,6 +284,7 @@ const state = {
     tab: "foryou", pick: {}, photos: {}, tripq: "", tripBusy: "",
     try: { cat: "", color: "", fit: "", style: "", brand: "", text: "", occ: "", shown: null, answer: "", busy: false },
     look: { season: "", style: "", occ: "casual", result: null, busy: false, seen: [] },
+    ev: null, evForm: { text: "", date: "", time: "", place: "" }, evPick: {}, evBusy: "", evOcc: false,
   },
   trip: null, // the mall or shop you're going to: { key, name, stores: [{ name, domain, sells, price }] }
   trips: [], // places looked up before (kept on this device, so each costs one AI request)
@@ -292,6 +294,7 @@ async function loadAll() {
   state.items = (await store.all("items")) || [];
   state.log = (await store.all("log")) || [];
   state.wants = (await store.all("wants")) || [];
+  state.events = (await store.all("events")) || [];
   Object.assign(state.settings, (await store.get("kv", "settings")) || {});
   for (const [k, empty] of Object.entries(SHARED_KV)) state[k] = (await store.get("kv", k)) ?? empty();
   state.cal = { ...state.cal, ...((await raw.get("kv", "calEvents")) || {}), loading: false };
@@ -339,7 +342,7 @@ const SYNC_STATE = "sync";
 // Shared values kept under "kv", and what each is when there's nothing yet.
 const SHARED_KV = { wishlist: () => [], calendar: () => ({ links: [], occ: {} }), plan: () => null, audit: () => null };
 function syncKey(s, k) {
-  if (s === "items" || s === "log" || s === "wants") return `${s}/${k}`;
+  if (s === "items" || s === "log" || s === "wants" || s === "events") return `${s}/${k}`;
   return s === "kv" && Object.hasOwn(SHARED_KV, k) ? `kv/${k}` : null;
 }
 const splitKey = (key) => { const i = key.indexOf("/"); return [key.slice(0, i), key.slice(i + 1)]; };
@@ -488,11 +491,12 @@ async function applyRecords(records) {
         await raw.put("items", it);
         if (at >= 0) state.items[at] = it; else { state.items.push(it); newSet = true; }
       }
-    } else if (rec.col === "log" || rec.col === "wants") {
+    } else if (rec.col === "log" || rec.col === "wants" || rec.col === "events") {
       const list = state[rec.col];
       const at = list.findIndex((l) => l.id === rec.id);
       if (rec.deleted) { await raw.del(rec.col, rec.id); if (at >= 0) list.splice(at, 1); }
       else { await raw.put(rec.col, rec.data); if (at >= 0) list[at] = rec.data; else list.push(rec.data); }
+      if (rec.col === "events" && (rec.data?.date || list[at]?.date) === localDay()) state.outfits = []; // a plan for today
     } else if (rec.col === "kv" && Object.hasOwn(SHARED_KV, rec.id)) {
       state[rec.id] = (rec.deleted ? null : rec.data) ?? SHARED_KV[rec.id]();
       await raw.put("kv", state[rec.id], rec.id);
@@ -542,6 +546,7 @@ async function joinServer() {
   }
   for (const l of state.log) if (!onServer.has(`log/${l.id}`)) await syncTouch(`log/${l.id}`, false);
   for (const w of state.wants) if (!onServer.has(`wants/${w.id}`)) await syncTouch(`wants/${w.id}`, false);
+  for (const e of state.events) if (!onServer.has(`events/${e.id}`)) await syncTouch(`events/${e.id}`, false);
   const sw = onServer.get("kv/wishlist");
   const theirs = sw && !sw.deleted ? sw.data || [] : [];
   const mine = state.wishlist.filter((w) => !theirs.some((t) => t.title === w.title));
@@ -1419,16 +1424,17 @@ function piecesByRole(occ, all = false) {
   return by;
 }
 // `opts` lets Discover ask for ideas around a piece you don't own yet ({ anchor, occ, cond }).
+// Events pass the pieces that suit their dress code (`by`) and whether a jacket is a must (`outer`).
 function ideaPool(opts = {}) {
   const occ = opts.occ || OCCASIONS.find((o) => o.id === state.occasion);
-  const by = piecesByRole(occ);
+  const by = opts.by || piecesByRole(occ);
   const cond = opts.cond || conditions();
   const t = taste();
   const pick = (arr) => arr[Math.floor(Math.random() * arr.length)];
   const wantMid = cond.feels < 20 || by.base.length === 0;
-  const wantOuter = cond.feels < 15 || cond.wet;
+  const wantOuter = opts.outer || cond.feels < 15 || cond.wet;
   // A piece you picked goes in every idea; the rest is built around it.
-  const anchor = opts.anchor || state.items.find((i) => i.id === state.anchor && CORE.includes(roleOf(i)) && !i.wash);
+  const anchor = "anchor" in opts ? opts.anchor : state.items.find((i) => i.id === state.anchor && CORE.includes(roleOf(i)) && !i.wash);
 
   const seen = new Set();
   const cands = [];
@@ -1513,8 +1519,9 @@ function generateOutfits(n = 3, avoid = []) {
 }
 // The outfit you planned last night comes first today, while all of it is out of the wash.
 function plannedIdea(pool) {
-  const p = state.plan;
-  if (!p || p.date !== localDay() || state.event?.day === "tomorrow" || state.anchor) return null;
+  const ev = state.events.find((e) => e.date === localDay() && e.outfit?.itemIds?.length);
+  const p = state.plan?.date === localDay() ? state.plan : ev && { date: ev.date, itemIds: ev.outfit.itemIds, occasion: ev.dressCode?.occasion, title: ev.title, eventId: ev.id };
+  if (!p || state.event?.day === "tomorrow" || state.anchor) return null;
   const items = (p.itemIds || []).map((id) => state.items.find((i) => i.id === id)).filter(Boolean);
   if (!items.length || items.some((i) => i.wash)) return null;
   const pieces = {}, extras = [];
@@ -1922,6 +1929,7 @@ const outfitContext = () => ({ occasion: state.occasion, feels: Math.round(condi
    No AI tokens.
    ====================================================================== */
 const CAL_FRESH = 30 * 60e3;
+const CAL_DAYS = 42;
 async function fetchCalendar(url) {
   let r;
   try {
@@ -1939,7 +1947,8 @@ async function fetchCalendar(url) {
 // Read every calendar again if it's been a while (or `force`). True when the events changed.
 async function loadCalendar(force = false) {
   const links = state.calendar.links || [];
-  const from = startOfDay(0), to = startOfDay(2);
+  // Six weeks ahead: today and tomorrow dress the ideas, the rest is listed in Discover > Events.
+  const from = startOfDay(0), to = startOfDay(CAL_DAYS);
   if (!links.length) {
     const had = state.cal.events.length;
     state.cal = { ...state.cal, at: 0, events: [], errors: {} };
@@ -2044,7 +2053,7 @@ async function addCalendar(url) {
   toast("Reading your calendar…");
   await loadCalendar(true);
   const err = state.cal.errors[url];
-  if (!err) { autoPickEvent(); toast(`Calendar added: ${state.cal.events.filter((e) => e.cal === url).length} events today and tomorrow`); }
+  if (!err) { autoPickEvent(); toast(`Calendar added: ${state.cal.events.filter((e) => e.cal === url && e.start < startOfDay(2)).length} events today and tomorrow`); }
   render();
 }
 
@@ -2651,7 +2660,7 @@ function dayCard() {
     : `<span class="muted small">${state.cal.loading && !state.cal.at ? "Reading your calendar…" : "Nothing else in your calendar today."}</span>`;
   return `<section class="card day-card stack" style="gap:10px">
     <div class="row" style="justify-content:space-between"><h2 style="margin:0;display:flex;gap:8px;align-items:center">${ICON_CAL}Your day</h2>
-      ${state.event ? `<span class="muted small">Ideas for <b>${esc(state.event.title)}</b>${state.event.day === "tomorrow" ? " tomorrow" : ""}</span>` : ""}</div>
+      ${state.event ? `<span class="muted small">Ideas for <b>${esc(state.event.title)}</b>${state.event.day === "tomorrow" ? " tomorrow" : ""}</span>` : `<button class="linkish small" data-disc="events">Plan for later events</button>`}</div>
     ${body}
     ${errors.length ? `<p class="small" style="margin:0;color:var(--danger)">${esc(errors[0])}</p>` : ""}
   </section>`;
@@ -2760,7 +2769,7 @@ function outfitCard(o, i) {
   const order = ["outer", "mid", "base", "bottom", "shoes"];
   const ph = (o.missing || []).map((m) => `<button class="piece" data-go="shop"><div class="ph">${kindIcon(SLOT_ICON[m])}<small>No ${SLOTS[m].toLowerCase()} yet<br>tap to shop</small></div><span>${SLOTS[m]}</span></button>`).join("");
   return `<article class="card outfit">
-    <div class="row" style="justify-content:space-between"><h2 style="margin:0">${o.planned ? `Planned last night${o.planned.title ? `: ${esc(o.planned.title)}` : ""}` : ["Best match", "Option 2", "Option 3"][i] || "Option"}</h2>${o.planned ? '<span class="score">Your plan</span>' : i === 0 ? '<span class="score">Top pick</span>' : ""}</div>
+    <div class="row" style="justify-content:space-between"><h2 style="margin:0">${o.planned ? (o.planned.eventId ? `Planned for ${esc(o.planned.title)}` : `Planned last night${o.planned.title ? `: ${esc(o.planned.title)}` : ""}`) : ["Best match", "Option 2", "Option 3"][i] || "Option"}</h2>${o.planned ? '<span class="score">Your plan</span>' : i === 0 ? '<span class="score">Top pick</span>' : ""}</div>
     <div class="pieces">${order.filter((k) => o.pieces[k]).map((k) => `<div class="swap-wrap">${pieceTile(o.pieces[k])}<button class="swap-btn" data-swap="${i}:${k}" aria-pressed="${o.swapping === k}" aria-label="Swap the ${esc(o.pieces[k].name)}">${ICON_SWAP}</button></div>`).join("")}${ph}</div>
     ${o.swapping ? swapPicker(o, i) : ""}
     ${o.extras?.length ? `<div class="pieces extras">${o.extras.map(pieceTile).join("")}</div>` : ""}
@@ -4134,11 +4143,13 @@ function renderShop() {
   const d = state.disc;
   if (d.tab === "foryou" && !d.auditBusy) setTimeout(autoAudit, 0);
   const must = mustBuy().length;
-  const tabs = [["foryou", "For you"], ["must", `Must-Buy${must ? ` <span class="muted">${must}</span>` : ""}`], ["explore", "Explore"]];
+  const evs = upcomingEvents().length;
+  const tabs = [["foryou", "For you"], ["must", `Must-Buy${must ? ` <span class="muted">${must}</span>` : ""}`], ["events", `Events${evs ? ` <span class="muted">${evs}</span>` : ""}`], ["explore", "Explore"]];
   const exploring = ["try", "trip", "look"].includes(d.tab);
   const sub = {
     foryou: "What your wardrobe is missing, or ask for something. Yes goes to Must-Buy, no teaches it what to skip.",
     must: "What you said yes to, by how many new outfits each piece unlocks with what you own.",
+    events: "Something coming up? Get its dress code, an outfit from your wardrobe for the weather that day, and what's missing.",
     try: "Thinking of buying something? See what it goes with first.",
     trip: "Going to a mall or a shop? See only what you can buy there.",
     look: "A complete outfit of new pieces for the season, style and occasion you pick.",
@@ -4148,7 +4159,7 @@ function renderShop() {
     <div class="chips disc-tabs" role="tablist">${tabs.map(([k, l]) => { const on = d.tab === k || (k === "explore" && exploring); return `<button class="chip" role="tab" aria-selected="${on}" aria-pressed="${on}" data-disc="${k === "explore" ? d.explore || "try" : k}">${l}</button>`; }).join("")}</div>
     ${exploring ? `<div class="seg" role="tablist">${[["try", "Try a piece"], ["trip", "Shop trip"], ["look", "New look"]].map(([k, l]) => `<button role="tab" aria-selected="${d.tab === k}" data-disc="${k}">${l}</button>`).join("")}</div>` : ""}
     ${state.trip && d.tab !== "trip" ? tripBar() : ""}
-    <div class="stack">${({ foryou: forYouTab, must: mustTab, try: tryTab, trip: tripTab, look: lookTab })[d.tab]()}</div>`;
+    <div class="stack">${({ foryou: forYouTab, must: mustTab, events: eventsTab, try: tryTab, trip: tripTab, look: lookTab })[d.tab]()}</div>`;
 }
 const tripBar = () => `<div class="card row trip-bar"><span>Showing only what you can buy at <b>${esc(state.trip.name.split(",")[0])}</b></span><button class="chip" data-disc="trip">Change</button><button class="chip" data-act="trip-clear">Show all shops</button></div>`;
 
@@ -4221,6 +4232,8 @@ async function answerWant(b, status) {
     state.wants.push(w);
   }
   Object.assign(w, { status, decidedAt: now });
+  // Needed for an event: Must-Buy sorts it up as the day gets closer.
+  if (status === "wanted" && b.eventId) Object.assign(w, { eventId: b.eventId, needBy: b.needBy });
   state.disc.feedMemo = null;
   delete w.reason;
   delete w.until;
@@ -4269,7 +4282,7 @@ function shopScore(b) {
 // Yes / No on a suggestion, or what you answered.
 function verdictHTML(b) {
   const w = wantOf(b);
-  const data = esc(JSON.stringify({ title: b.title, cat: b.cat, noun: b.noun, color: b.color, fit: b.fit, styles: b.styles, query: b.query, why: b.why || "" }));
+  const data = esc(JSON.stringify({ title: b.title, cat: b.cat, noun: b.noun, color: b.color, fit: b.fit, styles: b.styles, query: b.query, why: b.why || "", eventId: b.eventId, needBy: b.needBy, source: typeof b.source === "string" ? b.source : undefined }));
   if (w?.status === "wanted") return `<div class="verdict"><button class="btn" data-disc="must">✓ On your Must-Buy</button><button class="chip" data-unwant="${w.id}">Undo</button></div>`;
   if (w?.status === "bought") return `<div class="verdict"><span class="muted small">You bought this</span></div>`;
   if (w && state.whyNo === w.id) return `<div class="verdict stack" style="gap:8px"><span class="muted small">Why not? Optional: it decides what the ideas learn.</span><div class="chips">${REASONS.map(([k, l]) => `<button class="chip" data-whyno="${w.id}|${k}">${l}</button>`).join("")}<button class="chip" data-whyno="${w.id}|">Skip</button></div></div>`;
@@ -4382,19 +4395,24 @@ function multiplierLine(b) {
 
 function mustRow(w) {
   const b = { ...w, with: goesWith(w.title) };
+  const ev = forEvent(w);
   const m = multiplier(w);
-  const from = { foryou: "From For you", try: "From Try a piece", look: "From a new look", trip: "From a shop trip", today: "From the stylist", touch: "From Today's outfit", wishlist: "From your wishlist" }[w.source?.type] || "";
+  const from = { foryou: "From For you", try: "From Try a piece", look: "From a new look", trip: "From a shop trip", today: "From the stylist", touch: "From Today's outfit", event: "For an event", wishlist: "From your wishlist" }[w.source?.type] || "";
   return buyRow(b, {
-    label: m ? `+${m.n} outfit${m.n === 1 ? "" : "s"}` : from,
+    label: ev ? `For ${esc(ev.title)} · ${fmtDay(ev.date)}` : m ? `+${m.n} outfit${m.n === 1 ? "" : "s"}` : from,
     extra: `<button class="btn primary" data-bought="${w.id}">Bought it</button><button class="btn ghost" data-unwant="${w.id}">Remove</button>`,
   });
 }
+// The upcoming event a Must-Buy piece is for, if any.
+const forEvent = (w) => (w.eventId && w.needBy >= localDay() ? state.events.find((e) => e.id === w.eventId) : null);
 function mustTab() {
   const f = state.disc.mustf || "all";
   const all = mustBuy();
-  const list = all.filter((w) => f === "all" || w.kind === f).filter(soldHere)
-    .map((w) => [w, multiplier(w)?.n ?? -1]).sort((a, b) => b[1] - a[1]).map(([w]) => w);
-  const kinds = [["all", "All"], ["garment", "Clothes"], ["accessory", "Accessories"]].filter(([k]) => k === "all" || all.some((w) => w.kind === k));
+  // Pieces for an event in the next month first, soonest first; then the ones that unlock the most outfits.
+  const soon = (w) => (forEvent(w) && daysUntil(w.needBy) <= 31 ? w.needBy : "~");
+  const list = all.filter((w) => f === "all" || (f === "event" ? forEvent(w) : w.kind === f)).filter(soldHere)
+    .map((w) => [w, multiplier(w)?.n ?? -1]).sort((a, b) => soon(a[0]).localeCompare(soon(b[0])) || b[1] - a[1]).map(([w]) => w);
+  const kinds = [["all", "All"], ["garment", "Clothes"], ["accessory", "Accessories"], ["event", "For an event"]].filter(([k]) => k === "all" || all.some((w) => (k === "event" ? forEvent(w) : w.kind === k)));
   const bought = state.wants.filter((w) => w.status === "bought").length;
   return `
     ${kinds.length > 2 ? `<div class="chips">${kinds.map(([k, l]) => `<button class="chip" aria-pressed="${f === k}" data-mustf="${k}">${l}</button>`).join("")}</div>` : ""}
@@ -4404,6 +4422,328 @@ function mustTab() {
       ${!state.trip && list.length ? `<p class="muted small" style="margin:14px 0 0">Going shopping? <button class="linkish" data-disc="trip">Pick the mall or shop</button> to see only what's sold there.</p>` : ""}
       ${bought ? `<p class="muted small" style="margin:8px 0 0">${bought} bought so far.</p>` : ""}
     </section>`;
+}
+
+/* ---- Events: dressing for something coming up ----
+   An event you type (or pick from your calendar) gets a dress code, the weather it will probably
+   have (the forecast up to 15 days ahead, the usual weather for that month after that), an outfit
+   from your wardrobe that follows both, and the pieces you'd need to buy, which Yes puts on
+   Must-Buy for that date. The AI reads the dress code once per event (a small request: the
+   event and the weather, not your wardrobe); without a key the event's words decide the
+   occasion and its usual dress code. Everything else runs on the device. Events are records in
+   "events", shared by every device: { id, title, date, time, place: {name, lat, lon},
+   calendarKey, dressCode, weather: {feels, wet, source}, outfit: {itemIds}, createdAt }. */
+const EVENT_CODES = {
+  casual: { label: "Casual", musts: [], avoid: [], avoidColors: [] },
+  smart: { label: "Smart casual", musts: [], avoid: ["hoodie", "zip-hoodie", "sweatshirt", "joggers"], avoidColors: [] },
+  work: { label: "Business casual", musts: [], avoid: ["hoodie", "zip-hoodie", "sweatshirt", "joggers", "shorts"], avoidColors: [] },
+  night: { label: "Going out", musts: [], avoid: ["zip-hoodie", "joggers"], avoidColors: [] },
+  event: { label: "Elegant", musts: ["jacket", "dress-shoes"], avoid: ["hoodie", "zip-hoodie", "sweatshirt", "joggers", "shorts", "sneakers", "tshirt", "puffer", "rain"], avoidColors: [] },
+};
+const EVENT_EXAMPLES = ["Summer wedding", "Job interview", "Business dinner", "First date", "Graduation party"];
+const fmtDay = (date) => new Date(`${date}T12:00`).toLocaleDateString(undefined, { weekday: "short", day: "numeric", month: "short" });
+const daysUntil = (date) => Math.round((new Date(`${date}T12:00`).getTime() - startOfDay(0)) / 864e5 - 0.5);
+const upcomingEvents = () => state.events.filter((e) => e.date >= localDay()).sort((a, b) => (a.date + a.time).localeCompare(b.date + b.time));
+const saveEvent = (ev) => { ev.updatedAt = new Date().toISOString(); return store.put("events", ev); };
+function guessCode(text) {
+  const occ = guessOccasion({ title: text }) || "smart";
+  return { occasion: occ, ...EVENT_CODES[occ], formality: OCCASIONS.find((o) => o.id === occ).target, tips: [], source: "guess" };
+}
+// The usual weather at a place for the event's month: day or evening.
+function usualWeather(lat, lon, date, hour) {
+  const c = nearestCity(lat, lon);
+  if (!c) return null;
+  const m = +date.slice(5, 7) - 1, hi = c.hi[m], lo = c.lo[m];
+  const evening = hour != null && (hour >= 19 || hour < 9);
+  return { feels: Math.round(evening ? (2 * lo + hi) / 3 : (2 * hi + lo) / 3), wet: false, source: "usual", at: Date.now() };
+}
+// The forecast for the event's first four hours (midday to evening when it has no time).
+async function forecastWeather(lat, lon, date, hour) {
+  const j = await getJSON(`https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lon}&hourly=apparent_temperature,precipitation_probability,weather_code&start_date=${date}&end_date=${date}&timezone=auto`);
+  const h = j.hourly;
+  const hrs = (hour == null ? [11, 12, 13, 14, 15, 16, 17] : [hour, hour + 1, hour + 2, hour + 3]).filter((k) => k < h.time.length);
+  return {
+    feels: Math.round(hrs.reduce((a, k) => a + h.apparent_temperature[k], 0) / hrs.length),
+    wet: hrs.some((k) => isWet(h.weather_code[k]) || (h.precipitation_probability[k] ?? 0) >= 55), source: "forecast", at: Date.now(),
+  };
+}
+async function weatherForEvent(ev) {
+  const lat = ev.place?.lat ?? state.settings.lat, lon = ev.place?.lon ?? state.settings.lon;
+  if (lat == null) return null;
+  const hour = ev.time ? +ev.time.slice(0, 2) : null;
+  const d = daysUntil(ev.date);
+  if (d >= 0 && d <= 15) { try { return await forecastWeather(lat, lon, ev.date, hour); } catch {} }
+  return usualWeather(lat, lon, ev.date, hour);
+}
+// Once the forecast reaches the event (and every 6 hours after), it replaces the usual weather.
+const weatherTried = new Map();
+async function refreshEventWeather(ev) {
+  const d = daysUntil(ev.date);
+  const old = ev.weather;
+  const due = !old || (d >= 0 && d <= 15 && (old.source !== "forecast" || Date.now() - old.at > 6 * 3600e3));
+  if (!due || Date.now() - (weatherTried.get(ev.id) || 0) < 30 * 60e3) return;
+  weatherTried.set(ev.id, Date.now());
+  const w = await weatherForEvent(ev);
+  if (!w || (old && w.source === old.source && w.feels === old.feels && w.wet === old.wet)) return;
+  ev.weather = w;
+  await saveEvent(ev);
+  if (view === "shop" && state.disc.tab === "events") render();
+}
+// A place typed by you or from a calendar ("Via Roma 1, 20121 Milano MI, Italy"): the first
+// part the city search knows.
+async function placeFrom(text) {
+  const parts = [text, ...text.split(",").map((x) => x.replace(/\b\d+\b|\b[A-Z]{2}\b/g, "").trim()).filter((x) => x.length > 2).reverse().slice(1, 4)];
+  for (const q of parts) {
+    const { results } = await searchCity(q);
+    const c = results?.[0];
+    if (c) return { name: q === text ? text.split(",")[0].trim() : c.name, lat: c.latitude, lon: c.longitude };
+  }
+  return { name: text.trim() };
+}
+const EVENT_SCHEMA = {
+  type: "object", additionalProperties: false, required: ["occasion", "dressCode", "formality", "musts", "avoid", "avoidColors", "tips"],
+  properties: {
+    occasion: { type: "string", enum: ["casual", "smart", "work", "night", "event"], description: "casual, smart (smart casual), work (meeting, interview), night (going out), event (elegant: wedding, gala)" },
+    dressCode: { type: "string", description: "The dress code in 1-3 words, e.g. 'Cocktail', 'Smart casual', 'Business'" },
+    formality: { type: "number", description: "1 casual … 4 formal" },
+    musts: { type: "array", items: { type: "string", enum: CATS.filter((c) => !["under", "gym"].includes(c.slot)).map((c) => c.id) }, description: "Types of piece the outfit needs, if any (e.g. jacket, dress-shoes, tie)" },
+    avoid: { type: "array", items: { type: "string", enum: CATS.filter((c) => !["under", "gym"].includes(c.slot)).map((c) => c.id) }, description: "Types of piece that would be wrong here" },
+    avoidColors: { type: "array", items: { type: "string", enum: Object.keys(COLORS) }, description: "Colours to avoid, if the occasion has a rule (e.g. white at a wedding)" },
+    tips: { type: "array", items: { type: "string" }, description: "Up to 3 short tips, under 12 words each" },
+  },
+};
+async function readDressCode(ev) {
+  const w = ev.weather;
+  const text = await aiGenerate({
+    system: "You read an event someone is going to and say how to dress for it: the occasion, the dress code, what the outfit needs and what would be wrong there. Reply with JSON only.",
+    text: `Event: "${ev.title}", ${fmtDay(ev.date)}${ev.time ? ` at ${ev.time}` : ""}${ev.place?.name ? `, ${ev.place.name}` : ""}.${w ? ` Expected to feel ${w.feels}°C${w.wet ? ", rain likely" : ""}.` : ""} Dressing ${shopperText()}.`,
+    schema: EVENT_SCHEMA,
+    maxTokens: 400,
+  });
+  const r = JSON.parse(text.replace(/^```(json)?|```$/g, "").trim());
+  const occ = EVENT_CODES[r.occasion] ? r.occasion : guessCode(ev.title).occasion;
+  const cats = (l) => [...new Set((l || []).filter((c) => CAT[c]))].slice(0, 5);
+  return {
+    occasion: occ, label: String(r.dressCode || EVENT_CODES[occ].label).slice(0, 40), formality: clamp(+r.formality || OCCASIONS.find((o) => o.id === occ).target, 1, 4),
+    musts: cats(r.musts), avoid: cats(r.avoid).filter((c) => !(r.musts || []).includes(c)), avoidColors: [...new Set((r.avoidColors || []).filter((c) => COLORS[c]))].slice(0, 4),
+    tips: (r.tips || []).map((x) => String(x).trim()).filter(Boolean).slice(0, 3), source: "ai",
+  };
+}
+async function readCodeFor(id) {
+  const ev = state.events.find((e) => e.id === id);
+  if (!ev || !aiReady() || state.disc.evBusy) return;
+  state.disc.evBusy = id;
+  render();
+  try {
+    ev.dressCode = await readDressCode(ev);
+    await saveEvent(ev);
+  } catch (e) {
+    toast(e.message || "Couldn't read the dress code");
+  }
+  state.disc.evBusy = "";
+  render();
+}
+async function createEvent({ title, date, time = "", placeText = "", calendarKey = "", words = "" }) {
+  const now = new Date().toISOString();
+  const ev = { id: uid(), title: title.trim(), date, time, place: null, calendarKey, dressCode: guessCode(`${title} ${words}`), weather: null, outfit: null, createdAt: now, updatedAt: now };
+  state.disc.evBusy = "new";
+  render();
+  if (placeText.trim()) ev.place = await placeFrom(placeText.trim());
+  ev.weather = await weatherForEvent(ev);
+  weatherTried.set(ev.id, Date.now());
+  state.events.push(ev);
+  await saveEvent(ev);
+  state.disc.evBusy = "";
+  state.disc.ev = ev.id;
+  state.disc.evForm = { text: "", date: "", time: "", place: "" };
+  render();
+  main.scrollTop = 0;
+  if (aiReady()) await readCodeFor(ev.id);
+}
+function addEventFromForm() {
+  const f = state.disc.evForm;
+  if (!f.text.trim()) return toast("Say what the event is");
+  if (!f.date) return toast("Pick the date");
+  if (f.date < localDay()) return toast("That date has passed");
+  return createEvent({ title: f.text, date: f.date, time: f.time, placeText: f.place });
+}
+// Events in your calendar for the coming weeks that are worth dressing for.
+function calendarAhead() {
+  const saved = new Set(state.events.map((e) => e.calendarKey).filter(Boolean));
+  return state.cal.events.filter((e) => e.start >= startOfDay(1) && !saved.has(eventKey(e)) && !["skip", "casual", "gym"].includes(eventOcc(e))).slice(0, 6);
+}
+function eventFromCalendar(key) {
+  const e = state.cal.events.find((x) => eventKey(x) === key);
+  if (!e) return;
+  const d = new Date(e.start);
+  return createEvent({ title: e.title, date: d.toLocaleDateString("sv"), time: e.allDay ? "" : d.toTimeString().slice(0, 5), placeText: e.location || "", calendarKey: key, words: e.location || "" });
+}
+async function editCode(id, fn) {
+  const ev = state.events.find((e) => e.id === id);
+  if (!ev) return;
+  ev.dressCode = { ...fn(ev.dressCode), source: "you" };
+  ev.dressCode.formality ??= OCCASIONS.find((o) => o.id === ev.dressCode.occasion).target;
+  state.disc.evOcc = false;
+  await saveEvent(ev);
+  render();
+}
+async function planEvent(id, undo = false) {
+  const ev = state.events.find((e) => e.id === id);
+  if (!ev) return;
+  if (undo) ev.outfit = null;
+  else {
+    const o = eventIdeas(ev).ideas[state.disc.evPick[id] || 0];
+    if (!o) return;
+    ev.outfit = { itemIds: [...Object.values(o.pieces), ...(o.extras || [])].filter(Boolean).map((p) => p.id), at: new Date().toISOString() };
+    toast(ev.date === localDay() ? "Planned. It's the first idea on Today." : `Planned. On ${fmtDay(ev.date)} it's the first idea on Today.`);
+  }
+  if (ev.date === localDay()) state.outfits = [];
+  await saveEvent(ev);
+  render();
+}
+async function removeEvent(id) {
+  const ev = state.events.find((e) => e.id === id);
+  if (!ev || !(await confirmBox(`Remove “${ev.title}”?`, "Remove"))) return;
+  await store.del("events", id);
+  state.events = state.events.filter((e) => e !== ev);
+  if (ev.date === localDay()) state.outfits = [];
+  state.disc.ev = null;
+  render();
+}
+// The outfit ideas for an event, and what you'd need to buy for it. Kept until the event, its
+// dress code, its weather or your wardrobe change (the ideas are picked with some chance).
+const evMemo = new Map();
+function eventIdeas(ev) {
+  const code = ev.dressCode;
+  const occ = OCCASIONS.find((o) => o.id === code.occasion) || OCCASIONS[1];
+  const cond = { feels: ev.weather?.feels ?? 18, wet: !!ev.weather?.wet };
+  const soon = ev.date === localDay();
+  const sig = JSON.stringify([code, cond, soon, state.items.map((i) => `${i.id}${i.disliked ? "x" : ""}${soon && i.wash ? "w" : ""}`).join()]);
+  const hit = evMemo.get(ev.id);
+  if (hit?.sig === sig) return hit;
+  const fits = (i) => !i.disliked && slotOf(i) !== "gym" && !(soon && i.wash) && !code.avoid.includes(i.category) && !code.avoidColors.includes(i.colors?.[0]);
+  const by = { base: [], mid: [], outer: [], bottom: [], shoes: [] };
+  for (const i of state.items) if (by[roleOf(i)] && fits(i)) by[roleOf(i)].push(i);
+  const need = [];
+  for (const cat of code.musts) {
+    const role = roleOf({ category: cat });
+    if (!CORE.includes(role)) { if (!state.items.some((i) => i.category === cat && fits(i))) need.push({ cat, role }); continue; }
+    const own = by[role].filter((i) => i.category === cat);
+    if (own.length) by[role] = own;
+    else { by[role] = []; need.push({ cat, role }); }
+  }
+  const outer = code.musts.some((c) => roleOf({ category: c }) === "outer") && by.outer.length > 0;
+  const pool = ideaPool({ occ, cond, by, anchor: null, outer });
+  for (const role of pool.missing) if (!need.some((n) => n.role === role)) need.push({ role });
+  if (!by.base.length && !by.mid.length && !need.some((n) => n.role === "base")) need.push({ role: "base" });
+  const used = new Set();
+  const ideas = pickIdeas(pool, 3).map((c) => {
+    const o = dressIdea(c, pool, used);
+    // An accessory the dress code asks for, when you have one.
+    for (const cat of code.musts) {
+      if (CORE.includes(roleOf({ category: cat })) || o.extras?.some((x) => x.category === cat)) continue;
+      const a = state.items.find((i) => i.category === cat && fits(i));
+      if (a) o.extras = [...(o.extras || []), a];
+    }
+    return o;
+  });
+  const res = { sig, occ, cond, ideas, need: need.map((n) => buyFor(n, ev, occ, cond)).filter(Boolean) };
+  evMemo.set(ev.id, res);
+  return res;
+}
+// A piece to buy for a must you don't have, or a part of the outfit nothing you own suits.
+function buyFor(n, ev, occ, cond) {
+  const code = ev.dressCode, target = code.formality ?? occ.target;
+  const warmthOff = (k) => (k.role === "shoes" || k.role === "bottom" ? 0 : cond.feels >= 22 ? Math.max(0, k.w - 1) : cond.feels < 10 ? Math.max(0, 3 - k.w) : 0);
+  const k = LOOK_KIT_FOR().filter((x) => (n.cat ? x.cat === n.cat : x.role === n.role) && !code.avoid.includes(x.cat))
+    .sort((a, b) => Math.abs(a.f - target) + warmthOff(a) - (Math.abs(b.f - target) + warmthOff(b)))[0];
+  const what = n.cat ? catLabel(n.cat).toLowerCase() : SLOTS[n.role].toLowerCase();
+  const plural = /s$/.test(what);
+  // Owned, but only in a colour the dress code rules out.
+  const wrong = n.cat && state.items.some((i) => i.category === n.cat && !i.disliked && code.avoidColors.includes(i.colors?.[0]));
+  const why = n.cat
+    ? `${code.label} calls for ${plural ? "" : "a "}${what}, and you don't have ${wrong ? `${plural ? "any" : "one"} that isn't ${code.avoidColors.join(" or ")}` : plural ? "any" : "one"}.`
+    : `None of your ${what} suit${plural ? "" : "s"} ${code.label.toLowerCase()}.`;
+  const okColour = (c) => !code.avoidColors.includes(c) && (COLORS[c] || EXTRA_COLOURS[c]);
+  if (!k) {
+    const a = ACC_KIT.find((x) => x.cat === n.cat);
+    if (!n.cat) return null;
+    return { title: cap(a?.noun || what), cat: n.cat, noun: a?.noun || "", colors: (a?.colors || ["black", "navy", "brown"]).filter(okColour).slice(0, 3), why, role: n.role };
+  }
+  return { title: cap(k.noun), cat: k.cat, noun: k.noun, styles: k.styles, colors: bestColours(k.cat, 5, k.styles).filter(okColour).slice(0, 3), why, role: n.role };
+}
+function eventsTab() {
+  const ev = state.events.find((e) => e.id === state.disc.ev);
+  if (ev) return eventDetail(ev);
+  const f = state.disc.evForm;
+  const list = upcomingEvents();
+  const ahead = calendarAhead();
+  const row = (e) => {
+    const r = eventIdeas(e);
+    const status = e.outfit ? (r.need.length ? `Planned · ${r.need.length} to buy` : "Ready ✓") : r.need.length ? `${r.need.length} piece${r.need.length > 1 ? "s" : ""} missing` : "Not planned yet";
+    return `<button class="event-row" data-evopen="${e.id}"><b>${esc(e.title)}</b><span class="muted small">${fmtDay(e.date)}${e.time ? `, ${e.time}` : ""}${e.place?.name ? ` · ${esc(e.place.name)}` : ""}</span><span class="ev-status${e.outfit && !r.need.length ? " ok" : ""}">${status}</span></button>`;
+  };
+  return `
+    <section class="card stack">
+      <h2 style="margin:0">What's coming up?</h2>
+      <input class="input" data-input="evtext" value="${esc(f.text)}" placeholder="A wedding in Puglia, a job interview, dinner with clients…" aria-label="The event">
+      <div class="chips scroller">${EVENT_EXAMPLES.map((x) => `<button class="chip" data-evex="${esc(x)}">${esc(x)}</button>`).join("")}</div>
+      <div class="ev-form">
+        <label class="field"><span>Date</span><input class="input" type="date" data-input="evdate" min="${localDay()}" value="${esc(f.date)}"></label>
+        <label class="field"><span>Time <i class="muted">(optional)</i></span><input class="input" type="time" data-input="evtime" value="${esc(f.time)}"></label>
+        <label class="field" style="flex:2 1 220px"><span>Where <i class="muted">(city, optional)</i></span><input class="input" data-input="evplace" value="${esc(f.place)}" placeholder="${esc(state.settings.city || "City")}"></label>
+      </div>
+      <div class="row"><button class="btn primary" data-act="ev-add" ${state.disc.evBusy === "new" ? "disabled" : ""}>${state.disc.evBusy === "new" ? `<span class="spinner inline"></span> Getting the weather…` : "Plan what to wear"}</button></div>
+    </section>
+    ${list.length ? `<section class="card stack" style="gap:8px"><h2 style="margin:0">Your events</h2>${list.map(row).join("")}</section>` : ""}
+    ${ahead.length ? `<section class="card stack" style="gap:8px"><h2 style="margin:0">From your calendar</h2><p class="muted small" style="margin:0">The next six weeks. Tap one to plan it.</p>${ahead.map((e) => `<button class="event-row" data-evcal="${esc(eventKey(e))}"><b>${esc(e.title)}</b><span class="muted small">${fmtDay(new Date(e.start).toLocaleDateString("sv"))}${e.allDay ? "" : `, ${fmtTime(e.start)}`}${e.location ? ` · ${esc(e.location.split(",")[0])}` : ""}</span><span class="ev-status">${esc(occLabel(eventOcc(e)))}</span></button>`).join("")}</section>` : ""}`;
+}
+function eventDetail(ev) {
+  setTimeout(() => refreshEventWeather(ev), 0);
+  const code = ev.dressCode;
+  const r = eventIdeas(ev);
+  const w = ev.weather;
+  const past = ev.date < localDay();
+  const wLine = w ? `${w.source === "forecast" ? "forecast" : `usually`} ${fmtTemp(w.feels)}${w.source === "usual" ? ` in ${new Date(`${ev.date}T12:00`).toLocaleDateString(undefined, { month: "long" })}` : ""}${w.wet ? ", rain likely" : ""}` : "weather unknown";
+  const planned = ev.outfit && ev.outfit.itemIds.map((id) => state.items.find((i) => i.id === id)).filter(Boolean);
+  const k = Math.min(state.disc.evPick[ev.id] || 0, Math.max(0, r.ideas.length - 1));
+  const o = r.ideas[k];
+  const order = ["outer", "mid", "base", "bottom", "shoes"];
+  const dashed = r.need.filter((n) => CORE.includes(n.role)).map((n) => `<div class="piece"><div class="ph">${kindIcon(SLOT_ICON[n.role])}<small>${esc(n.title)}<br>to buy</small></div><span>${esc(SLOTS[n.role])}</span></div>`).join("");
+  const outfit = planned?.length
+    ? `<div class="pieces">${planned.map(pieceTile).join("")}</div>
+       <div class="row outfit-actions"><span class="score">Planned for the day</span><button class="btn ghost" data-evunplan="${ev.id}">Change</button></div>`
+    : o
+      ? `<div class="pieces">${order.filter((x) => o.pieces[x]).map((x) => pieceTile(o.pieces[x])).join("")}${dashed}</div>
+         ${o.extras?.length ? `<div class="pieces extras">${o.extras.map(pieceTile).join("")}</div>` : ""}
+         ${o.reasons.length ? `<p class="why">${o.reasons.map(esc).join(" · ")}</p>` : ""}
+         ${o.warn?.length ? `<p class="why warn">Heads up: ${o.warn.map(esc).join(" · ")}</p>` : ""}
+         <div class="row outfit-actions"><button class="btn primary" data-evplan="${ev.id}">Plan it for the day</button>${r.ideas.length > 1 ? `<button class="btn" data-evpick="${ev.id}|${(k + 1) % r.ideas.length}">Another outfit (${k + 1} of ${r.ideas.length})</button>` : ""}</div>`
+      : `<p class="muted" style="margin:0">Nothing you own makes an outfit for this yet.</p>${dashed ? `<div class="pieces">${dashed}</div>` : ""}`;
+  const chip = (field, v, l) => `<button class="chip" data-evdrop="${ev.id}|${field}|${esc(v)}" aria-label="Remove ${esc(l)}">${esc(l)} ✕</button>`;
+  return `
+    <div class="row" style="justify-content:space-between"><button class="chip" data-act="ev-close">← All events</button><button class="btn ghost danger" data-evrm="${ev.id}">Remove</button></div>
+    <section class="card stack event-plan">
+      <div><h2 style="margin:0">${esc(ev.title)}</h2>
+        <p class="muted" style="margin:4px 0 0">${fmtDay(ev.date)}${ev.time ? `, ${ev.time}` : ""}${ev.place?.name ? ` · ${esc(ev.place.name)}` : ""} · ${wLine}${past ? " · this was before today" : ""}</p></div>
+      <div class="stack" style="gap:8px">
+        <div class="row" style="justify-content:space-between;align-items:baseline"><span class="muted small">Dress code${code.source === "ai" ? ` · read by ${esc(aiName())}` : code.source === "you" ? " · edited by you" : " · guessed from the name"}</span>
+          ${aiReady() && code.source !== "ai" ? (state.disc.evBusy === ev.id ? `<span class="muted small"><span class="spinner inline"></span> Reading it…</span>` : `<button class="linkish small" data-evai="${ev.id}">Read it with AI</button>`) : state.disc.evBusy === ev.id ? `<span class="muted small"><span class="spinner inline"></span> Reading it…</span>` : ""}</div>
+        <div class="chips">
+          <button class="chip" aria-pressed="true" data-act="ev-occ" aria-expanded="${state.disc.evOcc}">${esc(occLabel(code.occasion))}${code.label && code.label !== occLabel(code.occasion) ? ` · ${esc(code.label)}` : ""}</button>
+          ${code.musts.map((c) => chip("musts", c, `Needs ${catLabel(c).toLowerCase()}`)).join("")}
+          ${code.avoid.map((c) => chip("avoid", c, `No ${catLabel(c).toLowerCase()}`)).join("")}
+          ${code.avoidColors.map((c) => chip("avoidColors", c, `No ${c}`)).join("")}
+        </div>
+        ${state.disc.evOcc ? `<div class="chips event-occ"><span class="muted small">Dress for it as:</span>${everydayOccs().map((x) => `<button class="chip" aria-pressed="${code.occasion === x.id}" data-evsetocc="${ev.id}|${x.id}">${esc(x.label)}</button>`).join("")}</div>` : ""}
+        ${code.tips?.length ? `<ul class="ev-tips">${code.tips.map((t) => `<li>${esc(t)}</li>`).join("")}</ul>` : ""}
+      </div>
+      <div class="stack" style="gap:10px"><h3 style="margin:0">From your wardrobe</h3>${outfit}</div>
+    </section>
+    ${r.need.length ? `<section class="card"><h2 style="margin:0">To buy for it</h2><div class="sugg">${r.need.map((s, j) => {
+      const options = variantsOf(s).filter(soldHere).map((b) => ({ ...b, eventId: ev.id, needBy: ev.date, source: "event" }));
+      return options.length ? ideaBlock(`ev${ev.id}:${j}:${s.title}`, { label: SLOTS[s.role] ? cap(SLOTS[s.role]) : "", title: s.title, why: s.why, options }) : "";
+    }).join("") || `<p class="muted">None of it is sold at ${esc(state.trip?.name)}.</p>`}</div></section>` : ""}`;
 }
 
 /* ---- The closet audit (For you) ----
@@ -4439,9 +4779,14 @@ function coverage() {
   return (coverMemo = { sig, cells });
 }
 const LOOK_KIT_FOR = () => LOOK_KIT.filter((k) => !k.who || k.who === state.settings.gender);
+// The colours each kind of piece usually comes in (others: the neutrals).
+const KIT_COLOURS = {
+  jeans: ["indigo", "denim", "black", "grey"], "dress-shoes": ["black", "brown", "tan", "burgundy"], boots: ["brown", "black", "tan", "sand"],
+  sneakers: ["white", "black", "grey", "navy", "cream"], coat: ["camel", "charcoal", "navy", "black", "grey", "beige"],
+};
 // The best colour of a kit piece for this wardrobe: the neutral that goes with most of what you own.
 function bestColours(cat, n = 3, styles) {
-  const choices = cat === "jeans" ? ["indigo", "denim", "black", "grey"] : ["navy", "white", "black", "grey", "beige", "olive", "brown", "cream", "charcoal"];
+  const choices = KIT_COLOURS[cat] || ["navy", "white", "black", "grey", "beige", "olive", "brown", "cream", "charcoal"];
   return choices.map((color) => {
     const b = mkIdea({ cat, color, styles });
     const piece = asPiece(b);
@@ -5308,7 +5653,7 @@ function renderSettings() {
         <p class="muted small" style="margin:0">Outfit ideas follow your day: a dinner gets a night-out look, a meeting a work one, and an evening event the evening temperature. Paste your calendar's private iCal link; nothing else is needed and no AI is used.</p>
         ${(state.calendar.links || []).map((l, k) => {
           const err = state.cal.errors?.[l.url];
-          const n = state.cal.events.filter((e) => e.cal === l.url).length;
+          const n = state.cal.events.filter((e) => e.cal === l.url && e.start < startOfDay(2)).length;
           let host = "";
           try { host = new URL(l.url).hostname.replace(/^www\./, ""); } catch {}
           return `<div class="row cal-link"><span style="flex:1;min-width:0"><b>${esc(state.cal.names?.[l.url] || host || "Calendar")}</b><br><span class="muted small">${err ? `<span style="color:var(--danger)">${esc(err)}</span>` : state.cal.at ? `${n} event${n === 1 ? "" : "s"} today and tomorrow · read ${fmtTime(state.cal.at)}` : "Not read yet"}</span></span><button class="btn ghost danger" data-calrm="${k}">Remove</button></div>`;
@@ -5550,7 +5895,7 @@ async function exportBackup() {
     photos: await Promise.all((i.photos || []).map(blobToDataURL)),
     originals: i.originals ? await Promise.all(i.originals.map(blobToDataURL)) : undefined,
   });
-  const blob = new Blob([JSON.stringify({ version: 2, exportedAt: new Date().toISOString(), items, log: state.log, wants: state.wants, calendar: state.calendar })], { type: "application/json" });
+  const blob = new Blob([JSON.stringify({ version: 2, exportedAt: new Date().toISOString(), items, log: state.log, wants: state.wants, events: state.events, calendar: state.calendar })], { type: "application/json" });
   const a = Object.assign(document.createElement("a"), { href: URL.createObjectURL(blob), download: `wardrobe-backup-${today()}.json` });
   a.click();
 }
@@ -5608,6 +5953,7 @@ async function importBackup() {
       for (const l of data.log || []) { delete l.id; await store.put("log", l); }
       if (data.wishlist?.length) { state.wishlist = data.wishlist; await moveWishlist(); }
       for (const w of data.wants || []) if (w?.id && !state.wants.some((x) => x.id === w.id)) { state.wants.push(w); await store.put("wants", w); }
+      for (const e of data.events || []) if (e?.id && !state.events.some((x) => x.id === e.id)) { state.events.push(e); await store.put("events", e); }
       if (data.calendar?.links) { state.calendar = data.calendar; await saveCalendar(); state.cal.at = 0; }
       await loadAll();
       state.outfits = [];
@@ -5921,6 +6267,16 @@ document.addEventListener("click", async (e) => {
     return go("add");
   }
   if (ds.mustf) { state.disc.mustf = ds.mustf; return render(); }
+  if (ds.evopen) { state.disc.ev = ds.evopen; state.disc.evOcc = false; render(); main.scrollTop = 0; return; }
+  if (ds.evcal) return eventFromCalendar(ds.evcal);
+  if (ds.evex) { state.disc.evForm.text = ds.evex; render(); $('[data-input="evdate"]')?.focus(); return; }
+  if (ds.evpick) { const [id, k] = ds.evpick.split("|"); state.disc.evPick[id] = +k; return render(); }
+  if (ds.evplan) return planEvent(ds.evplan);
+  if (ds.evunplan) return planEvent(ds.evunplan, true);
+  if (ds.evsetocc) { const [id, occ] = ds.evsetocc.split("|"); return editCode(id, (c) => ({ ...EVENT_CODES[occ], tips: [], occasion: occ })); }
+  if (ds.evdrop) { const [id, field, v] = ds.evdrop.split("|"); return editCode(id, (c) => ({ ...c, [field]: c[field].filter((x) => x !== v) })); }
+  if (ds.evai) return readCodeFor(ds.evai);
+  if (ds.evrm) return removeEvent(ds.evrm);
   if (ds.needchip) return askNeed("", ds.needchip);
   if (ds.ask) return ask(ds.ask);
   if (ds.unit) { state.settings.unit = ds.unit; await saveSettings(); return render(); }
@@ -5994,6 +6350,9 @@ document.addEventListener("click", async (e) => {
     case "need": return askNeed($('[data-input="need"]')?.value || "");
     case "need-clear": state.disc.need = null; return render();
     case "need-ai": return smarterPicks();
+    case "ev-add": return addEventFromForm();
+    case "ev-close": state.disc.ev = null; return render();
+    case "ev-occ": state.disc.evOcc = !state.disc.evOcc; return render();
     case "forget-taste": {
       const learnt = state.log.filter((l) => logKind(l) !== "wear");
       if (!(await confirmBox(`Forget ${learnt.length} outfit ratings, likes, skips and swaps? What you wore and the stars on your pieces stay.`, "Forget them"))) return render();
@@ -6042,8 +6401,8 @@ document.addEventListener("click", async (e) => {
     case "import": return importBackup();
     case "wipe":
       if (!(await confirmBox(sync.status === "on" ? "Erase all clothes, photos and history? Every device sharing this wardrobe loses them too." : "Erase all clothes, photos and history from this device?", "Erase everything"))) return;
-      await store.clear("items"); await store.clear("log"); await store.clear("wants");
-      state.items = []; state.log = []; state.wants = []; state.outfits = [];
+      await store.clear("items"); await store.clear("log"); await store.clear("wants"); await store.clear("events");
+      state.items = []; state.log = []; state.wants = []; state.events = []; state.outfits = [];
       toast("Wardrobe erased");
       return render();
   }
@@ -6051,6 +6410,7 @@ document.addEventListener("click", async (e) => {
 
 document.addEventListener("keydown", (e) => {
   if (e.key === "Enter" && e.target.dataset?.input === "need") askNeed(e.target.value);
+  if (e.key === "Enter" && ["evtext", "evplace"].includes(e.target.dataset?.input)) addEventFromForm();
 });
 document.addEventListener("input", (e) => {
   const k = e.target.dataset.input;
@@ -6065,6 +6425,7 @@ document.addEventListener("input", (e) => {
   }
   if (k === "trytext" || k === "trybrand") { state.disc.try[k === "trytext" ? "text" : "brand"] = v; return; }
   if (k === "tripq") { state.disc.tripq = v; return; }
+  if (["evtext", "evdate", "evtime", "evplace"].includes(k)) { state.disc.evForm[k.slice(2)] = v; return; }
   if (k === "temp") {
     state.manualTemp = +v;
     clearTimeout(e.target._t);
