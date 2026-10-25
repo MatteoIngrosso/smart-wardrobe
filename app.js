@@ -3218,7 +3218,7 @@ const TAG_LABEL_SCHEMA = {
     brand: { type: "string", description: "Brand printed on the tag. If none is printed but the tag is surely a known chain's, that brand (H&M tags print no brand: just the price, 'TAILLE/TAGLIA/MAAT' sizes and an article line like '1101074 049 73 4 5828'). Else empty" },
     name: { type: "string", description: "Product name or short description if printed, e.g. 'Slim fit chinos'; empty if none" },
     reference: { type: "string", description: "Product reference, article or style number as printed, with its spaces and slashes, e.g. '3660/516/833', 'REF 7683 515 400', or H&M's whole article line '1101074 049 73 4 5828'; not the barcode number; empty if none" },
-    category: { type: "string", enum: [...CATS.map((c) => c.id), ""], description: "Type of garment if the tag makes it clear; empty if not" },
+    category: { type: "string", enum: [...CATS.map((c) => c.id), "unknown"], description: "Type of garment if the tag makes it clear; unknown if not" }, // Gemini refuses an empty choice
     color: { type: "string", description: "Colour name if printed, in English, e.g. 'mid blue'; empty if none" },
     price: { type: "number", description: "Current selling price (the discounted one if there are two); 0 if none" },
     currency: { type: "string", description: "ISO code such as EUR, GBP, USD; empty if no price" },
