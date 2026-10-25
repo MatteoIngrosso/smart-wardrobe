@@ -2,6 +2,7 @@
 // Checks how label.js reads product references, shop links and product page text.
 import assert from "node:assert/strict";
 import test from "node:test";
+import { readFileSync } from "node:fs";
 import * as L from "../label.js";
 
 test("references as labels print them", () => {
@@ -109,4 +110,10 @@ test("H&M tags: no brand, just the article line", () => {
 
 test("shop names drop www2 too", () => {
   assert.equal(L.siteOf("https://www2.hm.com/it_it/productpage.1101074049.html"), "hm.com");
+});
+
+test("AI answer schemas never offer an empty choice", () => {
+  // Gemini turns the whole request down ("enum[n]: cannot be empty"), so the tag was never read.
+  const app = readFileSync(new URL("../app.js", import.meta.url), "utf8");
+  for (const m of app.matchAll(/enum: \[[^\]]*\]/g)) assert.doesNotMatch(m[0], /""|''/, m[0]);
 });
