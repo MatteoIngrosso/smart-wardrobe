@@ -1856,7 +1856,9 @@ function refreshViews() {
 const washAfterWear = (it) => ["base", "under"].includes(slotOf(it)) || (slotOf(it) === "gym" && ["base", "mid", "bottom"].includes(roleOf(it)));
 const wearable = () => state.items.filter((i) => !i.wash);
 // What outfit ideas and accessories are picked from: out of the wash, and not disliked.
-const suggestable = () => wearable().filter((i) => !i.disliked);
+// Pieces you're giving away or selling (Wardrobe > Report) are left out of ideas and the audit.
+const leaving = (i) => ["donate", "sell"].includes(i.fate?.status);
+const suggestable = () => wearable().filter((i) => !i.disliked && !leaving(i));
 const inWash = () => state.items.filter((i) => i.wash);
 async function setWash(items, on) {
   const now = new Date().toISOString();
@@ -2580,6 +2582,7 @@ let view = "today";
 let draft = null; // item being added / edited
 
 function go(v) {
+  if (v === "wardrobe") state.wardView = null;
   view = v;
   document.querySelectorAll(".tab").forEach((b) => (b.dataset.view === v ? b.setAttribute("aria-current", "page") : b.removeAttribute("aria-current")));
   render();
@@ -2817,6 +2820,7 @@ function filteredItems() {
   return list.sort(by[sort]);
 }
 function renderWardrobe() {
+  if (state.wardView === "report") return renderReport();
   const list = filteredItems();
   const usedColors = [...new Set(state.items.flatMap((i) => i.colors || []))];
   const usedStyles = Object.keys(STYLES).filter((s) => state.items.some((i) => (i.styles || []).includes(s)));
@@ -2825,7 +2829,7 @@ function renderWardrobe() {
   main.innerHTML = `
     <div class="head">
       <div><h1>Wardrobe</h1><p class="sub">${state.items.length} pieces${washing ? ` · ${washing} in the wash` : ""}</p></div>
-      <div class="chips">${[["recent", "Newest"], ["most", "Most worn"], ["least", "Least worn"], ["name", "A–Z"]].map(([k, l]) => `<button class="chip" aria-pressed="${f.sort === k}" data-sort="${k}">${l}</button>`).join("")}</div>
+      <div class="chips"><button class="chip report-btn" data-act="report">${ICON_CHART}Report</button>${[["recent", "Newest"], ["most", "Most worn"], ["least", "Least worn"], ["name", "A–Z"]].map(([k, l]) => `<button class="chip" aria-pressed="${f.sort === k}" data-sort="${k}">${l}</button>`).join("")}</div>
     </div>
     <div class="toolbar">
       <div class="search"><svg viewBox="0 0 24 24"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg><input id="search-input" class="input" placeholder="Search name, brand, style, tag…" value="${esc(f.q)}" data-input="q"></div>
@@ -2852,7 +2856,7 @@ function renderWardrobe() {
 function itemTile(i) {
   const sub = [i.brand, (i.styles || []).slice(0, 1).map(styleLabel)[0]].filter(Boolean).join(" · ") || catLabel(i.category);
   return `<button class="item" data-item="${i.id}">
-    <div class="pic${i.wash ? " washing" : ""}"><img class="thumb pic-bg" loading="lazy" src="${photoURL(i.photos?.[0])}" alt="">${isFavourite(i) ? `<span class="fav">★ ${starsOf(i)}</span>` : ""}${i.wash ? '<span class="wash-badge">In the wash</span>' : ""}</div>
+    <div class="pic${i.wash ? " washing" : ""}"><img class="thumb pic-bg" loading="lazy" src="${photoURL(i.photos?.[0])}" alt="">${isFavourite(i) ? `<span class="fav">★ ${starsOf(i)}</span>` : ""}${i.wash ? '<span class="wash-badge">In the wash</span>' : leaving(i) ? `<span class="wash-badge">To ${i.fate.status}</span>` : ""}</div>
     <div class="meta"><span class="name">${esc(i.name)}</span><span class="info">${swatches(i.colors)} ${esc(sub)}</span></div>
   </button>`;
 }
@@ -4307,7 +4311,7 @@ const goodOutfit = (o, occ, feels) => {
 // The pieces you own that can go in an everyday outfit (not disliked, not gym), by role.
 function ownedByRole(extra) {
   const by = { base: [], mid: [], outer: [], bottom: [], shoes: [] };
-  for (const i of state.items) if (!i.disliked && CORE.includes(roleOf(i)) && slotOf(i) !== "gym") by[roleOf(i)].push(i);
+  for (const i of state.items) if (!i.disliked && !leaving(i) && CORE.includes(roleOf(i)) && slotOf(i) !== "gym") by[roleOf(i)].push(i);
   if (extra) by[roleOf(extra)] = [extra];
   return by;
 }
@@ -5018,13 +5022,6 @@ async function smarterPicks() {
 
 /* ---- For you ---- */
 function forYouTab() {
-  const a = analyse();
-  const total = state.items.length || 1;
-  const palette = Object.entries(a.colorCount).sort((x, y) => y[1] - x[1]);
-  const styleMix = Object.entries(a.styleCount).sort((x, y) => y[1] - x[1]);
-  const brands = Object.entries(a.brandCount).sort((x, y) => y[1] - x[1]);
-  const tiers = {};
-  for (const i of state.items) { const t = brandInfo(i.brand)?.tier; if (t) tiers[t] = (tiers[t] || 0) + 1; }
   const need = state.disc.need;
   if (need?.cats?.length) return needBar() + needResults(need);
   if (!coverageDone()) {
@@ -5051,48 +5048,191 @@ function forYouTab() {
       ${notHere && blocks.length ? `<p class="muted small" style="margin:12px 0 0">${notHere} more idea${notHere > 1 ? "s aren't" : " isn't"} sold at ${esc(state.trip.name)}.</p>` : ""}
       ${answered ? `<p class="muted small" style="margin:12px 0 0">${answered} idea${answered > 1 ? "s" : ""} answered. The ones you liked are in <button class="linkish" data-disc="must">Must-Buy</button>.</p>` : ""}
     </section>
-    <div class="stats">
-      <div class="stat"><b>${state.items.length}</b><span>pieces</span></div>
-      <div class="stat"><b>${brands.length}</b><span>brands</span></div>
-      <div class="stat"><b>${a.unworn.length}</b><span>never worn</span></div>
-      <div class="stat"><b>${styleMix[0] ? styleLabel(styleMix[0][0]) : "–"}</b><span>main style</span></div>
-      ${(() => {
-        const priced = state.items.filter((i) => i.price);
-        if (!priced.length) return "";
-        const cur = priced[0].currency, same = priced.every((i) => i.currency === cur);
-        return same ? `<div class="stat"><b>${fmtPrice(priced.reduce((a, i) => a + i.price, 0), cur)}</b><span>value of ${priced.length} priced piece${priced.length === 1 ? "" : "s"}</span></div>` : "";
-      })()}
-    </div>
-    <div class="two-col">
-      <section class="card">
-        <h2>Your style</h2>
-        <div class="stack" style="gap:12px">
-          ${styleMix.length ? styleMix.map(([s, n]) => `<button class="style-row" data-stylego="${esc(s)}"><span>${styleLabel(s)}</span><span class="muted">${Math.round((n / total) * 100)}%</span><span class="bar"><i style="width:${(n / total) * 100}%"></i></span></button>`).join("") : `<p class="muted">Add pieces to see your style mix.</p>`}
-        </div>
-      </section>
-      <section class="card">
-        <h2>Brands</h2>
-        ${brands.length ? `<div class="chips">${brands.map(([b, n]) => { const t = brandInfo(b)?.tier; return `<button class="chip" data-brandgo="${esc(b)}">${esc(b)}${n > 1 ? ` <span class="muted">×${n}</span>` : ""}${t ? ` <span class="tier">${t}</span>` : ""}</button>`; }).join("")}</div>` : `<p class="muted">No brands recorded yet.</p>`}
-        ${Object.keys(tiers).length ? `<p class="muted small" style="margin:14px 0 0">${Object.entries(tiers).map(([t, n]) => `${n} ${t}`).join(" · ")}</p>` : ""}
-        ${palette.length ? `<h2 style="margin-top:22px">Palette</h2><div class="chips">${palette.map(([c, n]) => `<span class="chip"><span class="dot" style="background:${COLORS[c]?.hex}"></span>${cap(c)} ${Math.round((n / total) * 100)}%</span>`).join("")}</div>` : ""}
-      </section>
-    </div>
-    <section class="card">
-      <h2>Balance</h2>
-      <div class="stack" style="gap:14px">
-        ${Object.entries(SLOTS).filter(([k]) => SLOT_TARGET[k]).map(([k, l]) => {
-          const n = a.bySlot[k].length, t = SLOT_TARGET[k];
-          return `<div><div class="row" style="justify-content:space-between"><span>${l}</span><span class="muted">${n} / ${t} suggested</span></div><div class="bar"><i style="width:${Math.min(100, (n / t) * 100)}%;${n === 0 ? "background:var(--warn);width:4%" : ""}"></i></div></div>`;
-        }).join("")}
-      </div>
-    </section>
-    ${a.unworn.length || a.stale.length ? `<section class="card"><h2>Forgotten pieces</h2><p class="muted small" style="margin-top:-6px">Wear them, or think about selling or donating.</p><div class="grid">${[...a.unworn, ...a.stale].slice(0, 8).map(itemTile).join("")}</div></section>` : ""}
+    <p class="muted small" style="margin:0">Your style mix, palette, brands and the pieces you don't wear are in <button class="linkish" data-act="report-open">Wardrobe › Report</button>.</p>
     <section class="card ai-box">
       <h2 style="margin:0">Personal shopping advice</h2>
       <p class="muted small" style="margin:0">${aiReady() ? `${aiName()} looks at your whole wardrobe and suggests the next few buys.` : "Add a Gemini or Claude API key in Settings for tailored shopping advice."}</p>
       <div class="row"><button class="btn primary" data-ask="${esc(SHOP_QUESTION)}">What should I buy next?</button></div>
       <div class="ai-answer" id="ai-answer">${answerHTML(state.aiAnswer)}</div>
     </section>`;
+}
+
+/* ======================================================================
+   Wardrobe > Report: what you own, what it can do, and what you don't wear
+   All worked out on the device, no AI. Seasonal readiness counts the outfits that pass the
+   fashion bible at each season's usual temperature for each occasion (from 250 combinations per
+   season picked at random when there are more, scaled up). Dead weight compares your stars with
+   how often you wear each piece, per week it was in season, so a coat isn't flagged in July.
+   ====================================================================== */
+const ICON_CHART = `<svg viewBox="0 0 24 24" aria-hidden="true" style="width:18px;height:18px;fill:none;stroke:currentColor;stroke-width:1.8"><path d="M4 20V10M10 20V4M16 20v-7M22 20H2"/></svg>`;
+let readyMemo = null;
+const readinessDone = () => !Style.ready() || readyMemo?.sig === coverSig();
+function readiness() {
+  if (!Style.ready()) return null;
+  const sig = coverSig();
+  if (readyMemo?.sig === sig) return readyMemo;
+  const by = ownedByRole();
+  const grid = {}, good = new Set(), tried = new Set(), every = new Set();
+  for (const [season, { feels }] of Object.entries(SEASONS)) {
+    const list = outfitsAt(by, feels, 250);
+    const [tops, , bottoms, shoes] = list.parts;
+    const keys = new Set(list.map((o) => o.key));
+    const all = new Set();
+    for (const t of new Set(tops.map((x) => x.at(-1)))) for (const bo of bottoms) for (const sh of shoes) all.add(`${t.id}|${bo.id}|${sh?.id ?? ""}`);
+    all.forEach((k) => every.add(k));
+    keys.forEach((k) => tried.add(k));
+    const scale = keys.size ? all.size / keys.size : 1;
+    for (const occ of everydayOccs()) {
+      const ok = new Set();
+      for (const o of list) if (goodOutfit((o.built ||= Style.outfitFrom(o.pieces)), occ.id, feels)) ok.add(o.key);
+      ok.forEach((k) => good.add(k));
+      grid[`${season}|${occ.id}`] = Math.round(ok.size * scale);
+    }
+  }
+  // Seasons share outfits, so the total is scaled over all of them (and is at least the biggest cell).
+  const total = Math.max(Math.round(good.size * (tried.size ? every.size / tried.size : 1)), ...Object.values(grid));
+  return (readyMemo = { sig, grid, total });
+}
+// The usual temperature of each month where you live (the app's built-in cities), else the seasons.
+function monthTemps() {
+  const c = state.settings.lat != null ? nearestCity(state.settings.lat, state.settings.lon) : null;
+  const south = (state.settings.lat ?? 45) < 0;
+  return Array.from({ length: 12 }, (_, m) => (c ? (2 * c.hi[m] + c.lo[m]) / 3 : SEASONS[["winter", "winter", "spring", "spring", "spring", "summer", "summer", "summer", "autumn", "autumn", "autumn", "winter"][(m + (south ? 6 : 0)) % 12]].feels));
+}
+// Would you wear it at this temperature? Coats in the cold, shorts in the heat, most things all year.
+function inSeason(p, t) {
+  const r = roleOf(p), w = p.warmth || 2;
+  if (r === "outer") return t < (w >= 4 ? 12 : w >= 3 ? 17 : 20);
+  if (r === "mid") return t < (w >= 3 ? 18 : 22);
+  if (p.category === "shorts") return t >= 20;
+  if (p.category === "boots") return t < 18;
+  if (["scarf", "beanie", "gloves"].includes(p.category)) return t < 14;
+  return true;
+}
+const REPORT_DAYS = 180;
+// Each piece's stars (yours, else the average of the outfits with it you rated) and how often you
+// wear it per week it was in season, over the last 6 months (or since you added it).
+function pieceUse() {
+  const temps = monthTemps();
+  const from = Date.now() - REPORT_DAYS * 864e5;
+  const wears = new Map(), outfitStars = new Map();
+  for (const l of state.log) {
+    const kind = logKind(l), at = Date.parse(l.at || l.date);
+    if (kind === "wear" && at >= from) for (const id of l.itemIds || []) wears.set(id, (wears.get(id) || 0) + 1);
+    if (kind === "rate" && l.stars) for (const id of l.itemIds || []) { const a = outfitStars.get(id) || [0, 0]; a[0] += l.stars; a[1]++; outfitStars.set(id, a); }
+  }
+  return state.items.filter((i) => slotOf(i) !== "under").map((i) => {
+    const since = Math.max(from, Date.parse(i.createdAt || 0) || from);
+    let days = 0;
+    for (let d = since; d < Date.now(); d += 864e5) if (inSeason(i, temps[new Date(d).getMonth()])) days++;
+    const os = outfitStars.get(i.id);
+    const stars = i.disliked ? 1 : starsOf(i) || (os && os[1] >= 2 ? os[0] / os[1] : null);
+    const n = wears.get(i.id) || 0;
+    return { item: i, stars, wears: n, perWeek: days >= 7 ? n / (days / 7) : null, age: daysSince(i.createdAt) };
+  });
+}
+// Hidden gems, core, dead weight, upgrade, and forgotten pieces (not rated, rarely worn).
+function deadWeight() {
+  const groups = { gems: [], core: [], dead: [], upgrade: [], forgotten: [], leaving: [] };
+  for (const u of pieceUse()) {
+    const i = u.item;
+    if (leaving(i)) { groups.leaving.push(u); continue; }
+    if (u.age < 60 || i.wash || u.perWeek == null) continue; // too new, in the wash, or not its season yet
+    if (i.fate?.status === "keep" && daysSince(i.fate.at) < 90) continue;
+    const often = u.perWeek >= 0.2; // about once every five weeks it's in season
+    if (u.stars == null) { if (!often) groups.forgotten.push(u); else groups.core.push(u); continue; }
+    if (u.stars >= 3.5) groups[often ? "core" : "gems"].push(u);
+    else if (u.stars <= 2.5) groups[often ? "upgrade" : "dead"].push(u);
+  }
+  return groups;
+}
+function renderReport() {
+  const a = analyse();
+  const total = state.items.length || 1;
+  const palette = Object.entries(a.colorCount).sort((x, y) => y[1] - x[1]);
+  const styleMix = Object.entries(a.styleCount).sort((x, y) => y[1] - x[1]);
+  const brands = Object.entries(a.brandCount).sort((x, y) => y[1] - x[1]);
+  const tiers = {};
+  for (const i of state.items) { const t = brandInfo(i.brand)?.tier; if (t) tiers[t] = (tiers[t] || 0) + 1; }
+  const use = pieceUse();
+  const tracked = use.length || 1;
+  const worn90 = state.items.filter((i) => slotOf(i) !== "under" && daysSince(i.lastWorn) <= 90).length;
+  // The share of pieces that make 70% of what you wear.
+  const counts = use.map((u) => u.wears).sort((x, y) => y - x), wornTotal = counts.reduce((x, y) => x + y, 0);
+  let k = 0, acc = 0;
+  while (wornTotal && acc < wornTotal * 0.7) acc += counts[k++];
+  const priced = state.items.filter((i) => i.price && i.wearCount);
+  const cur = priced[0]?.currency;
+  const cpw = priced.length && priced.every((i) => i.currency === cur) ? priced.reduce((x, i) => x + i.price, 0) / priced.reduce((x, i) => x + i.wearCount, 0) : null;
+  const ready = readinessDone() ? readiness() : null;
+  if (!readinessDone()) setTimeout(() => { readiness(); if (view === "wardrobe" && state.wardView === "report") render(); }, 30);
+  const g = deadWeight();
+  const tile = (u, act) => `<div class="dw-piece">${pieceTile(u.item)}<span class="muted small">${u.stars ? `${"★".repeat(Math.round(u.stars))} · ` : ""}${u.wears ? `worn ${u.wears}×` : "not worn"}</span>${act(u.item)}</div>`;
+  const group = (key, title, hint, act) => (g[key].length ? `<div class="dw-group"><div class="row" style="justify-content:space-between;align-items:baseline"><h3 style="margin:0">${title} <span class="muted">${g[key].length}</span></h3><span class="muted small">${hint}</span></div><div class="dw-list">${g[key].slice(0, 8).map((u) => tile(u, act)).join("")}</div></div>` : "");
+  const fateBtns = (i) => `<div class="chips"><button class="chip" data-fate="${i.id}|donate">Donate</button><button class="chip" data-fate="${i.id}|sell">Sell</button><button class="chip" data-fate="${i.id}|keep">Keep</button></div>`;
+  const upgradeBtn = (i) => {
+    const b = mkIdea({ cat: i.category, color: i.colors?.[0] || "", noun: catLabel(i.category).toLowerCase(), styles: i.styles });
+    const w = wantOf(b);
+    const data = esc(JSON.stringify({ title: b.title, cat: b.cat, noun: b.noun, color: b.color, styles: b.styles, query: b.query, why: `To replace your ${i.name}: you wear it a lot but rate it ${Math.round(starsOf(i) || 2)} stars.`, source: "report" }));
+    return w?.status === "wanted" ? `<button class="chip" data-disc="must">✓ On Must-Buy</button>` : `<button class="chip" data-yes="${data}">A better one to Must-Buy</button>`;
+  };
+  const occs = everydayOccs();
+  return (main.innerHTML = `
+    <div class="head"><div><h1>Report</h1><p class="sub">Your wardrobe at a glance, worked out on this device.</p></div>
+      <div class="chips"><button class="chip" data-act="report-close">← Wardrobe</button></div></div>
+    <div class="stack">
+    <div class="stats">
+      <div class="stat"><b>${state.items.length}</b><span>pieces</span></div>
+      <div class="stat"><b>${ready ? ready.total : "…"}</b><span>outfits that pass the fashion bible</span></div>
+      <div class="stat"><b>${Math.round((worn90 / tracked) * 100)}%</b><span>worn in the last 90 days</span></div>
+      ${cpw != null ? `<div class="stat"><b>${fmtPrice(cpw, cur)}</b><span>average cost per wear</span></div>` : ""}
+      ${wornTotal >= 10 ? `<div class="stat"><b>${Math.round((k / tracked) * 100)}%</b><span>of your pieces make 70% of what you wear</span></div>` : ""}
+    </div>
+    <section class="card">
+      <h2>Ready for each season</h2>
+      ${ready ? `<div class="ready-wrap"><table class="ready"><thead><tr><th></th>${occs.map((o) => `<th>${esc(o.label.split(" /")[0])}</th>`).join("")}</tr></thead><tbody>
+        ${Object.entries(SEASONS).map(([se, { label }]) => `<tr><th>${label}</th>${occs.map((o) => { const n = ready.grid[`${se}|${o.id}`]; return `<td class="${n === 0 ? "zero" : n < 3 ? "low" : ""}">${n}</td>`; }).join("")}</tr>`).join("")}
+      </tbody></table></div>
+      <p class="muted small" style="margin:12px 0 0">Outfits that pass the fashion bible at each season's usual temperature. A 0 is a gap: <button class="linkish" data-disc="foryou">For you</button> suggests what fills it.</p>`
+        : Style.ready() ? `<p class="muted"><span class="spinner inline"></span> Counting outfits…</p>` : `<p class="muted">The fashion bible hasn't loaded yet.</p>`}
+    </section>
+    <section class="card stack">
+      <h2 style="margin:0">Worn and loved</h2>
+      <p class="muted small" style="margin:0">Your stars against how often you wear each piece when it's in season, over the last 6 months. Pieces added in the last 60 days aren't judged yet.</p>
+      ${group("gems", "Hidden gems", "Rated high, rarely worn", (i) => `<button class="chip" data-anchor="${i.id}">Wear it this week</button>`)}
+      ${group("dead", "Dead weight", "Rated low, rarely worn", fateBtns)}
+      ${group("upgrade", "Upgrade", "Rated low, worn often", upgradeBtn)}
+      ${group("forgotten", "Forgotten", "Not rated, rarely worn", (i) => `<div class="chips"><button class="chip" data-anchor="${i.id}">Wear it</button><button class="chip" data-fate="${i.id}|donate">Donate</button><button class="chip" data-fate="${i.id}|keep">Keep</button></div>`)}
+      ${group("leaving", "On their way out", "Left out of outfit ideas", (i) => `<div class="chips"><button class="chip" data-gone="${i.id}">It's gone</button><button class="chip" data-fateclear="${i.id}">Keep it after all</button></div>`)}
+      ${g.core.length ? `<p class="muted small" style="margin:0"><b>Core:</b> ${g.core.length} piece${g.core.length > 1 ? "s" : ""} you rate well and wear often.</p>` : ""}
+      ${!["gems", "dead", "upgrade", "forgotten", "leaving", "core"].some((x) => g[x].length) ? `<p class="muted" style="margin:0">Nothing to judge yet: rate pieces and wear outfits for a few weeks.</p>` : ""}
+    </section>
+    <div class="two-col">
+      <section class="card">
+        <h2>Your style</h2>
+        <div class="stack" style="gap:12px">
+          ${styleMix.length ? styleMix.map(([st, n]) => `<button class="style-row" data-stylego="${esc(st)}"><span>${styleLabel(st)}</span><span class="muted">${Math.round((n / total) * 100)}%</span><span class="bar"><i style="width:${(n / total) * 100}%"></i></span></button>`).join("") : `<p class="muted">Add pieces to see your style mix.</p>`}
+        </div>
+      </section>
+      <section class="card">
+        <h2>Brands</h2>
+        ${brands.length ? `<div class="chips">${brands.map(([b, n]) => { const t = brandInfo(b)?.tier; return `<button class="chip" data-brandgo="${esc(b)}">${esc(b)}${n > 1 ? ` <span class="muted">×${n}</span>` : ""}${t ? ` <span class="tier">${t}</span>` : ""}</button>`; }).join("")}</div>` : `<p class="muted">No brands recorded yet.</p>`}
+        ${Object.keys(tiers).length ? `<p class="muted small" style="margin:14px 0 0">${Object.entries(tiers).map(([t, n]) => `${n} ${t}`).join(" · ")}</p>` : ""}
+        ${palette.length ? `<h2 style="margin-top:22px">Palette</h2><div class="chips">${palette.map(([c, n]) => `<span class="chip"><span class="dot" style="background:${COLORS[c]?.hex}"></span>${cap(c)} ${Math.round((n / total) * 100)}%</span>`).join("")}</div>
+          <p class="muted small" style="margin:12px 0 0">${Math.round((palette.filter(([c]) => COLORS[c]?.neutral).reduce((x, [, n]) => x + n, 0) / total) * 100)}% neutrals.</p>` : ""}
+      </section>
+    </div>
+    <section class="card">
+      <h2>Over and under</h2>
+      <div class="stack" style="gap:14px">
+        ${Object.entries(SLOTS).filter(([k]) => SLOT_TARGET[k]).map(([k, l]) => {
+          const n = a.bySlot[k].length, t = SLOT_TARGET[k];
+          return `<div><div class="row" style="justify-content:space-between"><span>${l}</span><span class="muted">${n} / ${t} suggested${n > t * 2 ? " · a lot" : n === 0 ? " · none" : ""}</span></div><div class="bar"><i style="width:${Math.min(100, (n / t) * 100)}%;${n === 0 ? "background:var(--warn);width:4%" : ""}"></i></div></div>`;
+        }).join("")}
+        ${(() => { const miss = ACC_KIT.filter((x) => !state.items.some((i) => i.category === x.cat)).map((x) => catLabel(x.cat).toLowerCase()); return miss.length ? `<p class="muted small" style="margin:0">Accessories you don't have: ${miss.join(", ")}.</p>` : ""; })()}
+      </div>
+    </section>
+    </div>`);
 }
 
 /* ---- Try a piece ---- */
@@ -6267,6 +6407,26 @@ document.addEventListener("click", async (e) => {
     return go("add");
   }
   if (ds.mustf) { state.disc.mustf = ds.mustf; return render(); }
+  if (ds.fate || ds.fateclear) {
+    const [id, status] = (ds.fate || ds.fateclear).split("|");
+    const it = state.items.find((i) => i.id === id);
+    if (!it) return;
+    if (ds.fate) it.fate = { status, at: new Date().toISOString() };
+    else delete it.fate;
+    await store.put("items", it);
+    state.outfits = [];
+    if (ds.fate) toast(status === "keep" ? `Keeping ${it.name}. It won't be flagged for 90 days.` : `${it.name} is left out of outfit ideas until it's gone.`);
+    return render();
+  }
+  if (ds.gone) {
+    const it = state.items.find((i) => i.id === ds.gone);
+    if (!it || !(await confirmBox(`Remove “${it.name}” from your wardrobe? What you wore with it stays in your history.`, "Remove"))) return;
+    await store.del("items", it.id);
+    state.items = state.items.filter((i) => i.id !== it.id);
+    state.outfits = [];
+    toast("Removed");
+    return render();
+  }
   if (ds.evopen) { state.disc.ev = ds.evopen; state.disc.evOcc = false; render(); main.scrollTop = 0; return; }
   if (ds.evcal) return eventFromCalendar(ds.evcal);
   if (ds.evex) { state.disc.evForm.text = ds.evex; render(); $('[data-input="evdate"]')?.focus(); return; }
@@ -6350,6 +6510,9 @@ document.addEventListener("click", async (e) => {
     case "need": return askNeed($('[data-input="need"]')?.value || "");
     case "need-clear": state.disc.need = null; return render();
     case "need-ai": return smarterPicks();
+    case "report": state.wardView = "report"; render(); main.scrollTop = 0; return;
+    case "report-open": go("wardrobe"); state.wardView = "report"; return render();
+    case "report-close": state.wardView = null; render(); main.scrollTop = 0; return;
     case "ev-add": return addEventFromForm();
     case "ev-close": state.disc.ev = null; return render();
     case "ev-occ": state.disc.evOcc = !state.disc.evOcc; return render();

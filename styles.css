@@ -470,3 +470,18 @@ details summary { cursor: pointer; }
 .event-plan .pieces { display: grid; grid-template-columns: repeat(auto-fill, minmax(96px, 140px)); gap: 10px; }
 .event-plan .pieces.extras { grid-template-columns: repeat(auto-fill, minmax(64px, 84px)); }
 .event-plan .pieces.extras span { font-size: 12px; }
+/* Wardrobe > Report */
+.report-btn { gap: 8px; }
+.ready-wrap { overflow-x: auto; }
+.ready { width: 100%; border-collapse: separate; border-spacing: 6px; font-variant-numeric: tabular-nums; }
+.ready th { font-size: 13px; font-weight: 500; color: var(--muted); text-align: center; padding: 4px; }
+.ready tbody th { text-align: left; }
+.ready td { text-align: center; padding: 12px 6px; border-radius: 10px; background: var(--surface-2); font-size: 17px; font-weight: 600; }
+.ready td.low { color: var(--warn); }
+.ready td.zero { color: var(--danger); background: transparent; border: 2px dashed var(--line); }
+.dw-group { display: flex; flex-direction: column; gap: 10px; padding-top: 6px; }
+.dw-list { display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 14px; }
+.dw-piece { display: flex; flex-direction: column; gap: 6px; }
+.dw-piece .piece { width: 100%; max-width: 150px; }
+.dw-piece .chips { gap: 6px; }
+.dw-piece .chip { min-height: 40px; padding: 0 12px; font-size: 14px; }
