@@ -312,6 +312,19 @@ img.pic-bg { object-fit: contain; background: var(--pic); }
 .outfit-actions .btn.primary { flex: 1; }
 .btn.like[aria-pressed="true"] { color: var(--accent); border-color: var(--accent); }
 .btn.like[aria-pressed="true"] svg { fill: currentColor; }
+/* Stars: on outfit ideas (☆ opens them), on pieces, and "How did yesterday's outfit feel?" */
+.stars { display: flex; align-items: center; flex-wrap: wrap; gap: 2px; }
+.stars .muted { margin-left: 10px; }
+.star { width: 48px; height: 48px; border: 0; background: none; color: var(--text); font-size: 30px; line-height: 1; padding: 0; cursor: pointer; border-radius: 12px; }
+.star[aria-pressed="false"] { color: var(--muted); }
+.star:focus-visible { outline: 2px solid var(--accent); }
+.btn.rate { font-size: 20px; font-weight: 600; }
+.btn.rate:not(.icon-btn) { font-size: 17px; padding: 0 18px; }
+.btn.rate[aria-pressed="true"] { border-color: var(--accent); }
+.item-rate { gap: 12px; margin: 4px 0 14px; }
+.rate-card { display: grid; grid-template-columns: auto 1fr; gap: 20px; align-items: center; }
+.rate-card .pieces.mini { grid-template-columns: repeat(3, 72px); }
+@media (max-width: 640px) { .rate-card { grid-template-columns: 1fr; } }
 .find-fields { display: grid; grid-template-columns: 2fr 1fr; gap: 10px; }
 @media (max-width: 640px) { .find-fields { grid-template-columns: 1fr; } }
 

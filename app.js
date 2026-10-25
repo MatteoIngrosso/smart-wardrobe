@@ -1383,7 +1383,6 @@ function scoreOutfit(o, cond, occ, t = taste()) {
   for (const p of pieces) {
     const d = daysSince(p.lastWorn);
     if (d <= 1) s -= 3; else if (d <= 4) s -= 1.2;
-    if (p.favorite) s += 0.4;
     if (!p.wearCount) s += 0.3;
   }
   const fresh = pieces.find((p) => !p.wearCount || daysSince(p.lastWorn) > 21);
@@ -1398,11 +1397,13 @@ function scoreOutfit(o, cond, occ, t = taste()) {
 
 // Today's candidates, best first. Cheap enough to redo on every tap (900 tries).
 // The pieces that can fill each part of an outfit for an occasion (none that are in the wash).
-function piecesByRole(occ) {
+// Pieces you disliked are left out, except when you pick one yourself (`all`, for the ⇄ list).
+function piecesByRole(occ, all = false) {
   const gym = occ.id === "gym";
   const by = { base: [], mid: [], outer: [], bottom: [], shoes: [] };
-  for (const it of wearable()) if (by[roleOf(it)] && (slotOf(it) === "gym") === gym) by[roleOf(it)].push(it);
-  if (gym) for (const [role, cats] of Object.entries(GYM_FALLBACK)) if (!by[role].length) by[role] = wearable().filter((i) => cats.includes(i.category));
+  const from = all ? wearable() : suggestable();
+  for (const it of from) if (by[roleOf(it)] && (slotOf(it) === "gym") === gym) by[roleOf(it)].push(it);
+  if (gym) for (const [role, cats] of Object.entries(GYM_FALLBACK)) if (!by[role].length) by[role] = from.filter((i) => cats.includes(i.category));
   return by;
 }
 // `opts` lets Discover ask for ideas around a piece you don't own yet ({ anchor, occ, cond }).
@@ -1473,9 +1474,12 @@ function pickIdeas(pool, n, keep = [], avoid = []) {
   }
   return out;
 }
-// An idea you already ♥ today keeps its heart when it comes back.
-const likedToday = (key) => state.log.find((l) => l.kind === "like" && l.date === today() && outfitKey((l.itemIds || []).map((id) => state.items.find((i) => i.id === id))) === key)?.id;
-const dressIdea = (c, pool, used) => withWarn({ ...c, missing: pool.missing, likedId: likedToday(c.key), ...extrasFor(c.pieces, pool.cond, pool.occ, used) }, pool.cond, pool.occ);
+// An idea you already rated today keeps its stars when it comes back (a ♥ from before stars counts as 5).
+function ratedToday(key) {
+  const l = state.log.find((l) => (l.kind === "rate" || l.kind === "like") && l.date === today() && outfitKey((l.itemIds || []).map((id) => state.items.find((i) => i.id === id))) === key);
+  return { ratedId: l?.id || null, stars: l ? (l.kind === "like" ? 5 : l.stars) : 0, rating: false };
+}
+const dressIdea = (c, pool, used) => withWarn({ ...c, missing: pool.missing, ...ratedToday(c.key), ...extrasFor(c.pieces, pool.cond, pool.occ, used) }, pool.cond, pool.occ);
 // An idea that still breaks one of the fashion bible's important rules once its headwear and
 // accessories are on (only shown when nothing better is left) says so on its card.
 function withWarn(idea, cond, occ) {
@@ -1505,7 +1509,7 @@ function plannedIdea(pool) {
   for (const it of items) (CORE.includes(roleOf(it)) && !pieces[roleOf(it)] ? (pieces[roleOf(it)] = it) : extras.push(it));
   if (!pieces.base && !pieces.mid) return null;
   const key = outfitKey(items);
-  return withWarn({ key, pieces, planned: p, missing: [], likedId: likedToday(key), ...scoreOutfit(pieces, pool.cond, pool.occ), extras, extrasWhy: [] }, pool.cond, pool.occ);
+  return withWarn({ key, pieces, planned: p, missing: [], ...ratedToday(key), ...scoreOutfit(pieces, pool.cond, pool.occ), extras, extrasWhy: [] }, pool.cond, pool.occ);
 }
 async function planOutfit(o) {
   const e = state.event;
@@ -1519,7 +1523,7 @@ function swapOptions(o, role) {
   const occ = OCCASIONS.find((x) => x.id === state.occasion);
   const cond = conditions(), t = taste();
   const cur = o.pieces[role];
-  const options = piecesByRole(occ)[role]
+  const options = piecesByRole(occ, true)[role]
     .filter((p) => p.id !== cur?.id)
     .map((p) => ({ p, s: scoreOutfit({ ...o.pieces, [role]: p }, cond, occ, t).score }))
     .sort((a, b) => b.s - a.s)
@@ -1539,7 +1543,7 @@ async function swapPiece(i, role, toId) {
   const used = new Set(state.outfits.filter((_, k) => k !== i).flatMap((x) => (x.extras || []).map((e) => e.id)));
   const key = outfitKey(Object.values(pieces));
   const cond = conditions();
-  state.outfits[i] = withWarn({ ...o, key, pieces, swapping: null, likedId: likedToday(key), ...scoreOutfit(pieces, cond, occ), ...extrasFor(pieces, cond, occ, used) }, cond, occ);
+  state.outfits[i] = withWarn({ ...o, key, pieces, swapping: null, ...ratedToday(key), ...scoreOutfit(pieces, cond, occ), ...extrasFor(pieces, cond, occ, used) }, cond, occ);
 }
 
 // After "Not for me": swap that idea for the next best one, keeping the others where they are.
@@ -1564,16 +1568,38 @@ function replaceOutfit(i) {
    ====================================================================== */
 const SKIP_REASONS = [["warm", "Too warm"], ["cold", "Too cold"], ["colours", "Colours"], ["style", "Not my style"], ["today", "Just not today"]];
 const logKind = (l) => l.kind || "wear";
+// Your stars for a piece, 1–5 (null: not rated). Pieces marked ★ Favourite before stars existed count as 5.
+const starsOf = (i) => i?.rating || (i?.favorite ? 5 : null);
+const isFavourite = (i) => (starsOf(i) || 0) >= 4;
+const STAR_WORDS = ["", "Hate it", "Meh", "Fine", "Like it", "Love it"];
+// What stars on an outfit teach: 4 and 5 count like a wear and more, 3 nothing, 2 and 1 count against it.
+const RATE_WEIGHT = { 5: 2, 4: 1, 3: 0, 2: -1, 1: -2 };
+// What a piece is, for learning from the stars on pieces: its main colour, type, fit and styles.
+const traitsOf = (p) => [p.colors?.[0] && `colour:${p.colors[0]}`, `type:${p.category}`, p.fit && `fit:${p.fit}`, ...(p.styles || []).map((st) => `style:${st}`)].filter(Boolean);
 const pairKey = (a, b) => (a < b ? `${a}|${b}` : `${b}|${a}`);
 const clamp = (x, lo, hi) => Math.min(hi, Math.max(lo, x));
 let tasteMemo = null;
 
 function taste() {
-  const sig = `${state.log.length}|${state.items.length}|${today()}|${state.log.at(-1)?.id}`;
+  const stars = state.items.reduce((a, i) => a + (starsOf(i) || 0) * 3 + (i.disliked ? 1 : 0), 0);
+  const sig = `${state.log.length}|${state.items.length}|${today()}|${state.log.at(-1)?.id}|${stars}`;
   if (tasteMemo?.sig === sig) return tasteMemo.t;
   const byId = new Map(state.items.map((i) => [i.id, i]));
-  const t = { pairs: {}, items: {}, colours: {}, fits: {}, styles: {}, offset: 0, blocked: new Set(), counts: { wear: 0, like: 0, skip: 0, swap: 0 }, comfortN: 0 };
+  const t = { pairs: {}, items: {}, colours: {}, fits: {}, styles: {}, stars: {}, traits: {}, traitN: {}, offset: 0, blocked: new Set(), counts: { wear: 0, like: 0, skip: 0, swap: 0, rate: 0, rated: 0, disliked: 0 }, comfortN: 0 };
   const add = (map, k, v) => (map[k] = (map[k] || 0) + v);
+  // Your stars on pieces: the piece itself, and a little of what it is (colour, type, fit, style),
+  // averaged as if 3 neutral pieces agreed, so one 1-star red shirt doesn't put you off red.
+  const traitSum = {};
+  for (const p of state.items) {
+    const r = starsOf(p);
+    if (!r && !p.disliked) continue;
+    const v = p.disliked ? -2 : (r - 3) * 0.8;
+    t.stars[p.id] = v;
+    if (r) t.counts.rated++;
+    if (p.disliked) t.counts.disliked++;
+    for (const k of traitsOf(p)) { const a = (traitSum[k] ||= [0, 0]); a[0] += v; a[1]++; }
+  }
+  for (const [k, [sum, n]] of Object.entries(traitSum)) { t.traits[k] = sum / (n + 3); t.traitN[k] = n; }
   let warmSum = 0, warmW = 0;
   for (const l of state.log) {
     const kind = logKind(l);
@@ -1616,7 +1642,7 @@ function taste() {
       if (short ? l.date === today() : age < 30) t.blocked.add(outfitKey(pieces));
       if (short) continue;
     }
-    const v = w * ({ wear: 1, like: 1.5, skip: -1.2 }[kind] || 0);
+    const v = w * (kind === "rate" ? RATE_WEIGHT[l.stars] || 0 : { wear: 1, like: 1.5, skip: -1.2 }[kind] || 0);
     const onlyColours = l.reason === "colours";
     const hero = heroOf(o);
     if (hero && o.bottom) {
@@ -1628,7 +1654,7 @@ function taste() {
     for (let i = 0; i < pieces.length; i++) for (let j = i + 1; j < pieces.length; j++) add(t.pairs, pairKey(pieces[i].id, pieces[j].id), onlyColours ? v * 0.5 : v);
     if (onlyColours) continue;
     for (const p of pieces) {
-      add(t.items, `${occ}|${p.id}`, kind === "skip" ? v * 0.3 : v);
+      add(t.items, `${occ}|${p.id}`, v < 0 ? v * 0.3 : v);
       for (const st of p.styles || []) add(t.styles, `${occ}|${st}`, v / pieces.length);
     }
   }
@@ -1668,18 +1694,27 @@ function tasteScore(o, occ, t) {
     const f = t.fits[`${hero.fit}|${o.bottom.fit}`];
     if (f) s += Math.tanh(f / 2) * 0.8;
   }
+  // Pieces you gave stars to, and what you tend to rate high or low
+  let rs = 0;
+  for (const p of pieces) {
+    rs += (t.stars[p.id] || 0) * 0.4;
+    for (const k of traitsOf(p)) rs += (t.traits[k] || 0) * 0.3;
+  }
+  s += clamp(rs, -2, 2);
+  const loved = pieces.find((p) => starsOf(p) === 5);
   if (best) reason = `You like the ${best[1].name} with the ${best[2].name}`;
   else if (colourLiked) reason = `${cap(hero.colors[0])} with ${o.bottom.colors[0]}: a pairing you go for`;
+  else if (loved) reason = `With your ${loved.name}, rated 5 stars`;
   return { score: s, reason };
 }
 
 // One line under the ideas saying what they've learnt so far.
 function tasteLine() {
   const t = taste();
-  const { wear, like, skip, swap } = t.counts;
-  if (!wear && !like && !skip && !swap) return "Ideas learn from you: tap Wear this today, ♥, Not for me or ⇄ on a piece, and they get closer to your taste.";
+  const { wear, like, skip, swap, rate, rated, disliked } = t.counts;
+  if (!wear && !like && !skip && !swap && !rate && !rated && !disliked) return "Ideas learn from you: tap Wear this today, ☆, Not for me or ⇄ on a piece, or give your pieces stars, and they get closer to your taste.";
   const n = (k, one, many) => `${k} ${k === 1 ? one : many}`;
-  let line = `Learning from ${[wear && n(wear, "outfit worn", "outfits worn"), like && n(like, "like", "likes"), skip && n(skip, "skip", "skips"), swap && n(swap, "swap", "swaps")].filter(Boolean).join(", ")}.`;
+  let line = `Learning from ${[wear && n(wear, "outfit worn", "outfits worn"), (like || rate) && n(like + rate, "outfit rating", "outfit ratings"), skip && n(skip, "skip", "skips"), swap && n(swap, "swap", "swaps"), rated && n(rated, "rated piece", "rated pieces"), disliked && n(disliked, "disliked piece", "disliked pieces")].filter(Boolean).join(", ")}.`;
   if (t.offset <= -0.8) line += " You dress lighter than most for the weather, so ideas go a layer lighter.";
   else if (t.offset >= 0.8) line += " You like to dress warmer than most, so ideas add a layer sooner.";
   return line;
@@ -1696,9 +1731,17 @@ function tasteText() {
   const pairs = Object.entries(t.pairs).filter(([, v]) => v >= 1).sort((a, b) => b[1] - a[1]).slice(0, 5).map(([k]) => refs(k.split("|")));
   if (pairs.length) lines.push(`Often worn or liked together: ${pairs.join(", ")}.`);
   const recent = (kind, filter = () => true) => state.log.filter((l) => logKind(l) === kind && filter(l) && daysSince(l.at || l.date) < 90).slice(-3).reverse();
-  const liked = recent("like").map((l) => refs(l.itemIds.filter((id) => byId.has(id)))).filter(Boolean);
+  const liked = [...recent("like"), ...recent("rate", (l) => l.stars >= 4)].map((l) => refs(l.itemIds.filter((id) => byId.has(id)))).filter(Boolean);
   if (liked.length) lines.push(`Liked outfits: ${liked.join(", ")}.`);
-  const nope = recent("skip", (l) => ["colours", "style", undefined].includes(l.reason)).map((l) => `${refs(l.itemIds)}${l.reason ? ` (${l.reason})` : ""}`).filter((x) => /#/.test(x));
+  const pieceList = (f) => state.items.filter((i) => slotOf(i) !== "under" && f(i)).map((i) => num.get(i.id)).slice(0, 12).join(", ");
+  const loved = pieceList((i) => !i.disliked && starsOf(i) >= 4);
+  if (loved) lines.push(`Pieces rated 4-5 stars: ${loved}.`);
+  const meh = pieceList((i) => !i.disliked && starsOf(i) && starsOf(i) <= 2);
+  if (meh) lines.push(`Pieces rated 1-2 stars (use rarely): ${meh}.`);
+  const disliked = pieceList((i) => i.disliked);
+  if (disliked) lines.push(`Disliked pieces (never suggest unless asked): ${disliked}.`);
+  const nope = [...recent("skip", (l) => ["colours", "style", undefined].includes(l.reason)).map((l) => `${refs(l.itemIds)}${l.reason ? ` (${l.reason})` : ""}`),
+    ...recent("rate", (l) => l.stars <= 2).map((l) => `${refs(l.itemIds)} (rated ${l.stars} stars)`)].filter((x) => /#/.test(x));
   if (nope.length) lines.push(`Turned down: ${nope.join(", ")}.`);
   const swapped = recent("swap", (l) => num.has(l.removed)).map((l) => `${num.get(l.removed)} (with ${refs(l.itemIds.filter((id) => id !== l.removed))})`);
   if (swapped.length) lines.push(`Swapped out of outfits: ${swapped.join(", ")}.`);
@@ -1733,7 +1776,7 @@ function extrasFor(pieces, cond, occ, used) {
   const accent = cols.find((c) => !COLORS[c]?.neutral);
   const extras = [], why = [];
   for (const [cats, reason] of needs) {
-    let options = wearable().filter((i) => cats.includes(i.category));
+    let options = suggestable().filter((i) => cats.includes(i.category));
     // A belt in the same colour family as the leather shoes (black with black, brown with brown).
     if (cats[0] === "belt" && pieces.shoes && Style.ready()) options = options.filter((i) => !((Style.ruleScore([pieces.shoes, i], "belt-shoes") ?? 0) <= -0.5));
     if (!options.length) continue;
@@ -1743,7 +1786,7 @@ function extrasFor(pieces, cond, occ, used) {
       if ((i.styles || []).some((st) => occ.likes.includes(st))) s += 0.7;
       const d = daysSince(i.lastWorn);
       if (d <= 1) s -= 1.5;
-      if (i.favorite) s += 0.4;
+      if (isFavourite(i)) s += 0.4;
       if (used.has(i.id)) s -= 1;
       return s + Math.random() * 0.3;
     };
@@ -1789,6 +1832,8 @@ function refreshViews() {
 // Worn once, then washed: T-shirts and shirts, underwear and socks, and gym clothes (not shoes or bags).
 const washAfterWear = (it) => ["base", "under"].includes(slotOf(it)) || (slotOf(it) === "gym" && ["base", "mid", "bottom"].includes(roleOf(it)));
 const wearable = () => state.items.filter((i) => !i.wash);
+// What outfit ideas and accessories are picked from: out of the wash, and not disliked.
+const suggestable = () => wearable().filter((i) => !i.disliked);
 const inWash = () => state.items.filter((i) => i.wash);
 async function setWash(items, on) {
   const now = new Date().toISOString();
@@ -1798,6 +1843,47 @@ async function setWash(items, on) {
   }
   if (on && items.some((i) => i.id === state.anchor)) state.anchor = null;
   state.outfits = [];
+}
+// Stars on an outfit idea ("o"), a piece ("i") or the outfit you wore ("w"; 0 = skip the question).
+// Outfit ratings go in the wear log (kind "rate"), piece ratings on the piece.
+async function rate(kind, ref, n) {
+  n = +n;
+  tasteMemo = null;
+  if (kind === "o") {
+    const o = state.outfits[+ref];
+    if (!o) return render();
+    const stars = o.stars === n ? 0 : n;
+    const l = o.ratedId && state.log.find((x) => x.id === o.ratedId);
+    if (l && !stars) await dropLog(l.id);
+    else if (l) { l.kind = "rate"; l.stars = stars; await store.put("log", l); }
+    else if (stars) o.ratedId = (await addLog({ kind: "rate", stars, itemIds: Object.values(o.pieces).filter(Boolean).map((p) => p.id), ...outfitContext(), source: o.planned ? "plan" : "idea" })).id;
+    Object.assign(o, { stars, rating: false, ratedId: stars ? o.ratedId : null });
+    if (stars) toast(stars >= 4 ? "Saved. More ideas like this one." : stars <= 2 ? "Saved. Fewer ideas like this one." : "Saved");
+    return render();
+  }
+  if (kind === "i") {
+    const it = state.items.find((i) => i.id === ref);
+    if (!it) return render();
+    const stars = starsOf(it) === n ? 0 : n;
+    if (stars) it.rating = stars; else delete it.rating;
+    delete it.favorite; // the stars replace ★ Favourite
+    it.ratedAt = new Date().toISOString();
+    await store.put("items", it);
+    state.outfits = [];
+    openItem(it.id);
+    return render();
+  }
+  const wear = state.log.find((l) => l.id === ref);
+  if (!wear) return render();
+  if (n) {
+    await addLog({ kind: "rate", stars: n, itemIds: wear.itemIds, occasion: wear.occasion, feels: wear.feels, wearId: wear.id, source: "worn" });
+    toast(n >= 4 ? "Thanks. More outfits like it." : n <= 2 ? "Thanks. Fewer outfits like it." : "Thanks");
+  } else {
+    wear.rateSkip = true;
+    await store.put("log", wear);
+  }
+  state.outfits = [];
+  return render();
 }
 // Likes and skips go in the wear log too (with a `kind`), so they reach every device and backups.
 async function addLog(fields) {
@@ -2518,6 +2604,7 @@ function renderToday() {
         </div>
       </div>
       ${dayCard()}
+      ${rateCard()}
       <div class="chips scroller">${OCCASIONS.map((o) => `<button class="chip" aria-pressed="${state.occasion === o.id}" data-occ="${o.id}">${o.label}</button>`).join("")}</div>
       ${anchorBar()}
       <div class="outfits">${state.outfits.map((o, i) => outfitCard(o, i)).join("") || `<p class="muted">Add a few more tops to get outfit ideas.</p>`}</div>
@@ -2557,6 +2644,31 @@ function laundryLine() {
   const n = inWash().length;
   if (!n) return "";
   return `<div class="row laundry-row"><span class="muted small">${n} piece${n === 1 ? " is" : "s are"} in the wash and left out of these ideas.</span><button class="chip" data-act="see-wash">See them</button><button class="chip" data-act="wash-done">Laundry done</button></div>`;
+}
+// Five stars to tap. `key` says what is rated ("o|<card>", "i|<piece id>", "w|<wear id>"); the same star again takes the rating off.
+const starPicker = (key, current = 0) => `<div class="stars" role="group" aria-label="Your rating">${[1, 2, 3, 4, 5].map((n) => `<button class="star" aria-pressed="${n <= current}" aria-label="${n} star${n > 1 ? "s" : ""}: ${STAR_WORDS[n]}" data-stars="${key}|${n}">${n <= current ? "★" : "☆"}</button>`).join("")}<span class="muted small">${current ? STAR_WORDS[current] : "1 hate it · 5 love it"}</span></div>`;
+// The outfit you wore yesterday (or the day before), until you rate it or skip it.
+function rateDue() {
+  const rated = new Set(state.log.filter((l) => l.kind === "rate" && l.wearId).map((l) => l.wearId));
+  const byId = new Map(state.items.map((i) => [i.id, i]));
+  return state.log
+    .filter((l) => logKind(l) === "wear" && l.occasion && !l.rateSkip && l.date !== today() && daysSince(l.at || l.date) <= 2 && !rated.has(l.id) &&
+      (l.itemIds || []).filter((id) => byId.has(id) && CORE.includes(roleOf(byId.get(id)))).length >= 2)
+    .sort((a, b) => String(b.at || b.date).localeCompare(String(a.at || a.date)))[0];
+}
+function rateCard() {
+  const l = rateDue();
+  if (!l) return "";
+  const pieces = l.itemIds.map((id) => state.items.find((i) => i.id === id)).filter((p) => p && CORE.includes(roleOf(p)));
+  const yesterday = new Date(Date.now() - 864e5).toISOString().slice(0, 10);
+  return `<section class="card rate-card">
+    <div class="pieces mini">${pieces.map(pieceTile).join("")}</div>
+    <div class="stack" style="gap:8px">
+      <h2 style="margin:0">How did ${l.date === yesterday ? "yesterday's" : "your last"} outfit feel?</h2>
+      <span class="muted small">${esc(occLabel(l.occasion))}${l.feels != null ? ` · ${fmtTemp(l.feels)}` : ""}${l.event ? ` · ${esc(l.event)}` : ""}</span>
+      <div class="row">${starPicker(`w|${l.id}`)}<button class="chip" data-stars="w|${l.id}|0">Skip</button></div>
+    </div>
+  </section>`;
 }
 const ICON_HEART = `<svg viewBox="0 0 24 24"><path d="M12 20s-7.5-4.6-9.3-9.4C1.5 7.3 3.6 4 7 4c2.1 0 3.6 1.2 5 3 1.4-1.8 2.9-3 5-3 3.4 0 5.5 3.3 4.3 6.6C19.5 15.4 12 20 12 20z"/></svg>`;
 const ICON_SWAP = `<svg viewBox="0 0 24 24"><path d="M7 4 3 8l4 4M3 8h14M17 20l4-4-4-4M21 16H7"/></svg>`;
@@ -2626,9 +2738,10 @@ function outfitCard(o, i) {
       ? `<div class="stack" style="gap:8px"><span class="muted small">What's off? The next ideas take it into account.</span><div class="chips">${SKIP_REASONS.map(([k, l]) => `<button class="chip" data-skipwhy="${i}:${k}">${l}</button>`).join("")}<button class="chip" data-skip="${i}" data-cancel="1">Cancel</button></div></div>`
       : `<div class="row outfit-actions">
           ${state.event?.day === "tomorrow" ? `<button class="btn primary" data-plan="${i}">Plan it for tomorrow</button>` : `<button class="btn primary" data-wear="${i}">Wear this today</button>`}
-          <button class="btn icon-btn like" data-like="${i}" aria-pressed="${!!o.likedId}" aria-label="${o.likedId ? "Liked" : "Like this outfit"}">${ICON_HEART}</button>
+          <button class="btn rate${o.stars ? "" : " icon-btn"}" data-rate="${i}" aria-pressed="${!!o.stars}" aria-expanded="${!!o.rating}" aria-label="${o.stars ? `Rated ${o.stars} stars, change` : "Rate this outfit"}">${o.stars ? `★ ${o.stars}` : "☆"}</button>
           <button class="btn ghost" data-skip="${i}">Not for me</button>
-        </div>`}
+        </div>
+        ${o.rating ? starPicker(`o|${i}`, o.stars) : ""}`}
   </article>`;
 }
 function aiCard() {
@@ -2648,7 +2761,7 @@ function filteredItems() {
   const { q, slot, cat, color, style, sort } = state.filters;
   const ql = q.trim().toLowerCase();
   const list = state.items.filter((i) =>
-    (slot === "all" || (slot === "fav" ? i.favorite : slot === "wash" ? i.wash : slotOf(i) === slot)) &&
+    (slot === "all" || (slot === "fav" ? isFavourite(i) : slot === "wash" ? i.wash : slot === "disliked" ? i.disliked : slotOf(i) === slot)) &&
     (cat === "all" || i.category === cat) &&
     (color === "all" || (i.colors || []).includes(color)) &&
     (style === "all" || (i.styles || []).includes(style)) &&
@@ -2678,6 +2791,7 @@ function renderWardrobe() {
         <button class="chip" aria-pressed="${f.slot === "all"}" data-slot="all">All</button>
         <button class="chip" aria-pressed="${f.slot === "fav"}" data-slot="fav">★ Favourites</button>
         ${washing || f.slot === "wash" ? `<button class="chip" aria-pressed="${f.slot === "wash"}" data-slot="wash">In the wash <span class="muted">${washing}</span></button>` : ""}
+        ${state.items.some((i) => i.disliked) || f.slot === "disliked" ? `<button class="chip" aria-pressed="${f.slot === "disliked"}" data-slot="disliked">Disliked <span class="muted">${state.items.filter((i) => i.disliked).length}</span></button>` : ""}
         ${Object.entries(SLOTS).map(([k, l]) => `<button class="chip" aria-pressed="${f.slot === k}" data-slot="${k}">${l}</button>`).join("")}
       </div>
       ${(() => {
@@ -2696,7 +2810,7 @@ function renderWardrobe() {
 function itemTile(i) {
   const sub = [i.brand, (i.styles || []).slice(0, 1).map(styleLabel)[0]].filter(Boolean).join(" · ") || catLabel(i.category);
   return `<button class="item" data-item="${i.id}">
-    <div class="pic${i.wash ? " washing" : ""}"><img class="thumb pic-bg" loading="lazy" src="${photoURL(i.photos?.[0])}" alt="">${i.favorite ? '<span class="fav">★</span>' : ""}${i.wash ? '<span class="wash-badge">In the wash</span>' : ""}</div>
+    <div class="pic${i.wash ? " washing" : ""}"><img class="thumb pic-bg" loading="lazy" src="${photoURL(i.photos?.[0])}" alt="">${isFavourite(i) ? `<span class="fav">★ ${starsOf(i)}</span>` : ""}${i.wash ? '<span class="wash-badge">In the wash</span>' : ""}</div>
     <div class="meta"><span class="name">${esc(i.name)}</span><span class="info">${swatches(i.colors)} ${esc(sub)}</span></div>
   </button>`;
 }
@@ -2716,6 +2830,11 @@ function openItem(id, showOriginal = false) {
       <div><h1 style="font-size:28px">${esc(i.name)}</h1><p class="sub">${esc([catLabel(i.category), i.brand].filter(Boolean).join(" · "))}${b?.tier ? ` · <span class="tier">${TIER_LABEL[b.tier]}</span>` : ""}</p></div>
       <button class="btn icon-btn ghost" data-close aria-label="Close"><svg viewBox="0 0 24 24"><path d="M6 6l12 12M18 6 6 18"/></svg></button>
     </div>
+    <div class="row item-rate">
+      ${starPicker(`i|${i.id}`, starsOf(i) || 0)}
+      <button class="btn" data-dislike="${i.id}" aria-pressed="${!!i.disliked}">${i.disliked ? "Disliked" : "Dislike"}</button>
+      ${i.disliked ? `<span class="muted small">Left out of outfit ideas. You can still build outfits around it.</span>` : ""}
+    </div>
     <div class="gallery">${pics.map((p) => `<img class="pic-bg" src="${photoURL(p)}" alt="">`).join("")}</div>
     ${i.originals?.length ? `<div class="row" style="margin-top:10px"><button class="chip" data-orig="${i.id}" data-show="${showOriginal ? 0 : 1}">${showOriginal ? "Show cut-out" : "Show original photo"}</button></div>` : ""}
     <div class="kv" style="margin:18px 0">
@@ -2734,7 +2853,6 @@ function openItem(id, showOriginal = false) {
     ${i.notes ? `<p>${esc(i.notes)}</p>` : ""}
     <div class="row">
       <button class="btn primary" data-wear-item="${i.id}">Wearing it today</button>
-      <button class="btn" data-fav="${i.id}">${i.favorite ? "★ Favourite" : "☆ Favourite"}</button>
       <button class="btn" data-wash="${i.id}" aria-pressed="${!!i.wash}">${i.wash ? "Back from the wash" : "In the wash"}</button>
       ${CORE.includes(roleOf(i)) && !i.wash ? `<button class="btn" data-anchor="${i.id}">Build outfits with it</button>` : ""}
       <button class="btn" data-pair="${i.id}">What goes with it?</button>
@@ -4701,6 +4819,7 @@ function renderSettings() {
           return `<p class="muted small" style="margin:0">The stylist must follow the fashion bible: ${b.rules.length} checked rules and ${b.tips.length} tips${n ? ` learnt from ${n} magazine, article and video sources` : ""}${acc != null ? `, right on ${Math.round(acc * 100)}% of example outfits it hadn't seen` : ""}. Outfit ideas that break an important rule only appear when nothing else is left, and every question to the AI stylist carries the rules and the tips that fit it. Updated ${esc(String(b.built_at).slice(0, 10))}.</p>`;
         })()}
       </section>
+      ${tasteCard()}
       <section class="card stack">
         <h2 style="margin:0">Look</h2>
         <div class="chips">${[["auto", "Match system"], ["dark", "Dark"], ["light", "Light"]].map(([k, l]) => `<button class="chip" aria-pressed="${s.theme === k}" data-theme="${k}">${l}</button>`).join("")}</div>
@@ -4717,12 +4836,33 @@ function renderSettings() {
           <button class="btn" data-act="seed">Load sample wardrobe</button>
           <button class="btn" data-act="export">Export backup</button>
           <button class="btn" data-act="import">Import backup</button>
-          ${state.log.some((l) => logKind(l) !== "wear") ? `<button class="btn" data-act="forget-taste">Forget likes and skips</button>` : ""}
           <button class="btn ghost danger" data-act="wipe">Erase everything</button>
         </div>
         <p class="muted small" style="margin:0">${syncLine()}</p>
       </section>
     </div>`;
+}
+
+// Settings: what outfit ideas have learnt from your wears, stars and dislikes.
+const traitLabel = (k) => {
+  const [kind, v] = [k.slice(0, k.indexOf(":")), k.slice(k.indexOf(":") + 1)];
+  return { colour: () => `${cap(v)} pieces`, type: () => catLabel(v), fit: () => `${FITS[v]?.label || cap(v)} fit`, style: () => styleLabel(v) }[kind]?.() || v;
+};
+function tasteCard() {
+  const t = taste();
+  // Only what at least two rated pieces have in common
+  const traits = Object.entries(t.traits).filter(([k]) => t.traitN[k] >= 2).sort((a, b) => b[1] - a[1]);
+  const high = traits.filter(([, v]) => v >= 0.4).slice(0, 5).map(([k]) => traitLabel(k));
+  const low = traits.filter(([, v]) => v <= -0.4).reverse().slice(0, 5).map(([k]) => traitLabel(k));
+  const disliked = state.items.filter((i) => i.disliked);
+  return `<section class="card stack">
+    <h2 style="margin:0">Your taste</h2>
+    <p class="muted small" style="margin:0">${esc(tasteLine())} It all stays in your wardrobe's data: no AI tokens. Outfit ideas still follow the fashion bible first.</p>
+    ${high.length ? `<div class="field"><label>You rate highly</label><div class="chips">${high.map((x) => `<span class="chip">${esc(x)}</span>`).join("")}</div></div>` : ""}
+    ${low.length ? `<div class="field"><label>Less keen on</label><div class="chips">${low.map((x) => `<span class="chip">${esc(x)}</span>`).join("")}</div></div>` : ""}
+    ${disliked.length ? `<div class="field"><label>Disliked: left out of ideas</label><div class="pieces mini">${disliked.map(pieceTile).join("")}</div></div>` : ""}
+    ${state.log.some((l) => logKind(l) !== "wear") ? `<div class="row"><button class="btn" data-act="forget-taste">Forget outfit ratings, likes and skips</button></div>` : ""}
+  </section>`;
 }
 
 /* ======================================================================
@@ -5052,10 +5192,16 @@ document.addEventListener("click", async (e) => {
   }
   if (ds.toggle) { state.settings[ds.toggle] = !state.settings[ds.toggle]; await saveSettings(); return render(); }
   if (ds.provider) { state.settings.aiProvider = ds.provider; await saveSettings(); return render(); }
-  if (ds.like != null) {
-    const o = state.outfits[+ds.like];
-    if (o.likedId) { await dropLog(o.likedId); o.likedId = null; }
-    else { o.likedId = (await addLog({ kind: "like", itemIds: Object.values(o.pieces).filter(Boolean).map((p) => p.id), ...outfitContext(), source: "idea" })).id; toast("Liked. More ideas like this one."); }
+  if (ds.rate != null) { const o = state.outfits[+ds.rate]; o.rating = !o.rating; return render(); }
+  if (ds.stars) return rate(...ds.stars.split("|"));
+  if (ds.dislike) {
+    const it = state.items.find((i) => i.id === ds.dislike);
+    if (it.disliked) delete it.disliked; else it.disliked = true;
+    await store.put("items", it);
+    tasteMemo = null;
+    state.outfits = [];
+    toast(it.disliked ? "Left out of outfit ideas" : "Back in outfit ideas");
+    openItem(it.id);
     return render();
   }
   if (ds.likeids) {
@@ -5119,13 +5265,6 @@ document.addEventListener("click", async (e) => {
     it.fit = it.fit === fit ? "" : fit;
     await store.put("items", it);
     state.outfits = [];
-    openItem(it.id);
-    return render();
-  }
-  if (ds.fav) {
-    const it = state.items.find((i) => i.id === ds.fav);
-    it.favorite = !it.favorite;
-    await store.put("items", it);
     openItem(it.id);
     return render();
   }
@@ -5262,10 +5401,11 @@ document.addEventListener("click", async (e) => {
     case "look": return makeLook();
     case "forget-taste": {
       const learnt = state.log.filter((l) => logKind(l) !== "wear");
-      if (!(await confirmBox(`Forget ${learnt.length} likes and skips? What you wore stays.`, "Forget them"))) return render();
+      if (!(await confirmBox(`Forget ${learnt.length} outfit ratings, likes, skips and swaps? What you wore and the stars on your pieces stay.`, "Forget them"))) return render();
       for (const l of learnt) await dropLog(l.id);
+      tasteMemo = null;
       state.outfits = [];
-      toast("Likes and skips forgotten");
+      toast("Outfit ratings, likes and skips forgotten");
       return render();
     }
     case "ask": return ask($('[data-input="ask"]')?.value);
