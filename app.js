@@ -2088,8 +2088,8 @@ function toGeminiSchema(s) {
   return out;
 }
 // `search`: let Gemini look things up with Google Search (shops in a mall, real products);
-// `onSources` then gets the web pages it used ({ uri, title }).
-async function geminiGenerate({ system, text, image, schema, maxTokens, search, urlContext, onSources }) {
+// `onSources` then gets the web pages it used ({ uri, title }). `wait`: give up after that many ms.
+async function geminiGenerate({ system, text, image, schema, maxTokens, search, urlContext, onSources, wait }) {
   const { geminiKey, geminiModel } = state.settings;
   const parts = [];
   if (image) parts.push({ inline_data: { mime_type: "image/jpeg", data: await blobToBase64(image) } });
@@ -2106,12 +2106,14 @@ async function geminiGenerate({ system, text, image, schema, maxTokens, search, 
   };
   const model = encodeURIComponent(geminiModel || "gemini-flash-latest");
   // With the key saved on the server, the request goes through it and this device never holds the key.
+  const signal = () => (wait && AbortSignal.timeout ? { signal: AbortSignal.timeout(wait) } : {});
   const call = (b) => state.serverKeys.gemini
-    ? fetch(`api/ai/gemini/${model}`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(b) })
+    ? fetch(`api/ai/gemini/${model}`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(b), ...signal() })
     : fetch(`https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent`, {
       method: "POST",
       headers: { "Content-Type": "application/json", "x-goog-api-key": geminiKey },
       body: JSON.stringify(b),
+      ...signal(),
     });
   let res = await call(body);
   if (res.status === 400) {
@@ -2198,6 +2200,7 @@ async function aiGenerate(opts) {
     return await (state.settings.aiProvider === "claude" ? claudeGenerate(opts) : geminiGenerate(opts));
   } catch (e) {
     if (e instanceof TypeError && /fetch|network|load failed/i.test(e.message)) throw new Error(`Couldn't reach ${aiName()}. Check the internet connection and try again.`);
+    if (e?.name === "TimeoutError") throw new Error(`${aiName()} took too long to answer.`);
     throw e;
   }
 }
@@ -3319,7 +3322,8 @@ async function readTagText(file) {
 // The shop's page for the piece on the label: { page, ref, link, why }. Tries the QR link,
 // then a link built from the reference, then Google Shopping, then the AI with Google Search.
 // `why` says what went wrong when no page could be read.
-async function findProduct(codes, tag, step) {
+// What a label points to: its QR link, reference, brand, and the product page they give.
+function labelTarget(codes, tag) {
   const qrLink = Label.linkIn(codes.qr);
   const said = tag?.brand || "";
   const ref = Label.refFrom(tag?.reference, said) || Label.refInUrl(qrLink) || Label.refFromCode(codes.barcode) || (!qrLink && Label.refFrom(codes.qr, said)) || null;
@@ -3327,8 +3331,12 @@ async function findProduct(codes, tag, step) {
   // A Pull&Bear tag's QR stands for the tag, not a page: its reference says which page.
   const fromCode = !!(Label.refInUrl(qrLink) || Label.refFromCode(codes.barcode));
   const built = Label.shopUrl(brand || qrLink || (fromCode && !brand ? "Pull&Bear" : ""), ref, state.settings.region);
+  return { qrLink, ref, brand, built, link: built || (Label.isTagLink(qrLink) ? "" : qrLink) };
+}
+async function findProduct(codes, tag, step) {
+  const { qrLink, ref, brand, built } = labelTarget(codes, tag);
   let best = null, why = "";
-  const code = ref ? ref.model + ref.colour : "";
+  const code = Label.photoCode(ref);
   const open = async (url) => {
     let page = await pageInfo(url, 45000, code);
     if (!page?.image && !page?.noServer) page = (await microlinkInfo(url)) || page;
@@ -3344,7 +3352,7 @@ async function findProduct(codes, tag, step) {
   for (const url of [...new Set([Label.isTagLink(qrLink) ? "" : qrLink, built].filter(Boolean))]) if (await open(url)) return done();
   const words = [brand, tag?.name, ref?.text || tag?.reference].filter(Boolean).join(" ");
   if (!tag?.name && !ref && !tag?.reference) return done(); // nothing to look for
-  if (productsOn() && brand) {
+  if (productsOn() && brand && !built) { // a built link is the exact page; Shopping can't search by reference
     step("Looking it up on Google Shopping…");
     const it = state.settings.region === "it";
     const r = await fetch(`api/products?${new URLSearchParams({ q: words, gl: it ? "it" : "us", hl: it ? "it" : "en" })}`).catch(() => null);
@@ -3371,7 +3379,7 @@ async function findProduct(codes, tag, step) {
 // that turn the app's server away. Asked from this device, so the 50 are this device's own.
 async function microlinkInfo(url) {
   try {
-    const r = await fetch(`https://api.microlink.io/?${new URLSearchParams({ url })}`, AbortSignal.timeout ? { signal: AbortSignal.timeout(20000) } : {});
+    const r = await fetch(`https://api.microlink.io/?${new URLSearchParams({ url })}`, AbortSignal.timeout ? { signal: AbortSignal.timeout(12000) } : {});
     const d = (await r.json()).data;
     const image = /^https:\/\//.test(d?.image?.url || "") ? d.image.url : "";
     if (!image) return null;
@@ -3400,19 +3408,21 @@ function wardrobeColour(text, category) {
 // What the AI finds about the product (the label rarely says the material or the fit). Shops
 // like Pull&Bear hide their pages from servers, so Gemini also searches Google for it, with
 // whatever the shop's page showed as a start (about 1,500 tokens). Claude reads the page only.
+const searchesWeb = () => state.settings.aiProvider !== "claude" && !state.previewAI;
 async function productDetails(page, link, tag, ref) {
-  const what = [tag?.brand, ref?.text && `reference ${ref.text}`].filter(Boolean).join(", ");
+  const what = [tag?.brand, Label.refWords(ref)].filter(Boolean).join(", ");
   const ask = "Reply with exactly these lines, in English, leaving a value empty when no source says it:\n" +
     "name: <product name as the shop writes it>\nbrand: <brand>\ntype: <garment type, e.g. jeans, hoodie>\ncolour: <colour>\nfit: <e.g. baggy, slim, regular>\n" +
     "material: <composition, e.g. 100% cotton>\ndescription: <one short sentence about the piece>\nprice: <price with currency>";
   const shown = page?.text ? page.text.slice(0, 4000) : [page?.title, page?.description].filter(Boolean).join("\n");
   let text;
-  if (state.settings.aiProvider !== "claude" && !state.previewAI && (link || what)) {
+  if (searchesWeb() && (link || what)) {
     const open = !!link && !page?.text; // the page's own text is better than Gemini's try at opening it
     const q = {
       system: "You find a clothing product's details for a wardrobe app. Search Google for the product (its reference and name)" + (open ? " and open its page with URL context" : "") + ". Never guess: leave a value empty if no source says it. Plain text only, no markdown.",
       text: `Product page: ${link || "unknown"}${what ? `\n(${what})` : ""}${shown ? `\nWhat the shop's page showed (it may be incomplete):\n${shown}` : ""}\n\n${ask}${open ? "\nphotos: <full addresses of the product's photos on the page, space separated>" : ""}`,
       maxTokens: 450,
+      wait: 30000, // opening a page that turns Google away can hang
     };
     text = await aiGenerate({ ...q, search: true, urlContext: open }).catch(() => aiGenerate({ ...q, search: true }));
   } else if (shown) {
@@ -3441,7 +3451,7 @@ const PIECE_SCHEMA = {
 };
 // A candidate photo is { url, thumb }: thumb is Google's small copy, used if the shop's won't load.
 const shopPhoto = async (x) => (await productPhoto(x.url)) || (x.thumb ? await productPhoto(x.thumb) : null);
-async function pieceOnlyPhotos(list) {
+async function pieceOnlyPhotos(list, colour = "") {
   const got = (await Promise.all(list.slice(0, 8).map(async (x) => ({ url: x.url, blob: await shopPhoto(x) })))).filter((x) => x.blob);
   if (!got.length) return null; // none could be loaded: not the same as "all worn"
   const cols = Math.min(4, got.length), w = 240, h = 320;
@@ -3461,7 +3471,7 @@ async function pieceOnlyPhotos(list) {
   }
   const text = await aiGenerate({
     system: "You sort a clothing shop's product photos for a wardrobe app. Reply with JSON only.",
-    text: `These are ${got.length} numbered photos of one product. Which show the garment alone, not worn by anyone?`,
+    text: `These are ${got.length} numbered photos of one product. Which show the garment alone, not worn by anyone, and in ${colour || "the same colour as photo 1"}? Shops also show the other colours: leave those out.`,
     image: await canvasBlob(c, "image/jpeg", 0.85),
     schema: PIECE_SCHEMA,
     maxTokens: 60,
@@ -3483,10 +3493,11 @@ function photoCandidates(urls, ref) {
 // The shop's own photos of a reference, through Google Images, for shops that show their pages
 // to no server (one search, kept two weeks on the server). Only photos named after the
 // reference, or from its product page, so they're surely this piece in this colour.
-async function galleryPhotos(ref, brand) {
+async function galleryPhotos(ref, brand, name = "") {
   if (!productsOn() || !ref?.colour) return [];
   const it = state.settings.region === "it";
-  for (const q of [`${brand} ${ref.model}${ref.colour}`, `${brand} ${ref.text}`]) {
+  // By reference first; then by the shop's product name, still keeping only this reference's photos.
+  for (const q of [`${brand} ${ref.model}${ref.colour}`, `${brand} ${ref.text}`, name && `${brand} ${name}`].filter(Boolean)) {
     const r = await fetch(`api/photos?${new URLSearchParams({ q: q.trim(), gl: it ? "it" : "us", hl: it ? "it" : "en" })}`).catch(() => null);
     const j = await r?.json().catch(() => null);
     if (!r?.ok) {
@@ -3507,7 +3518,7 @@ async function useShopPhotos(d, list, { site, ref, colour, replace, step }) {
   let chosen = null;
   if (aiReady()) {
     step("Picking the photos of the piece on its own…");
-    chosen = await pieceOnlyPhotos(list).catch(() => null);
+    chosen = await pieceOnlyPhotos(list, colour).catch(() => null);
   }
   if (!chosen) { // no AI to tell worn photos apart (or it failed): the shop's main photo
     step("Getting the shop's photo…");
@@ -3534,7 +3545,7 @@ async function useShopPhotos(d, list, { site, ref, colour, replace, step }) {
 // Google Lens: you chose that product). Returns the colour the shop gives, in wardrobe terms.
 function fillFromProduct(d, { tag: r, page, info, ref, link, qr = "", override = false }) {
   const title = Label.cleanTitle(page?.title, r?.brand || page?.brand || info?.brand || "");
-  const name = override ? info?.name || title : title || info?.name || "";
+  const name = override ? info?.name || title : title || info?.name || r?.name || "";
   const words = Label.toEnglish(`${info?.type || ""} ${name}`);
   const about = `${words} ${Label.toEnglish(info?.fit)} ${Label.toEnglish(page?.description)} ${Label.toEnglish(info?.description)}`;
   // What the label says comes first, then the product page.
@@ -3545,8 +3556,7 @@ function fillFromProduct(d, { tag: r, page, info, ref, link, qr = "", override =
   const cat = CAT[r?.category] ? r.category : kind?.[1];
   if (cat && (override || !d.category)) { d.category = cat; d.warmth = CAT[cat].warmth; }
   // The wardrobe's own simple name ("Light blue Pull&Bear jeans") is kept: shops' product
-  // names often don't fit. The shop's name is only used when the type is unknown.
-  if (!d.name && !d.category && (name || r?.name)) d.name = cap((name || r.name).trim());
+  // names often don't fit, so the shop's name goes in the notes.
   const fit = Label.fitIn(about);
   if (fit && (override || !d.fit)) d.fit = fitsFor(d).includes(fit) ? fit : fit === "baggy" && fitsFor(d).includes("oversized") ? "oversized" : fit === "oversized" && fitsFor(d).includes("baggy") ? "baggy" : d.fit;
   const pagePrice = [page?.price, info?.price].find((p) => /\d/.test(p || "")) || "";
@@ -3578,19 +3588,26 @@ async function scanTag(d, file) {
     const r = tag?.error ? null : tag;
     if (r && !r.brand) r.brand = Label.brandOfRef(Label.refFrom(r.reference)); // H&M: no brand on the tag
     let found = { page: null, ref: Label.refFrom(r?.reference, r?.brand), why: "" };
+    // Gemini looks the product up on Google while the shop's page opens: shops that turn the
+    // server away take half a minute to give up.
+    const t = labelTarget(codes, r);
+    const early = aiReady() && searchesWeb() && (t.link || (t.ref && t.brand)) ? productDetails(null, t.link, r, t.ref).catch((e) => ({ error: e.message })) : null;
     try { found = await findProduct(codes, r, step); } catch (e) { if (e.noServer) found.why = e.message; }
     const page = found.page;
     let info = null;
-    if (aiReady() && (page || found.link || (found.ref && r?.brand))) {
+    if (early || (aiReady() && (page || found.link || (found.ref && r?.brand)))) {
       step("Reading the product details…");
-      info = await productDetails(page, found.link, r, found.ref).catch(() => null);
+      info = await (early || productDetails(page, found.link, r, found.ref).catch((e) => ({ error: e.message })));
     }
+    const lookupError = info?.error || "";
+    if (lookupError) info = null;
     const colour = fillFromProduct(d, { tag: r, page, info, ref: found.ref, link: found.link, qr });
-    const known = page?.title || info?.name;
+    const known = Label.cleanTitle(page?.title) || info?.name || page?.image; // the page may give a photo but no name
     // Said under the Label button until the next scan, so it isn't missed like a toast.
     d.labelNote = known ? "" : [
       found.ref || qr ? `Couldn't open the product page${found.why ? ` (${found.why.replace(/\.$/, "")})` : ""}.` : "No QR code or reference found on that photo. Try again closer, with the QR code and the ART./REF number sharp.",
       tag?.error ? `${aiName()} couldn't read the printed text: ${tag.error}` : "",
+      lookupError ? `${aiName()} couldn't look it up: ${lookupError}` : "",
       found.ref ? `Reference ${found.ref.text}.` : "",
     ].filter(Boolean).join(" ");
     if (colour && (fresh || !d.colors.length)) d.colors = [colour];
@@ -3600,7 +3617,7 @@ async function scanTag(d, file) {
       let list = photoCandidates([...(page?.images || []), ...(info?.photos || [])], found.ref);
       if (list.length < 3 && found.ref && productsOn()) { // a page shares one or two photos; Google has the whole gallery
         step("Finding the shop's photos on Google…");
-        const more = (await galleryPhotos(found.ref, d.brand)).filter((x) => !list.some((y) => y.url.split("?")[0] === x.url.split("?")[0]));
+        const more = (await galleryPhotos(found.ref, d.brand, info?.name)).filter((x) => !list.some((y) => y.url.split("?")[0] === x.url.split("?")[0]));
         list = [...list, ...more];
       }
       const note = list.length
@@ -3609,6 +3626,20 @@ async function scanTag(d, file) {
         : productsOn() ? "Google has no photos of this one yet: take a photo of the piece, then Google Lens can find its shop photos."
         : "The shop doesn't show its photos to the app's server. With the free SerpApi key on the server (see Settings > Look) they come through Google instead. For now, take a photo of the piece.";
       if (note) d.labelNote = [d.labelNote, note].filter(Boolean).join(" ");
+      // The shop's page and Google said too little: the AI looks at the shop's photo instead,
+      // as it does for your own photos (about 600 tokens).
+      if (d.photos[0]?.shop && (!d.category || !colour) && aiReady() && draft === d) {
+        d.scanningTag = true;
+        step("Recognising the piece in the photo…");
+        const t = await aiTagPhoto(d.photos[0].orig).catch(() => null);
+        if (t && draft === d) {
+          if (!d.category && CAT[t.category]) { d.category = t.category; d.warmth = CAT[t.category].warmth; }
+          if (!d.fit && FITS[t.fit] && fitsFor(d).includes(t.fit)) d.fit = t.fit;
+          const cols = (t.colors || []).filter((c) => COLORS[c]).slice(0, 3);
+          if (!colour && cols.length) { d.colors = cols; d.keepColors = true; } // better than the pixels: navy isn't black
+          refreshStyles();
+        }
+      }
     }
     if (draft === d) {
       const what = [d.name || autoName(d) || d.brand, (page?.site || found.link) && `from ${page?.site || Label.siteOf(found.link)}`].filter(Boolean).join(" ");
@@ -3671,7 +3702,7 @@ async function pickLens(d, k) {
     const ref = Label.refInUrl(m.url);
     const site = m.shop || Label.siteOf(m.url);
     step("Opening the product page…");
-    const got = await pageInfo(m.url, 20000, ref?.colour ? ref.model + ref.colour : ""); // shops that block the server are skipped after 20 s
+    const got = await pageInfo(m.url, 20000, ref?.colour ? Label.photoCode(ref) : ""); // shops that block the server are skipped after 20 s
     const lensPage = { url: m.url, title: m.title, image: m.image, images: [m.image].filter(Boolean), price: m.price, site, description: "" };
     const page = got?.title ? { ...lensPage, ...got, images: [...(got.images || []), ...lensPage.images], price: got.price || m.price, site: got.site || site } : lensPage;
     let info = null;
