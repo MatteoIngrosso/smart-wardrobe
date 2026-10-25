@@ -49,6 +49,11 @@ export const isPullBear = (s) => /pull(and)?bear/.test(norm(s));
 export const isHM = (s) => norm(s) === "hm" || /hennes|^(https?)?(www2?)?hmcom/.test(norm(s));
 // The brand a reference gives away when the tag doesn't print one (H&M's article line).
 export const brandOfRef = (ref) => (ref?.shop === "hm" ? "H&M" : "");
+// The code a shop's photo names hold, for the server to pick the product's photos from a page:
+// Inditex model and colour; none for H&M, whose photo names are random.
+export const photoCode = (ref) => (ref?.model && ref.shop !== "hm" ? ref.model + ref.colour : "");
+// How to search for a reference: H&M writes its article number as one, e.g. "1101074049".
+export const refWords = (ref) => (!ref ? "" : ref.shop === "hm" ? `article number ${ref.model}${ref.colour}` : `reference ${ref.text}`);
 
 // The product page a reference leads to, for shops whose links can be built from it.
 // The words before "-l…" don't matter to the shop, so any name works.

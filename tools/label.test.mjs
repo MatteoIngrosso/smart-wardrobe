@@ -112,6 +112,18 @@ test("shop names drop www2 too", () => {
   assert.equal(L.siteOf("https://www2.hm.com/it_it/productpage.1101074049.html"), "hm.com");
 });
 
+test("what to send for a reference", () => {
+  const hm = L.refFrom("1101074 049 73 4 5828");
+  const pb = L.refFrom("REF 7660/508/434");
+  assert.equal(L.photoCode(hm), "", "H&M photo names don't hold the article");
+  assert.equal(L.photoCode(pb), "07660508434");
+  assert.equal(L.photoCode(L.refFrom("7683/515")), "07683515");
+  assert.equal(L.photoCode(null), "");
+  assert.equal(L.refWords(hm), "article number 1101074049");
+  assert.equal(L.refWords(pb), "reference 7660/508/434");
+  assert.equal(L.refWords(null), "");
+});
+
 test("AI answer schemas never offer an empty choice", () => {
   // Gemini turns the whole request down ("enum[n]: cannot be empty"), so the tag was never read.
   const app = readFileSync(new URL("../app.js", import.meta.url), "utf8");
