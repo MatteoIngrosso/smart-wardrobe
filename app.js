@@ -192,17 +192,21 @@ const SEED_VERSION = 3;
    Storage (IndexedDB)
    ====================================================================== */
 const db = await new Promise((resolve, reject) => {
-  const req = indexedDB.open("smart-wardrobe", 3);
+  const req = indexedDB.open("smart-wardrobe", 4);
   req.onupgradeneeded = () => {
     const d = req.result;
-    // Version 2 adds "wants": Must-Buy, and suggestions you said no to. Version 3: "events".
-    for (const [name, opts] of [["items", { keyPath: "id" }], ["log", { keyPath: "id", autoIncrement: true }], ["kv"], ["wants", { keyPath: "id" }], ["events", { keyPath: "id" }]]) {
+    // Version 2 adds "wants": Must-Buy, and suggestions you said no to. Version 3: "events". Version 4: "scents".
+    for (const [name, opts] of [["items", { keyPath: "id" }], ["log", { keyPath: "id", autoIncrement: true }], ["kv"], ["wants", { keyPath: "id" }], ["events", { keyPath: "id" }], ["scents", { keyPath: "id" }]]) {
       if (!d.objectStoreNames.contains(name)) d.createObjectStore(name, opts);
     }
   };
+  // An older copy of the app open in another tab holds the old version until it's closed.
+  req.onblocked = () => document.body.insertAdjacentHTML("afterbegin", `<p class="muted" style="position:fixed;inset:16px auto auto 16px;z-index:9">Updating. Close Smart Wardrobe in your other tabs or windows to finish.</p>`);
   req.onsuccess = () => resolve(req.result);
   req.onerror = () => reject(req.error);
 });
+// A newer copy of the app opened elsewhere needs the database: step aside and reload as that version.
+db.onversionchange = () => { db.close(); location.reload(); };
 function tx(store, mode, fn) {
   return new Promise((resolve, reject) => {
     const t = db.transaction(store, mode);
@@ -219,7 +223,7 @@ const raw = {
   get: (s, k) => tx(s, "readonly", (o) => o.get(k)),
   clear: (s) => tx(s, "readwrite", (o) => o.clear()),
 };
-// Same as `raw`, but changes to shared records (pieces, wear log, Must-Buy, wishlist) are
+// Same as `raw`, but changes to shared records (pieces, fragrances, wear log, Must-Buy, events) are
 // also queued for the other devices (see Sync below).
 const store = {
   all: raw.all,
@@ -260,6 +264,9 @@ const state = {
   wishlist: [], // before Must-Buy: moved into `wants` once (see moveWishlist)
   audit: null, // shared: the last full audit { at, items, summary, ideas }
   events: [], // shared: events you're dressing for (see Events)
+  scents: [], // shared: the fragrance cabinet (see Wardrobe > Fragrances)
+  wardSide: "clothes", // Wardrobe shows "clothes" or "scents"
+  scentFilter: "all",
   wants: [], // shared: every suggestion you answered: Must-Buy (yes), no, bought (see Must-Buy)
   whyNo: null, // the suggestion whose "Why not?" is open
   buying: null, // the Must-Buy piece you tapped "Bought it" on: the next piece you add starts as it
@@ -295,6 +302,7 @@ async function loadAll() {
   state.log = (await store.all("log")) || [];
   state.wants = (await store.all("wants")) || [];
   state.events = (await store.all("events")) || [];
+  state.scents = (await store.all("scents")) || [];
   Object.assign(state.settings, (await store.get("kv", "settings")) || {});
   for (const [k, empty] of Object.entries(SHARED_KV)) state[k] = (await store.get("kv", k)) ?? empty();
   state.cal = { ...state.cal, ...((await raw.get("kv", "calEvents")) || {}), loading: false };
@@ -320,7 +328,7 @@ const saveAudit = () => store.put("kv", state.audit, "audit");
    Each device keeps its full copy in IndexedDB, so it works offline. When the
    app is opened through server.py, changes go to the computer running it and
    come back to the other devices through a long-poll, within a second or two.
-   - pieces, the wear log, Must-Buy, calendar links and a planned outfit are shared;
+   - pieces, fragrances, the wear log, Must-Buy, events, calendar links and a planned outfit are shared;
      settings and keys are not
    - the newest change to a record wins
    - photos are uploaded once, keyed by a hash of their bytes
@@ -342,7 +350,7 @@ const SYNC_STATE = "sync";
 // Shared values kept under "kv", and what each is when there's nothing yet.
 const SHARED_KV = { wishlist: () => [], calendar: () => ({ links: [], occ: {} }), plan: () => null, audit: () => null };
 function syncKey(s, k) {
-  if (s === "items" || s === "log" || s === "wants" || s === "events") return `${s}/${k}`;
+  if (["items", "log", "wants", "events", "scents"].includes(s)) return `${s}/${k}`;
   return s === "kv" && Object.hasOwn(SHARED_KV, k) ? `kv/${k}` : null;
 }
 const splitKey = (key) => { const i = key.indexOf("/"); return [key.slice(0, i), key.slice(i + 1)]; };
@@ -491,6 +499,14 @@ async function applyRecords(records) {
         await raw.put("items", it);
         if (at >= 0) state.items[at] = it; else { state.items.push(it); newSet = true; }
       }
+    } else if (rec.col === "scents") {
+      const at = state.scents.findIndex((x) => x.id === rec.id);
+      if (rec.deleted) { await raw.del("scents", rec.id); if (at >= 0) state.scents.splice(at, 1); }
+      else {
+        const sc = await unpackBlobs(rec.data);
+        await raw.put("scents", sc);
+        if (at >= 0) state.scents[at] = sc; else state.scents.push(sc);
+      }
     } else if (rec.col === "log" || rec.col === "wants" || rec.col === "events") {
       const list = state[rec.col];
       const at = list.findIndex((l) => l.id === rec.id);
@@ -547,6 +563,7 @@ async function joinServer() {
   for (const l of state.log) if (!onServer.has(`log/${l.id}`)) await syncTouch(`log/${l.id}`, false);
   for (const w of state.wants) if (!onServer.has(`wants/${w.id}`)) await syncTouch(`wants/${w.id}`, false);
   for (const e of state.events) if (!onServer.has(`events/${e.id}`)) await syncTouch(`events/${e.id}`, false);
+  for (const sc of state.scents) if (!onServer.has(`scents/${sc.id}`)) await syncTouch(`scents/${sc.id}`, false);
   const sw = onServer.get("kv/wishlist");
   const theirs = sw && !sw.deleted ? sw.data || [] : [];
   const mine = state.wishlist.filter((w) => !theirs.some((t) => t.title === w.title));
@@ -1869,8 +1886,8 @@ async function setWash(items, on) {
   if (on && items.some((i) => i.id === state.anchor)) state.anchor = null;
   state.outfits = [];
 }
-// Stars on an outfit idea ("o"), a piece ("i") or the outfit you wore ("w"; 0 = skip the question).
-// Outfit ratings go in the wear log (kind "rate"), piece ratings on the piece.
+// Stars on an outfit idea ("o"), a piece ("i"), a fragrance ("s") or the outfit you wore ("w"; 0 = skip the question).
+// Outfit ratings go in the wear log (kind "rate"), piece and fragrance ratings on the piece or bottle.
 async function rate(kind, ref, n) {
   n = +n;
   tasteMemo = null;
@@ -1896,6 +1913,16 @@ async function rate(kind, ref, n) {
     await store.put("items", it);
     state.outfits = [];
     openItem(it.id);
+    return render();
+  }
+  if (kind === "s") {
+    const sc = state.scents.find((x) => x.id === ref);
+    if (!sc) return render();
+    const stars = starsOf(sc) === n ? 0 : n;
+    if (stars) sc.rating = stars; else delete sc.rating;
+    sc.ratedAt = new Date().toISOString();
+    await store.put("scents", sc);
+    openScent(sc.id);
     return render();
   }
   const wear = state.log.find((l) => l.id === ref);
@@ -2583,6 +2610,7 @@ let draft = null; // item being added / edited
 
 function go(v) {
   if (v === "wardrobe") state.wardView = null;
+  if (v !== "add" && scentDraft && !scentDraft.id && !scentDraft.name.trim() && !scentDraft.photos.length) scentDraft = null; // started, nothing in it
   view = v;
   document.querySelectorAll(".tab").forEach((b) => (b.dataset.view === v ? b.setAttribute("aria-current", "page") : b.removeAttribute("aria-current")));
   render();
@@ -2821,6 +2849,7 @@ function filteredItems() {
 }
 function renderWardrobe() {
   if (state.wardView === "report") return renderReport();
+  if (state.wardSide === "scents") return renderCabinet();
   const list = filteredItems();
   const usedColors = [...new Set(state.items.flatMap((i) => i.colors || []))];
   const usedStyles = Object.keys(STYLES).filter((s) => state.items.some((i) => (i.styles || []).includes(s)));
@@ -2831,6 +2860,7 @@ function renderWardrobe() {
       <div><h1>Wardrobe</h1><p class="sub">${state.items.length} pieces${washing ? ` · ${washing} in the wash` : ""}</p></div>
       <div class="chips"><button class="chip report-btn" data-act="report">${ICON_CHART}Report</button>${[["recent", "Newest"], ["most", "Most worn"], ["least", "Least worn"], ["name", "A–Z"]].map(([k, l]) => `<button class="chip" aria-pressed="${f.sort === k}" data-sort="${k}">${l}</button>`).join("")}</div>
     </div>
+    ${sideSwitch()}
     <div class="toolbar">
       <div class="search"><svg viewBox="0 0 24 24"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg><input id="search-input" class="input" placeholder="Search name, brand, style, tag…" value="${esc(f.q)}" data-input="q"></div>
       <div class="chips scroller">
@@ -3090,9 +3120,11 @@ const ICON_GALLERY = `<svg viewBox="0 0 24 24"><rect x="3" y="4" width="18" heig
 const ICON_TAG = `<svg viewBox="0 0 24 24"><path d="M3 12V4a1 1 0 0 1 1-1h8l9 9-9 9z"/><circle cx="8" cy="8" r="1.5"/></svg>`;
 const ICON_LENS = `<svg viewBox="0 0 24 24"><path d="M4 8V6a2 2 0 0 1 2-2h2M16 4h2a2 2 0 0 1 2 2v2M20 16v2a2 2 0 0 1-2 2h-2M8 20H6a2 2 0 0 1-2-2v-2"/><circle cx="12" cy="12" r="3.5"/></svg>`;
 const ICON_SCISSORS = `<svg viewBox="0 0 24 24"><circle cx="6" cy="6" r="3"/><circle cx="6" cy="18" r="3"/><path d="M8.1 8.1 20 20M8.1 15.9 20 4"/></svg>`;
+const ICON_BOTTLE = `<svg viewBox="0 0 24 24"><path d="M10 2.5h4v3h-4zM8.5 5.5h7V8h-7zM6.5 11a3 3 0 0 1 3-3h5a3 3 0 0 1 3 3v8a2.5 2.5 0 0 1-2.5 2.5H9A2.5 2.5 0 0 1 6.5 19zM9.5 14.5h5"/></svg>`;
 const ICON_ROTATE =`<svg viewBox="0 0 24 24"><path d="M20 11a8 8 0 1 0-2.3 5.7"/><path d="M20 4v7h-7"/></svg>`;
 
 function renderAdd() {
+  if (scentDraft) return renderScentAdd();
   if (!draft) draft = newDraft();
   const d = draft;
   if (pendingShots.length) {
@@ -3116,6 +3148,7 @@ function renderAdd() {
         <button class="btn big" data-act="gallery">${ICON_GALLERY}<span class="big-label">Choose from gallery<small>Front and back photos are paired up</small></span></button>
         <button class="btn big" data-act="scan-label">${ICON_TAG}<span class="big-label">Scan the label<small>Fills it in from the shop</small></span></button>
         <button class="btn big" data-act="lens-start">${ICON_LENS}<span class="big-label">Google Lens<small>Finds it in the shops</small></span></button>
+        <button class="btn big" data-act="scent-start">${ICON_BOTTLE}<span class="big-label">Fragrance<small>A bottle photo or its name</small></span></button>
       </div>
       <ol class="how">
         <li>Lay the piece flat on a plain surface, collar or waistband at the top.</li>
@@ -5766,6 +5799,388 @@ function watchTiles() {
   for (const el of document.querySelectorAll("[data-prod]")) tileWatch ? tileWatch.observe(el) : fillTile(el);
 }
 
+/* ======================================================================
+   Wardrobe > Fragrances: the cabinet
+   Each bottle keeps its notes, families and a small profile (how fresh, sweet, heavy and
+   loud it is), plus when it works: seasons, day or evening, how dressy. A photo of the
+   bottle or its name is enough: the AI reads the bottle and looks the fragrance up once,
+   and the answer is kept on the server for every device (ai_cache), so the same fragrance
+   never costs a second request. Everything stays editable.
+   ====================================================================== */
+const SCENT_FAMILIES = {
+  fresh: "Fresh", citrus: "Citrus", aquatic: "Aquatic", green: "Green", aromatic: "Aromatic", fougere: "Fougère", woody: "Woody",
+  spicy: "Spicy", amber: "Amber", gourmand: "Gourmand", leather: "Leather", floral: "Floral", musky: "Musky", chypre: "Chypre",
+};
+// The cabinet's filter chips, each a group of families.
+const SCENT_GROUPS = [
+  ["fresh", "Fresh", ["fresh", "citrus", "aquatic", "green", "aromatic", "fougere"]],
+  ["woody", "Woody", ["woody", "leather", "chypre"]],
+  ["amber", "Amber", ["amber", "spicy", "gourmand"]],
+  ["floral", "Floral", ["floral", "musky"]],
+];
+const CONCENTRATIONS = { EDC: "Eau de Cologne", EDT: "Eau de Toilette", EDP: "Eau de Parfum", Parfum: "Parfum", Extrait: "Extrait de Parfum" };
+const SCENT_TIMES = { day: "Day", night: "Evening", both: "Day and evening" };
+const SCENT_DRESS = ["", "Casual", "Smart casual", "Smart", "Formal"]; // 1–4, the same scale as clothes (STYLES[…].f)
+const FILLS = { full: "Full", half: "Half", low: "Running low", empty: "Empty" };
+// The profile the matching reads: [key, label, lowest, highest].
+const PROFILE_BARS = [["fresh", "Freshness", 0, 3], ["sweet", "Sweetness", 0, 3], ["weight", "Weight", 1, 5], ["projection", "Projection", 1, 5], ["longevity", "Longevity", 1, 5]];
+const PROFILE_WORDS = {
+  fresh: ["Not fresh", "A little fresh", "Fresh", "Very fresh"],
+  sweet: ["Dry", "Slightly sweet", "Sweet", "Very sweet"],
+  weight: ["", "Very light", "Light", "Medium", "Rich", "Heavy"],
+  projection: ["", "Skin scent", "Close", "Moderate", "Strong", "Fills a room"],
+  longevity: ["", "Under 3 hours", "3 to 5 hours", "5 to 7 hours", "7 to 10 hours", "Over 10 hours"],
+};
+const runningLow = (sc) => ["low", "empty"].includes(sc.fill);
+const scentNorm = (x) => String(x || "").toLowerCase().normalize("NFD").replace(/[̀-ͯ]/g, "").replace(/[^a-z0-9]+/g, " ").trim();
+// The same fragrance gets the same key on every device: "hermes|terre d hermes|EDT".
+const scentKey = (sc) => `${scentNorm(sc.house)}|${scentNorm(sc.name)}|${sc.concentration || ""}`;
+
+// AI answers kept for every device (the server's ai_cache), or on this device when there's no server.
+const CACHE_DAYS = { scent: Infinity, pair: 30 };
+async function cacheGet(kind, q) {
+  try {
+    const r = await fetch(`api/cache?${new URLSearchParams({ kind, q })}`, { cache: "no-store" });
+    if (r.ok && (r.headers.get("Content-Type") || "").includes("json")) {
+      const { data } = await r.json();
+      if (data) return data;
+    }
+  } catch {}
+  const hit = ((await raw.get("kv", "aiCache")) || {})[`${kind}:${q}`];
+  return hit && Date.now() - hit.at < CACHE_DAYS[kind] * 864e5 ? hit.data : null;
+}
+async function cachePut(kind, q, data) {
+  const local = (await raw.get("kv", "aiCache")) || {};
+  local[`${kind}:${q}`] = { data, at: Date.now() };
+  await raw.put("kv", local, "aiCache");
+  fetch("api/cache", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ kind, q, data }) }).catch(() => {});
+}
+
+const SCENT_SYSTEM = "You know perfumes and colognes well: their notes, families, and when and how they're worn. Reply with JSON only. If you don't know the fragrance, set found to false and leave the rest empty or 0.";
+const SCENT_SCHEMA = {
+  type: "object", additionalProperties: false,
+  required: ["found", "name", "house", "concentration", "sizeMl", "top", "heart", "base", "accords", "families", "fresh", "sweet", "weight", "projection", "longevity", "spring", "summer", "autumn", "winter", "time", "formality", "vibes"],
+  properties: {
+    found: { type: "boolean", description: "true if you know this fragrance" },
+    name: { type: "string", description: "The fragrance's name without the house, e.g. 'Sauvage'" },
+    house: { type: "string", description: "The perfume house, e.g. 'Dior'" },
+    concentration: { type: "string", enum: [...Object.keys(CONCENTRATIONS), "unknown"] },
+    sizeMl: { type: "number", description: "The bottle's size in ml if it's printed on it, else 0" },
+    top: { type: "array", items: { type: "string" }, description: "Up to 4 top notes, lower case" },
+    heart: { type: "array", items: { type: "string" }, description: "Up to 4 heart notes, lower case" },
+    base: { type: "array", items: { type: "string" }, description: "Up to 4 base notes, lower case" },
+    accords: { type: "array", items: { type: "string" }, description: "Up to 4 main accords, lower case" },
+    families: { type: "array", items: { type: "string", enum: Object.keys(SCENT_FAMILIES) }, description: "1 to 3 families, main first" },
+    fresh: { type: "number", description: "0 not fresh … 3 very fresh" },
+    sweet: { type: "number", description: "0 dry … 3 very sweet" },
+    weight: { type: "number", description: "1 very light … 5 heavy and dense" },
+    projection: { type: "number", description: "1 stays on the skin … 5 fills a room" },
+    longevity: { type: "number", description: "1 under 3 hours … 5 over 10 hours" },
+    spring: { type: "number", description: "0 wrong season, 1 fine, 2 ideal" },
+    summer: { type: "number", description: "0 wrong season, 1 fine, 2 ideal" },
+    autumn: { type: "number", description: "0 wrong season, 1 fine, 2 ideal" },
+    winter: { type: "number", description: "0 wrong season, 1 fine, 2 ideal" },
+    time: { type: "string", enum: Object.keys(SCENT_TIMES) },
+    formality: { type: "number", description: "How dressy: 1 casual, 2 smart casual, 3 smart, 4 formal" },
+    vibes: { type: "array", items: { type: "string", enum: Object.keys(STYLES) }, description: "1 to 3 clothing styles it suits" },
+  },
+};
+// The AI's answer as the fields a bottle keeps (the bottle's own size and fill aren't part of it).
+function scentFromAI(r) {
+  const list = (a, n) => [...new Set((a || []).map((x) => String(x).trim().toLowerCase()).filter(Boolean))].slice(0, n);
+  const num = (x, lo, hi, dflt) => (Number.isFinite(+x) ? clamp(Math.round(+x), lo, hi) : dflt);
+  return {
+    name: String(r.name || "").trim().slice(0, 60), house: String(r.house || "").trim().slice(0, 40),
+    concentration: CONCENTRATIONS[r.concentration] ? r.concentration : "",
+    notes: { top: list(r.top, 5), heart: list(r.heart, 5), base: list(r.base, 5) },
+    accords: list(r.accords, 5),
+    families: [...new Set((r.families || []).filter((f) => SCENT_FAMILIES[f]))].slice(0, 3),
+    profile: { fresh: num(r.fresh, 0, 3, 1), sweet: num(r.sweet, 0, 3, 1), weight: num(r.weight, 1, 5, 3), projection: num(r.projection, 1, 5, 3), longevity: num(r.longevity, 1, 5, 3) },
+    seasons: Object.fromEntries(Object.keys(SEASONS).map((k) => [k, num(r[k], 0, 2, 1) / 2])),
+    time: SCENT_TIMES[r.time] ? r.time : "both",
+    formality: num(r.formality, 1, 4, 2),
+    vibes: [...new Set((r.vibes || []).filter((v) => STYLES[v]))].slice(0, 3),
+  };
+}
+
+/* ---- Adding and editing a bottle ---- */
+let scentDraft = null; // the bottle being added or edited
+const newScentDraft = () => ({
+  id: null, photos: [], name: "", house: "", concentration: "", notes: { top: [], heart: [], base: [] }, accords: [], families: [],
+  profile: { fresh: 1, sweet: 1, weight: 3, projection: 3, longevity: 3 }, seasons: { spring: 1, summer: 1, autumn: 1, winter: 1 },
+  time: "both", formality: 2, vibes: [], sizeMl: "", fill: "full", info: { source: "manual" }, busy: "", note: "",
+});
+const rerenderScent = (d) => { if (scentDraft === d && view === "add") render(); };
+const scentEdited = (d) => (d.info = { source: "manual", at: new Date().toISOString() });
+function applyScentInfo(d, info, keepConc) {
+  Object.assign(d, JSON.parse(JSON.stringify(info)));
+  if (keepConc) d.concentration = keepConc; // the bottle you typed it for
+  d.info = { source: "ai", at: new Date().toISOString() };
+}
+// Fills the draft in from the name typed (the shared cache first, then the AI), or from the
+// bottle's photo when there's no name yet.
+async function lookupScent(d, fromPhoto = false) {
+  if (!d || d.busy) return;
+  const photo = d.photos[0];
+  const byName = !fromPhoto && d.name.trim();
+  if (!byName && !photo) { d.note = "Type its name (and house), or add a photo of the bottle."; return rerenderScent(d); }
+  d.note = "";
+  const asked = byName && { key: scentKey(d), conc: d.concentration };
+  if (asked) {
+    const hit = await cacheGet("scent", asked.key);
+    if (hit) {
+      applyScentInfo(d, hit, asked.conc);
+      d.note = "Filled in from a lookup made before, no AI needed. Check it and save.";
+      return rerenderScent(d);
+    }
+  }
+  if (!aiReady()) { d.note = "Add a Gemini key in Settings to fill in the notes for you, or fill them in below."; return rerenderScent(d); }
+  d.busy = byName ? `Looking up ${d.name.trim()}…` : "Reading the bottle…";
+  rerenderScent(d);
+  try {
+    const text = await aiGenerate({
+      system: SCENT_SYSTEM,
+      text: byName
+        ? `Describe this fragrance: ${[d.house, d.name, CONCENTRATIONS[d.concentration]].filter(Boolean).join(" ")}.`
+        : "Read this perfume bottle: the fragrance's name, house and concentration as printed on it, and its size in ml if shown. Then describe that fragrance.",
+      ...(byName ? {} : { image: await resizeImage(photo, 1024) }),
+      schema: SCENT_SCHEMA,
+      maxTokens: 500,
+    });
+    const r = JSON.parse(text.replace(/^```(json)?|```$/g, "").trim());
+    if (!r.found || !String(r.name || "").trim()) {
+      d.note = byName ? "This fragrance wasn't recognised. Check the name and house, or fill in what you know." : "Couldn't tell which fragrance this is. Type its name and house, then tap Look it up.";
+    } else {
+      const info = scentFromAI(r);
+      if (!byName && +r.sizeMl > 0 && !d.sizeMl) d.sizeMl = String(Math.round(+r.sizeMl));
+      applyScentInfo(d, info, asked?.conc);
+      // Kept under the AI's own spelling, and under what you typed if that was different.
+      cachePut("scent", scentKey(info), info);
+      if (asked && asked.key !== scentKey(info)) cachePut("scent", asked.key, info);
+      d.note = "Filled in by AI. Check it and save.";
+    }
+  } catch (e) {
+    d.note = e.message || "Couldn't look it up. Try again.";
+  }
+  d.busy = "";
+  rerenderScent(d);
+}
+const scentCam = Object.assign(document.createElement("input"), { type: "file", accept: "image/*", capture: "environment", hidden: true });
+const scentGal = Object.assign(document.createElement("input"), { type: "file", accept: "image/*", hidden: true });
+document.body.append(scentCam, scentGal);
+for (const input of [scentCam, scentGal]) {
+  input.onchange = async () => {
+    const f = input.files[0];
+    input.value = "";
+    const d = scentDraft;
+    if (!f || !d) return;
+    d.photos.push(await resizeImage(f));
+    rerenderScent(d);
+    if (d.photos.length === 1 && !d.name.trim()) lookupScent(d, true); // the bottle says what it is
+  };
+}
+function renderScentAdd() {
+  const d = scentDraft;
+  const cur = d.photos[0];
+  const chip = (attr, value, on, label) => `<button class="chip" aria-pressed="${!!on}" data-${attr}="${esc(String(value))}">${label}</button>`;
+  main.innerHTML = `
+    <div class="head">
+      <div><h1>${d.id ? "Edit fragrance" : "New fragrance"}</h1>${d.busy ? `<p class="sub row" style="gap:10px"><span class="spinner"></span>${esc(d.busy)}</p>` : d.id ? "" : `<p class="sub">A photo of the bottle, or its name. The notes and the rest are filled in for you.</p>`}</div>
+      <div class="row"><button class="btn ghost" data-act="scent-cancel">Cancel</button></div>
+    </div>
+    <div class="add-grid">
+      <div class="photos">
+        ${cur ? `
+          <div class="photo-wrap"><img class="photo-main pic-bg" src="${photoURL(cur)}" alt="">${d.busy && !d.name.trim() ? `<div class="busy"><div class="spinner"></div><span>${esc(d.busy)}</span></div>` : ""}</div>
+          <div class="photo-strip">
+            ${d.photos.map((p, k) => `<div class="mini${k === 0 ? " on" : ""}"><img class="pic-bg" src="${photoURL(p)}" alt=""><button class="x" data-scrmphoto="${k}" aria-label="Remove photo">×</button></div>`).join("")}
+            <button class="add-photo" data-act="scent-gallery" aria-label="Add photo">+</button>
+          </div>` : `
+          <div class="photo-wrap no-photo"><div class="stack" style="align-items:center;text-align:center;padding:24px">
+            <p class="muted" style="margin:0">Take a photo of the bottle with its name in view.</p>
+            <button class="btn primary" data-act="scent-shoot">${ICON_CAMERA}Take a photo</button>
+            <button class="btn" data-act="scent-gallery">${ICON_GALLERY}Choose from gallery</button>
+          </div></div>`}
+      </div>
+      <div class="stack">
+        <div class="field"><label for="sc-name">Name</label><input id="sc-name" class="input" data-input="sc-name" value="${esc(d.name)}" placeholder="e.g. Terre d'Hermès" autocomplete="off"></div>
+        <div class="field"><label for="sc-house">House</label><input id="sc-house" class="input" data-input="sc-house" value="${esc(d.house)}" placeholder="e.g. Hermès" autocomplete="off"></div>
+        <div class="field"><label>Concentration</label><div class="chips">${Object.entries(CONCENTRATIONS).map(([k, l]) => `<button class="chip" aria-pressed="${d.concentration === k}" data-scconc="${k}" title="${l}">${k}</button>`).join("")}</div></div>
+        <div class="row">
+          <button class="btn" data-act="scent-lookup" ${d.busy ? "disabled" : ""}><svg viewBox="0 0 24 24"><path d="M12 3l1.8 4.7L18.5 9.5l-4.7 1.8L12 16l-1.8-4.7L5.5 9.5l4.7-1.8z"/></svg>Look it up</button>
+          <span class="muted small">${aiReady() ? "Fills in the notes, families, seasons and the rest from the name. Looked up once, then kept for every device." : "Fills in what was looked up before. Add a Gemini key in Settings to look up new ones."}</span>
+        </div>
+        ${d.note ? `<p class="muted small" style="margin:0">${esc(d.note)}</p>` : ""}
+        <div class="field"><label>Families <span style="text-transform:none;font-weight:400">(main first)</span></label><div class="chips">${Object.entries(SCENT_FAMILIES).map(([k, l]) => chip("scfam", k, d.families.includes(k), `${l}${d.families[0] === k && d.families.length > 1 ? " ·main" : ""}`)).join("")}</div></div>
+        <div class="field"><label>Notes</label><div class="note-fields">${[["top", "Top, e.g. bergamot, lemon"], ["heart", "Heart, e.g. pepper, lavender"], ["base", "Base, e.g. vetiver, cedar"]].map(([k, ph]) => `<input class="input" data-input="sc-${k}" value="${esc(d.notes[k].join(", "))}" placeholder="${ph}" aria-label="${cap(k)} notes">`).join("")}</div></div>
+        <div class="field"><label>Profile</label><div class="sc-sliders">${PROFILE_BARS.map(([k, l, lo, hi]) => `<label class="sc-slider"><span>${l}</span><input type="range" min="${lo}" max="${hi}" step="1" value="${d.profile[k]}" data-input="sc-${k}"><span class="muted small" id="scv-${k}">${PROFILE_WORDS[k][d.profile[k]]}</span></label>`).join("")}</div></div>
+        <div class="field"><label>Seasons</label><div class="chips">${Object.entries(SEASONS).map(([k, v]) => chip("scseason", k, (d.seasons[k] ?? 1) >= 0.5, v.label)).join("")}</div></div>
+        <div class="field"><label>Time of day</label><div class="chips">${Object.entries(SCENT_TIMES).map(([k, l]) => chip("sctime", k, d.time === k, l)).join("")}</div></div>
+        <div class="field"><label>How dressy</label><div class="chips">${[1, 2, 3, 4].map((n) => chip("scform", n, d.formality === n, SCENT_DRESS[n])).join("")}</div></div>
+        <div class="field"><label>Styles it suits</label><div class="chips">${Object.entries(STYLES).map(([k, v]) => chip("scvibe", k, d.vibes.includes(k), v.label)).join("")}</div></div>
+        <div class="field"><label>Bottle</label><div class="row">
+          <input class="input sc-size" data-input="sc-size" inputmode="numeric" value="${esc(String(d.sizeMl || ""))}" placeholder="Size in ml" aria-label="Bottle size in ml">
+          <div class="chips">${Object.entries(FILLS).map(([k, l]) => chip("scdfill", k, d.fill === k, l)).join("")}</div>
+        </div></div>
+        <div class="row">
+          <button class="btn primary big" data-act="scent-save" ${d.name.trim() && !d.busy ? "" : "disabled"}>${d.id ? "Save changes" : "Save to cabinet"}</button>
+          <span class="muted small" id="sc-need"${d.name.trim() || d.busy ? " hidden" : ""}>Add its name to save.</span>
+        </div>
+      </div>
+    </div>`;
+}
+// Typing in the bottle form: kept in the draft without redrawing the screen.
+function scentTyped(d, k, v) {
+  if (k === "name" || k === "house") {
+    d[k] = v;
+    const save = $('[data-act="scent-save"]');
+    if (save) save.disabled = !d.name.trim() || !!d.busy;
+    const need = $("#sc-need");
+    if (need) need.hidden = !!d.name.trim() || !!d.busy;
+    return;
+  }
+  if (k === "size") { d.sizeMl = v.replace(/\D/g, "").slice(0, 4); return; }
+  if (d.notes[k]) d.notes[k] = v.split(",").map((x) => x.trim().toLowerCase()).filter(Boolean).slice(0, 8);
+  else if (PROFILE_WORDS[k]) {
+    d.profile[k] = +v;
+    const out = $(`#scv-${k}`);
+    if (out) out.textContent = PROFILE_WORDS[k][+v];
+  } else return;
+  scentEdited(d);
+}
+// A chip in the bottle form. True if it was one.
+function scentChip(d, ds) {
+  const toggle = (list, v) => (list.includes(v) ? list.filter((x) => x !== v) : [...list, v]);
+  if (ds.scconc) d.concentration = d.concentration === ds.scconc ? "" : ds.scconc;
+  else if (ds.scdfill) d.fill = ds.scdfill;
+  else if (ds.scrmphoto != null) d.photos.splice(+ds.scrmphoto, 1);
+  else {
+    if (ds.scfam) d.families = toggle(d.families, ds.scfam);
+    else if (ds.scseason) d.seasons[ds.scseason] = (d.seasons[ds.scseason] ?? 1) >= 0.5 ? 0 : 1;
+    else if (ds.sctime) d.time = ds.sctime;
+    else if (ds.scform) d.formality = +ds.scform;
+    else if (ds.scvibe) d.vibes = toggle(d.vibes, ds.scvibe);
+    else return false;
+    scentEdited(d);
+  }
+  render();
+  return true;
+}
+async function saveScent() {
+  const d = scentDraft;
+  if (!d?.name.trim() || d.busy) return;
+  const old = d.id && state.scents.find((x) => x.id === d.id);
+  const now = new Date().toISOString();
+  const sc = {
+    ...(old || { wearCount: 0, createdAt: now }), id: d.id || uid(),
+    name: d.name.trim(), house: d.house.trim(), concentration: d.concentration, photos: d.photos,
+    notes: d.notes, accords: d.accords, families: d.families, profile: d.profile, seasons: d.seasons, time: d.time,
+    formality: d.formality, vibes: d.vibes, sizeMl: +d.sizeMl || null, fill: d.fill, info: d.info, updatedAt: now,
+  };
+  await store.put("scents", sc);
+  if (old) state.scents[state.scents.indexOf(old)] = sc; else state.scents.push(sc);
+  scentDraft = null;
+  state.wardSide = "scents";
+  toast(old ? "Saved" : `${sc.name} is in your cabinet`);
+  go("wardrobe");
+}
+function editScent(sc) {
+  scentDraft = {
+    ...newScentDraft(), ...JSON.parse(JSON.stringify({ ...sc, photos: [] })),
+    id: sc.id, photos: [...(sc.photos || [])], sizeMl: sc.sizeMl ? String(sc.sizeMl) : "", busy: "", note: "",
+  };
+  closeSheet();
+  go("add");
+}
+
+/* ---- The cabinet ---- */
+const sideSwitch = () => `<div class="seg" role="tablist">${[["clothes", "Clothes"], ["scents", "Fragrances"]].map(([k, l]) => `<button role="tab" aria-selected="${state.wardSide === k}" data-side="${k}">${l}</button>`).join("")}</div>`;
+const inGroup = (sc, g) => (sc.families || []).some((f) => SCENT_GROUPS.find(([id]) => id === g)[2].includes(f));
+function seasonDots(sc) {
+  const on = Object.keys(SEASONS).filter((k) => (sc.seasons?.[k] ?? 1) >= 0.5);
+  return `<span class="sdots" title="${esc(on.map((k) => SEASONS[k].label).join(", ") || "No season set")}" aria-label="Seasons: ${esc(on.map((k) => SEASONS[k].label).join(", "))}">${Object.keys(SEASONS).map((k) => `<i class="${(sc.seasons?.[k] ?? 1) >= 1 ? "on" : (sc.seasons?.[k] ?? 1) >= 0.5 ? "half" : ""}"></i>`).join("")}</span>`;
+}
+function scentTile(sc) {
+  const kind = [sc.concentration, (sc.families || []).slice(0, 2).map((f) => SCENT_FAMILIES[f].toLowerCase()).join(" ")].filter(Boolean).join(" · ");
+  return `<button class="item bottle" data-scent="${sc.id}">
+    <div class="pic">${sc.photos?.[0] ? `<img class="thumb pic-bg" loading="lazy" src="${photoURL(sc.photos[0])}" alt="">` : `<div class="thumb bottle-ph">${ICON_BOTTLE}</div>`}${isFavourite(sc) ? `<span class="fav">★ ${starsOf(sc)}</span>` : ""}${runningLow(sc) ? `<span class="wash-badge">${FILLS[sc.fill]}</span>` : ""}</div>
+    <div class="meta"><span class="name">${esc(sc.name)}</span><span class="info">${esc(sc.house || "")}</span><span class="info">${seasonDots(sc)}${esc(kind)}</span></div>
+  </button>`;
+}
+function renderCabinet() {
+  const all = state.scents;
+  const f = state.scentFilter;
+  const low = all.filter(runningLow);
+  const groups = SCENT_GROUPS.filter(([g]) => all.some((sc) => inGroup(sc, g)));
+  const list = all.filter((sc) => f === "all" || (f === "low" ? runningLow(sc) : f === "fav" ? isFavourite(sc) : inGroup(sc, f)))
+    .sort((a, b) => (starsOf(b) || 0) - (starsOf(a) || 0) || String(a.name).localeCompare(String(b.name)));
+  main.innerHTML = `
+    <div class="head">
+      <div><h1>Wardrobe</h1><p class="sub">${all.length} fragrance${all.length === 1 ? "" : "s"}${low.length ? ` · ${low.length} running low` : ""}</p></div>
+      ${all.length ? `<div class="chips"><button class="chip" data-act="scent-start">${ICON_BOTTLE}Add a fragrance</button></div>` : ""}
+    </div>
+    ${sideSwitch()}
+    ${all.length ? `<div class="chips scroller cabinet-filters">
+      <button class="chip" aria-pressed="${f === "all"}" data-scf="all">All <span class="muted">${all.length}</span></button>
+      ${all.some(isFavourite) ? `<button class="chip" aria-pressed="${f === "fav"}" data-scf="fav">★ Favourites</button>` : ""}
+      ${groups.map(([g, l]) => `<button class="chip" aria-pressed="${f === g}" data-scf="${g}">${l} <span class="muted">${all.filter((sc) => inGroup(sc, g)).length}</span></button>`).join("")}
+      ${low.length || f === "low" ? `<button class="chip" aria-pressed="${f === "low"}" data-scf="low">Running low <span class="muted">${low.length}</span></button>` : ""}
+    </div>` : ""}
+    ${list.length ? `<div class="grid bottles">${list.map(scentTile).join("")}</div>` :
+      all.length ? `<p class="muted">No fragrances match this filter.</p>` :
+      emptyState("No fragrances yet", "Snap a bottle or type its name. Its notes, seasons and how dressy it is are filled in for you, ready for matching scents to outfits.", `<button class="btn primary" data-act="scent-start">${ICON_BOTTLE}Add a fragrance</button>`)}`;
+}
+
+/* ---- A bottle's page (sheet) ---- */
+function openScent(id) {
+  const sc = state.scents.find((x) => x.id === id);
+  if (!sc) return;
+  const p = sc.profile || {};
+  const notes = [["Top", sc.notes?.top], ["Heart", sc.notes?.heart], ["Base", sc.notes?.base]].filter(([, l]) => l?.length);
+  const seasons = Object.keys(SEASONS).filter((k) => (sc.seasons?.[k] ?? 1) >= 0.5);
+  const ago = (d) => (daysSince(d) === 0 ? "today" : daysSince(d) === 1 ? "yesterday" : `${daysSince(d)} days ago`);
+  $(".sheet-panel").innerHTML = `
+    <div class="detail-head">
+      <div><h1 style="font-size:28px">${esc(sc.name)}</h1><p class="sub">${esc([sc.house, CONCENTRATIONS[sc.concentration]].filter(Boolean).join(" · ") || "Fragrance")}</p></div>
+      <button class="btn icon-btn ghost" data-close aria-label="Close"><svg viewBox="0 0 24 24"><path d="M6 6l12 12M18 6 6 18"/></svg></button>
+    </div>
+    <div class="row item-rate">
+      ${starPicker(`s|${sc.id}`, starsOf(sc) || 0)}
+      <button class="btn" data-scdislike="${sc.id}" aria-pressed="${!!sc.disliked}">${sc.disliked ? "Disliked" : "Dislike"}</button>
+      ${sc.disliked ? `<span class="muted small">Won't be suggested with outfits.</span>` : ""}
+    </div>
+    ${sc.photos?.length ? `<div class="gallery bottle-gallery">${sc.photos.map((ph) => `<img class="pic-bg" src="${photoURL(ph)}" alt="">`).join("")}</div>` : ""}
+    ${notes.length ? `<div class="kv scent-notes">${notes.map(([l, list]) => `<div><b>${l}</b>${esc(list.join(", "))}</div>`).join("")}</div>` : ""}
+    ${sc.families?.length || sc.accords?.length ? `<div class="chips" style="margin:14px 0">${(sc.families || []).map((f) => `<span class="chip on">${SCENT_FAMILIES[f]}</span>`).join("")}${(sc.accords || []).filter((a) => !(sc.families || []).some((f) => scentNorm(SCENT_FAMILIES[f]) === scentNorm(a))).map((a) => `<span class="chip">${esc(a)}</span>`).join("")}</div>` : ""}
+    <div class="pbars">${PROFILE_BARS.map(([k, l, lo, hi]) => p[k] == null ? "" : `<div class="pbar"><span>${l}</span><i style="--v:${(p[k] - lo) / (hi - lo)}"></i><span class="muted small">${PROFILE_WORDS[k][p[k]]}</span></div>`).join("")}</div>
+    <div class="kv" style="margin:18px 0">
+      <div><b>When</b>${seasons.length === 4 ? "All year" : seasons.map((k) => SEASONS[k].label).join(", ") || "Not set"} · ${SCENT_TIMES[sc.time] || SCENT_TIMES.both}</div>
+      <div><b>How dressy</b>${SCENT_DRESS[sc.formality] || "Not set"}${sc.vibes?.length ? ` · ${sc.vibes.map(styleLabel).join(", ")}` : ""}</div>
+      <div><b>Worn</b>${sc.wearCount ? `${sc.wearCount}×` : "Not yet"}${sc.lastWorn ? ` · ${ago(sc.lastWorn)}` : ""}</div>
+      ${sc.sizeMl ? `<div><b>Size</b>${sc.sizeMl} ml</div>` : ""}
+    </div>
+    <div class="field" style="margin-bottom:14px"><label>Bottle</label><div class="chips">${Object.entries(FILLS).map(([k, l]) => `<button class="chip" aria-pressed="${(sc.fill || "full") === k}" data-scfill="${sc.id}|${k}">${l}</button>`).join("")}</div></div>
+    ${sc.info?.source === "ai" ? `<p class="muted small">Notes and profile looked up by AI. Tap Edit to change any of it.</p>` : ""}
+    <div class="row">
+      <button class="btn primary" data-scwear="${sc.id}">Wearing it today</button>
+      <button class="btn" data-scedit="${sc.id}">Edit</button>
+      <button class="btn ghost danger" data-scdel="${sc.id}">Delete</button>
+    </div>`;
+  $("#sheet").hidden = false;
+}
+// Worn today: counted on the bottle, and added to today's outfit in the wear log if it's there.
+async function wearScent(sc) {
+  sc.wearCount = (sc.wearCount || 0) + 1;
+  sc.lastWorn = new Date().toISOString();
+  await store.put("scents", sc);
+  const wear = [...state.log].reverse().find((l) => logKind(l) === "wear" && l.date === today());
+  if (wear && !(wear.scentIds || []).includes(sc.id)) {
+    wear.scentIds = [...(wear.scentIds || []), sc.id];
+    await store.put("log", wear);
+  }
+  toast(`Logged ${sc.name}.`);
+}
+
 /* ---------- Settings ---------- */
 function renderSettings() {
   const s = state.settings;
@@ -6035,7 +6450,9 @@ async function exportBackup() {
     photos: await Promise.all((i.photos || []).map(blobToDataURL)),
     originals: i.originals ? await Promise.all(i.originals.map(blobToDataURL)) : undefined,
   });
-  const blob = new Blob([JSON.stringify({ version: 2, exportedAt: new Date().toISOString(), items, log: state.log, wants: state.wants, events: state.events, calendar: state.calendar })], { type: "application/json" });
+  const scents = [];
+  for (const sc of state.scents) scents.push({ ...sc, photos: await Promise.all((sc.photos || []).map(blobToDataURL)) });
+  const blob = new Blob([JSON.stringify({ version: 2, exportedAt: new Date().toISOString(), items, scents, log: state.log, wants: state.wants, events: state.events, calendar: state.calendar })], { type: "application/json" });
   const a = Object.assign(document.createElement("a"), { href: URL.createObjectURL(blob), download: `wardrobe-backup-${today()}.json` });
   a.click();
 }
@@ -6090,6 +6507,7 @@ async function importBackup() {
         }
         await store.put("items", i);
       }
+      for (const sc of data.scents || []) if (sc?.id) { sc.photos = await toBlobs(sc.photos); await store.put("scents", sc); }
       for (const l of data.log || []) { delete l.id; await store.put("log", l); }
       if (data.wishlist?.length) { state.wishlist = data.wishlist; await moveWishlist(); }
       for (const w of data.wants || []) if (w?.id && !state.wants.some((x) => x.id === w.id)) { state.wants.push(w); await store.put("wants", w); }
@@ -6097,7 +6515,7 @@ async function importBackup() {
       if (data.calendar?.links) { state.calendar = data.calendar; await saveCalendar(); state.cal.at = 0; }
       await loadAll();
       state.outfits = [];
-      toast(`Imported ${data.items?.length || 0} pieces`);
+      toast(`Imported ${data.items?.length || 0} pieces${data.scents?.length ? ` and ${data.scents.length} fragrances` : ""}`);
       render();
     } catch { toast("That file couldn't be imported"); }
   };
@@ -6164,6 +6582,30 @@ document.addEventListener("click", async (e) => {
   if (ds.view) return go(ds.view);
   if (ds.go) { closeSheet(); return go(ds.go); }
   if (ds.item) return openItem(ds.item);
+  // Fragrances
+  if (ds.side) { state.wardSide = ds.side; render(); main.scrollTop = 0; return; }
+  if (ds.scf) { state.scentFilter = ds.scf; return render(); }
+  if (ds.scent) return openScent(ds.scent);
+  if (scentDraft && view === "add" && scentChip(scentDraft, ds)) return;
+  {
+    const sc = state.scents.find((x) => x.id === (ds.scfill || ds.scwear || ds.scdislike || ds.scedit || ds.scdel || "").split("|")[0]);
+    if (sc && ds.scfill) { sc.fill = ds.scfill.split("|")[1]; await store.put("scents", sc); openScent(sc.id); return render(); }
+    if (sc && ds.scwear) { await wearScent(sc); openScent(sc.id); return render(); }
+    if (sc && ds.scdislike) {
+      if (sc.disliked) delete sc.disliked; else sc.disliked = true;
+      await store.put("scents", sc);
+      openScent(sc.id);
+      return render();
+    }
+    if (sc && ds.scedit) return editScent(sc);
+    if (sc && ds.scdel) {
+      if (!(await confirmBox(`Delete “${sc.name}” from your cabinet?`, "Delete"))) return openScent(sc.id);
+      await store.del("scents", sc.id);
+      state.scents = state.scents.filter((x) => x !== sc);
+      toast("Deleted");
+      return render();
+    }
+  }
   if (ds.orig) return openItem(ds.orig, ds.show === "1");
   if (ds.occ) { state.occasion = ds.occ; state.occChosen = localDay(); state.event = null; generateOutfits(); return render(); }
   if (ds.event) { pickEvent(ds.event); return render(); }
@@ -6470,6 +6912,12 @@ document.addEventListener("click", async (e) => {
       await applyRotation(p);
       return rerenderAdd(d);
     }
+    case "scent-start": scentDraft = newScentDraft(); closeSheet(); return go("add");
+    case "scent-shoot": return scentCam.click();
+    case "scent-gallery": return scentGal.click();
+    case "scent-lookup": return lookupScent(scentDraft);
+    case "scent-save": return saveScent();
+    case "scent-cancel": scentDraft = null; state.wardSide = "scents"; return go("wardrobe");
     case "cancel-add": draft = null; queue = []; pendingShots = []; return go(state.items.length ? "wardrobe" : "today");
     case "save": return saveDraft(false);
     case "save-next": return saveDraft(true);
@@ -6563,9 +7011,9 @@ document.addEventListener("click", async (e) => {
     case "export": return exportBackup();
     case "import": return importBackup();
     case "wipe":
-      if (!(await confirmBox(sync.status === "on" ? "Erase all clothes, photos and history? Every device sharing this wardrobe loses them too." : "Erase all clothes, photos and history from this device?", "Erase everything"))) return;
-      await store.clear("items"); await store.clear("log"); await store.clear("wants"); await store.clear("events");
-      state.items = []; state.log = []; state.wants = []; state.events = []; state.outfits = [];
+      if (!(await confirmBox(sync.status === "on" ? "Erase all clothes, fragrances, photos and history? Every device sharing this wardrobe loses them too." : "Erase all clothes, fragrances, photos and history from this device?", "Erase everything"))) return;
+      await store.clear("items"); await store.clear("log"); await store.clear("wants"); await store.clear("events"); await store.clear("scents");
+      state.items = []; state.log = []; state.wants = []; state.events = []; state.scents = []; state.outfits = [];
       toast("Wardrobe erased");
       return render();
   }
@@ -6588,6 +7036,7 @@ document.addEventListener("input", (e) => {
   }
   if (k === "trytext" || k === "trybrand") { state.disc.try[k === "trytext" ? "text" : "brand"] = v; return; }
   if (k === "tripq") { state.disc.tripq = v; return; }
+  if (scentDraft && k.startsWith("sc-")) return scentTyped(scentDraft, k.slice(3), v);
   if (["evtext", "evdate", "evtime", "evplace"].includes(k)) { state.disc.evForm[k.slice(2)] = v; return; }
   if (k === "temp") {
     state.manualTemp = +v;

@@ -13,11 +13,13 @@ the computer within a second or two.
     POST /api/records                   {"records": [{col, id, updatedAt, deleted, data}]}
                                         the newest updatedAt wins
     HEAD/GET/PUT /api/blob/<key>        photos, stored once by content hash
+    GET  /api/cache?kind=scent&q=…      an AI answer kept for every device: {data, at}
+    POST /api/cache                     {"kind", "q", "data"}: keep one (a fragrance's notes)
 
 Everything is stored in the data folder (db.json plus blobs/). Nothing leaves this
 computer, and API keys are never synced.
 """
-import argparse, json, os, re, socket, ssl, threading
+import argparse, json, os, re, socket, ssl, threading, time
 from http import HTTPStatus
 from http.server import SimpleHTTPRequestHandler, ThreadingHTTPServer
 from urllib.parse import parse_qs, urlparse
@@ -27,6 +29,8 @@ COLS = {"items", "log", "kv", "wants", "scents", "events"}
 BLOB_KEY = re.compile(r"^[0-9a-z-]{4,80}\.(jpg|webp|png|bin)$")
 BLOB_TYPE = {"jpg": "image/jpeg", "webp": "image/webp", "png": "image/png", "bin": "application/octet-stream"}
 MAX_BLOB = 25 * 1024 * 1024
+CACHE_DAYS = {"scent": None, "pair": 30}  # AI answers kept, by kind (None: for good)
+MAX_CACHE = 20_000
 
 
 class Store:
@@ -34,19 +38,35 @@ class Store:
         self.folder = folder
         self.blobs = os.path.join(folder, "blobs")
         self.path = os.path.join(folder, "db.json")
+        self.cache_path = os.path.join(folder, "ai-cache.json")
         os.makedirs(self.blobs, exist_ok=True)
-        self.rev, self.records = 0, {}
+        self.rev, self.records, self.cache = 0, {}, {}
         if os.path.exists(self.path):
             with open(self.path, encoding="utf-8") as f:
                 saved = json.load(f)
             self.rev, self.records = saved["rev"], saved["records"]
+        if os.path.exists(self.cache_path):
+            with open(self.cache_path, encoding="utf-8") as f:
+                self.cache = json.load(f)
         self.changed = threading.Condition()
 
-    def save(self):
-        tmp = self.path + ".tmp"
+    def save(self, path=None, data=None):
+        path = path or self.path
+        tmp = path + ".tmp"
         with open(tmp, "w", encoding="utf-8") as f:
-            json.dump({"rev": self.rev, "records": self.records}, f)
-        os.replace(tmp, self.path)
+            json.dump(data if data is not None else {"rev": self.rev, "records": self.records}, f)
+        os.replace(tmp, path)
+
+    def cached(self, kind, q):
+        hit = self.cache.get(f"{kind}:{q}")
+        if not hit or (CACHE_DAYS[kind] and time.time() * 1000 - hit["at"] > CACHE_DAYS[kind] * 864e5):
+            return {"data": None}
+        return hit
+
+    def keep(self, kind, q, data):
+        with self.changed:
+            self.cache[f"{kind}:{q}"] = {"data": data, "at": int(time.time() * 1000)}
+            self.save(self.cache_path, self.cache)
 
     def since(self, rev):
         return [r for r in self.records.values() if r["rev"] > rev]
@@ -151,6 +171,12 @@ class Handler(SimpleHTTPRequestHandler):
             return self.send_json({"rev": rev, "records": records})
         if url.path.startswith("/api/blob/"):
             return self.send_blob(head=False)
+        if url.path == "/api/cache":
+            q = parse_qs(url.query)
+            kind, key = q.get("kind", [""])[0], q.get("q", [""])[0][:200]
+            if kind not in CACHE_DAYS or not key:
+                return self.send_error(HTTPStatus.BAD_REQUEST)
+            return self.send_json(self.store.cached(kind, key))
         if url.path.startswith("/api/") or url.path.startswith("/data/"):
             return self.send_error(HTTPStatus.NOT_FOUND)
         return super().do_GET()
@@ -163,15 +189,23 @@ class Handler(SimpleHTTPRequestHandler):
 
     def do_POST(self):
         path = urlparse(self.path).path
-        if path not in ("/api/records", "/api/missing"):
+        if path not in ("/api/records", "/api/missing", "/api/cache"):
             return self.send_error(HTTPStatus.NOT_FOUND)
         try:
             body = json.loads(self.read_body(MAX_BLOB))
+            if path == "/api/cache":
+                kind, key, data = body.get("kind"), body.get("q"), body.get("data")
+                if kind not in CACHE_DAYS or not isinstance(key, str) or not key or len(key) > 200 or not isinstance(data, dict):
+                    return self.send_error(HTTPStatus.BAD_REQUEST)
+                if len(json.dumps(data)) > MAX_CACHE:
+                    return self.send_error(HTTPStatus.REQUEST_ENTITY_TOO_LARGE)
+                self.store.keep(kind, key, data)
+                return self.send_json({"ok": True})
             if path == "/api/missing":  # which of these photos does the server still need?
                 keys = [k for k in body["keys"] if BLOB_KEY.match(k)]
                 return self.send_json({"missing": [k for k in keys if not os.path.exists(os.path.join(self.store.blobs, k))]})
             records = body["records"]
-        except (ValueError, KeyError, TypeError):
+        except (ValueError, KeyError, TypeError, AttributeError):
             return self.send_error(HTTPStatus.BAD_REQUEST)
         rev, accepted, missing = self.store.put(records)
         self.send_json({"rev": rev, "accepted": accepted, "missing": missing})

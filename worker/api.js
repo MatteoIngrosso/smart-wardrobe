@@ -18,6 +18,9 @@
 //     POST /api/lens?q=…&country=it&hl=it a photo (JPEG body): the products in it, {items} (Google Lens via SerpApi)
 //     GET  /lens/<name>.jpg               that photo, for Google Lens to fetch: no sign-in, gone once Lens has answered
 //     POST /api/calendar                  {"url": "..."}: reads a calendar's private iCal link
+//     GET  /api/cache?kind=scent&q=…      an AI answer kept for every device: {data, at}, data null if none
+//     POST /api/cache                     {"kind", "q", "data"}: keep one (a fragrance's notes for good,
+//                                         "even better" scent picks for 30 days)
 //
 // Settings (see README, "Putting it online"):
 //     DB            D1 database binding, created on the first deploy (wrangler.jsonc)
@@ -34,6 +37,8 @@ const MAX_BLOB = 1_900_000; // a D1 row holds up to 2 MB; photos are resized to 
 const MAX_BODY = 25 * 1024 * 1024;
 const PUBLIC = new Set(["/manifest.webmanifest", "/icon.svg"]); // browsers fetch these without cookies
 const SESSION_DAYS = 365;
+const CACHE_DAYS = { scent: Infinity, pair: 30 }; // AI answers kept in ai_cache, by kind
+const MAX_CACHE = 20_000; // characters of JSON per answer
 const MAX_TRIES = 10; // wrong passwords per address before a 15-minute pause
 const PAUSE_MS = 15 * 60_000;
 
@@ -82,6 +87,7 @@ export async function handleApi(request, env) {
     }
     if (path.startsWith("blob/")) return await blob(request, env.DB, path.slice(5));
     if (path === "lens" && method === "POST") return await lens(request, env);
+    if (path === "cache") return await aiCache(request, env.DB);
     return fail(404, "Not found");
   } catch (e) {
     return fail(e.status || 500, e.status ? e.message : "Server error");
@@ -168,6 +174,7 @@ function ready(db) {
     db.prepare("CREATE TABLE IF NOT EXISTS login_fails (ip TEXT PRIMARY KEY, n INTEGER NOT NULL, at INTEGER NOT NULL)"),
     db.prepare("CREATE TABLE IF NOT EXISTS products (q TEXT PRIMARY KEY, data TEXT NOT NULL, at INTEGER NOT NULL)"),
     db.prepare("CREATE TABLE IF NOT EXISTS lens (name TEXT PRIMARY KEY, body BLOB NOT NULL, at INTEGER NOT NULL)"),
+    db.prepare("CREATE TABLE IF NOT EXISTS ai_cache (q TEXT PRIMARY KEY, kind TEXT NOT NULL, data TEXT NOT NULL, at INTEGER NOT NULL)"),
   ]).catch((e) => { schema = null; throw e; });
   return schema;
 }
@@ -267,6 +274,29 @@ async function readJson(request) {
   } catch {
     throw Object.assign(new Error("Expected JSON"), { status: 400 });
   }
+}
+
+/* ---------- AI answers kept for every device ---------- */
+
+// What Gemini said about a fragrance (its notes and profile) is the same for everyone, so it's
+// asked once and kept here; the app asks this first. Keys are the app's own ("house|name|EDT").
+async function aiCache(request, db) {
+  const method = request.method;
+  if (method === "GET") {
+    const params = new URL(request.url).searchParams;
+    const kind = params.get("kind") || "", q = (params.get("q") || "").slice(0, 200);
+    if (!Object.hasOwn(CACHE_DAYS, kind) || !q) return fail(400, "Which answer?");
+    const row = await db.prepare("SELECT data, at FROM ai_cache WHERE q = ?").bind(`${kind}:${q}`).first();
+    if (!row || Date.now() - row.at > CACHE_DAYS[kind] * 864e5) return json({ data: null });
+    return json({ data: JSON.parse(row.data), at: row.at });
+  }
+  if (method !== "POST") return fail(405, "Method not allowed");
+  const { kind, q, data } = await readJson(request);
+  if (!Object.hasOwn(CACHE_DAYS, kind) || typeof q !== "string" || !q || q.length > 200 || !data || typeof data !== "object") return fail(400, "Expected {kind, q, data}");
+  const text = JSON.stringify(data);
+  if (text.length > MAX_CACHE) return fail(413, "Too large");
+  await db.prepare("INSERT OR REPLACE INTO ai_cache (q, kind, data, at) VALUES (?, ?, ?, ?)").bind(`${kind}:${q}`, kind, text, Date.now()).run();
+  return json({ ok: true });
 }
 
 /* ---------- Calendar ---------- */
