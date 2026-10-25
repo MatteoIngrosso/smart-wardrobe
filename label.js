@@ -94,6 +94,7 @@ export function siteOf(url) {
 // "Jeans baggy | Pull&Bear Italy" → "Jeans baggy"
 export function cleanTitle(title, brand = "") {
   let t = String(title || "").replace(/\s+/g, " ").trim();
+  if (/^https?:\/\/|^[\w.-]+\.(html?|php|aspx?|jsp)$/i.test(t)) return ""; // a page that gave no title, just its address
   t = t.split(/\s[|–—]\s|\s-\s(?=[^-]*$)/)[0].trim();
   if (brand) t = t.replace(new RegExp(`^${brand.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")}\\s*[-:·]?\\s*`, "i"), "");
   return t.slice(0, 80);

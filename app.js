@@ -3451,7 +3451,7 @@ const PIECE_SCHEMA = {
 };
 // A candidate photo is { url, thumb }: thumb is Google's small copy, used if the shop's won't load.
 const shopPhoto = async (x) => (await productPhoto(x.url)) || (x.thumb ? await productPhoto(x.thumb) : null);
-async function pieceOnlyPhotos(list) {
+async function pieceOnlyPhotos(list, colour = "") {
   const got = (await Promise.all(list.slice(0, 8).map(async (x) => ({ url: x.url, blob: await shopPhoto(x) })))).filter((x) => x.blob);
   if (!got.length) return null; // none could be loaded: not the same as "all worn"
   const cols = Math.min(4, got.length), w = 240, h = 320;
@@ -3471,7 +3471,7 @@ async function pieceOnlyPhotos(list) {
   }
   const text = await aiGenerate({
     system: "You sort a clothing shop's product photos for a wardrobe app. Reply with JSON only.",
-    text: `These are ${got.length} numbered photos of one product. Which show the garment alone, not worn by anyone?`,
+    text: `These are ${got.length} numbered photos of one product. Which show the garment alone, not worn by anyone, and in ${colour || "the same colour as photo 1"}? Shops also show the other colours: leave those out.`,
     image: await canvasBlob(c, "image/jpeg", 0.85),
     schema: PIECE_SCHEMA,
     maxTokens: 60,
@@ -3518,7 +3518,7 @@ async function useShopPhotos(d, list, { site, ref, colour, replace, step }) {
   let chosen = null;
   if (aiReady()) {
     step("Picking the photos of the piece on its own…");
-    chosen = await pieceOnlyPhotos(list).catch(() => null);
+    chosen = await pieceOnlyPhotos(list, colour).catch(() => null);
   }
   if (!chosen) { // no AI to tell worn photos apart (or it failed): the shop's main photo
     step("Getting the shop's photo…");
@@ -3545,7 +3545,7 @@ async function useShopPhotos(d, list, { site, ref, colour, replace, step }) {
 // Google Lens: you chose that product). Returns the colour the shop gives, in wardrobe terms.
 function fillFromProduct(d, { tag: r, page, info, ref, link, qr = "", override = false }) {
   const title = Label.cleanTitle(page?.title, r?.brand || page?.brand || info?.brand || "");
-  const name = override ? info?.name || title : title || info?.name || "";
+  const name = override ? info?.name || title : title || info?.name || r?.name || "";
   const words = Label.toEnglish(`${info?.type || ""} ${name}`);
   const about = `${words} ${Label.toEnglish(info?.fit)} ${Label.toEnglish(page?.description)} ${Label.toEnglish(info?.description)}`;
   // What the label says comes first, then the product page.
@@ -3556,8 +3556,7 @@ function fillFromProduct(d, { tag: r, page, info, ref, link, qr = "", override =
   const cat = CAT[r?.category] ? r.category : kind?.[1];
   if (cat && (override || !d.category)) { d.category = cat; d.warmth = CAT[cat].warmth; }
   // The wardrobe's own simple name ("Light blue Pull&Bear jeans") is kept: shops' product
-  // names often don't fit. The shop's name is only used when the type is unknown.
-  if (!d.name && !d.category && (name || r?.name)) d.name = cap((name || r.name).trim());
+  // names often don't fit, so the shop's name goes in the notes.
   const fit = Label.fitIn(about);
   if (fit && (override || !d.fit)) d.fit = fitsFor(d).includes(fit) ? fit : fit === "baggy" && fitsFor(d).includes("oversized") ? "oversized" : fit === "oversized" && fitsFor(d).includes("baggy") ? "baggy" : d.fit;
   const pagePrice = [page?.price, info?.price].find((p) => /\d/.test(p || "")) || "";
@@ -3603,7 +3602,7 @@ async function scanTag(d, file) {
     const lookupError = info?.error || "";
     if (lookupError) info = null;
     const colour = fillFromProduct(d, { tag: r, page, info, ref: found.ref, link: found.link, qr });
-    const known = page?.title || info?.name;
+    const known = Label.cleanTitle(page?.title) || info?.name || page?.image; // the page may give a photo but no name
     // Said under the Label button until the next scan, so it isn't missed like a toast.
     d.labelNote = known ? "" : [
       found.ref || qr ? `Couldn't open the product page${found.why ? ` (${found.why.replace(/\.$/, "")})` : ""}.` : "No QR code or reference found on that photo. Try again closer, with the QR code and the ART./REF number sharp.",
@@ -3627,6 +3626,20 @@ async function scanTag(d, file) {
         : productsOn() ? "Google has no photos of this one yet: take a photo of the piece, then Google Lens can find its shop photos."
         : "The shop doesn't show its photos to the app's server. With the free SerpApi key on the server (see Settings > Look) they come through Google instead. For now, take a photo of the piece.";
       if (note) d.labelNote = [d.labelNote, note].filter(Boolean).join(" ");
+      // The shop's page and Google said too little: the AI looks at the shop's photo instead,
+      // as it does for your own photos (about 600 tokens).
+      if (d.photos[0]?.shop && (!d.category || !colour) && aiReady() && draft === d) {
+        d.scanningTag = true;
+        step("Recognising the piece in the photo…");
+        const t = await aiTagPhoto(d.photos[0].orig).catch(() => null);
+        if (t && draft === d) {
+          if (!d.category && CAT[t.category]) { d.category = t.category; d.warmth = CAT[t.category].warmth; }
+          if (!d.fit && FITS[t.fit] && fitsFor(d).includes(t.fit)) d.fit = t.fit;
+          const cols = (t.colors || []).filter((c) => COLORS[c]).slice(0, 3);
+          if (!colour && cols.length) { d.colors = cols; d.keepColors = true; } // better than the pixels: navy isn't black
+          refreshStyles();
+        }
+      }
     }
     if (draft === d) {
       const what = [d.name || autoName(d) || d.brand, (page?.site || found.link) && `from ${page?.site || Label.siteOf(found.link)}`].filter(Boolean).join(" ");

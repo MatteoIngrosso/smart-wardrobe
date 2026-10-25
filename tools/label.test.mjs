@@ -124,6 +124,13 @@ test("what to send for a reference", () => {
   assert.equal(L.refWords(null), "");
 });
 
+test("a page address is not a product name", () => {
+  assert.equal(L.cleanTitle("productpage.1101074049.html"), "");
+  assert.equal(L.cleanTitle("https://www2.hm.com/it_it/productpage.1101074049.html"), "");
+  assert.equal(L.cleanTitle("T-shirt in cotone Pima Slim Fit - Blu navy - UOMO | H&M IT"), "T-shirt in cotone Pima Slim Fit - Blu navy");
+  assert.equal(L.cleanTitle("Jeans baggy relax fit - Uomo | Pull&Bear"), "Jeans baggy relax fit");
+});
+
 test("AI answer schemas never offer an empty choice", () => {
   // Gemini turns the whole request down ("enum[n]: cannot be empty"), so the tag was never read.
   const app = readFileSync(new URL("../app.js", import.meta.url), "utf8");
