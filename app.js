@@ -257,6 +257,7 @@ const state = {
     region: (navigator.language || "en").slice(0, 2) === "it" ? "it" : "com",
     gender: "men", // who the shopping ideas are for: "men" or "women"
     touches: true, // a "Finish it with…" line on Today when an accessory you don't own would help
+    scents: true, // a scent from your cabinet on each outfit idea (Wardrobe > Fragrances)
     aiProvider: "gemini", geminiKey: "", geminiModel: "gemini-flash-latest", apiKey: "",
     autoCutout: true, aiAuto: true, autoWash: true,
   },
@@ -267,6 +268,8 @@ const state = {
   scents: [], // shared: the fragrance cabinet (see Wardrobe > Fragrances)
   wardSide: "clothes", // Wardrobe shows "clothes" or "scents"
   scentFilter: "all",
+  scentUI: {}, // per outfit or event ("t:<outfit key>", "e:<event id>"): {open, pick} (pick "" = no scent)
+  better: {}, // "even better" fragrances by kind of outfit: {picks} | "busy" | {error}
   wants: [], // shared: every suggestion you answered: Must-Buy (yes), no, bought (see Must-Buy)
   whyNo: null, // the suggestion whose "Why not?" is open
   buying: null, // the Must-Buy piece you tapped "Bought it" on: the next piece you add starts as it
@@ -1234,14 +1237,14 @@ async function loadWeather(force = false) {
   const fresh = cached && !cached.typical && cached.lat === lat && cached.hourly; // older copies had no hourly forecast
   if (!force && fresh && Date.now() - cached.at < 30 * 60e3) return (state.weather = cached);
   try {
-    const j = await getJSON(`https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lon}&current=temperature_2m,apparent_temperature,weather_code,wind_speed_10m,precipitation&hourly=apparent_temperature,precipitation_probability,weather_code&daily=temperature_2m_max,temperature_2m_min,precipitation_probability_max&forecast_days=2&timezone=auto`);
+    const j = await getJSON(`https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lon}&current=temperature_2m,apparent_temperature,relative_humidity_2m,weather_code,wind_speed_10m,precipitation&hourly=apparent_temperature,precipitation_probability,weather_code,relative_humidity_2m&daily=temperature_2m_max,temperature_2m_min,precipitation_probability_max&forecast_days=2&timezone=auto`);
     const w = {
       at: Date.now(), lat,
       temp: j.current.temperature_2m, feels: j.current.apparent_temperature, code: j.current.weather_code,
-      wind: j.current.wind_speed_10m, max: j.daily.temperature_2m_max[0], min: j.daily.temperature_2m_min[0],
+      wind: j.current.wind_speed_10m, humid: j.current.relative_humidity_2m, max: j.daily.temperature_2m_max[0], min: j.daily.temperature_2m_min[0],
       rainChance: j.daily.precipitation_probability_max[0] ?? 0,
       // Hour by hour for today and tomorrow, for events later in the day (local times, "2026-10-15T19:00").
-      hourly: { time: j.hourly.time, feels: j.hourly.apparent_temperature, rain: j.hourly.precipitation_probability, code: j.hourly.weather_code },
+      hourly: { time: j.hourly.time, feels: j.hourly.apparent_temperature, rain: j.hourly.precipitation_probability, code: j.hourly.weather_code, humid: j.hourly.relative_humidity_2m },
     };
     await store.put("kv", w, "weather");
     return (state.weather = w);
@@ -1280,13 +1283,14 @@ function conditions() {
   const w = state.weather;
   let feels = w ? Math.min(w.feels, (w.min + w.max) / 2 + 1) : 15;
   let wet = w ? isWet(w.code) || w.rainChance >= 55 : false;
+  let humid = w?.humid ?? 0; // relative humidity, %: picks lighter scents when the air is heavy
   const at = state.event && eventWeather(state.event);
   if (at) {
     // Dressing now for something later today: warm enough for both. Tomorrow: for that time.
-    if (state.event.day === "tomorrow") ({ feels, wet } = at);
+    if (state.event.day === "tomorrow") ({ feels, wet, humid } = at);
     else { feels = Math.min(feels, at.feels); wet ||= at.wet; }
   }
-  return { feels: state.manualTemp ?? feels, wet };
+  return { feels: state.manualTemp ?? feels, wet, humid };
 }
 // How it will feel during an event (its first four hours), from the hourly forecast.
 // With only the usual temperatures for the month, evenings and mornings are cooler than midday.
@@ -1296,13 +1300,13 @@ function eventWeather(ev) {
   const h = w.hourly;
   if (!h) {
     const hr = new Date(ev.start).getHours();
-    return hr >= 19 || hr < 9 ? { feels: (2 * w.min + w.max) / 3, wet: false } : null;
+    return hr >= 19 || hr < 9 ? { feels: (2 * w.min + w.max) / 3, wet: false, humid: 0 } : null;
   }
   const to = Math.max(ev.start + 3600e3, Math.min(ev.end, ev.start + 4 * 3600e3));
   const idx = h.time.map((t, k) => [new Date(t).getTime(), k]).filter(([t]) => t + 3600e3 > ev.start && t < to).map(([, k]) => k);
   if (!idx.length) return null;
   const feels = idx.reduce((a, k) => a + h.feels[k], 0) / idx.length;
-  return { feels, wet: idx.some((k) => isWet(h.code[k]) || (h.rain[k] ?? 0) >= 55) };
+  return { feels, wet: idx.some((k) => isWet(h.code[k]) || (h.rain[k] ?? 0) >= 55), humid: h.humid ? idx.reduce((a, k) => a + (h.humid[k] ?? 0), 0) / idx.length : 0 };
 }
 const CORE = ["base", "mid", "outer", "bottom", "shoes"];
 
@@ -2807,6 +2811,7 @@ function outfitCard(o, i) {
     ${o.reasons.length || o.extrasWhy?.length ? `<p class="why">${[...o.reasons, ...(o.extrasWhy || [])].map(esc).join(" · ")}</p>` : ""}
     ${o.warn?.length ? `<p class="why warn">Heads up: ${o.warn.map(esc).join(" · ")}</p>` : ""}
     ${i === 0 && !o.planned ? finishingTouch(o) : ""}
+    ${todayScent(o)}
     ${o.asking
       ? `<div class="stack" style="gap:8px"><span class="muted small">What's off? The next ideas take it into account.</span><div class="chips">${SKIP_REASONS.map(([k, l]) => `<button class="chip" data-skipwhy="${i}:${k}">${l}</button>`).join("")}<button class="chip" data-skip="${i}" data-cancel="1">Cancel</button></div></div>`
       : `<div class="row outfit-actions">
@@ -4262,7 +4267,8 @@ async function answerWant(b, status) {
   if (!w) {
     const cat = b.cat || buyKind(b.title || "").cat;
     w = {
-      id, sig: sigOf(b), kind: ["acc", "head"].includes(CAT[cat]?.slot) ? "accessory" : "garment",
+      id, sig: sigOf(b), kind: cat === "fragrance" ? "fragrance" : ["acc", "head"].includes(CAT[cat]?.slot) ? "accessory" : "garment",
+      ...(b.scent && { scent: b.scent }),
       title: b.title, cat, noun: b.noun || "", color: b.color || colourIn((b.title || "").toLowerCase()) || "", fit: b.fit || "",
       styles: b.styles || [], query: b.query || b.title, why: b.why || "", source: { type: b.source || (view === "shop" ? state.disc.tab : view) }, createdAt: now,
     };
@@ -4319,7 +4325,7 @@ function shopScore(b) {
 // Yes / No on a suggestion, or what you answered.
 function verdictHTML(b) {
   const w = wantOf(b);
-  const data = esc(JSON.stringify({ title: b.title, cat: b.cat, noun: b.noun, color: b.color, fit: b.fit, styles: b.styles, query: b.query, why: b.why || "", eventId: b.eventId, needBy: b.needBy, source: typeof b.source === "string" ? b.source : undefined }));
+  const data = esc(JSON.stringify({ title: b.title, cat: b.cat, noun: b.noun, color: b.color, fit: b.fit, styles: b.styles, query: b.query, why: b.why || "", eventId: b.eventId, needBy: b.needBy, scent: b.scent, source: typeof b.source === "string" ? b.source : undefined }));
   if (w?.status === "wanted") return `<div class="verdict"><button class="btn" data-disc="must">✓ On your Must-Buy</button><button class="chip" data-unwant="${w.id}">Undo</button></div>`;
   if (w?.status === "bought") return `<div class="verdict"><span class="muted small">You bought this</span></div>`;
   if (w && state.whyNo === w.id) return `<div class="verdict stack" style="gap:8px"><span class="muted small">Why not? Optional: it decides what the ideas learn.</span><div class="chips">${REASONS.map(([k, l]) => `<button class="chip" data-whyno="${w.id}|${k}">${l}</button>`).join("")}<button class="chip" data-whyno="${w.id}|">Skip</button></div></div>`;
@@ -4431,10 +4437,11 @@ function multiplierLine(b) {
 }
 
 function mustRow(w) {
+  if (w.kind === "fragrance") return scentWantRow(w);
   const b = { ...w, with: goesWith(w.title) };
   const ev = forEvent(w);
   const m = multiplier(w);
-  const from = { foryou: "From For you", try: "From Try a piece", look: "From a new look", trip: "From a shop trip", today: "From the stylist", touch: "From Today's outfit", event: "For an event", wishlist: "From your wishlist" }[w.source?.type] || "";
+  const from = { foryou: "From For you", try: "From Try a piece", look: "From a new look", trip: "From a shop trip", today: "From the stylist", touch: "From Today's outfit", event: "For an event", wishlist: "From your wishlist", scent: "From an outfit's scent" }[w.source?.type] || "";
   return buyRow(b, {
     label: ev ? `For ${esc(ev.title)} · ${fmtDay(ev.date)}` : m ? `+${m.n} outfit${m.n === 1 ? "" : "s"}` : from,
     extra: `<button class="btn primary" data-bought="${w.id}">Bought it</button><button class="btn ghost" data-unwant="${w.id}">Remove</button>`,
@@ -4449,7 +4456,7 @@ function mustTab() {
   const soon = (w) => (forEvent(w) && daysUntil(w.needBy) <= 31 ? w.needBy : "~");
   const list = all.filter((w) => f === "all" || (f === "event" ? forEvent(w) : w.kind === f)).filter(soldHere)
     .map((w) => [w, multiplier(w)?.n ?? -1]).sort((a, b) => soon(a[0]).localeCompare(soon(b[0])) || b[1] - a[1]).map(([w]) => w);
-  const kinds = [["all", "All"], ["garment", "Clothes"], ["accessory", "Accessories"], ["event", "For an event"]].filter(([k]) => k === "all" || all.some((w) => (k === "event" ? forEvent(w) : w.kind === k)));
+  const kinds = [["all", "All"], ["garment", "Clothes"], ["accessory", "Accessories"], ["fragrance", "Fragrances"], ["event", "For an event"]].filter(([k]) => k === "all" || all.some((w) => (k === "event" ? forEvent(w) : w.kind === k)));
   const bought = state.wants.filter((w) => w.status === "bought").length;
   return `
     ${kinds.length > 2 ? `<div class="chips">${kinds.map(([k, l]) => `<button class="chip" aria-pressed="${f === k}" data-mustf="${k}">${l}</button>`).join("")}</div>` : ""}
@@ -4496,12 +4503,13 @@ function usualWeather(lat, lon, date, hour) {
 }
 // The forecast for the event's first four hours (midday to evening when it has no time).
 async function forecastWeather(lat, lon, date, hour) {
-  const j = await getJSON(`https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lon}&hourly=apparent_temperature,precipitation_probability,weather_code&start_date=${date}&end_date=${date}&timezone=auto`);
+  const j = await getJSON(`https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lon}&hourly=apparent_temperature,precipitation_probability,weather_code,relative_humidity_2m&start_date=${date}&end_date=${date}&timezone=auto`);
   const h = j.hourly;
   const hrs = (hour == null ? [11, 12, 13, 14, 15, 16, 17] : [hour, hour + 1, hour + 2, hour + 3]).filter((k) => k < h.time.length);
   return {
     feels: Math.round(hrs.reduce((a, k) => a + h.apparent_temperature[k], 0) / hrs.length),
     wet: hrs.some((k) => isWet(h.weather_code[k]) || (h.precipitation_probability[k] ?? 0) >= 55), source: "forecast", at: Date.now(),
+    humid: h.relative_humidity_2m ? Math.round(hrs.reduce((a, k) => a + (h.relative_humidity_2m[k] ?? 0), 0) / hrs.length) : 0,
   };
 }
 async function weatherForEvent(ev) {
@@ -4631,7 +4639,8 @@ async function planEvent(id, undo = false) {
   else {
     const o = eventIdeas(ev).ideas[state.disc.evPick[id] || 0];
     if (!o) return;
-    ev.outfit = { itemIds: [...Object.values(o.pieces), ...(o.extras || [])].filter(Boolean).map((p) => p.id), at: new Date().toISOString() };
+    const sc = scentShown.get(`e:${ev.id}`)?.chosen;
+    ev.outfit = { itemIds: [...Object.values(o.pieces), ...(o.extras || [])].filter(Boolean).map((p) => p.id), ...(sc && { scentId: sc.id }), at: new Date().toISOString() };
     toast(ev.date === localDay() ? "Planned. It's the first idea on Today." : `Planned. On ${fmtDay(ev.date)} it's the first idea on Today.`);
   }
   if (ev.date === localDay()) state.outfits = [];
@@ -4747,14 +4756,15 @@ function eventDetail(ev) {
   const o = r.ideas[k];
   const order = ["outer", "mid", "base", "bottom", "shoes"];
   const dashed = r.need.filter((n) => CORE.includes(n.role)).map((n) => `<div class="piece"><div class="ph">${kindIcon(SLOT_ICON[n.role])}<small>${esc(n.title)}<br>to buy</small></div><span>${esc(SLOTS[n.role])}</span></div>`).join("");
+  const scent = scentOn() ? scentBlock(`e:${ev.id}`, eventScentContext(ev, planned?.length ? planned : o ? [...Object.values(o.pieces), ...(o.extras || [])].filter(Boolean) : []), ev.outfit?.scentId) : "";
   const outfit = planned?.length
-    ? `<div class="pieces">${planned.map(pieceTile).join("")}</div>
+    ? `<div class="pieces">${planned.map(pieceTile).join("")}</div>${scent}
        <div class="row outfit-actions"><span class="score">Planned for the day</span><button class="btn ghost" data-evunplan="${ev.id}">Change</button></div>`
     : o
       ? `<div class="pieces">${order.filter((x) => o.pieces[x]).map((x) => pieceTile(o.pieces[x])).join("")}${dashed}</div>
          ${o.extras?.length ? `<div class="pieces extras">${o.extras.map(pieceTile).join("")}</div>` : ""}
          ${o.reasons.length ? `<p class="why">${o.reasons.map(esc).join(" · ")}</p>` : ""}
-         ${o.warn?.length ? `<p class="why warn">Heads up: ${o.warn.map(esc).join(" · ")}</p>` : ""}
+         ${o.warn?.length ? `<p class="why warn">Heads up: ${o.warn.map(esc).join(" · ")}</p>` : ""}${scent}
          <div class="row outfit-actions"><button class="btn primary" data-evplan="${ev.id}">Plan it for the day</button>${r.ideas.length > 1 ? `<button class="btn" data-evpick="${ev.id}|${(k + 1) % r.ideas.length}">Another outfit (${k + 1} of ${r.ideas.length})</button>` : ""}</div>`
       : `<p class="muted" style="margin:0">Nothing you own makes an outfit for this yet.</p>${dashed ? `<div class="pieces">${dashed}</div>` : ""}`;
   const chip = (field, v, l) => `<button class="chip" data-evdrop="${ev.id}|${field}|${esc(v)}" aria-label="Remove ${esc(l)}">${esc(l)} ✕</button>`;
@@ -5240,6 +5250,7 @@ function renderReport() {
       ${g.core.length ? `<p class="muted small" style="margin:0"><b>Core:</b> ${g.core.length} piece${g.core.length > 1 ? "s" : ""} you rate well and wear often.</p>` : ""}
       ${!["gems", "dead", "upgrade", "forgotten", "leaving", "core"].some((x) => g[x].length) ? `<p class="muted" style="margin:0">Nothing to judge yet: rate pieces and wear outfits for a few weeks.</p>` : ""}
     </section>
+    ${state.scents.length ? scentReport() : ""}
     <div class="two-col">
       <section class="card">
         <h2>Your style</h2>
@@ -5463,8 +5474,8 @@ function tripTab() {
 
 /* ---- New look ---- */
 const SEASONS = { spring: { label: "Spring", feels: 16 }, summer: { label: "Summer", feels: 27 }, autumn: { label: "Autumn", feels: 12 }, winter: { label: "Winter", feels: 3 } };
-function seasonNow() {
-  const m = new Date().getMonth(), south = (state.settings.lat ?? 45) < 0;
+function seasonNow(m = new Date().getMonth()) {
+  const south = (state.settings.lat ?? 45) < 0;
   const n = m >= 2 && m <= 4 ? "spring" : m >= 5 && m <= 7 ? "summer" : m >= 8 && m <= 10 ? "autumn" : "winter";
   return south ? { spring: "autumn", summer: "winter", autumn: "spring", winter: "summer" }[n] : n;
 }
@@ -6169,16 +6180,264 @@ function openScent(id) {
   $("#sheet").hidden = false;
 }
 // Worn today: counted on the bottle, and added to today's outfit in the wear log if it's there.
-async function wearScent(sc) {
+async function countScentWear(sc) {
   sc.wearCount = (sc.wearCount || 0) + 1;
   sc.lastWorn = new Date().toISOString();
   await store.put("scents", sc);
+}
+async function wearScent(sc) {
+  await countScentWear(sc);
   const wear = [...state.log].reverse().find((l) => logKind(l) === "wear" && l.date === today());
   if (wear && !(wear.scentIds || []).includes(sc.id)) {
     wear.scentIds = [...(wear.scentIds || []), sc.id];
     await store.put("log", wear);
   }
   toast(`Logged ${sc.name}.`);
+}
+
+/* ---- A scent for each outfit ----
+   Picked on the device, no AI: the weather (the "feels like" temperature, with humid air counting
+   2° warmer), the occasion, how dressy the outfit is and its styles, day or evening, the seasons the
+   bottle is made for, your stars, what you picked before for that occasion and temperature, and
+   not yesterday's scent again. Evenings and events also get a layering idea from two bottles you
+   own. "Even better" asks the AI once per kind of outfit for fragrances you don't own; the answer
+   is kept 30 days for every device (ai_cache "pair"). */
+const HUMID = 70; // % relative humidity from which the air counts 2° warmer
+const FRESH_FAMS = ["fresh", "citrus", "aquatic", "green"];
+const MILD_FAMS = ["aromatic", "fougere", "citrus", "green", "woody"];
+const WARM_FAMS = ["woody", "amber", "spicy", "leather", "gourmand"];
+const tempBand = (t) => (t >= 26 ? "hot" : t >= 15 ? "mild" : "cold");
+const BAND_WORDS = { hot: "hot weather", mild: "mild weather", cold: "cold weather" };
+const wearableScents = () => state.scents.filter((sc) => !sc.disliked && sc.fill !== "empty");
+const scentOn = () => state.settings.scents !== false && wearableScents().length > 0;
+const prof = (sc) => ({ fresh: 1, sweet: 1, weight: 3, projection: 3, longevity: 3, ...sc.profile });
+const words = (list) => (list.length > 1 ? `${list.slice(0, -1).join(", ")} and ${list.at(-1)}` : list[0] || "");
+
+// What a scent is picked for: the weather, the occasion, and the outfit's pieces.
+function scentContext(pieces, o = {}) {
+  const c = conditions();
+  const occasion = o.occasion || state.occasion;
+  const feels = o.feels ?? c.feels, humid = o.humid ?? c.humid ?? 0;
+  const eff = feels + (humid >= HUMID ? 2 : 0);
+  const hour = o.hour ?? (state.event ? new Date(state.event.start).getHours() : new Date().getHours());
+  const count = {};
+  for (const p of pieces) for (const st of p.styles || []) count[st] = (count[st] || 0) + 1;
+  const fs = pieces.map((p) => p.formality ?? formalityOf(p.styles || []));
+  return {
+    occasion, feels, humid, band: tempBand(eff), season: o.season || seasonNow(), night: occasion === "night" || hour >= 18, event: !!o.event,
+    styles: new Set(Object.keys(count)), style: Object.entries(count).sort((a, b) => b[1] - a[1])[0]?.[0] || "casual",
+    formality: fs.length ? fs.reduce((a, b) => a + b, 0) / fs.length : OCCASIONS.find((x) => x.id === occasion)?.target || 2,
+  };
+}
+function eventScentContext(ev, pieces) {
+  const m = +ev.date.slice(5, 7) - 1;
+  return scentContext(pieces, {
+    occasion: ev.dressCode?.occasion, feels: ev.weather?.feels ?? conditions().feels, humid: ev.weather?.humid ?? 0,
+    hour: ev.time ? +ev.time.slice(0, 2) : 13, season: seasonNow(m), event: true,
+  });
+}
+// What your picks and wears taught: points per scent, occasion and temperature band.
+let scentTasteMemo = null;
+function scentTaste() {
+  if (scentTasteMemo?.n === state.log.length) return scentTasteMemo.t;
+  const t = {};
+  const add = (id, occ, band, v) => { if (id) t[`${id}|${occ}|${band}`] = (t[`${id}|${occ}|${band}`] || 0) + v; };
+  for (const l of state.log) {
+    const w = 0.5 ** (Math.max(0, daysSince(l.at || l.date)) / 60);
+    if (l.kind === "scent") { add(l.scentId, l.occasion, l.band, w); add(l.from, l.occasion, l.band, -0.5 * w); }
+    else if (logKind(l) === "wear" && l.scentIds) for (const id of l.scentIds) add(id, l.occasion, tempBand(l.feels ?? 15), 0.3 * w);
+  }
+  scentTasteMemo = { n: state.log.length, t };
+  return t;
+}
+function scentScore(sc, ctx) {
+  const p = prof(sc);
+  const fam = new Set(sc.families || []);
+  const has = (list) => list.some((f) => fam.has(f));
+  let s = 0;
+  if (ctx.band === "hot") s += p.fresh * 0.9 - Math.max(0, p.weight - 2) * 0.9 + (has(FRESH_FAMS) ? 1 : 0) - (has(["amber", "gourmand", "leather"]) ? 1.5 : 0) - Math.max(0, p.sweet - 1) * 0.5;
+  else if (ctx.band === "mild") s += (has(MILD_FAMS) ? 0.8 : 0) - Math.abs(p.weight - 3) * 0.5;
+  else s += (p.weight - 3) * 0.6 + (has(WARM_FAMS) ? 1 : 0) - (p.fresh >= 3 ? 0.8 : 0) - (fam.has("aquatic") ? 1 : 0);
+  s += ((sc.seasons?.[ctx.season] ?? 0.5) - 0.5) * 1.2;
+  s -= Math.abs((sc.formality || 2) - ctx.formality) * 0.7;
+  if (ctx.occasion === "work" && p.projection > 3) s -= (p.projection - 3) * 1.2; // nobody wants to share an office with it
+  s += ctx.night ? (sc.time === "day" ? -1 : sc.time === "night" ? 0.6 : 0) : sc.time === "night" ? -1 : 0;
+  s += Math.min(2, (sc.vibes || []).filter((v) => ctx.styles.has(v)).length) * 0.5;
+  if (starsOf(sc)) s += (starsOf(sc) - 3) * 0.5;
+  s += scentTaste()[`${sc.id}|${ctx.occasion}|${ctx.band}`] || 0;
+  if (sc.lastWorn && daysSince(sc.lastWorn) === 1) s -= 0.8; // yesterday's
+  return s;
+}
+// One line on why it fits.
+function scentWhy(sc, ctx, others) {
+  const p = prof(sc);
+  const kind = words([p.weight <= 2 ? "light" : p.weight >= 4 ? "rich" : "", ...(sc.families || []).slice(0, 2).map((f) => SCENT_FAMILIES[f].toLowerCase())].filter(Boolean));
+  const extra = ctx.occasion === "work" && p.projection <= 3 ? ", and quiet enough for the office"
+    : ctx.night && sc.time === "night" ? ", made for the evening"
+    : Math.abs((sc.formality || 2) - ctx.formality) < 0.6 ? ", as dressy as the outfit" : "";
+  const heavy = ctx.band === "hot" && p.weight <= 3 && others.some((x) => prof(x).weight >= 4) ? " Your heavier ones would feel too much in this heat."
+    : ctx.band === "cold" && p.weight >= 3 && others.some((x) => prof(x).fresh >= 3 && prof(x).weight <= 2) ? " Your lightest ones would fade in the cold." : "";
+  return `${cap(kind || "a good match")} for ${fmtTemp(ctx.feels)}${ctx.humid >= HUMID ? " and humid air" : ""}${extra}.${heavy}`;
+}
+// Two bottles you own worn together, for evenings and events: the heavier one first, a fresher
+// one on top, never two sweet ones or two loud ones.
+function layering(sc, ctx) {
+  if (!(ctx.night || ctx.event || ctx.occasion === "event") || ctx.band === "hot") return "";
+  const heavy = (x) => prof(x).weight >= 4 || WARM_FAMS.includes(x.families?.[0]);
+  const fresh = (x) => !heavy(x) && (prof(x).fresh >= 2 || [...FRESH_FAMS, "aromatic"].includes(x.families?.[0]));
+  const ok = (a, b) => a.id !== b.id && !(prof(a).sweet >= 2 && prof(b).sweet >= 2) && !(prof(a).projection >= 4 && prof(b).projection >= 4);
+  const best = (list) => list.map((x) => [x, scentScore(x, ctx)]).sort((a, b) => b[1] - a[1])[0]?.[0];
+  const all = wearableScents();
+  const [base, top] = heavy(sc) ? [sc, best(all.filter((x) => fresh(x) && ok(sc, x)))] : fresh(sc) ? [best(all.filter((x) => heavy(x) && ok(x, sc))), sc] : [];
+  if (!base || !top) return "";
+  const fam = (x) => SCENT_FAMILIES[x.families?.[0]]?.toLowerCase() || "";
+  return `${base.name} first on the chest, then one spray of ${top.name} on the neck: ${fam(base) || "warm"} underneath, ${fam(top) || "fresh"} on top.`;
+}
+const scentShown = new Map(); // what each scent line showed: key → {ctx, auto, chosen}
+// The scent for an outfit: the one you picked, the one saved with a plan, or the best match.
+function scentChoice(key, ctx, saved) {
+  const picks = wearableScents().map((sc) => ({ sc, s: scentScore(sc, ctx) })).sort((a, b) => b.s - a.s);
+  const ui = state.scentUI[key] || {};
+  const want = ui.pick !== undefined ? ui.pick : saved;
+  const chosen = want === "" ? null : (want && wearableScents().find((x) => x.id === want)) || picks[0]?.sc || null;
+  return { picks, chosen, auto: picks[0]?.sc || null, ui };
+}
+function scentBlock(key, ctx, saved) {
+  const { picks, chosen, auto, ui } = scentChoice(key, ctx, saved);
+  if (!auto) return "";
+  scentShown.set(key, { ctx, auto, chosen });
+  const k = esc(key);
+  let more = "";
+  if (ui.open) {
+    const lay = chosen && layering(chosen, ctx);
+    more = `<div class="scent-more">
+      <div class="chips"><span class="muted small">Or</span>${picks.filter((x) => x.sc !== chosen).slice(0, 4).map(({ sc }) => `<button class="chip" data-scpick="${k}|${sc.id}">${esc(sc.name)}</button>`).join("")}${chosen ? `<button class="chip" data-scpick="${k}|">No scent</button>` : ""}</div>
+      ${lay ? `<p class="why"><b>Layering${ctx.event ? "" : " tonight"}:</b> ${esc(lay)}</p>` : ""}
+      ${betterHTML(ctx)}
+    </div>`;
+  }
+  return `<div class="scentline">${ICON_BOTTLE}<div class="scent-main">${chosen
+    ? `<b>${esc(chosen.name)}</b> <span class="muted">· ${esc(scentWhy(chosen, ctx, picks.map((x) => x.sc).filter((x) => x !== chosen)))}</span>`
+    : `<span class="muted">No scent with this one.</span>`}</div><button class="chip" data-scopen="${k}" aria-expanded="${!!ui.open}">${ui.open ? "Less" : chosen ? "Change" : "Pick one"}</button>${more}</div>`;
+}
+const todayKey = (o) => `t:${o.key}`;
+const todaySaved = (o) => (o.planned?.eventId ? state.events.find((e) => e.id === o.planned.eventId)?.outfit?.scentId : undefined);
+const todayPieces = (o) => [...Object.values(o.pieces), ...(o.extras || [])].filter(Boolean);
+const todayScent = (o) => (scentOn() && state.occasion !== "gym" ? scentBlock(todayKey(o), scentContext(todayPieces(o)), todaySaved(o)) : "");
+// The scent worn with an outfit from Today (logged with it), or null.
+function outfitScent(o) {
+  if (!scentOn() || state.occasion === "gym") return null;
+  return scentChoice(todayKey(o), scentContext(todayPieces(o)), todaySaved(o)).chosen;
+}
+async function pickScent(key, id) {
+  const seen = scentShown.get(key);
+  (state.scentUI[key] ||= {}).pick = id;
+  // Picking another one teaches: more of it for this occasion and weather, a little less of the one suggested.
+  if (id && seen) await addLog({ kind: "scent", scentId: id, ...(seen.auto && seen.auto.id !== id && { from: seen.auto.id }), occasion: seen.ctx.occasion, feels: Math.round(seen.ctx.feels), band: seen.ctx.band });
+  const ev = key.startsWith("e:") && state.events.find((e) => e.id === key.slice(2));
+  if (ev?.outfit) { ev.outfit.scentId = id; await saveEvent(ev); }
+  render();
+}
+
+// "Even better": fragrances you don't own for this kind of outfit, asked once and kept 30 days.
+const betterKey = (ctx) => [ctx.occasion, ctx.band, ctx.night ? "night" : "day", ctx.style, state.settings.gender].join("|");
+const betterCtx = new Map();
+const BETTER_SCHEMA = {
+  type: "object", additionalProperties: false, required: ["picks"],
+  properties: {
+    picks: {
+      type: "array", description: "3 fragrances",
+      items: {
+        type: "object", additionalProperties: false, required: ["house", "name", "concentration", "why"],
+        properties: {
+          house: { type: "string" }, name: { type: "string", description: "Without the house" },
+          concentration: { type: "string", enum: [...Object.keys(CONCENTRATIONS), "unknown"] },
+          why: { type: "string", description: "Why it suits this kind of outfit and weather, under 16 words" },
+        },
+      },
+    },
+  },
+};
+const scentIdea = (b) => ({
+  title: `${b.house} ${b.name}`.trim(), cat: "fragrance", noun: `${b.house} ${b.name}`.trim().toLowerCase(), color: "",
+  query: [b.house, b.name, CONCENTRATIONS[b.concentration]].filter(Boolean).join(" "), why: b.why, source: "scent",
+  scent: { house: b.house, name: b.name, concentration: b.concentration || "" },
+});
+function betterHTML(ctx) {
+  if (!aiReady()) return "";
+  const bk = betterKey(ctx);
+  betterCtx.set(bk, ctx);
+  const got = state.better[bk];
+  if (!got) return `<button class="linkish small" data-scbetter="${esc(bk)}">Even better, not in your cabinet</button>`;
+  if (got === "busy") return `<p class="muted small"><span class="spinner inline"></span> Looking for even better ones…</p>`;
+  if (got.error) return `<p class="muted small">${esc(got.error)} <button class="linkish small" data-scbetter="${esc(bk)}">Try again</button></p>`;
+  const owned = new Set(state.scents.map((sc) => scentNorm(sc.name)));
+  const picks = got.picks.filter((b) => !owned.has(scentNorm(b.name))).slice(0, 2);
+  if (!picks.length) return `<p class="muted small">Nothing better than your own for this one.</p>`;
+  return `<div class="better"><span class="muted small">Even better, not in your cabinet</span>${picks.map((b) => {
+    const idea = scentIdea(b);
+    return `<div class="better-row"><p><b>${esc(idea.title)}</b> <span class="muted">· ${esc(b.why)}</span></p>${verdictHTML(idea)}</div>`;
+  }).join("")}</div>`;
+}
+async function findBetter(bk) {
+  const ctx = betterCtx.get(bk);
+  if (!ctx || state.better[bk] === "busy") return;
+  state.better[bk] = "busy";
+  render();
+  try {
+    let data = await cacheGet("pair", bk);
+    if (!data) {
+      const cabinet = state.scents.map((sc) => `${[sc.house, sc.name].filter(Boolean).join(" ")} (${(sc.families || []).map((f) => SCENT_FAMILIES[f]).join(", ") || "?"})`).join("; ");
+      const text = await aiGenerate({
+        system: "You are a fragrance adviser in a wardrobe app. Suggest real, well-known fragrances that are easy to buy. Reply with JSON only.",
+        text: `Kind of outfit: ${occLabel(ctx.occasion)}, ${styleLabel(ctx.style).toLowerCase()} style, ${ctx.night ? "evening" : "daytime"}, ${BAND_WORDS[ctx.band]} (feels about ${Math.round(ctx.feels)}°C${ctx.humid >= HUMID ? ", humid" : ""}). The wearer is ${shopperText()}. Their cabinet: ${cabinet || "empty"}. Suggest 3 fragrances they don't own that would suit this kind of outfit better than anything in the cabinet.`,
+        schema: BETTER_SCHEMA,
+        maxTokens: 350,
+      });
+      const r = JSON.parse(text.replace(/^```(json)?|```$/g, "").trim());
+      data = {
+        picks: (r.picks || []).map((x) => ({
+          house: String(x.house || "").trim().slice(0, 40), name: String(x.name || "").trim().slice(0, 60),
+          concentration: CONCENTRATIONS[x.concentration] ? x.concentration : "", why: String(x.why || "").trim().slice(0, 140),
+        })).filter((x) => x.name).slice(0, 3),
+      };
+      if (data.picks.length) cachePut("pair", bk, data);
+    }
+    state.better[bk] = data;
+  } catch (e) {
+    state.better[bk] = { error: e.message || "Couldn't look just now." };
+  }
+  render();
+}
+// A fragrance on Must-Buy.
+function scentWantRow(w) {
+  const b = { ...w, with: [] };
+  const it = state.settings.region === "it";
+  const q = encodeURIComponent(w.query || w.title);
+  const shops = [["Google Shopping", `https://www.google.com/search?tbm=shop&q=${q}`], ["Notino", `https://www.notino.${it ? "it" : "co.uk"}/search.asp?exps=${q}`], ["Douglas", `https://www.douglas.${it ? "it" : "de"}/search?q=${q}`], ["Sephora", `https://www.sephora.${it ? "it" : "com"}/search?q=${q}`]];
+  return `<div class="buy-row">
+    <a class="buy-ic art-tile" href="${shops[0][1]}" target="_blank" rel="noopener" aria-label="Search for ${esc(w.title)}"${prodAttr(b)}>${tileInner(b)}</a>
+    <div class="buy-body">
+      <span class="prio">Fragrance${w.source?.type === "scent" ? " · from an outfit's scent" : ""}</span><h3>${esc(w.title)}</h3>${w.why ? `<p>${esc(w.why)}</p>` : ""}
+      <div class="shops">${shops.map(([n, u]) => `<a class="btn" href="${u}" target="_blank" rel="noopener">${esc(n)}</a>`).join("")}<button class="btn primary" data-bought="${w.id}">Bought it</button><button class="btn ghost" data-unwant="${w.id}">Remove</button></div>
+    </div>
+  </div>`;
+}
+
+// Wardrobe > Report: the cabinet by season and time of day.
+const SEASON_GAP = { spring: "green or aromatic", summer: "fresh citrus or aquatic", autumn: "woody or spicy", winter: "amber or woody" };
+function scentReport() {
+  const all = wearableScents();
+  const most = [...state.scents].filter((sc) => sc.wearCount).sort((a, b) => b.wearCount - a.wearCount)[0];
+  const evening = all.filter((sc) => sc.time !== "day").length, day = all.filter((sc) => sc.time !== "night").length;
+  return `<section class="card stack">
+    <h2 style="margin:0">Fragrances</h2>
+    <div class="scent-seasons">${Object.entries(SEASONS).map(([k, { label }]) => {
+      const fit = all.filter((sc) => (sc.seasons?.[k] ?? 1) >= 0.5).sort((a, b) => (b.seasons?.[k] ?? 1) - (a.seasons?.[k] ?? 1));
+      return `<div><b>${label}</b>${fit.length ? `<span>${esc(fit.slice(0, 4).map((sc) => sc.name).join(", "))}${fit.length > 4 ? ` +${fit.length - 4}` : ""}</span>` : `<span class="muted">Nothing yet: a ${SEASON_GAP[k]} one would fill it.</span>`}</div>`;
+    }).join("")}</div>
+    <p class="muted small" style="margin:0">${day} for the day, ${evening} for the evening${most ? ` · worn most: ${esc(most.name)} (${most.wearCount}×)` : ""}${state.scents.some(runningLow) ? ` · running low: ${esc(state.scents.filter(runningLow).map((sc) => sc.name).join(", "))}` : ""}.</p>
+  </section>`;
 }
 
 /* ---------- Settings ---------- */
@@ -6280,6 +6539,7 @@ function renderSettings() {
         <div class="field"><label>Shops</label><div class="chips">${[["it", "Italy"], ["com", "International"]].map(([k, l]) => `<button class="chip" aria-pressed="${s.region === k}" data-region="${k}">${l}</button>`).join("")}</div></div>
         <div class="field"><label>Shop for</label><div class="chips">${[["men", "Men"], ["women", "Women"]].map(([k, l]) => `<button class="chip" aria-pressed="${s.gender === k}" data-gender="${k}">${l}</button>`).join("")}</div><span class="muted small">Shopping ideas, shop links, product photos and new looks are for ${s.gender === "women" ? "women" : "men"}.</span></div>
         ${toggle("touches", "Finishing touches", "One line on today's best outfit when an accessory you don't own (a belt, a watch…) would finish it.")}
+        ${toggle("scents", "A scent for each outfit", "A fragrance from your cabinet on each outfit idea and event plan, picked for the weather and the occasion. Logged with the outfit when you wear it.")}
         <div class="field"><label>Product photos</label><span class="muted small">${productsOn()
           ? "On: Discover shows real products from Google Shopping, and Add can find a piece with Google Lens and the shop's photos of a label through Google Images (all through SerpApi, saved on your server). Shopping and image searches are kept for two weeks, so the free 250 searches a month go a long way."
           : state.serverKeys.products ? `Paused: ${esc(productsDown)} Discover shows drawings until it works again.`
@@ -6587,6 +6847,9 @@ document.addEventListener("click", async (e) => {
   if (ds.scf) { state.scentFilter = ds.scf; return render(); }
   if (ds.scent) return openScent(ds.scent);
   if (scentDraft && view === "add" && scentChip(scentDraft, ds)) return;
+  if (ds.scopen) { const u = (state.scentUI[ds.scopen] ||= {}); u.open = !u.open; return render(); }
+  if (ds.scpick != null) { const at = ds.scpick.lastIndexOf("|"); return pickScent(ds.scpick.slice(0, at), ds.scpick.slice(at + 1)); }
+  if (ds.scbetter) return findBetter(ds.scbetter);
   {
     const sc = state.scents.find((x) => x.id === (ds.scfill || ds.scwear || ds.scdislike || ds.scedit || ds.scdel || "").split("|")[0]);
     if (sc && ds.scfill) { sc.fill = ds.scfill.split("|")[1]; await store.put("scents", sc); openScent(sc.id); return render(); }
@@ -6724,10 +6987,12 @@ document.addEventListener("click", async (e) => {
   }
   if (ds.wear != null) {
     const o = state.outfits[+ds.wear];
-    const washed = await wearOutfit([...Object.values(o.pieces), ...(o.extras || [])].filter(Boolean), { source: o.planned ? "plan" : "idea" });
+    const sc = outfitScent(o);
+    const washed = await wearOutfit([...Object.values(o.pieces), ...(o.extras || [])].filter(Boolean), { source: o.planned ? "plan" : "idea", ...(sc && { scentIds: [sc.id] }) });
+    if (sc) await countScentWear(sc);
     if (o.planned) { state.plan = null; await savePlan(); }
     state.anchor = null;
-    wornToast("Logged. Enjoy your day!", washed);
+    wornToast(sc ? `Logged with ${sc.name}. Enjoy your day!` : "Logged. Enjoy your day!", washed);
     generateOutfits();
     return render();
   }
@@ -6844,6 +7109,11 @@ document.addEventListener("click", async (e) => {
     if (!w) return render();
     Object.assign(w, { status: "bought", decidedAt: new Date().toISOString() });
     await store.put("wants", w);
+    if (w.kind === "fragrance") { // the bottle form starts with its name, and its notes are filled in
+      scentDraft = { ...newScentDraft(), name: w.scent?.name || w.title, house: w.scent?.house || "", concentration: w.scent?.concentration || "" };
+      go("add");
+      return lookupScent(scentDraft);
+    }
     state.buying = w.id;
     toast(`Great. Take its photos: the type${w.color ? " and colour" : ""} ${w.color ? "are" : "is"} filled in.`);
     return go("add");

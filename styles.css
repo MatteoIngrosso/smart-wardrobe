@@ -513,3 +513,14 @@ details summary { cursor: pointer; }
   .sc-slider { grid-template-columns: 90px 1fr; }
   .sc-slider .muted { grid-column: 2; margin-top: -10px; }
 }
+.scentline { display: flex; flex-wrap: wrap; gap: 8px 12px; align-items: center; padding: 10px 14px; border-radius: 12px; background: var(--surface-2); font-size: 15px; }
+.scentline > svg { width: 22px; height: 22px; flex: none; stroke-width: 1.4; }
+.scent-main { flex: 1; min-width: 0; }
+.scent-more { flex-basis: 100%; display: grid; gap: 10px; padding-top: 4px; }
+.scent-more .why { margin: 0; }
+.better { display: grid; gap: 10px; }
+.better-row { display: grid; gap: 6px; }
+.better-row p { margin: 0; }
+.scent-seasons { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 10px; }
+.scent-seasons div { display: grid; gap: 2px; background: var(--surface-2); border-radius: 12px; padding: 10px 14px; }
+.scent-seasons b { font-size: 13px; color: var(--muted); font-weight: 500; text-transform: uppercase; letter-spacing: .05em; }
