@@ -27,7 +27,7 @@
 //     SERPAPI_KEY   optional secret: product photos in Discover, Google Images and Google Lens for
 //                   adding pieces (free plan, 250 searches a month)
 
-const COLS = new Set(["items", "log", "kv"]);
+const COLS = new Set(["items", "log", "kv", "wants", "scents", "events"]);
 const BLOB_KEY = /^[0-9a-z-]{4,80}\.(jpg|webp|png|bin)$/;
 const BLOB_TYPE = { jpg: "image/jpeg", webp: "image/webp", png: "image/png", bin: "application/octet-stream" };
 const MAX_BLOB = 1_900_000; // a D1 row holds up to 2 MB; photos are resized to 1100 px, far below that

@@ -192,12 +192,13 @@ const SEED_VERSION = 3;
    Storage (IndexedDB)
    ====================================================================== */
 const db = await new Promise((resolve, reject) => {
-  const req = indexedDB.open("smart-wardrobe", 1);
+  const req = indexedDB.open("smart-wardrobe", 2);
   req.onupgradeneeded = () => {
     const d = req.result;
-    d.createObjectStore("items", { keyPath: "id" });
-    d.createObjectStore("log", { keyPath: "id", autoIncrement: true });
-    d.createObjectStore("kv");
+    // Version 2 adds "wants": Must-Buy, and suggestions you said no to.
+    for (const [name, opts] of [["items", { keyPath: "id" }], ["log", { keyPath: "id", autoIncrement: true }], ["kv"], ["wants", { keyPath: "id" }]]) {
+      if (!d.objectStoreNames.contains(name)) d.createObjectStore(name, opts);
+    }
   };
   req.onsuccess = () => resolve(req.result);
   req.onerror = () => reject(req.error);
@@ -218,7 +219,7 @@ const raw = {
   get: (s, k) => tx(s, "readonly", (o) => o.get(k)),
   clear: (s) => tx(s, "readwrite", (o) => o.clear()),
 };
-// Same as `raw`, but changes to shared records (pieces, wear log, wishlist) are
+// Same as `raw`, but changes to shared records (pieces, wear log, Must-Buy, wishlist) are
 // also queued for the other devices (see Sync below).
 const store = {
   all: raw.all,
@@ -255,7 +256,10 @@ const state = {
     autoCutout: true, aiAuto: true, autoWash: true,
   },
   usage: { month: "", requests: 0, input: 0, output: 0 },
-  wishlist: [],
+  wishlist: [], // before Must-Buy: moved into `wants` once (see moveWishlist)
+  wants: [], // shared: every suggestion you answered: Must-Buy (yes), no, bought (see Must-Buy)
+  whyNo: null, // the suggestion whose "Why not?" is open
+  buying: null, // the Must-Buy piece you tapped "Bought it" on: the next piece you add starts as it
   filters: { q: "", slot: "all", cat: "all", color: "all", style: "all", sort: "recent" },
   occasion: "casual",
   manualTemp: null,
@@ -285,6 +289,7 @@ const state = {
 async function loadAll() {
   state.items = (await store.all("items")) || [];
   state.log = (await store.all("log")) || [];
+  state.wants = (await store.all("wants")) || [];
   Object.assign(state.settings, (await store.get("kv", "settings")) || {});
   for (const [k, empty] of Object.entries(SHARED_KV)) state[k] = (await store.get("kv", k)) ?? empty();
   state.cal = { ...state.cal, ...((await raw.get("kv", "calEvents")) || {}), loading: false };
@@ -309,7 +314,7 @@ const savePlan = () => store.put("kv", state.plan, "plan");
    Each device keeps its full copy in IndexedDB, so it works offline. When the
    app is opened through server.py, changes go to the computer running it and
    come back to the other devices through a long-poll, within a second or two.
-   - pieces, the wear log, the wishlist, calendar links and a planned outfit are shared;
+   - pieces, the wear log, Must-Buy, calendar links and a planned outfit are shared;
      settings and keys are not
    - the newest change to a record wins
    - photos are uploaded once, keyed by a hash of their bytes
@@ -331,7 +336,7 @@ const SYNC_STATE = "sync";
 // Shared values kept under "kv", and what each is when there's nothing yet.
 const SHARED_KV = { wishlist: () => [], calendar: () => ({ links: [], occ: {} }), plan: () => null };
 function syncKey(s, k) {
-  if (s === "items" || s === "log") return `${s}/${k}`;
+  if (s === "items" || s === "log" || s === "wants") return `${s}/${k}`;
   return s === "kv" && Object.hasOwn(SHARED_KV, k) ? `kv/${k}` : null;
 }
 const splitKey = (key) => { const i = key.indexOf("/"); return [key.slice(0, i), key.slice(i + 1)]; };
@@ -480,10 +485,11 @@ async function applyRecords(records) {
         await raw.put("items", it);
         if (at >= 0) state.items[at] = it; else { state.items.push(it); newSet = true; }
       }
-    } else if (rec.col === "log") {
-      const at = state.log.findIndex((l) => l.id === rec.id);
-      if (rec.deleted) { await raw.del("log", rec.id); if (at >= 0) state.log.splice(at, 1); }
-      else { await raw.put("log", rec.data); if (at >= 0) state.log[at] = rec.data; else state.log.push(rec.data); }
+    } else if (rec.col === "log" || rec.col === "wants") {
+      const list = state[rec.col];
+      const at = list.findIndex((l) => l.id === rec.id);
+      if (rec.deleted) { await raw.del(rec.col, rec.id); if (at >= 0) list.splice(at, 1); }
+      else { await raw.put(rec.col, rec.data); if (at >= 0) list[at] = rec.data; else list.push(rec.data); }
     } else if (rec.col === "kv" && Object.hasOwn(SHARED_KV, rec.id)) {
       state[rec.id] = (rec.deleted ? null : rec.data) ?? SHARED_KV[rec.id]();
       await raw.put("kv", state[rec.id], rec.id);
@@ -531,6 +537,7 @@ async function joinServer() {
     await syncTouch(`items/${it.id}`, false);
   }
   for (const l of state.log) if (!onServer.has(`log/${l.id}`)) await syncTouch(`log/${l.id}`, false);
+  for (const w of state.wants) if (!onServer.has(`wants/${w.id}`)) await syncTouch(`wants/${w.id}`, false);
   const sw = onServer.get("kv/wishlist");
   const theirs = sw && !sw.deleted ? sw.data || [] : [];
   const mine = state.wishlist.filter((w) => !theirs.some((t) => t.title === w.title));
@@ -558,6 +565,7 @@ async function joinServer() {
 }
 
 function syncChanged() {
+  if (state.wishlist?.length) return void moveWishlist().then(syncChanged); // a wishlist from a device that hadn't updated yet
   // Refresh the screen, unless that would disturb someone typing or adding a piece.
   if (view === "add" || document.activeElement?.matches("input, textarea")) { sync.pendingRender = true; return; }
   sync.pendingRender = false;
@@ -1745,6 +1753,10 @@ function tasteText() {
   if (nope.length) lines.push(`Turned down: ${nope.join(", ")}.`);
   const swapped = recent("swap", (l) => num.has(l.removed)).map((l) => `${num.get(l.removed)} (with ${refs(l.itemIds.filter((id) => id !== l.removed))})`);
   if (swapped.length) lines.push(`Swapped out of outfits: ${swapped.join(", ")}.`);
+  const wantList = state.wants.filter((w) => w.status === "wanted").slice(-6).map((w) => w.title);
+  if (wantList.length) lines.push(`Already on the Must-Buy list: ${wantList.join(", ")}.`);
+  const nos = state.wants.filter((w) => w.status === "rejected" && daysSince(w.decidedAt) < 180).slice(-6).map((w) => `${w.title}${w.reason ? ` (${REASON_WORDS[w.reason]?.toLowerCase()})` : ""}`);
+  if (nos.length) lines.push(`Turned down as buys, don't suggest again: ${nos.join(", ")}.`);
   const fits = Object.entries(t.fits).filter(([, v]) => v >= 1).sort((a, b) => b[1] - a[1])[0];
   if (fits) lines.push(`Favourite proportions: ${fits[0].split("|").map((f) => FITS[f]?.label.toLowerCase()).join(" top, ")} bottom.`);
   const worn = state.items.filter((i) => daysSince(i.lastWorn) <= 2 && slotOf(i) !== "under").map((i) => num.get(i.id));
@@ -2470,7 +2482,7 @@ function buyRow(b, { label = "To buy", shops = 4, extra = "" } = {}) {
     </div>
   </div>`;
 }
-const wishBtn = (b) => `<button class="btn" data-wishbuy="${esc(JSON.stringify({ prio: "medium", title: b.title, why: b.why || "", query: b.query, cat: b.cat, color: b.color }))}">${state.wishlist.some((w) => w.title === b.title) ? "♥ Saved" : "♡ Save"}</button>`;
+const wishBtn = (b) => verdictHTML(b);
 
 const pieceTile = (p) => `<button class="piece" data-item="${p.id}"><img class="pic-bg" src="${photoURL(p.photos?.[0])}" alt=""><span>${esc(p.name)}</span></button>`;
 // Advice that isn't an outfit: each line with photos of the pieces it mentions; buys get their own row.
@@ -3287,6 +3299,11 @@ async function startDraft(srcs) {
   const d = draft;
   d.photos = srcs.slice(0, 4).map(newPhoto);
   d.colors = await detectColors(srcs[0]).catch(() => []);
+  const w = state.buying && state.wants.find((x) => x.id === state.buying);
+  if (w) {
+    Object.assign(d, { category: CAT[w.cat] ? w.cat : d.category, name: w.title, fit: w.fit || "", want: w.id });
+    if (COLORS[w.color]) d.colors = [w.color, ...d.colors.filter((c) => c !== w.color)];
+  }
   render();
   for (const p of d.photos) await preparePhoto(p, d);
   if (aiReady() && state.settings.aiAuto) await recognise(d);
@@ -3985,6 +4002,8 @@ async function saveDraft(next = false) {
   };
   await store.put("items", item);
   if (existing) Object.assign(existing, item); else state.items.push(item);
+  const bought = d.want && state.wants.find((w) => w.id === d.want);
+  if (bought) { bought.boughtItemId = item.id; await store.put("wants", bought); state.buying = null; }
   lookupBrand(item.brand);
   state.outfits = [];
   toast(existing ? "Saved" : `Added ${item.name}`);
@@ -4040,7 +4059,7 @@ const artTile = (b) => `<div class="art-tile"${prodAttr(b)}>${tileInner(b)}</div
 // Something to buy: { cat, color, title, query }. Shop searches add who it's for (forWho).
 function mkIdea({ cat, color = "", noun = "", brand = "", fit = "", title = "", why = "", styles }) {
   const words = [brand, color, fit ? FITS[fit]?.label.toLowerCase() : "", noun || catLabel(cat).toLowerCase()].filter(Boolean).join(" ");
-  return { cat, color, brand, fit, styles, title: title || cap(words), query: title ? [brand, title].filter(Boolean).join(" ") : words, why };
+  return { cat, color, brand, fit, styles, noun, title: title || cap(words), query: title ? [brand, title].filter(Boolean).join(" ") : words, why };
 }
 // The same idea as a wardrobe piece, so the outfit rules can try it with what you own.
 // It counts as worn ten days ago: no "never worn" bonus, no "worn yesterday" penalty.
@@ -4058,15 +4077,16 @@ const wornWith = (piece) => state.items.filter((o) => CORE.includes(roleOf(o)) &
 const matchesFor = (piece) => wornWith(piece).filter((o) => pairScore(piece, o) >= 2);
 const goesLine = (n) => (n ? `Goes with ${n} of your pieces` : "Hard to match with what you own");
 
-// The versions of a "Worth adding" idea, the one that goes with most of your pieces first.
+// The versions of a "Worth adding" idea, the one that goes with most of your pieces first,
+// leaning away from what you've said no to. Colours you turned down for it are left out.
 function variantsOf(s) {
   if (!s.cat) return [{ ...s, cat: buyKind(s.title).cat, n: goesWith(s.title).length }];
   return s.colors.map((color, i) => {
     const b = mkIdea({ cat: s.cat, color, noun: s.noun, why: s.why });
     const piece = asPiece(b);
-    const fit = wornWith(piece).reduce((a, o) => a + pairScore(piece, o), 0);
-    return { ...b, n: matchesFor(piece).length, fit, i };
-  }).sort((a, b) => b.fit - a.fit || a.i - b.i);
+    const match = wornWith(piece).reduce((a, o) => a + pairScore(piece, o), 0) + shopScore(b) * 3;
+    return { ...b, n: matchesFor(piece).length, match, i };
+  }).filter((b) => wantOf(b)?.reason !== "colour").sort((a, b) => b.match - a.match || a.i - b.i);
 }
 
 /* Shop trip: what the shops sell, in a few groups the AI is asked to use. */
@@ -4091,9 +4111,11 @@ const soldHere = (b) => !state.trip || tripStores(b).length > 0;
 
 function renderShop() {
   const d = state.disc;
-  const tabs = [["foryou", "For you"], ["try", "Try a piece"], ["trip", "Shop trip"], ["look", "New look"]];
+  const must = mustBuy().length;
+  const tabs = [["foryou", "For you"], ["must", `Must-Buy${must ? ` <span class="muted">${must}</span>` : ""}`], ["try", "Try a piece"], ["trip", "Shop trip"], ["look", "New look"]];
   const sub = {
-    foryou: "What your wardrobe is missing, in a few versions each.",
+    foryou: "What your wardrobe is missing. Say yes or no: yes goes to Must-Buy, no teaches it what to skip.",
+    must: "What you said yes to, by how many new outfits each piece unlocks with what you own.",
     try: "Thinking of buying something? See what it goes with first.",
     trip: "Going to a mall or a shop? See only what you can buy there.",
     look: "A complete outfit of new pieces for the season, style and occasion you pick.",
@@ -4102,7 +4124,7 @@ function renderShop() {
     <div class="head"><div><h1>Discover</h1><p class="sub">${sub}</p></div></div>
     <div class="chips disc-tabs" role="tablist">${tabs.map(([k, l]) => `<button class="chip" role="tab" aria-selected="${d.tab === k}" aria-pressed="${d.tab === k}" data-disc="${k}">${l}</button>`).join("")}</div>
     ${state.trip && d.tab !== "trip" ? tripBar() : ""}
-    <div class="stack">${({ foryou: forYouTab, try: tryTab, trip: tripTab, look: lookTab })[d.tab]()}</div>`;
+    <div class="stack">${({ foryou: forYouTab, must: mustTab, try: tryTab, trip: tripTab, look: lookTab })[d.tab]()}</div>`;
 }
 const tripBar = () => `<div class="card row trip-bar"><span>Showing only what you can buy at <b>${esc(state.trip.name.split(",")[0])}</b></span><button class="chip" data-disc="trip">Change</button><button class="chip" data-act="trip-clear">Show all shops</button></div>`;
 
@@ -4124,9 +4146,191 @@ function ideaDetail(b, { withPieces = true } = {}) {
   const shops = shopsFor(b);
   return `<div class="idea-detail">
     ${pieces.length ? `<div class="goes-with"><span class="muted small">${esc(b.title)} goes with</span><div class="pieces mini">${pieces.map(pieceTile).join("")}</div></div>` : ""}
-    <div class="shops">${shops.slice(0, state.trip ? 8 : 4).map(([n, u]) => `<a class="btn" href="${u}" target="_blank" rel="noopener">${esc(n)}</a>`).join("")}${realBtn(b)}${wishBtn(b)}</div>
+    ${multiplierLine(b)}
+    <div class="shops">${shops.slice(0, state.trip ? 8 : 4).map(([n, u]) => `<a class="btn" href="${u}" target="_blank" rel="noopener">${esc(n)}</a>`).join("")}${realBtn(b)}</div>
+    ${verdictHTML(b)}
     ${photosHTML(b)}
   </div>`;
+}
+
+/* ---- Must-Buy ----
+   Every suggestion in the app (For you, Try a piece, New look, the stylist's buys) can be
+   answered: "Yes, I like this" puts it on Must-Buy, "No" (with an optional reason) teaches
+   the ideas what to leave out. Answers are records in "wants", shared by every device:
+   { id, sig, kind, title, cat, noun, color, fit, styles, query, why, source, status
+     (wanted | rejected | snoozed | bought), reason, until, createdAt, decidedAt, boughtItemId } */
+const REASONS = [["style", "Not my style"], ["colour", "Colour"], ["similar", "I have something similar"], ["price", "Too pricey"], ["later", "Not now"]];
+const REASON_WORDS = Object.fromEntries(REASONS);
+// The same idea always gets the same id, so it's never asked twice, even from two devices.
+function sigOf(b) {
+  const cat = b.cat || buyKind(b.title || "").cat;
+  const color = b.color || colourIn((b.title || "").toLowerCase()) || "";
+  const noun = (b.noun || (b.title || "").toLowerCase().replace(color, "")).toLowerCase().replace(/[^a-z0-9]+/g, " ").trim();
+  return `${cat}|${noun}|${color}`;
+}
+const wantId = (b) => "w" + hashText(sigOf(b));
+function hashText(str) {
+  let h = 5381;
+  for (let i = 0; i < str.length; i++) h = (h * 33) ^ str.charCodeAt(i);
+  return (h >>> 0).toString(36);
+}
+const wantOf = (b) => state.wants.find((w) => w.id === wantId(b));
+const mustBuy = () => state.wants.filter((w) => w.status === "wanted");
+// Answered, so it leaves the For you feed: a no for its colour only hides that version.
+function settled(s) {
+  const opts = s.cat ? s.colors.map((color) => mkIdea({ cat: s.cat, color, noun: s.noun })) : [{ ...s, cat: buyKind(s.title).cat }];
+  const ws = opts.map(wantOf);
+  const open = (w) => !w || w.id === state.whyNo || (w.status === "snoozed" && Date.now() > Date.parse(w.until)) || (w.status === "rejected" && w.reason === "colour");
+  return !ws.every(open) || ws.every((w) => w?.reason === "colour");
+}
+async function answerWant(b, status) {
+  const id = wantId(b);
+  let w = state.wants.find((x) => x.id === id);
+  const now = new Date().toISOString();
+  if (!w) {
+    const cat = b.cat || buyKind(b.title || "").cat;
+    w = {
+      id, sig: sigOf(b), kind: ["acc", "head"].includes(CAT[cat]?.slot) ? "accessory" : "garment",
+      title: b.title, cat, noun: b.noun || "", color: b.color || colourIn((b.title || "").toLowerCase()) || "", fit: b.fit || "",
+      styles: b.styles || [], query: b.query || b.title, why: b.why || "", source: { type: b.source || (view === "shop" ? state.disc.tab : view) }, createdAt: now,
+    };
+    state.wants.push(w);
+  }
+  Object.assign(w, { status, decidedAt: now });
+  delete w.reason;
+  delete w.until;
+  await store.put("wants", w);
+  shopMemo = null;
+  return w;
+}
+// The wishlist from before Must-Buy, moved over once (on whichever device opens first).
+async function moveWishlist() {
+  if (!state.wishlist?.length) return;
+  for (const b of state.wishlist) if (b?.title && !wantOf(b)) await answerWant({ ...b, source: "wishlist" }, "wanted");
+  state.wishlist = [];
+  await saveWishlist();
+}
+
+// What your answers teach, as points per trait (type, noun, colour, style, fit). A no counts
+// only against what its reason names; "Not now" and "Too pricey" teach nothing. Half as much after 180 days.
+let shopMemo = null;
+function shopTaste() {
+  if (shopMemo) return shopMemo;
+  const traits = {};
+  const add = (k, v) => (traits[k] = (traits[k] || 0) + v);
+  for (const w of state.wants) {
+    if (w.id === state.whyNo) continue; // its reason isn't in yet, and the idea stays as it was until it is
+    const d = 0.5 ** (daysSince(w.decidedAt) / 180);
+    const tr = wantTraits(w);
+    if (w.status === "wanted" || w.status === "bought") { for (const k of Object.values(tr)) if (k) add(k, 0.5 * d); continue; }
+    if (w.status !== "rejected") continue;
+    const keys = { style: [tr.noun, tr.fit, ...tr.styles], colour: [tr.colour], similar: [tr.typeColour] }[w.reason] || (w.reason ? [] : [tr.noun, tr.typeColour]);
+    for (const k of keys.filter(Boolean)) add(k, -1 * d);
+  }
+  return (shopMemo = traits);
+}
+function wantTraits(b) {
+  const cat = b.cat || buyKind(b.title || "").cat;
+  const [, noun, colour] = sigOf(b).split("|");
+  return { type: `type:${cat}`, noun: noun && `noun:${noun}`, colour: colour && `colour:${colour}`, typeColour: `type:${cat}|${colour}`, fit: b.fit && `fit:${b.fit}`, styles: (b.styles || []).map((st) => `style:${st}`) };
+}
+// Above 0: like things you said yes to. Below 0: like things you said no to.
+function shopScore(b) {
+  const t = shopTaste(), tr = wantTraits(b);
+  const keys = [tr.noun, tr.colour, tr.typeColour, tr.fit, ...tr.styles].filter(Boolean);
+  return clamp(keys.reduce((a, k) => a + (t[k] || 0), 0), -3, 3);
+}
+
+// Yes / No on a suggestion, or what you answered.
+function verdictHTML(b) {
+  const w = wantOf(b);
+  const data = esc(JSON.stringify({ title: b.title, cat: b.cat, noun: b.noun, color: b.color, fit: b.fit, styles: b.styles, query: b.query, why: b.why || "" }));
+  if (w?.status === "wanted") return `<div class="verdict"><button class="btn" data-disc="must">✓ On your Must-Buy</button><button class="chip" data-unwant="${w.id}">Undo</button></div>`;
+  if (w?.status === "bought") return `<div class="verdict"><span class="muted small">You bought this</span></div>`;
+  if (w && state.whyNo === w.id) return `<div class="verdict stack" style="gap:8px"><span class="muted small">Why not? Optional: it decides what the ideas learn.</span><div class="chips">${REASONS.map(([k, l]) => `<button class="chip" data-whyno="${w.id}|${k}">${l}</button>`).join("")}<button class="chip" data-whyno="${w.id}|">Skip</button></div></div>`;
+  if (w && (w.status === "rejected" || (w.status === "snoozed" && Date.now() < Date.parse(w.until)))) return `<div class="verdict"><span class="muted small">${w.status === "snoozed" ? "Hidden for now" : `Not for you${w.reason ? `: ${REASON_WORDS[w.reason].toLowerCase()}` : ""}`}</span><button class="chip" data-unwant="${w.id}">Undo</button></div>`;
+  return `<div class="verdict"><button class="btn" data-no="${data}">No</button><button class="btn primary" data-yes="${data}">Yes, I like this</button></div>`;
+}
+
+/* The Outfit Multiplier: how many new outfits a piece would make with what you own.
+   Every combination with it (a top layer or two, a jacket when it's cold, bottoms, shoes) at the
+   usual temperature of each season is checked against the fashion bible for each occasion; the
+   ones it rates as good outfits (and that break none of its important rules) count. An outfit
+   is what people see: the top (or the layer over it), bottoms and shoes; jackets and what's
+   under a knit don't make it a different one. Pieces you disliked don't count.
+   No AI: a few thousand rule checks, kept until the wardrobe changes. */
+const MULTI_SEASONS = [27, 16, 9, 3];
+const MULTI_GOOD = 0.6; // how sure the fashion bible's model must be that it's a good outfit
+const multiMemo = new Map();
+function multiplier(b) {
+  if (!Style.ready()) return null;
+  const piece = asPiece(b);
+  const role = roleOf(piece);
+  if (!CORE.includes(role) || slotOf(piece) === "gym") return null;
+  const own = state.items.filter((i) => !i.disliked && CORE.includes(roleOf(i)) && slotOf(i) !== "gym");
+  const key = `${sigOf(b)}|${own.map((i) => i.id).join()}`;
+  if (multiMemo.has(key)) return multiMemo.get(key);
+  const by = { base: [], mid: [], outer: [], bottom: [], shoes: [] };
+  for (const i of own) by[roleOf(i)].push(i);
+  by[role] = [piece];
+  const occs = OCCASIONS.filter((o) => o.id !== "gym");
+  const found = new Map(); // outfit → occasions it works for
+  for (const feels of MULTI_SEASONS) {
+    const tops = feels >= 22 ? by.base.map((x) => [x])
+      : feels >= 12 ? [...by.base.map((x) => [x]), ...by.mid.map((x) => [x]), ...by.base.flatMap((x) => by.mid.map((m) => [x, m]))]
+      : by.base.flatMap((x) => by.mid.map((m) => [x, m]));
+    const outers = feels >= 17 ? [null] : feels >= 12 ? [null, ...by.outer] : by.outer.length ? by.outer : [null];
+    let n = 0;
+    for (const top of tops) for (const outer of outers) for (const bottom of by.bottom) for (const shoes of by.shoes.length ? by.shoes : [null]) {
+      const pieces = [...top, outer, bottom, shoes].filter(Boolean);
+      if (!pieces.includes(piece) || ++n > 3000) continue;
+      const k = [top.at(-1), bottom, shoes].map((p) => p?.id).join("|");
+      for (const occ of occs) {
+        if (found.get(k)?.has(occ.id)) continue;
+        const j = Style.judge(pieces, { occasion: occ.id, feels, wet: false, offset: 0 });
+        if (j.violations.length || j.prob < MULTI_GOOD) continue;
+        if (!found.has(k)) found.set(k, new Set());
+        found.get(k).add(occ.id);
+      }
+    }
+  }
+  const byOcc = {};
+  for (const set of found.values()) for (const o of set) byOcc[o] = (byOcc[o] || 0) + 1;
+  const res = { n: found.size, byOcc };
+  multiMemo.set(key, res);
+  return res;
+}
+function multiplierLine(b) {
+  const m = multiplier(b);
+  if (!m) return "";
+  const top = Object.entries(m.byOcc).sort((x, y) => y[1] - x[1]).slice(0, 2).map(([o]) => occLabel(o));
+  return `<div class="multi"><b>${m.n ? `+${m.n}` : "0"}</b><span>${m.n ? `new outfit${m.n > 1 ? "s" : ""} with what you own${top.length ? `, mostly ${top.join(" and ")}` : ""}` : "new outfits: nothing you own goes with it by the fashion bible's rules"}</span></div>`;
+}
+
+function mustRow(w) {
+  const b = { ...w, with: goesWith(w.title) };
+  const m = multiplier(w);
+  const from = { foryou: "From For you", try: "From Try a piece", look: "From a new look", trip: "From a shop trip", today: "From the stylist", wishlist: "From your wishlist" }[w.source?.type] || "";
+  return buyRow(b, {
+    label: m ? `+${m.n} outfit${m.n === 1 ? "" : "s"}` : from,
+    extra: `<button class="btn primary" data-bought="${w.id}">Bought it</button><button class="btn ghost" data-unwant="${w.id}">Remove</button>`,
+  });
+}
+function mustTab() {
+  const f = state.disc.mustf || "all";
+  const all = mustBuy();
+  const list = all.filter((w) => f === "all" || w.kind === f).filter(soldHere)
+    .map((w) => [w, multiplier(w)?.n ?? -1]).sort((a, b) => b[1] - a[1]).map(([w]) => w);
+  const kinds = [["all", "All"], ["garment", "Clothes"], ["accessory", "Accessories"]].filter(([k]) => k === "all" || all.some((w) => w.kind === k));
+  const bought = state.wants.filter((w) => w.status === "bought").length;
+  return `
+    ${kinds.length > 2 ? `<div class="chips">${kinds.map(([k, l]) => `<button class="chip" aria-pressed="${f === k}" data-mustf="${k}">${l}</button>`).join("")}</div>` : ""}
+    <section class="card">
+      ${list.length ? `<div class="sugg">${list.map(mustRow).join("")}</div>`
+        : `<p class="muted" style="margin:0">${all.length ? `Nothing here is sold at ${esc(state.trip?.name || "this shop")}.` : "Nothing yet. Tap <b>Yes, I like this</b> on any idea in For you, Try a piece, New look or the stylist's advice, and it lands here with how many new outfits it unlocks."}</p>`}
+      ${!state.trip && list.length ? `<p class="muted small" style="margin:14px 0 0">Going shopping? <button class="linkish" data-disc="trip">Pick the mall or shop</button> to see only what's sold there.</p>` : ""}
+      ${bought ? `<p class="muted small" style="margin:8px 0 0">${bought} bought so far.</p>` : ""}
+    </section>`;
 }
 
 /* ---- For you ---- */
@@ -4138,20 +4342,19 @@ function forYouTab() {
   const brands = Object.entries(a.brandCount).sort((x, y) => y[1] - x[1]);
   const tiers = {};
   for (const i of state.items) { const t = brandInfo(i.brand)?.tier; if (t) tiers[t] = (tiers[t] || 0) + 1; }
-  const blocks = a.suggestions.map((s, k) => ({ s, k, options: variantsOf(s).filter(soldHere) })).filter((x) => x.options.length);
-  const notHere = a.suggestions.length - blocks.length;
-  const wish = state.wishlist.map((w, k) => [w, k]).filter(([w]) => soldHere(w));
+  const fresh = a.suggestions.filter((s) => !settled(s));
+  const blocks = fresh.map((s, k) => ({ s, k, options: variantsOf(s).filter(soldHere) })).filter((x) => x.options.length);
+  const notHere = fresh.length - blocks.length;
+  const answered = a.suggestions.length - fresh.length;
   return `
     <section class="card">
       <h2>Worth adding</h2>
       <div class="sugg">${blocks.map(({ s, k, options }) => ideaBlock(`s${k}:${s.title}`, {
         label: s.prio === "high" ? "Fills a gap" : s.prio === "medium" ? "Adds range" : "Nice to have", title: s.title, why: s.why, options,
-      })).join("") || `<p class="muted">${a.suggestions.length ? `None of these ideas are sold at ${esc(state.trip?.name)}.` : "Your wardrobe looks well balanced."}</p>`}</div>
+      })).join("") || `<p class="muted">${fresh.length ? `None of these ideas are sold at ${esc(state.trip?.name)}.` : "Your wardrobe looks well balanced."}</p>`}</div>
       ${notHere && blocks.length ? `<p class="muted small" style="margin:12px 0 0">${notHere} more idea${notHere > 1 ? "s aren't" : " isn't"} sold at ${esc(state.trip.name)}.</p>` : ""}
+      ${answered ? `<p class="muted small" style="margin:12px 0 0">${answered} idea${answered > 1 ? "s" : ""} answered. The ones you liked are in <button class="linkish" data-disc="must">Must-Buy</button>.</p>` : ""}
     </section>
-    ${wish.length ? `<section class="card"><h2>Wishlist</h2><div class="sugg">${wish.map(([w, k]) => buyRow({ ...w, with: goesWith(w.title) }, {
-      label: "", shops: 2, extra: `<button class="btn ghost" data-unwish="${k}">Remove</button>`,
-    })).join("")}</div></section>` : ""}
     <div class="stats">
       <div class="stat"><b>${state.items.length}</b><span>pieces</span></div>
       <div class="stat"><b>${brands.length}</b><span>brands</span></div>
@@ -4367,8 +4570,8 @@ async function lookupTrip(raw) {
 function tripTab() {
   const tr = state.trip, d = state.disc;
   const a = analyse();
-  const blocks = tr ? a.suggestions.map((s, k) => ({ s, k, options: variantsOf(s).filter(soldHere) })).filter((x) => x.options.length) : [];
-  const wish = tr ? state.wishlist.map((w, k) => [w, k]).filter(([w]) => soldHere(w)) : [];
+  const blocks = tr ? a.suggestions.filter((s) => !settled(s)).map((s, k) => ({ s, k, options: variantsOf(s).filter(soldHere) })).filter((x) => x.options.length) : [];
+  const wish = tr ? mustBuy().filter(soldHere) : [];
   return `
     <section class="card stack">
       <h2 style="margin:0">Where are you going shopping?</h2>
@@ -4386,7 +4589,7 @@ function tripTab() {
       <h2>What you could buy here</h2>
       <div class="sugg">${blocks.map(({ s, k, options }) => ideaBlock(`s${k}:${s.title}`, { label: s.prio === "high" ? "Fills a gap" : s.prio === "medium" ? "Adds range" : "Nice to have", title: s.title, why: s.why, options })).join("") || `<p class="muted">None of the ideas for your wardrobe are sold here. Try a piece or New look to search these shops anyway.</p>`}</div>
     </section>
-    ${wish.length ? `<section class="card"><h2>From your wishlist</h2><div class="sugg">${wish.map(([w, k]) => buyRow({ ...w, with: goesWith(w.title) }, { label: "", extra: `<button class="btn ghost" data-unwish="${k}">Remove</button>` })).join("")}</div></section>` : ""}` : ""}`;
+    ${wish.length ? `<section class="card"><h2>From your Must-Buy</h2><div class="sugg">${wish.map(mustRow).join("")}</div></section>` : ""}` : ""}`;
 }
 
 /* ---- New look ---- */
@@ -4995,7 +5198,7 @@ async function exportBackup() {
     photos: await Promise.all((i.photos || []).map(blobToDataURL)),
     originals: i.originals ? await Promise.all(i.originals.map(blobToDataURL)) : undefined,
   });
-  const blob = new Blob([JSON.stringify({ version: 2, exportedAt: new Date().toISOString(), items, log: state.log, wishlist: state.wishlist, calendar: state.calendar })], { type: "application/json" });
+  const blob = new Blob([JSON.stringify({ version: 2, exportedAt: new Date().toISOString(), items, log: state.log, wants: state.wants, calendar: state.calendar })], { type: "application/json" });
   const a = Object.assign(document.createElement("a"), { href: URL.createObjectURL(blob), download: `wardrobe-backup-${today()}.json` });
   a.click();
 }
@@ -5051,7 +5254,8 @@ async function importBackup() {
         await store.put("items", i);
       }
       for (const l of data.log || []) { delete l.id; await store.put("log", l); }
-      if (data.wishlist) { state.wishlist = data.wishlist; await saveWishlist(); }
+      if (data.wishlist?.length) { state.wishlist = data.wishlist; await moveWishlist(); }
+      for (const w of data.wants || []) if (w?.id && !state.wants.some((x) => x.id === w.id)) { state.wants.push(w); await store.put("wants", w); }
       if (data.calendar?.links) { state.calendar = data.calendar; await saveCalendar(); state.cal.at = 0; }
       await loadAll();
       state.outfits = [];
@@ -5323,14 +5527,43 @@ document.addEventListener("click", async (e) => {
   if (ds.lookseason) { state.disc.look.season = ds.lookseason; return render(); }
   if (ds.lookstyle) { state.disc.look.style = ds.lookstyle; return render(); }
   if (ds.lookocc) { state.disc.look.occ = ds.lookocc; return render(); }
-  if (ds.wishbuy) {
-    const w = JSON.parse(ds.wishbuy);
-    if (!state.wishlist.some((x) => x.title === w.title)) { state.wishlist.push(w); await saveWishlist(); toast("Saved to wishlist"); }
-    t.textContent = "♥ Saved";
-    if (view === "shop") render();
-    return;
+  if (ds.yes) {
+    const w = await answerWant(JSON.parse(ds.yes), "wanted");
+    toast(`${w.title} is on your Must-Buy`, { label: "See it", run: () => { state.disc.tab = "must"; go("shop"); } });
+    return render();
   }
-  if (ds.unwish != null) { state.wishlist.splice(+ds.unwish, 1); await saveWishlist(); return render(); }
+  if (ds.no) {
+    const w = await answerWant(JSON.parse(ds.no), "rejected");
+    state.whyNo = w.id;
+    return render();
+  }
+  if (ds.whyno) {
+    const [id, reason] = ds.whyno.split("|");
+    const w = state.wants.find((x) => x.id === id);
+    state.whyNo = null;
+    if (!w) return render();
+    if (reason === "later") Object.assign(w, { status: "snoozed", until: new Date(Date.now() + 30 * 864e5).toISOString() });
+    else if (reason) w.reason = reason;
+    await store.put("wants", w);
+    shopMemo = null;
+    toast(reason === "later" ? "Hidden for 30 days" : "Got it. Fewer ideas like this.");
+    return render();
+  }
+  if (ds.unwant) {
+    const w = state.wants.find((x) => x.id === ds.unwant);
+    if (w) { await store.del("wants", w.id); state.wants = state.wants.filter((x) => x !== w); shopMemo = null; }
+    return render();
+  }
+  if (ds.bought) {
+    const w = state.wants.find((x) => x.id === ds.bought);
+    if (!w) return render();
+    Object.assign(w, { status: "bought", decidedAt: new Date().toISOString() });
+    await store.put("wants", w);
+    state.buying = w.id;
+    toast(`Great. Take its photos: the type${w.color ? " and colour" : ""} ${w.color ? "are" : "is"} filled in.`);
+    return go("add");
+  }
+  if (ds.mustf) { state.disc.mustf = ds.mustf; return render(); }
   if (ds.ask) return ask(ds.ask);
   if (ds.unit) { state.settings.unit = ds.unit; await saveSettings(); return render(); }
   if (ds.theme) { state.settings.theme = ds.theme; applyTheme(); await saveSettings(); return render(); }
@@ -5447,8 +5680,8 @@ document.addEventListener("click", async (e) => {
     case "import": return importBackup();
     case "wipe":
       if (!(await confirmBox(sync.status === "on" ? "Erase all clothes, photos and history? Every device sharing this wardrobe loses them too." : "Erase all clothes, photos and history from this device?", "Erase everything"))) return;
-      await store.clear("items"); await store.clear("log");
-      state.items = []; state.log = []; state.outfits = [];
+      await store.clear("items"); await store.clear("log"); await store.clear("wants");
+      state.items = []; state.log = []; state.wants = []; state.outfits = [];
       toast("Wardrobe erased");
       return render();
   }
@@ -5496,6 +5729,7 @@ document.addEventListener("keydown", (e) => {
    Boot
    ====================================================================== */
 await loadAll();
+await moveWishlist();
 applyTheme();
 await loadBible();
 loadWeather().then(() => { if (view === "today") { state.outfits = []; render(); } });
