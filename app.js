@@ -1343,6 +1343,21 @@ const wantedWarmth = (feels) => (feels >= 24 ? 1 : feels >= 19 ? 2.5 : feels >= 
 const heroOf = (o) => o.mid || o.base;
 const outfitKey = (pieces) => pieces.filter((p) => p && CORE.includes(roleOf(p))).map((p) => p.id).sort().join("|");
 
+// How dressed-up an outfit is, 1 to 4: a full suit (jacket and trousers of one suit, shirt, dress shoes),
+// tailored separates (a blazer, trousers, a shirt or fine knit, leather shoes), smart casual, everyday.
+// Anything sporty or casual-only (hoodie, jeans, sneakers...) keeps it at 2 at most.
+const CASUAL_ONLY = ["hoodie", "zip-hoodie", "sweatshirt", "jeans", "shorts", "joggers", "tshirt", "sneakers", "puffer", "rain"];
+const DRESS_LEVELS = { 4: "a full suit", 3: "tailored", 2: "smart casual", 1: "everyday" };
+function dressLevel(pieces) {
+  const o = Style.outfitFrom(pieces);
+  if (o.core.some((p) => CASUAL_ONLY.includes(p.category))) return o.core.length && mean(o.core.map((p) => p.formality)) >= 2 ? 2 : 1;
+  const tailored = o.outer && o.outer.category === "jacket" && o.outer.formality >= 2.5 && o.bottom?.category === "trousers" && o.shoes && ["dress-shoes", "boots"].includes(o.shoes.category) && o.base?.category === "shirt";
+  if (tailored && Style.isSuit(o)) return 4;
+  if (tailored) return 3;
+  return mean(o.core.map((p) => p.formality)) >= 2 ? 2 : 1;
+}
+const mean = (xs) => (xs.length ? xs.reduce((a, b) => a + b, 0) / xs.length : 0);
+
 function scoreOutfit(o, cond, occ, t = taste()) {
   const reasons = [];
   let s = 0;
@@ -1417,6 +1432,16 @@ function scoreOutfit(o, cond, occ, t = taste()) {
     for (const [a, b] of STYLE_CLASH) if (freq[a] && freq[b]) s -= 1.5;
   }
 
+  // Dressy occasions: how far the outfit is from what the occasion calls for. Elegant wants a full suit
+  // (tailored separates are the second best), work wants at least tailored: a blazer with odd trousers
+  // or a sweater over the shirt is a step down.
+  if (occ.target >= 2.9 && Style.ready()) {
+    const lvl = dressLevel(pieces), want = occ.id === "event" ? 4 : 3;
+    s += lvl >= want ? (lvl === 4 ? 1.5 : 0.8) : -1.4 * (want - lvl);
+    if (lvl === 4) reasons.unshift("A full suit: blazer, trousers, shirt and dress shoes");
+    else if (lvl === 3 && occ.id === "event") reasons.push("Tailored separates");
+  }
+
   // Rotation: don't repeat what you wore recently; give the forgotten pieces a turn
   for (const p of pieces) {
     const d = daysSince(p.lastWorn);
@@ -1454,6 +1479,13 @@ function ideaPool(opts = {}) {
   const pick = (arr) => arr[Math.floor(Math.random() * arr.length)];
   const wantMid = cond.feels < 20 || by.base.length === 0;
   const wantOuter = opts.outer || cond.feels < 15 || cond.wet;
+  // Milder days: a light jacket or blazer is tried in about half of the ideas (most of them on dressy
+  // occasions) and the score decides; without this a jacket never showed up above 15°.
+  const dressy = occ.target >= 2.9;
+  const maybeOuter = !wantOuter && occ.id !== "gym" && cond.feels < (dressy ? 27 : 22) ? (dressy ? 0.8 : 0.5) : 0;
+  // Dressy occasions: pairs of jacket and trousers that make one suit, tried in a third of the ideas
+  // (picking them by chance would rarely find the match in a big wardrobe).
+  const suits = dressy && Style.ready() ? by.outer.flatMap((j) => by.bottom.filter((b) => Style.isSuit(Style.outfitFrom([j, b]))).map((b) => [j, b])) : [];
   // A piece you picked goes in every idea; the rest is built around it.
   const anchor = "anchor" in opts ? opts.anchor : state.items.find((i) => i.id === state.anchor && CORE.includes(roleOf(i)) && !i.wash);
 
@@ -1466,9 +1498,12 @@ function ideaPool(opts = {}) {
     // still gets three different ideas.
     const r = Math.random();
     if (by.base.length && (!by.mid.length || r < (wantMid ? 0.85 : 0.7))) o.base = pick(by.base);
-    if (by.mid.length && (!o.base || wantMid || r < 0.15)) o.mid = pick(by.mid);
-    if (by.outer.length && wantOuter) o.outer = pick(by.outer);
+    // On a mild day a jacket is the layer: it comes instead of a sweater or hoodie, not on top of one.
+    const mildJacket = by.outer.length && !wantOuter && Math.random() < maybeOuter;
+    if (by.mid.length && (!o.base || (wantMid && !mildJacket) || r < 0.15)) o.mid = pick(by.mid);
+    if (by.outer.length && (wantOuter || mildJacket)) o.outer = pick(by.outer);
     if (by.bottom.length) o.bottom = pick(by.bottom);
+    if (suits.length && Math.random() < 0.33) [o.outer, o.bottom] = pick(suits);
     if (by.shoes.length) o.shoes = pick(by.shoes);
     if (anchor) o[roleOf(anchor)] = anchor;
     if (!o.base && !o.mid) continue;
@@ -1494,17 +1529,21 @@ function pickIdeas(pool, n, keep = [], avoid = []) {
   const out = [];
   const shown = new Set([...keep.map((o) => o.key), ...avoid]);
   const heroes = new Set(keep.map((o) => heroOf(o.pieces).id)), bottoms = new Set(keep.map((o) => o.pieces.bottom?.id).filter(Boolean));
+  const outers = new Set(keep.map((o) => o.pieces.outer?.id).filter(Boolean));
   const differ = (h, b) => !heroes.has(h) && !(b && bottoms.has(b));
   const half = (h, b) => !heroes.has(h) || !(b && bottoms.has(b));
   const good = (cands.find((c) => !c.blocked && !c.isBroken)?.score ?? cands.find((c) => !c.blocked)?.score ?? 0) - 3;
-  const passes = [[differ, good], [half, good], [differ, -Infinity], [half, -Infinity], [() => true, -Infinity]];
+  // A jacket you love shouldn't fill every idea: the first passes want each idea to bring a different one.
+  const passes = [[differ, good, true], [half, good, true], [differ, good], [half, good], [differ, -Infinity], [half, -Infinity], [() => true, -Infinity]];
   for (const [allowBlocked, allowBroken] of [[false, false], [true, false], [true, true]]) {
-    for (const [ok, min] of passes) {
+    for (const [ok, min, newOuter] of passes) {
       for (const c of cands) {
         if (out.length === n) break;
         const hero = heroOf(c.pieces).id;
         const bottom = c.pieces.bottom?.id;
-        if (out.includes(c) || shown.has(c.key) || (c.blocked && !allowBlocked) || (c.isBroken && !allowBroken) || c.score < min || !ok(hero, bottom)) continue;
+        const outer = c.pieces.outer?.id;
+        if (out.includes(c) || shown.has(c.key) || (c.blocked && !allowBlocked) || (c.isBroken && !allowBroken) || c.score < min || !ok(hero, bottom) || (newOuter && outer && outers.has(outer))) continue;
+        if (outer) outers.add(outer);
         heroes.add(hero);
         if (bottom) bottoms.add(bottom);
         out.push(c);
