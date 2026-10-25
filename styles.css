@@ -448,3 +448,12 @@ details summary { cursor: pointer; }
 .multi b { font-size: 30px; font-weight: 700; font-variant-numeric: tabular-nums; letter-spacing: -.02em; }
 .multi span { color: var(--muted); font-size: 14px; }
 .linkish { border: 0; background: none; padding: 0; font: inherit; color: var(--text); text-decoration: underline; cursor: pointer; }
+/* Explore's three tools, "What do you need?", finishing touches on Today */
+.seg { display: flex; gap: 4px; padding: 4px; margin: -6px 0 18px; border-radius: 999px; background: var(--surface-2); width: fit-content; max-width: 100%; overflow-x: auto; }
+.seg button { border: 0; background: none; color: var(--muted); font: inherit; font-size: 15px; min-height: 44px; padding: 0 18px; border-radius: 999px; white-space: nowrap; cursor: pointer; }
+.seg button[aria-selected="true"] { background: var(--surface); color: var(--text); font-weight: 600; box-shadow: 0 1px 2px rgba(0,0,0,.12); }
+.spinner.inline { display: inline-block; width: 14px; height: 14px; border-width: 2px; vertical-align: -2px; margin-right: 4px; }
+.need { margin-bottom: 18px; }
+.need .input { min-height: 52px; font-size: 17px; }
+.touch { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 10px; margin-top: 12px; padding: 10px 12px; border-radius: 12px; background: var(--surface-2); font-size: 15px; }
+.touch span { flex: 1 1 220px; }
