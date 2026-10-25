@@ -427,7 +427,7 @@ async function viaJinaText(url, code) {
   const title = text.match(/^Title:\s*(.+)$/m)?.[1]?.trim() || "";
   const images = productPhotos(text, code);
   const body = text.replace(/^(Title|URL Source|Published Time|Warning):.*$/gm, "").replace(/!\[[^\]]*\]\([^)]*\)/g, "").replace(/\[([^\]]*)\]\([^)]*\)/g, "$1").replace(/\n{3,}/g, "\n\n").trim();
-  return { url: url.href, title: title.slice(0, 140), image: images[0] || "", images, description: "", color: "", brand: "", price: "", site: url.hostname.replace(/^www\./, ""), text: body.slice(0, 8000) };
+  return { url: url.href, title: title.slice(0, 140), image: images[0] || "", images, description: "", color: "", brand: "", price: "", site: url.hostname.replace(/^www\d*\./, ""), text: body.slice(0, 8000) };
 }
 // Photo addresses in a page that belong to the product (their name holds its code), one per
 // photo: the same photo in other sizes counts once, at full size.
@@ -475,7 +475,7 @@ function pageInfo(html, page, code = "") {
     color: typeof product?.color === "string" ? product.color.slice(0, 40) : "",
     brand: String(product?.brand?.name || product?.brand || "").slice(0, 60),
     price: amount ? `${amount} ${currency}`.trim() : "",
-    site: meta("og:site_name") || page.hostname.replace(/^www\./, ""),
+    site: meta("og:site_name") || page.hostname.replace(/^www\d*\./, ""),
   };
 }
 
