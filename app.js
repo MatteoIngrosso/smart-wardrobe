@@ -276,6 +276,7 @@ const state = {
   filters: { q: "", slot: "all", cat: "all", color: "all", style: "all", sort: "recent" },
   occasion: "casual",
   manualTemp: null,
+  level: null, // an elegance level (1-5) picked by hand for today's ideas; null: the occasion's
   previewAI: false, // true inside the Claude preview, where AI goes through the viewer's Claude account
   serverKeys: {}, // {gemini, claude}: keys saved on the hosted server (Cloudflare), so this device needs none
   weather: null,
@@ -1343,19 +1344,33 @@ const wantedWarmth = (feels) => (feels >= 24 ? 1 : feels >= 19 ? 2.5 : feels >= 
 const heroOf = (o) => o.mid || o.base;
 const outfitKey = (pieces) => pieces.filter((p) => p && CORE.includes(roleOf(p))).map((p) => p.id).sort().join("|");
 
-// How dressed-up an outfit is, 1 to 4: a full suit (jacket and trousers of one suit, shirt, dress shoes),
-// tailored separates (a blazer, trousers, a shirt or fine knit, leather shoes), smart casual, everyday.
-// Anything sporty or casual-only (hoodie, jeans, sneakers...) keeps it at 2 at most.
-const CASUAL_ONLY = ["hoodie", "zip-hoodie", "sweatshirt", "jeans", "shorts", "joggers", "tshirt", "sneakers", "puffer", "rain"];
-const DRESS_LEVELS = { 4: "a full suit", 3: "tailored", 2: "smart casual", 1: "everyday" };
+/* ---------- Elegance levels ----------
+   How dressed-up a whole outfit is, from 1 to 5:
+   1 Relaxed: a hoodie, sweatshirt, joggers or shorts in it.
+   2 Casual: T-shirt, jeans or sneakers (more than one of them, or nothing smarter around them).
+   3 Smart casual: shirts, knits, chinos or trousers, leather shoes (one casual piece is fine, like
+     a blazer and shirt with jeans).
+   4 Tailored: a blazer over a shirt, with trousers and dress shoes or boots.
+   5 Full suit: the same, with jacket and trousers of one suit.
+   The jacket you wear against the weather (a puffer, a rain jacket) doesn't change the level.
+   Each occasion has the levels that suit it; the chips under the occasions pick one by hand. */
+const RELAXED = ["hoodie", "zip-hoodie", "sweatshirt", "joggers", "shorts", "track-pants", "gym-shorts", "training-shoes", "slides"];
+const EVERYDAY = ["tshirt", "jeans", "sneakers", "tank-top", "polo"];
+const LEVELS = { 1: "Relaxed", 2: "Casual", 3: "Smart casual", 4: "Tailored", 5: "Full suit" };
+// [lowest, best, highest] level for each occasion.
+const OCC_LEVELS = { casual: [1, 2, 3], smart: [3, 3, 4], work: [3, 4, 5], night: [2, 3, 4], event: [4, 5, 5] };
 function dressLevel(pieces) {
   const o = Style.outfitFrom(pieces);
-  if (o.core.some((p) => CASUAL_ONLY.includes(p.category))) return o.core.length && mean(o.core.map((p) => p.formality)) >= 2 ? 2 : 1;
+  const worn = o.core.filter((p) => p !== o.outer || p.category === "jacket");
+  if (!worn.length) return 1;
+  if (worn.some((p) => RELAXED.includes(p.category))) return 1;
   const tailored = o.outer && o.outer.category === "jacket" && o.outer.formality >= 2.5 && o.bottom?.category === "trousers" && o.shoes && ["dress-shoes", "boots"].includes(o.shoes.category) && o.base?.category === "shirt";
-  if (tailored && Style.isSuit(o)) return 4;
-  if (tailored) return 3;
-  return mean(o.core.map((p) => p.formality)) >= 2 ? 2 : 1;
+  if (tailored) return Style.isSuit(o) ? 5 : 4;
+  const casual = worn.filter((p) => EVERYDAY.includes(p.category)).length;
+  return casual === 0 || (casual === 1 && mean(worn.map((p) => p.formality)) >= 2) ? 3 : 2;
 }
+// The levels wanted now: the occasion's, or the one picked by hand ({ level } on the occasion).
+const levelsFor = (occ) => (occ.level ? [occ.level, occ.level, occ.level] : OCC_LEVELS[occ.id] || null);
 const mean = (xs) => (xs.length ? xs.reduce((a, b) => a + b, 0) / xs.length : 0);
 
 function scoreOutfit(o, cond, occ, t = taste()) {
@@ -1432,20 +1447,20 @@ function scoreOutfit(o, cond, occ, t = taste()) {
     for (const [a, b] of STYLE_CLASH) if (freq[a] && freq[b]) s -= 1.5;
   }
 
-  // Dressy occasions: how far the outfit is from what the occasion calls for. Elegant wants a full suit
-  // (tailored separates are the second best), work wants at least tailored: a blazer with odd trousers
-  // or a sweater over the shirt is a step down.
-  if (occ.target >= 2.9 && Style.ready()) {
-    const lvl = dressLevel(pieces), want = occ.id === "event" ? 4 : 3;
-    s += lvl >= want ? (lvl === 4 ? 1.5 : 0.8) : -1.4 * (want - lvl);
-    if (lvl === 4) reasons.unshift("A full suit: blazer, trousers, shirt and dress shoes");
-    else if (lvl === 3 && occ.id === "event") reasons.push("Tailored separates");
+  // Elegance: each step outside the levels the occasion wants costs more than a loved piece earns
+  // (a level you picked by hand even more), the best level for it earns a little. Elegant wants a full
+  // suit first, then tailored separates.
+  const range = Style.ready() && levelsFor(occ);
+  if (range) {
+    const lvl = dressLevel(pieces), [lo, best, hi] = range, step = occ.level ? 4.5 : 3;
+    s += lvl < lo ? -step * (lo - lvl) : lvl > hi ? -step * (lvl - hi) : lvl === best ? 1.2 : 0.4;
+    if (lvl === 5 && lvl >= lo) reasons.unshift("A full suit: blazer, trousers, shirt and dress shoes");
   }
 
   // Rotation: don't repeat what you wore recently; give the forgotten pieces a turn
   for (const p of pieces) {
-    const d = daysSince(p.lastWorn);
-    if (d <= 1) s -= 3; else if (d <= 4) s -= 1.2;
+    const d = daysSince(p.lastWorn), k = ROTATION[starsOf(p)] || 1;
+    if (d <= 1) s -= 3 * k; else if (d <= 4) s -= 1.2 * k;
     if (!p.wearCount) s += 0.3;
   }
   const fresh = pieces.find((p) => !p.wearCount || daysSince(p.lastWorn) > 21);
@@ -1472,11 +1487,18 @@ function piecesByRole(occ, all = false) {
 // `opts` lets Discover ask for ideas around a piece you don't own yet ({ anchor, occ, cond }).
 // Events pass the pieces that suit their dress code (`by`) and whether a jacket is a must (`outer`).
 function ideaPool(opts = {}) {
-  const occ = opts.occ || OCCASIONS.find((o) => o.id === state.occasion);
+  const occNow = OCCASIONS.find((o) => o.id === state.occasion);
+  const occ = opts.occ || (state.level && occNow.id !== "gym" ? { ...occNow, level: state.level } : occNow);
   const by = opts.by || piecesByRole(occ);
   const cond = opts.cond || conditions();
   const t = taste();
-  const pick = (arr) => arr[Math.floor(Math.random() * arr.length)];
+  // Pieces you love are tried more often (and the ones you rated low less), so they're in more ideas.
+  const tries = (x) => ({ 5: 3, 4: 2, 2: 0.6, 1: 0.4 })[starsOf(x)] || 1;
+  const pick = (arr) => {
+    let r = Math.random() * arr.reduce((a, x) => a + tries(x), 0);
+    for (const x of arr) if ((r -= tries(x)) < 0) return x;
+    return arr.at(-1);
+  };
   const wantMid = cond.feels < 20 || by.base.length === 0;
   const wantOuter = opts.outer || cond.feels < 15 || cond.wet;
   // Milder days: a light jacket or blazer is tried in about half of the ideas (most of them on dressy
@@ -1575,7 +1597,38 @@ function generateOutfits(n = 3, avoid = []) {
   const keep = plan ? [plan] : [];
   const picks = pickIdeas(pool, n, keep, avoid);
   if (picks.length < n) picks.push(...pickIdeas(pool, n - picks.length, [...keep, ...picks])); // small wardrobe: repeats are fine
+  if (!state.anchor) withLoved(pool, picks, keep, avoid);
   state.outfits = [...keep, ...picks.map((c) => dressIdea(c, pool, used))];
+}
+// A piece you love (5 stars, then 4) that suits today goes in at least one idea, when it's in none
+// yet: the one you wore longest ago, in its best outfit that breaks no rule and isn't far behind.
+// It takes the place of the last idea that has no loved piece. Not the day after you wore it, and
+// never in an outfit too casual or too dressy for the occasion.
+function withLoved(pool, picks, keep, avoid) {
+  const loved = (p) => (starsOf(p) || 0) >= 4;
+  const ideas = [...keep, ...picks];
+  const shown = new Set(ideas.flatMap((o) => Object.values(o.pieces).filter(Boolean).map((p) => p.id)));
+  const top = pool.cands.find((c) => !c.blocked && !c.isBroken)?.score ?? 0;
+  const keys = new Set([...ideas.map((o) => o.key), ...avoid]);
+  const range = Style.ready() && levelsFor(pool.occ);
+  const fits = (c) => {
+    if (!range) return true;
+    const l = dressLevel(Object.values(c.pieces).filter(Boolean));
+    return l >= range[0] && l <= range[2];
+  };
+  let best = null, rank = null;
+  for (const c of pool.cands) {
+    if (c.blocked || c.isBroken || c.score < top - 5 || keys.has(c.key) || !fits(c)) continue;
+    for (const p of Object.values(c.pieces)) {
+      if (!p || !loved(p) || shown.has(p.id) || daysSince(p.lastWorn) <= 1) continue;
+      const r = [starsOf(p), Math.min(daysSince(p.lastWorn), 365), c.score];
+      if (!rank || r[0] > rank[0] || (r[0] === rank[0] && (r[1] > rank[1] || (r[1] === rank[1] && r[2] > rank[2])))) { best = c; rank = r; }
+    }
+  }
+  if (!best) return;
+  const swap = picks.findLastIndex((c, i) => (i > 0 || keep.length) && !Object.values(c.pieces).some((p) => p && loved(p)));
+  if (swap >= 0) picks[swap] = best;
+  else if (picks.length < 3 - keep.length) picks.push(best);
 }
 // The outfit you planned last night comes first today, while all of it is out of the wash.
 function plannedIdea(pool) {
@@ -1651,6 +1704,10 @@ const logKind = (l) => l.kind || "wear";
 const starsOf = (i) => i?.rating || (i?.favorite ? 5 : null);
 const isFavourite = (i) => (starsOf(i) || 0) >= 4;
 const STAR_WORDS = ["", "Hate it", "Meh", "Fine", "Like it", "Love it"];
+// How much a piece's own stars pull an outfit with it up or down. Loved pieces should come up often.
+const STAR_PULL = { 5: 2.5, 4: 1.2, 3: 0, 2: -1.2, 1: -2.5 };
+// Loved pieces come back sooner after you wore them (the rotation penalty is scaled down).
+const ROTATION = { 5: 0.35, 4: 0.6 };
 // What stars on an outfit teach: 4 and 5 count like a wear and more, 3 nothing, 2 and 1 count against it.
 const RATE_WEIGHT = { 5: 2, 4: 1, 3: 0, 2: -1, 1: -2 };
 // What a piece is, for learning from the stars on pieces: its main colour, type, fit and styles.
@@ -1773,17 +1830,18 @@ function tasteScore(o, occ, t) {
     const f = t.fits[`${hero.fit}|${o.bottom.fit}`];
     if (f) s += Math.tanh(f / 2) * 0.8;
   }
-  // Pieces you gave stars to, and what you tend to rate high or low
-  let rs = 0;
+  // Pieces you gave stars to (a strong pull: a piece you love should be worn often),
+  // and a little of what you tend to rate high or low (colours, types, fits, styles)
+  let sp = 0, rs = 0;
   for (const p of pieces) {
-    rs += (t.stars[p.id] || 0) * 0.4;
+    sp += p.disliked ? -3 : STAR_PULL[starsOf(p)] || 0;
     for (const k of traitsOf(p)) rs += (t.traits[k] || 0) * 0.3;
   }
-  s += clamp(rs, -2, 2);
+  s += clamp(sp, -5, 5) + clamp(rs, -1, 1);
   const loved = pieces.find((p) => starsOf(p) === 5);
-  if (best) reason = `You like the ${best[1].name} with the ${best[2].name}`;
+  if (loved) reason = `With your ${loved.name}: you love it`;
+  else if (best) reason = `You like the ${best[1].name} with the ${best[2].name}`;
   else if (colourLiked) reason = `${cap(hero.colors[0])} with ${o.bottom.colors[0]}: a pairing you go for`;
-  else if (loved) reason = `With your ${loved.name}, rated 5 stars`;
   return { score: s, reason };
 }
 
@@ -2705,6 +2763,7 @@ function renderToday() {
       ${dayCard()}
       ${rateCard()}
       <div class="chips scroller">${OCCASIONS.map((o) => `<button class="chip" aria-pressed="${state.occasion === o.id}" data-occ="${o.id}">${o.label}</button>`).join("")}</div>
+      ${levelChips()}
       ${anchorBar()}
       <div class="outfits">${state.outfits.map((o, i) => outfitCard(o, i)).join("") || `<p class="muted">Add a few more tops to get outfit ideas.</p>`}</div>
       ${laundryLine()}
@@ -2839,11 +2898,23 @@ function finishingTouch(o) {
   const data = esc(JSON.stringify({ title: b.title, cat: b.cat, noun: b.noun, color: b.color, query: b.query, why: a.why, source: "touch" }));
   return `<div class="touch"><span>Finish it with a <b>${esc(b.title.toLowerCase())}</b>. You don't have one.</span><button class="chip" data-yes="${data}">Add to Must-Buy</button><button class="chip" data-no="${data}" data-quiet="1">No thanks</button></div>`;
 }
+// Elegance: Auto (the occasion's levels) or one level picked by hand, for today's ideas.
+function levelChips() {
+  const r = OCC_LEVELS[state.occasion];
+  if (!r || !Style.ready()) return "";
+  const auto = r[0] === r[2] ? `${r[0]}` : `${r[0]}–${r[2]}`;
+  return `<div class="chips scroller levels"><span class="muted small">Elegance</span><button class="chip" aria-pressed="${!state.level}" data-level="0">Auto (${auto})</button>${Object.entries(LEVELS).map(([n, l]) => `<button class="chip" aria-pressed="${state.level === +n}" data-level="${n}">${n} ${l}</button>`).join("")}</div>`;
+}
+const levelBadge = (o) => {
+  if (!Style.ready() || !o.pieces) return "";
+  const n = dressLevel(Object.values(o.pieces).filter(Boolean));
+  return `<span class="level" title="Elegance level ${n} of 5">${"●".repeat(n)}${"○".repeat(5 - n)} ${LEVELS[n]}</span>`;
+};
 function outfitCard(o, i) {
   const order = ["outer", "mid", "base", "bottom", "shoes"];
   const ph = (o.missing || []).map((m) => `<button class="piece" data-go="shop"><div class="ph">${kindIcon(SLOT_ICON[m])}<small>No ${SLOTS[m].toLowerCase()} yet<br>tap to shop</small></div><span>${SLOTS[m]}</span></button>`).join("");
   return `<article class="card outfit">
-    <div class="row" style="justify-content:space-between"><h2 style="margin:0">${o.planned ? (o.planned.eventId ? `Planned for ${esc(o.planned.title)}` : `Planned last night${o.planned.title ? `: ${esc(o.planned.title)}` : ""}`) : ["Best match", "Option 2", "Option 3"][i] || "Option"}</h2>${o.planned ? '<span class="score">Your plan</span>' : i === 0 ? '<span class="score">Top pick</span>' : ""}</div>
+    <div class="row" style="justify-content:space-between"><h2 style="margin:0">${o.planned ? (o.planned.eventId ? `Planned for ${esc(o.planned.title)}` : `Planned last night${o.planned.title ? `: ${esc(o.planned.title)}` : ""}`) : ["Best match", "Option 2", "Option 3"][i] || "Option"}</h2>${levelBadge(o)}${o.planned ? '<span class="score">Your plan</span>' : i === 0 ? '<span class="score">Top pick</span>' : ""}</div>
     <div class="pieces">${order.filter((k) => o.pieces[k]).map((k) => `<div class="swap-wrap">${pieceTile(o.pieces[k])}<button class="swap-btn" data-swap="${i}:${k}" aria-pressed="${o.swapping === k}" aria-label="Swap the ${esc(o.pieces[k].name)}">${ICON_SWAP}</button></div>`).join("")}${ph}</div>
     ${o.swapping ? swapPicker(o, i) : ""}
     ${o.extras?.length ? `<div class="pieces extras">${o.extras.map(pieceTile).join("")}</div>` : ""}
@@ -6909,7 +6980,8 @@ document.addEventListener("click", async (e) => {
     }
   }
   if (ds.orig) return openItem(ds.orig, ds.show === "1");
-  if (ds.occ) { state.occasion = ds.occ; state.occChosen = localDay(); state.event = null; generateOutfits(); return render(); }
+  if (ds.occ) { state.occasion = ds.occ; state.occChosen = localDay(); state.event = null; state.level = null; generateOutfits(); return render(); }
+  if (ds.level != null) { state.level = +ds.level || null; generateOutfits(); return render(); }
   if (ds.event) { pickEvent(ds.event); return render(); }
   if (ds.evocc) { state.editingEvent = state.editingEvent === ds.evocc ? null : ds.evocc; return render(); }
   if (ds.setevocc) {
