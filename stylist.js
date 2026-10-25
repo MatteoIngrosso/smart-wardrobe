@@ -302,7 +302,7 @@ export function wantedWarmth(feels) {
   return feels >= 24 ? 1 : feels >= 19 ? 2.5 : feels >= 14 ? 3.5 : feels >= 8 ? 6 : feels >= 2 ? 8 : 9.5;
 }
 // Jacket and trousers of one suit: both tagged suit, or the same colour and cloth and both dressy.
-function isSuit(o) {
+export function isSuit(o) {
   const j = o.outer, t = o.bottom;
   if (!(j && t && j.category === "jacket" && t.category === "trousers")) return false;
   if (j.has("suit") && t.has("suit")) return true;

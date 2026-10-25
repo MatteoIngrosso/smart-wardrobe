@@ -109,3 +109,12 @@ test("a belt must match the leather shoes", () => {
   assert.equal(S.ruleScore([shoes, item("belt", ["brown"])], "belt-shoes"), 1);
   assert.equal(S.ruleScore([shoes, item("belt", ["red"])], "belt-shoes"), null, "no leather colour to compare");
 });
+
+test("a blazer and trousers of one suit are a suit, odd trousers are not", () => {
+  S.setBible(bible);
+  const blazer = { category: "jacket", colors: ["navy"], tags: ["blazer", "suit"], styles: ["smart", "formal"] };
+  const trousers = { category: "trousers", colors: ["navy"], tags: ["suit"], styles: ["smart", "formal"] };
+  const chinos = { category: "trousers", colors: ["beige"], tags: [], styles: ["smart casual"] };
+  assert.equal(S.isSuit(S.outfitFrom([blazer, trousers])), true);
+  assert.equal(S.isSuit(S.outfitFrom([blazer, chinos])), false);
+});
