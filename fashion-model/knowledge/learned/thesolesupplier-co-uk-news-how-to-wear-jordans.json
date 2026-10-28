@@ -1,0 +1,146 @@
+{
+  "source": {
+    "kind": "article",
+    "url": "https://thesolesupplier.co.uk/news/how-to-wear-jordans/",
+    "title": "How to Wear Jordans: Outfits and Styling Advice (The Sole Supplier)",
+    "author": ""
+  },
+  "learned_at": "2026-10-28T15:52:49+00:00",
+  "model": "by hand",
+  "tokens": {
+    "in": 0,
+    "out": 0
+  },
+  "tips": [
+    {
+      "id": "thesolesupplier-co-uk-news-how-to-wear-jordans-1",
+      "text": "Link the sneakers to the outfit subtly, with a neutral palette or one tonal echo of the shoe, without looking over-coordinated.",
+      "why": "Subtle matching looks cohesive.",
+      "topics": [
+        "colour",
+        "shoes",
+        "streetwear"
+      ],
+      "occasions": [
+        "casual"
+      ],
+      "strength": "tip"
+    },
+    {
+      "id": "thesolesupplier-co-uk-news-how-to-wear-jordans-2",
+      "text": "With a simple outfit, let a loud sneaker colourway be the focal point.",
+      "why": "A standout shoe carries a plain outfit.",
+      "topics": [
+        "shoes",
+        "streetwear"
+      ],
+      "occasions": [
+        "casual"
+      ],
+      "strength": "tip"
+    },
+    {
+      "id": "thesolesupplier-co-uk-news-how-to-wear-jordans-3",
+      "text": "An all-black tee with black jeans or joggers goes with almost any colourful sneaker.",
+      "why": "Black is neutral against any colour.",
+      "topics": [
+        "colour",
+        "shoes"
+      ],
+      "occasions": [
+        "casual",
+        "night"
+      ],
+      "strength": "tip"
+    },
+    {
+      "id": "thesolesupplier-co-uk-news-how-to-wear-jordans-4",
+      "text": "A plain tee under a varsity or bomber jacket with cargo trousers and high-tops is a classic streetwear look.",
+      "why": "Collegiate layering is a streetwear staple.",
+      "topics": [
+        "layering",
+        "streetwear"
+      ],
+      "occasions": [
+        "casual"
+      ],
+      "strength": "tip"
+    },
+    {
+      "id": "thesolesupplier-co-uk-news-how-to-wear-jordans-5",
+      "text": "Straight-leg jeans or carpenter trousers with a workwear jacket and basketball sneakers make a reliable everyday outfit.",
+      "why": "Rugged practical pieces suit everyday wear.",
+      "topics": [
+        "streetwear",
+        "outerwear"
+      ],
+      "occasions": [
+        "casual"
+      ],
+      "strength": "tip"
+    },
+    {
+      "id": "thesolesupplier-co-uk-news-how-to-wear-jordans-6",
+      "text": "Show high-tops with shorts, slim joggers or cropped trousers that don't cover the shoe.",
+      "why": "Shorter hems reveal the whole shoe.",
+      "topics": [
+        "proportions",
+        "shoes"
+      ],
+      "occasions": [
+        "casual"
+      ],
+      "strength": "tip"
+    }
+  ],
+  "outfits": [
+    {
+      "outfit": "tshirt black minimal, jeans black minimal, sneakers red streetwear +high-top",
+      "occasion": "casual",
+      "verdict": "good",
+      "why": "A black base suits almost any colourway."
+    },
+    {
+      "outfit": "tshirt black minimal, joggers black minimal, sneakers yellow streetwear +high-top",
+      "occasion": "casual",
+      "verdict": "good",
+      "why": "Black joggers keep the monochrome look easy."
+    },
+    {
+      "outfit": "jacket navy streetwear +varsity, tshirt white streetwear, trousers beige streetwear +cargo, sneakers white streetwear +high-top",
+      "occasion": "casual",
+      "verdict": "good",
+      "why": "Collegiate layering with cargos."
+    },
+    {
+      "outfit": "jacket brown casual +workwear, tshirt white casual, jeans denim straight casual, sneakers black streetwear +high-top",
+      "occasion": "casual",
+      "verdict": "good",
+      "why": "A workwear jacket and straight jeans for every day."
+    },
+    {
+      "outfit": "hoodie grey casual, trousers black streetwear +cargo, sneakers red streetwear +high-top",
+      "occasion": "casual",
+      "verdict": "good",
+      "why": "A grey hoodie and cargos are comfortable and balanced."
+    },
+    {
+      "outfit": "tshirt olive streetwear +logo, trousers olive streetwear +cargo, sneakers black streetwear +high-top",
+      "occasion": "casual",
+      "verdict": "good",
+      "why": "A logo tee with cargos: a classic."
+    },
+    {
+      "outfit": "track-jacket navy sporty, tshirt white minimal, joggers grey minimal, sneakers grey streetwear +high-top",
+      "occasion": "casual",
+      "verdict": "good",
+      "why": "Grey sweats, a white tee and a track jacket look minimal."
+    },
+    {
+      "outfit": "sweatshirt grey casual, jeans black casual, sneakers red streetwear +high-top",
+      "occasion": "casual",
+      "verdict": "good",
+      "why": "A grey sweatshirt with black jeans: classic off-duty."
+    }
+  ]
+}

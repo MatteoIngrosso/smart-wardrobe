@@ -164,7 +164,7 @@ const CHECKS = {
     return [clamp((o.core.reduce((a, p) => a + suits(p), 0) / o.core.length) * 2 - 1), null];
   },
   style_clash(o, ctx, { pairs = [] }) {
-    const present = new Set(o.core.flatMap((p) => p.styles));
+    const present = new Set(clothes(o).flatMap((p) => p.styles));
     for (const [a, b] of pairs) if (present.has(a) && present.has(b)) return [-1, `${cap(a)} and ${b} pieces clash`];
     return NONE;
   },

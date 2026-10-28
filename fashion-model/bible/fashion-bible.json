@@ -1,20 +1,20 @@
 {
  "name": "Fashion bible",
  "version": 1,
- "built_at": "2026-10-18T11:59:20+00:00",
+ "built_at": "2026-10-28T15:53:26+00:00",
  "about": "Menswear rules, tips and example outfits, in the Smart Wardrobe app's vocabulary (garment types, colours, styles, fits and occasions as in app.js). Score an outfit with: sigmoid(model.bias + sum(rule.weight * check(rule))).",
  "model": {
-  "bias": -2.998,
+  "bias": -2.141,
   "trained_on": {
-   "outfits": 127,
+   "outfits": 242,
    "rulebook": 42,
-   "learnt": 85,
-   "sources": 67
+   "learnt": 200,
+   "sources": 85
   },
   "accuracy": {
-   "training": 0.874,
-   "unseen": 0.866,
-   "rulebook_only_unseen": 0.85
+   "training": 0.901,
+   "unseen": 0.897,
+   "rulebook_only_unseen": 0.86
   }
  },
  "rules": [
@@ -26,7 +26,7 @@
    "params": {
     "limit": 1
    },
-   "weight": 1.413,
+   "weight": 1.389,
    "prior": 1.5,
    "topics": [
     "colour"
@@ -41,7 +41,7 @@
    "params": {
     "limit": 3
    },
-   "weight": 1.004,
+   "weight": 1.107,
    "prior": 0.8,
    "topics": [
     "colour"
@@ -54,7 +54,7 @@
    "why": "Contrast between top and bottom gives the outfit shape; all mid-tones look flat.",
    "check": "light_dark_contrast",
    "params": {},
-   "weight": 0.121,
+   "weight": 0.002,
    "prior": 0.6,
    "topics": [
     "colour"
@@ -67,7 +67,7 @@
    "why": "Shades of one colour from head to toe look calm and expensive.",
    "check": "tonal",
    "params": {},
-   "weight": 0.343,
+   "weight": 0.205,
    "prior": 0.6,
    "topics": [
     "colour"
@@ -195,7 +195,7 @@
      ]
     ]
    },
-   "weight": 0.849,
+   "weight": 0.725,
    "prior": 0.8,
    "topics": [
     "colour"
@@ -235,7 +235,7 @@
      ]
     ]
    },
-   "weight": 1.371,
+   "weight": 1.448,
    "prior": 1.2,
    "topics": [
     "colour"
@@ -250,7 +250,7 @@
    "params": {
     "limit": 1.5
    },
-   "weight": 1.621,
+   "weight": 1.636,
    "prior": 1.5,
    "topics": [
     "occasions",
@@ -264,7 +264,7 @@
    "why": "Being clearly under- or overdressed is the most noticed mistake; aim for the level of the room.",
    "check": "occasion_formality",
    "params": {},
-   "weight": 1.869,
+   "weight": 1.404,
    "prior": 2.0,
    "topics": [
     "occasions"
@@ -277,7 +277,7 @@
    "why": "Each occasion has its own vocabulary: tailoring for work, sportswear for the gym.",
    "check": "occasion_styles",
    "params": {},
-   "weight": 0.469,
+   "weight": 0.685,
    "prior": 0.8,
    "topics": [
     "occasions"
@@ -287,7 +287,7 @@
   {
    "id": "style-clash",
    "title": "Don't mix gym kit with tailoring",
-   "why": "Sportswear and formal pieces come from different worlds; together they look accidental.",
+   "why": "Gym kit and formal pieces come from different worlds; together they look accidental. Sporty with smart casual (a hoodie over a polo, a track jacket over a shirt) is a normal high-low streetwear mix.",
    "check": "style_clash",
    "params": {
     "pairs": [
@@ -302,14 +302,10 @@
      [
       "streetwear",
       "formal"
-     ],
-     [
-      "sporty",
-      "smart"
      ]
     ]
    },
-   "weight": 1.983,
+   "weight": 1.969,
    "prior": 1.8,
    "topics": [
     "occasions",
@@ -324,7 +320,7 @@
    "why": "When every piece shares a style the outfit reads as intentional.",
    "check": "consistent_style",
    "params": {},
-   "weight": 0.0,
+   "weight": 0.076,
    "prior": 0.6,
    "topics": [
     "wardrobe"
@@ -337,7 +333,7 @@
    "why": "A roomy top looks best over slimmer trousers and the other way round; roomy on roomy only works as a deliberate streetwear look.",
    "check": "proportions",
    "params": {},
-   "weight": 1.012,
+   "weight": 1.111,
    "prior": 1.2,
    "topics": [
     "proportions",
@@ -353,7 +349,7 @@
    "params": {
     "limit": 1
    },
-   "weight": 1.013,
+   "weight": 1.195,
    "prior": 1.0,
    "topics": [
     "streetwear",
@@ -367,7 +363,7 @@
    "why": "One pattern is easy. Two need clearly different scales (fine stripe with a large check), so most days keep it to one.",
    "check": "pattern_mixing",
    "params": {},
-   "weight": 1.15,
+   "weight": 1.185,
    "prior": 0.7,
    "topics": [
     "patterns"
@@ -380,7 +376,7 @@
    "why": "A denim top with jeans in the same wash reads as a uniform; pick clearly different washes or break it up.",
    "check": "denim_on_denim",
    "params": {},
-   "weight": 1.088,
+   "weight": 1.037,
    "prior": 0.8,
    "topics": [
     "denim"
@@ -393,7 +389,7 @@
    "why": "Shoes are read first: dress shoes with joggers or trainers with a tie break the look.",
    "check": "shoe_formality",
    "params": {},
-   "weight": 1.289,
+   "weight": 1.302,
    "prior": 1.6,
    "topics": [
     "shoes",
@@ -421,7 +417,7 @@
    "why": "A tie only works with a collared shirt and tailored trousers, never with a hoodie or shorts.",
    "check": "tie_rules",
    "params": {},
-   "weight": 1.666,
+   "weight": 1.621,
    "prior": 2.0,
    "topics": [
     "accessories",
@@ -435,7 +431,7 @@
    "why": "A suit is the dressiest thing most men own; a T-shirt or trainers pull it down to casual.",
    "check": "suit_rules",
    "params": {},
-   "weight": 0.687,
+   "weight": 0.577,
    "prior": 1.5,
    "topics": [
     "suits",
@@ -449,7 +445,7 @@
    "why": "A puffer or rain shell over tailoring undoes it; an overcoat finishes a smart outfit.",
    "check": "outerwear_match",
    "params": {},
-   "weight": 1.025,
+   "weight": 0.961,
    "prior": 0.9,
    "topics": [
     "outerwear"
@@ -462,7 +458,7 @@
    "why": "Watch, rings and bracelet look tidier all gold or all silver.",
    "check": "metals",
    "params": {},
-   "weight": 0.407,
+   "weight": 0.404,
    "prior": 0.4,
    "topics": [
     "accessories"
@@ -475,7 +471,7 @@
    "why": "Too many layers is as uncomfortable as too few: about one warm layer above 24°C, three or four when mild, six or more when cold.",
    "check": "warmth_for_weather",
    "params": {},
-   "weight": 1.26,
+   "weight": 1.201,
    "prior": 1.5,
    "topics": [
     "weather",
@@ -489,7 +485,7 @@
    "why": "Shorts below about 17°C look out of season.",
    "check": "shorts_weather",
    "params": {},
-   "weight": 1.363,
+   "weight": 1.397,
    "prior": 1.4,
    "topics": [
     "weather",
@@ -503,7 +499,7 @@
    "why": "On wet days a jacket that sheds water and shoes that don't mind puddles; suede and white trainers suffer.",
    "check": "rain_ready",
    "params": {},
-   "weight": 1.036,
+   "weight": 1.092,
    "prior": 0.8,
    "topics": [
     "weather",
@@ -518,7 +514,7 @@
    "why": "Linen and seersucker for heat, tweed, flannel and corduroy for cold.",
    "check": "fabric_season",
    "params": {},
-   "weight": 1.269,
+   "weight": 1.348,
    "prior": 0.8,
    "topics": [
     "fabrics",
@@ -532,7 +528,7 @@
    "why": "At the gym, clothes made to move and breathe, and proper training shoes.",
    "check": "gym_kit",
    "params": {},
-   "weight": 1.595,
+   "weight": 1.555,
    "prior": 1.5,
    "topics": [
     "sportswear"
@@ -1588,6 +1584,68 @@
    ]
   },
   {
+   "id": "mrporter-com-en-us-journal-fashion-you-asked-how-do-i-make-streetwear-smart-4482-3",
+   "text": "Choose a mid-weight hoodie to layer under a jacket.",
+   "why": "A thick one bunches up and looks bulky beneath tailoring.",
+   "topics": [
+    "fabrics",
+    "layering",
+    "streetwear"
+   ],
+   "occasions": [
+    "casual",
+    "smart"
+   ],
+   "strength": "tip",
+   "support": 2,
+   "rank": 1.355,
+   "sources": [
+    "You Asked: How Do I Make Streetwear Smart?",
+    "You Asked: How Do I Make Streetwear Smart? (MR PORTER)"
+   ]
+  },
+  {
+   "id": "mrporter-com-en-us-journal-fashion-you-asked-how-do-i-make-streetwear-smart-4482-5",
+   "text": "Swap jeans for tailored trousers, ideally navy, to sharpen a streetwear outfit.",
+   "why": "Trousers lift the formality while the rest stays relaxed.",
+   "topics": [
+    "trousers",
+    "streetwear",
+    "smart casual"
+   ],
+   "occasions": [
+    "smart"
+   ],
+   "strength": "tip",
+   "support": 2,
+   "rank": 1.355,
+   "sources": [
+    "You Asked: How Do I Make Streetwear Smart?",
+    "You Asked: How Do I Make Streetwear Smart? (MR PORTER)"
+   ]
+  },
+  {
+   "id": "mrporter-com-en-us-journal-fashion-you-asked-how-do-i-make-streetwear-smart-4482-7",
+   "text": "To smarten streetwear, choose minimal low-profile sneakers over chunky trainers.",
+   "why": "Bulky trainers pull attention away from the rest of the outfit.",
+   "topics": [
+    "shoes",
+    "streetwear",
+    "smart casual"
+   ],
+   "occasions": [
+    "casual",
+    "smart"
+   ],
+   "strength": "tip",
+   "support": 2,
+   "rank": 1.355,
+   "sources": [
+    "You Asked: How Do I Make Streetwear Smart?",
+    "You Asked: How Do I Make Streetwear Smart? (MR PORTER)"
+   ]
+  },
+  {
    "id": "putthison-com-a-practical-guide-to-getting-started-4",
    "text": "Don't size down to look slimmer.",
    "why": "Tight clothes tend to make you look heavier, not thinner.",
@@ -1603,6 +1661,27 @@
    "sources": [
     "A Practical Guide To Getting Started",
     "How Your Pants Should Fit Now"
+   ]
+  },
+  {
+   "id": "gqphilippines-com-style-how-to-look-good-in-both-skinny-and-baggy-fits-4",
+   "text": "Balance wide trousers with a roomy, oversized top.",
+   "why": "A slim top over wide legs makes the torso look small; a loose top keeps the proportions even.",
+   "topics": [
+    "proportions",
+    "trousers",
+    "fit",
+    "shoes"
+   ],
+   "occasions": [
+    "casual"
+   ],
+   "strength": "tip",
+   "support": 2,
+   "rank": 1.355,
+   "sources": [
+    "How to Look Good in Both Skinny and Baggy Fits",
+    "How to Properly Style and Wear Air Jordan 1s (Complex)"
    ]
   },
   {
@@ -2857,6 +2936,271 @@
    "rank": 1.0,
    "sources": [
     "Should You Wear Socks With Loafers?"
+   ]
+  },
+  {
+   "id": "complex-com-style-how-to-wear-air-jordan-1-guide-4",
+   "text": "With high-top sneakers, wear trousers that just touch the tongue with a slight break; avoid hems that bunch over the shoe.",
+   "why": "The shoe stays visible and the hem looks tidy.",
+   "topics": [
+    "trousers",
+    "proportions",
+    "shoes"
+   ],
+   "occasions": [
+    "casual"
+   ],
+   "strength": "rule",
+   "support": 1,
+   "rank": 1.0,
+   "sources": [
+    "How to Properly Style and Wear Air Jordan 1s (Complex)"
+   ]
+  },
+  {
+   "id": "complex-com-style-how-to-wear-air-jordan-1-guide-8",
+   "text": "With shorts and high-top sneakers, wear plain white or black crew socks, never no-show socks.",
+   "why": "Bare ankles above a high-top look awkward.",
+   "topics": [
+    "shoes",
+    "accessories"
+   ],
+   "occasions": [
+    "casual"
+   ],
+   "strength": "rule",
+   "support": 1,
+   "rank": 1.0,
+   "sources": [
+    "How to Properly Style and Wear Air Jordan 1s (Complex)"
+   ]
+  },
+  {
+   "id": "mensflair-com-baggy-jeans-outfits-1",
+   "text": "Baggy jeans should sit at the waist; the room should start below the waistband, not from jeans sliding down.",
+   "why": "Keeps the loose silhouette intentional.",
+   "topics": [
+    "fit",
+    "denim"
+   ],
+   "occasions": [
+    "casual"
+   ],
+   "strength": "rule",
+   "support": 1,
+   "rank": 1.0,
+   "sources": [
+    "How To Wear Baggy Jeans: 19 Modern Looks (Mens Flair)"
+   ]
+  },
+  {
+   "id": "opumo-com-magazine-streetwear-outfits-for-men-4",
+   "text": "Go relaxed in fit, but not so baggy or so tight that it looks unintentional.",
+   "why": "Balanced looseness keeps streetwear deliberate.",
+   "topics": [
+    "fit",
+    "proportions",
+    "streetwear"
+   ],
+   "occasions": [
+    "casual"
+   ],
+   "strength": "rule",
+   "support": 1,
+   "rank": 1.0,
+   "sources": [
+    "8 fail-safe streetwear outfits for men (OPUMO)"
+   ]
+  },
+  {
+   "id": "theessentialman-com-mens-graphic-t-shirt-outfits-5",
+   "text": "When the tee has an all-over print, keep everything else plain so the shirt is the focal point.",
+   "why": "Solids let a busy print stand out without clashing.",
+   "topics": [
+    "patterns",
+    "colour"
+   ],
+   "occasions": [
+    "casual"
+   ],
+   "strength": "rule",
+   "support": 1,
+   "rank": 1.0,
+   "sources": [
+    "The Grown Man's Guide to Wearing Graphic T-Shirts (The Essential Man)"
+   ]
+  },
+  {
+   "id": "themodestman-com-p-596796-1",
+   "text": "Slim cargo pants with few pockets read dressier; relaxed or baggy cuts with many pockets keep the look casual.",
+   "why": "Fit and pockets set how formal cargos look.",
+   "topics": [
+    "fit",
+    "trousers",
+    "smart casual"
+   ],
+   "occasions": [
+    "casual",
+    "smart"
+   ],
+   "strength": "rule",
+   "support": 1,
+   "rank": 1.0,
+   "sources": [
+    "What To Wear With Cargo Pants (The Modest Man)"
+   ]
+  },
+  {
+   "id": "themodestman-com-p-596796-4",
+   "text": "Cargo pants are never formal: keep them away from suits, dress shoes and evening dress codes.",
+   "why": "Cargos stay casual whatever you pair them with.",
+   "topics": [
+    "formal",
+    "trousers"
+   ],
+   "occasions": [
+    "event",
+    "work"
+   ],
+   "strength": "rule",
+   "support": 1,
+   "rank": 1.0,
+   "sources": [
+    "What To Wear With Cargo Pants (The Modest Man)"
+   ]
+  },
+  {
+   "id": "themodestman-com-p-596796-5",
+   "text": "Avoid cinched or elastic hems on cargos with leather boots or dress shoes; they make them look like joggers.",
+   "why": "Cinched hems clash with leather footwear.",
+   "topics": [
+    "trousers",
+    "shoes"
+   ],
+   "occasions": [
+    "casual",
+    "smart"
+   ],
+   "strength": "rule",
+   "support": 1,
+   "rank": 1.0,
+   "sources": [
+    "What To Wear With Cargo Pants (The Modest Man)"
+   ]
+  },
+  {
+   "id": "content-prod-adc-blue-infra-complex-com-sneakers-a-calvy-click-rules-for-matchin-4",
+   "text": "Keep running sneakers away from business attire.",
+   "why": "Athletic shoes clash with work dress.",
+   "topics": [
+    "shoes",
+    "occasions"
+   ],
+   "occasions": [
+    "work",
+    "smart"
+   ],
+   "strength": "rule",
+   "support": 1,
+   "rank": 1.0,
+   "sources": [
+    "Rules for Matching Your Sneakers to Your Outfit (Complex)"
+   ]
+  },
+  {
+   "id": "opumo-com-magazine-blazer-with-hoodie-3",
+   "text": "With a blazer and hoodie, wear slim trousers, chinos or dark jeans rather than ripped jeans or joggers.",
+   "why": "Tailored bottoms keep the mix polished.",
+   "topics": [
+    "trousers",
+    "smart casual",
+    "streetwear"
+   ],
+   "occasions": [
+    "casual",
+    "smart",
+    "work"
+   ],
+   "strength": "rule",
+   "support": 1,
+   "rank": 1.0,
+   "sources": [
+    "How to perfect the blazer with hoodie combination (OPUMO)"
+   ]
+  },
+  {
+   "id": "realmenrealstyle-com-puffer-jacket-style-1",
+   "text": "A puffer should fit: shoulder seams on the shoulder, sleeves to the wrist, hem around the waist; narrow baffles keep it from ballooning.",
+   "why": "Fit keeps a bulky jacket from looking shapeless.",
+   "topics": [
+    "fit",
+    "outerwear",
+    "proportions"
+   ],
+   "occasions": [
+    "casual"
+   ],
+   "strength": "rule",
+   "support": 1,
+   "rank": 1.0,
+   "sources": [
+    "Puffer Jacket Style: How to Look Sharp (Real Men Real Style)"
+   ]
+  },
+  {
+   "id": "themodestman-com-how-to-wear-a-bomber-jacket-4",
+   "text": "Only roomy classic bombers fit a hoodie or flannel layered underneath; slim bombers bunch up.",
+   "why": "Slim bombers have no room for layers.",
+   "topics": [
+    "layering",
+    "outerwear",
+    "fit"
+   ],
+   "occasions": [
+    "casual"
+   ],
+   "strength": "rule",
+   "support": 1,
+   "rank": 1.0,
+   "sources": [
+    "How To Wear a Bomber Jacket (The Modest Man)"
+   ]
+  },
+  {
+   "id": "artofmanliness-com-style-clothing-how-to-wear-a-polo-shirt-without-looking-like--1",
+   "text": "A polo should be slim but not tight: sleeves mid-bicep, hem around mid-fly; avoid baggy polos with long sleeves.",
+   "why": "A shapeless polo looks like an afterthought.",
+   "topics": [
+    "fit",
+    "casual"
+   ],
+   "occasions": [
+    "casual",
+    "smart"
+   ],
+   "strength": "rule",
+   "support": 1,
+   "rank": 1.0,
+   "sources": [
+    "How to Wear a Polo Shirt Without Looking Like a Middle Manager (Art of Manliness)"
+   ]
+  },
+  {
+   "id": "gymshark-com-blog-article-how-to-style-oversized-tshirts-for-men-5",
+   "text": "Keep oversized tees out of formal and business settings.",
+   "why": "They suit relaxed dress codes only.",
+   "topics": [
+    "occasions"
+   ],
+   "occasions": [
+    "work",
+    "event"
+   ],
+   "strength": "rule",
+   "support": 1,
+   "rank": 1.0,
+   "sources": [
+    "How Guys Are Styling Oversized T-Shirts (Gymshark)"
    ]
   },
   {
@@ -6403,71 +6747,12 @@
    ]
   },
   {
-   "id": "mrporter-com-en-us-journal-fashion-you-asked-how-do-i-make-streetwear-smart-4482-3",
-   "text": "Choose a mid-weight hoodie to layer under a jacket.",
-   "why": "A thick one bunches up and looks bulky beneath tailoring.",
-   "topics": [
-    "fabrics",
-    "layering",
-    "streetwear"
-   ],
-   "occasions": [
-    "casual",
-    "smart"
-   ],
-   "strength": "tip",
-   "support": 1,
-   "rank": 0.8,
-   "sources": [
-    "You Asked: How Do I Make Streetwear Smart?"
-   ]
-  },
-  {
    "id": "mrporter-com-en-us-journal-fashion-you-asked-how-do-i-make-streetwear-smart-4482-4",
    "text": "Look to streetwear labels' more refined pieces, such as work jackets, and wear them over a collared shirt.",
    "why": "They bridge street style and smart dressing.",
    "topics": [
     "streetwear",
     "outerwear",
-    "smart casual"
-   ],
-   "occasions": [
-    "casual",
-    "smart"
-   ],
-   "strength": "tip",
-   "support": 1,
-   "rank": 0.8,
-   "sources": [
-    "You Asked: How Do I Make Streetwear Smart?"
-   ]
-  },
-  {
-   "id": "mrporter-com-en-us-journal-fashion-you-asked-how-do-i-make-streetwear-smart-4482-5",
-   "text": "Swap jeans for tailored trousers, ideally navy, to sharpen a streetwear outfit.",
-   "why": "Trousers lift the formality while the rest stays relaxed.",
-   "topics": [
-    "trousers",
-    "streetwear",
-    "smart casual"
-   ],
-   "occasions": [
-    "smart"
-   ],
-   "strength": "tip",
-   "support": 1,
-   "rank": 0.8,
-   "sources": [
-    "You Asked: How Do I Make Streetwear Smart?"
-   ]
-  },
-  {
-   "id": "mrporter-com-en-us-journal-fashion-you-asked-how-do-i-make-streetwear-smart-4482-7",
-   "text": "To smarten streetwear, choose minimal low-profile sneakers over chunky trainers.",
-   "why": "Bulky trainers pull attention away from the rest of the outfit.",
-   "topics": [
-    "shoes",
-    "streetwear",
     "smart casual"
    ],
    "occasions": [
@@ -10777,25 +11062,6 @@
    ]
   },
   {
-   "id": "gqphilippines-com-style-how-to-look-good-in-both-skinny-and-baggy-fits-4",
-   "text": "Balance wide trousers with a roomy, oversized top.",
-   "why": "A slim top over wide legs makes the torso look small; a loose top keeps the proportions even.",
-   "topics": [
-    "proportions",
-    "trousers",
-    "fit"
-   ],
-   "occasions": [
-    "casual"
-   ],
-   "strength": "tip",
-   "support": 1,
-   "rank": 0.8,
-   "sources": [
-    "How to Look Good in Both Skinny and Baggy Fits"
-   ]
-  },
-  {
    "id": "gqphilippines-com-style-how-to-look-good-in-both-skinny-and-baggy-fits-5",
    "text": "Don't overdo looseness; an outfit that is baggy everywhere can look as if you didn't try.",
    "why": "Too much volume reads sloppy rather than relaxed.",
@@ -10982,6 +11248,1495 @@
    ]
   },
   {
+   "id": "complex-com-style-how-to-wear-air-jordan-1-guide-1",
+   "text": "With bold sneakers like Jordan 1s, keep the rest of the outfit neutral (black, white, grey) so the shoes stand out.",
+   "why": "Neutral basics pair cleanly with colourful sneakers.",
+   "topics": [
+    "colour",
+    "shoes",
+    "streetwear"
+   ],
+   "occasions": [
+    "casual"
+   ],
+   "strength": "tip",
+   "support": 1,
+   "rank": 0.8,
+   "sources": [
+    "How to Properly Style and Wear Air Jordan 1s (Complex)"
+   ]
+  },
+  {
+   "id": "complex-com-style-how-to-wear-air-jordan-1-guide-2",
+   "text": "Don't match every piece to the sneakers; echo the shoe colourway in one piece only, such as a cap, a bag or the print of a tee.",
+   "why": "Head-to-toe matching looks forced.",
+   "topics": [
+    "colour",
+    "shoes",
+    "streetwear"
+   ],
+   "occasions": [
+    "casual"
+   ],
+   "strength": "tip",
+   "support": 1,
+   "rank": 0.8,
+   "sources": [
+    "How to Properly Style and Wear Air Jordan 1s (Complex)"
+   ]
+  },
+  {
+   "id": "complex-com-style-how-to-wear-air-jordan-1-guide-3",
+   "text": "A graphic tee with subtle details in the sneakers' colours ties the outfit together better than a bright tee that competes with them.",
+   "why": "Subtle colour echoes connect top and shoes.",
+   "topics": [
+    "colour",
+    "streetwear"
+   ],
+   "occasions": [
+    "casual"
+   ],
+   "strength": "tip",
+   "support": 1,
+   "rank": 0.8,
+   "sources": [
+    "How to Properly Style and Wear Air Jordan 1s (Complex)"
+   ]
+  },
+  {
+   "id": "complex-com-style-how-to-wear-air-jordan-1-guide-6",
+   "text": "Roomy work pants and cargo trousers go well with high-top basketball sneakers.",
+   "why": "Wider legs balance the bulk of the shoe.",
+   "topics": [
+    "trousers",
+    "streetwear",
+    "shoes"
+   ],
+   "occasions": [
+    "casual"
+   ],
+   "strength": "tip",
+   "support": 1,
+   "rank": 0.8,
+   "sources": [
+    "How to Properly Style and Wear Air Jordan 1s (Complex)"
+   ]
+  },
+  {
+   "id": "mensflair-com-baggy-jeans-outfits-2",
+   "text": "Pair baggy jeans with streetwear pieces like graphic tees, hoodies and sportswear for relaxed casual outfits.",
+   "why": "Matches the streetwear roots of the baggy silhouette.",
+   "topics": [
+    "streetwear",
+    "denim",
+    "casual"
+   ],
+   "occasions": [
+    "casual"
+   ],
+   "strength": "tip",
+   "support": 1,
+   "rank": 0.8,
+   "sources": [
+    "How To Wear Baggy Jeans: 19 Modern Looks (Mens Flair)"
+   ]
+  },
+  {
+   "id": "mensflair-com-baggy-jeans-outfits-3",
+   "text": "A bomber over a hoodie or tee, with baggy jeans and sneakers, is a reliable streetwear formula.",
+   "why": "A proven layering combination in any colour.",
+   "topics": [
+    "outerwear",
+    "streetwear",
+    "layering"
+   ],
+   "occasions": [
+    "casual"
+   ],
+   "strength": "tip",
+   "support": 1,
+   "rank": 0.8,
+   "sources": [
+    "How To Wear Baggy Jeans: 19 Modern Looks (Mens Flair)"
+   ]
+  },
+  {
+   "id": "mensflair-com-baggy-jeans-outfits-4",
+   "text": "Workwear shirts, flannels and chore jackets bring baggy jeans into smart casual.",
+   "why": "Workwear and loose denim share a relaxed, utilitarian logic.",
+   "topics": [
+    "layering",
+    "outerwear",
+    "smart casual",
+    "denim"
+   ],
+   "occasions": [
+    "casual",
+    "smart"
+   ],
+   "strength": "tip",
+   "support": 1,
+   "rank": 0.8,
+   "sources": [
+    "How To Wear Baggy Jeans: 19 Modern Looks (Mens Flair)"
+   ]
+  },
+  {
+   "id": "mensflair-com-baggy-jeans-outfits-5",
+   "text": "Keep colours and patterns minimal with baggy jeans, so the loose silhouette is the statement.",
+   "why": "Tonal outfits let the proportions do the talking.",
+   "topics": [
+    "colour",
+    "proportions",
+    "denim"
+   ],
+   "occasions": [
+    "casual"
+   ],
+   "strength": "tip",
+   "support": 1,
+   "rank": 0.8,
+   "sources": [
+    "How To Wear Baggy Jeans: 19 Modern Looks (Mens Flair)"
+   ]
+  },
+  {
+   "id": "mensflair-com-baggy-jeans-outfits-6",
+   "text": "Black, grey and white layered from light to dark is an easy palette with baggy jeans.",
+   "why": "Tonal layering keeps loose outfits cohesive.",
+   "topics": [
+    "colour",
+    "layering",
+    "streetwear"
+   ],
+   "occasions": [
+    "casual"
+   ],
+   "strength": "tip",
+   "support": 1,
+   "rank": 0.8,
+   "sources": [
+    "How To Wear Baggy Jeans: 19 Modern Looks (Mens Flair)"
+   ]
+  },
+  {
+   "id": "mensflair-com-baggy-jeans-outfits-7",
+   "text": "Baggy jeans can be dressed up with a knit or a shirt and loafers or derbies; light washes suit the casual look, dark or cream ones the smarter one.",
+   "why": "Polished shoes and tops sharpen a loose fit.",
+   "topics": [
+    "denim",
+    "shoes",
+    "smart casual"
+   ],
+   "occasions": [
+    "smart"
+   ],
+   "strength": "tip",
+   "support": 1,
+   "rank": 0.8,
+   "sources": [
+    "How To Wear Baggy Jeans: 19 Modern Looks (Mens Flair)"
+   ]
+  },
+  {
+   "id": "mensflair-com-baggy-jeans-outfits-8",
+   "text": "Cropped or rolled hems on baggy jeans show the shoe; long hems that puddle over sneakers suit skate looks only.",
+   "why": "Hem length decides how tidy the outfit looks.",
+   "topics": [
+    "proportions",
+    "denim",
+    "shoes"
+   ],
+   "occasions": [
+    "casual"
+   ],
+   "strength": "tip",
+   "support": 1,
+   "rank": 0.8,
+   "sources": [
+    "How To Wear Baggy Jeans: 19 Modern Looks (Mens Flair)"
+   ]
+  },
+  {
+   "id": "mrporter-com-en-ie-journal-fashion-you-asked-how-do-i-make-streetwear-smart-4482-5",
+   "text": "Mixing workwear, tailoring and streetwear is fine now, but do it deliberately: piece by piece, not just sneakers thrown on with formal clothes.",
+   "why": "Hybrid looks need thought to work.",
+   "topics": [
+    "smart casual",
+    "streetwear",
+    "occasions"
+   ],
+   "occasions": [
+    "casual",
+    "smart"
+   ],
+   "strength": "tip",
+   "support": 1,
+   "rank": 0.8,
+   "sources": [
+    "You Asked: How Do I Make Streetwear Smart? (MR PORTER)"
+   ]
+  },
+  {
+   "id": "opumo-com-magazine-streetwear-outfits-for-men-1",
+   "text": "Mixing a few high-end pieces with affordable streetwear staples is what gives streetwear its character.",
+   "why": "Contrast between price tiers looks authentic.",
+   "topics": [
+    "streetwear",
+    "wardrobe"
+   ],
+   "occasions": [
+    "casual"
+   ],
+   "strength": "tip",
+   "support": 1,
+   "rank": 0.8,
+   "sources": [
+    "8 fail-safe streetwear outfits for men (OPUMO)"
+   ]
+  },
+  {
+   "id": "opumo-com-magazine-streetwear-outfits-for-men-2",
+   "text": "Layer hoodies, bomber jackets and longline tees to add depth to a streetwear outfit.",
+   "why": "Layering is a core streetwear technique.",
+   "topics": [
+    "layering",
+    "outerwear",
+    "streetwear"
+   ],
+   "occasions": [
+    "casual"
+   ],
+   "strength": "tip",
+   "support": 1,
+   "rank": 0.8,
+   "sources": [
+    "8 fail-safe streetwear outfits for men (OPUMO)"
+   ]
+  },
+  {
+   "id": "opumo-com-magazine-streetwear-outfits-for-men-3",
+   "text": "In streetwear the sneakers are the centrepiece: start with clean white pairs, then add statement ones.",
+   "why": "Shoes anchor the outfit.",
+   "topics": [
+    "shoes",
+    "streetwear"
+   ],
+   "occasions": [
+    "casual"
+   ],
+   "strength": "tip",
+   "support": 1,
+   "rank": 0.8,
+   "sources": [
+    "8 fail-safe streetwear outfits for men (OPUMO)"
+   ]
+  },
+  {
+   "id": "opumo-com-magazine-streetwear-outfits-for-men-5",
+   "text": "An all-black outfit of tee, cargo pants and low-top sneakers is a clean, minimal streetwear base.",
+   "why": "Monochrome is cohesive and timeless.",
+   "topics": [
+    "colour",
+    "streetwear"
+   ],
+   "occasions": [
+    "casual",
+    "night"
+   ],
+   "strength": "tip",
+   "support": 1,
+   "rank": 0.8,
+   "sources": [
+    "8 fail-safe streetwear outfits for men (OPUMO)"
+   ]
+  },
+  {
+   "id": "opumo-com-magazine-streetwear-outfits-for-men-7",
+   "text": "A plain hoodie with joggers and clean sneakers works from the gym to a casual evening.",
+   "why": "Athleisure crosses casual occasions.",
+   "topics": [
+    "sportswear",
+    "casual"
+   ],
+   "occasions": [
+    "casual",
+    "gym"
+   ],
+   "strength": "tip",
+   "support": 1,
+   "rank": 0.8,
+   "sources": [
+    "8 fail-safe streetwear outfits for men (OPUMO)"
+   ]
+  },
+  {
+   "id": "theessentialman-com-mens-graphic-t-shirt-outfits-1",
+   "text": "Favour abstract or minimal graphics that could pass as art; they look more grown-up than busy slogans or big logos.",
+   "why": "Art-like prints read more refined.",
+   "topics": [
+    "patterns",
+    "casual",
+    "streetwear"
+   ],
+   "occasions": [
+    "casual"
+   ],
+   "strength": "tip",
+   "support": 1,
+   "rank": 0.8,
+   "sources": [
+    "The Grown Man's Guide to Wearing Graphic T-Shirts (The Essential Man)"
+   ]
+  },
+  {
+   "id": "theessentialman-com-mens-graphic-t-shirt-outfits-2",
+   "text": "Logo and band tees are the most casual tees; keep them for relaxed days rather than polished looks.",
+   "why": "Logos add casualness to an already casual shirt.",
+   "topics": [
+    "casual",
+    "patterns"
+   ],
+   "occasions": [
+    "casual"
+   ],
+   "strength": "tip",
+   "support": 1,
+   "rank": 0.8,
+   "sources": [
+    "The Grown Man's Guide to Wearing Graphic T-Shirts (The Essential Man)"
+   ]
+  },
+  {
+   "id": "theessentialman-com-mens-graphic-t-shirt-outfits-3",
+   "text": "A graphic tee with dressy trousers and minimal sneakers or boots works for a smart-casual office day.",
+   "why": "Dressy bottoms balance the tee.",
+   "topics": [
+    "smart casual",
+    "trousers"
+   ],
+   "occasions": [
+    "work",
+    "smart"
+   ],
+   "strength": "tip",
+   "support": 1,
+   "rank": 0.8,
+   "sources": [
+    "The Grown Man's Guide to Wearing Graphic T-Shirts (The Essential Man)"
+   ]
+  },
+  {
+   "id": "theessentialman-com-mens-graphic-t-shirt-outfits-4",
+   "text": "Calm a bold or pastel graphic tee with dark neutrals: grey chinos, black or olive.",
+   "why": "Dark neutrals tame a tricky colour.",
+   "topics": [
+    "colour",
+    "trousers"
+   ],
+   "occasions": [
+    "casual",
+    "work"
+   ],
+   "strength": "tip",
+   "support": 1,
+   "rank": 0.8,
+   "sources": [
+    "The Grown Man's Guide to Wearing Graphic T-Shirts (The Essential Man)"
+   ]
+  },
+  {
+   "id": "theessentialman-com-mens-graphic-t-shirt-outfits-6",
+   "text": "A blazer and loafers over a graphic tee and shorts or trousers make it evening-appropriate.",
+   "why": "A tailored layer lifts a relaxed tee for nights out.",
+   "topics": [
+    "smart casual",
+    "layering",
+    "shoes"
+   ],
+   "occasions": [
+    "night"
+   ],
+   "strength": "tip",
+   "support": 1,
+   "rank": 0.8,
+   "sources": [
+    "The Grown Man's Guide to Wearing Graphic T-Shirts (The Essential Man)"
+   ]
+  },
+  {
+   "id": "theessentialman-com-mens-graphic-t-shirt-outfits-7",
+   "text": "For a weekend look, an illustrated tee with a light jacket and minimal sneakers in a neutral colour stays tidy.",
+   "why": "Neutral shoes calm the graphic.",
+   "topics": [
+    "casual",
+    "shoes",
+    "layering"
+   ],
+   "occasions": [
+    "casual"
+   ],
+   "strength": "tip",
+   "support": 1,
+   "rank": 0.8,
+   "sources": [
+    "The Grown Man's Guide to Wearing Graphic T-Shirts (The Essential Man)"
+   ]
+  },
+  {
+   "id": "themodestman-com-p-596796-2",
+   "text": "Black cargos suit high-low dressing: with a polo, a button-down or a sport coat they work for smart casual nights out.",
+   "why": "Black blends into dressier outfits.",
+   "topics": [
+    "colour",
+    "trousers",
+    "smart casual"
+   ],
+   "occasions": [
+    "smart",
+    "night"
+   ],
+   "strength": "tip",
+   "support": 1,
+   "rank": 0.8,
+   "sources": [
+    "What To Wear With Cargo Pants (The Modest Man)"
+   ]
+  },
+  {
+   "id": "themodestman-com-p-596796-3",
+   "text": "Olive, khaki, grey and brown cargos keep a military feel; pair them with workwear shirts, overshirts and boots.",
+   "why": "The classic utility look hangs together.",
+   "topics": [
+    "colour",
+    "trousers",
+    "outerwear"
+   ],
+   "occasions": [
+    "casual"
+   ],
+   "strength": "tip",
+   "support": 1,
+   "rank": 0.8,
+   "sources": [
+    "What To Wear With Cargo Pants (The Modest Man)"
+   ]
+  },
+  {
+   "id": "themodestman-com-p-596796-6",
+   "text": "Baggy cargos look tidy with a single break at the shoe and a higher waist; wear them with a tee or crewneck and boots or sneakers.",
+   "why": "Clean lines keep loose cargos intentional.",
+   "topics": [
+    "fit",
+    "proportions",
+    "casual"
+   ],
+   "occasions": [
+    "casual"
+   ],
+   "strength": "tip",
+   "support": 1,
+   "rank": 0.8,
+   "sources": [
+    "What To Wear With Cargo Pants (The Modest Man)"
+   ]
+  },
+  {
+   "id": "timberland-com-en-gb-blog-faq-what-to-wear-with-timberland-boots-1",
+   "text": "Timberland-style work boots suit casual basics (jeans, tees, hoodies, sweats) and smarter pieces like chinos, shirts and a wool coat for smart casual.",
+   "why": "Rugged boots bridge relaxed and smarter outfits.",
+   "topics": [
+    "shoes",
+    "casual",
+    "smart casual"
+   ],
+   "occasions": [
+    "casual",
+    "smart"
+   ],
+   "strength": "tip",
+   "support": 1,
+   "rank": 0.8,
+   "sources": [
+    "What to wear with Timberland boots (Timberland)"
+   ]
+  },
+  {
+   "id": "timberland-com-en-gb-blog-faq-what-to-wear-with-timberland-boots-2",
+   "text": "Wheat or yellow boots go with lighter denim and light chinos; dark brown or black boots with dark denim and grey or black chinos for a sharper look.",
+   "why": "Boot and trouser tones should agree.",
+   "topics": [
+    "colour",
+    "denim",
+    "shoes"
+   ],
+   "occasions": [
+    "casual",
+    "smart"
+   ],
+   "strength": "tip",
+   "support": 1,
+   "rank": 0.8,
+   "sources": [
+    "What to wear with Timberland boots (Timberland)"
+   ]
+  },
+  {
+   "id": "timberland-com-en-gb-blog-faq-what-to-wear-with-timberland-boots-3",
+   "text": "With boots and sweatpants, add a smart knit; with a hoodie, wear jeans rather than sweats, so the outfit isn't all lounge.",
+   "why": "One smarter piece balances relaxed boots outfits.",
+   "topics": [
+    "layering",
+    "streetwear",
+    "casual"
+   ],
+   "occasions": [
+    "casual"
+   ],
+   "strength": "tip",
+   "support": 1,
+   "rank": 0.8,
+   "sources": [
+    "What to wear with Timberland boots (Timberland)"
+   ]
+  },
+  {
+   "id": "timberland-com-en-gb-blog-faq-what-to-wear-with-timberland-boots-4",
+   "text": "Wheat work boots and a bomber jacket make a classic streetwear pairing; darker boots go with a dark raincoat or car coat for a polished look.",
+   "why": "Outerwear sets the boots' mood.",
+   "topics": [
+    "outerwear",
+    "shoes",
+    "streetwear"
+   ],
+   "occasions": [
+    "casual",
+    "smart"
+   ],
+   "strength": "tip",
+   "support": 1,
+   "rank": 0.8,
+   "sources": [
+    "What to wear with Timberland boots (Timberland)"
+   ]
+  },
+  {
+   "id": "content-prod-adc-blue-infra-complex-com-sneakers-a-calvy-click-rules-for-matchin-1",
+   "text": "Don't match the sneakers' colour on every item; pick complementary textures and styles instead.",
+   "why": "Full colour matching looks costumed.",
+   "topics": [
+    "colour",
+    "shoes",
+    "streetwear"
+   ],
+   "occasions": [
+    "casual"
+   ],
+   "strength": "tip",
+   "support": 1,
+   "rank": 0.8,
+   "sources": [
+    "Rules for Matching Your Sneakers to Your Outfit (Complex)"
+   ]
+  },
+  {
+   "id": "content-prod-adc-blue-infra-complex-com-sneakers-a-calvy-click-rules-for-matchin-2",
+   "text": "Match trouser width to sneaker bulk: chunky sneakers with straight or wider legs, slim sneakers with slim trousers.",
+   "why": "Balanced widths keep proportions right.",
+   "topics": [
+    "proportions",
+    "shoes",
+    "trousers"
+   ],
+   "occasions": [
+    "casual"
+   ],
+   "strength": "tip",
+   "support": 1,
+   "rank": 0.8,
+   "sources": [
+    "Rules for Matching Your Sneakers to Your Outfit (Complex)"
+   ]
+  },
+  {
+   "id": "content-prod-adc-blue-infra-complex-com-sneakers-a-calvy-click-rules-for-matchin-3",
+   "text": "When the sneakers are the focal point, cut fabric at the ankle: pin-roll or crop jeans, or wear tapered trousers.",
+   "why": "Less bunched fabric keeps the sneakers visible.",
+   "topics": [
+    "proportions",
+    "shoes",
+    "denim"
+   ],
+   "occasions": [
+    "casual"
+   ],
+   "strength": "tip",
+   "support": 1,
+   "rank": 0.8,
+   "sources": [
+    "Rules for Matching Your Sneakers to Your Outfit (Complex)"
+   ]
+  },
+  {
+   "id": "content-prod-adc-blue-infra-complex-com-sneakers-a-calvy-click-rules-for-matchin-5",
+   "text": "Contrasting categories works when colours agree: technical outerwear with retro sneakers, or a classic topcoat with sneaker boots.",
+   "why": "A shared palette makes contrast look deliberate.",
+   "topics": [
+    "layering",
+    "shoes",
+    "colour"
+   ],
+   "occasions": [
+    "casual"
+   ],
+   "strength": "tip",
+   "support": 1,
+   "rank": 0.8,
+   "sources": [
+    "Rules for Matching Your Sneakers to Your Outfit (Complex)"
+   ]
+  },
+  {
+   "id": "opumo-com-magazine-blazer-with-hoodie-1",
+   "text": "For a blazer over a hoodie, pick a navy, charcoal or grey blazer and a plain grey, black or navy hoodie.",
+   "why": "Neutral layers make the mix look intentional.",
+   "topics": [
+    "colour",
+    "layering",
+    "streetwear"
+   ],
+   "occasions": [
+    "casual",
+    "smart",
+    "night"
+   ],
+   "strength": "tip",
+   "support": 1,
+   "rank": 0.8,
+   "sources": [
+    "How to perfect the blazer with hoodie combination (OPUMO)"
+   ]
+  },
+  {
+   "id": "opumo-com-magazine-blazer-with-hoodie-2",
+   "text": "Under a blazer, wear a slim mid-weight hoodie, not a bulky baggy one, and let the hood sit over the collar.",
+   "why": "A bulky hoodie spoils the jacket's line.",
+   "topics": [
+    "layering",
+    "fit"
+   ],
+   "occasions": [
+    "casual",
+    "smart"
+   ],
+   "strength": "tip",
+   "support": 1,
+   "rank": 0.8,
+   "sources": [
+    "How to perfect the blazer with hoodie combination (OPUMO)"
+   ]
+  },
+  {
+   "id": "opumo-com-magazine-blazer-with-hoodie-4",
+   "text": "Shoes set the level of a blazer-and-hoodie outfit: Chelsea boots or derbies for evenings, loafers or clean sneakers for daytime.",
+   "why": "Footwear decides how dressed up it looks.",
+   "topics": [
+    "shoes",
+    "smart casual"
+   ],
+   "occasions": [
+    "casual",
+    "night",
+    "smart"
+   ],
+   "strength": "tip",
+   "support": 1,
+   "rank": 0.8,
+   "sources": [
+    "How to perfect the blazer with hoodie combination (OPUMO)"
+   ]
+  },
+  {
+   "id": "opumo-com-magazine-blazer-with-hoodie-5",
+   "text": "On cold days add an overcoat over the blazer and hoodie.",
+   "why": "Keeps the layered look with more warmth.",
+   "topics": [
+    "outerwear",
+    "layering",
+    "weather"
+   ],
+   "occasions": [
+    "casual",
+    "smart"
+   ],
+   "strength": "tip",
+   "support": 1,
+   "rank": 0.8,
+   "sources": [
+    "How to perfect the blazer with hoodie combination (OPUMO)"
+   ]
+  },
+  {
+   "id": "realmenrealstyle-com-puffer-jacket-style-2",
+   "text": "Pick puffers in charcoal, navy, olive, burgundy or matte black; skip neon and shiny finishes unless going full streetwear.",
+   "why": "Muted shades pair with the rest of the wardrobe.",
+   "topics": [
+    "colour",
+    "outerwear"
+   ],
+   "occasions": [
+    "casual",
+    "smart"
+   ],
+   "strength": "tip",
+   "support": 1,
+   "rank": 0.8,
+   "sources": [
+    "Puffer Jacket Style: How to Look Sharp (Real Men Real Style)"
+   ]
+  },
+  {
+   "id": "realmenrealstyle-com-puffer-jacket-style-3",
+   "text": "Balance a bulky puffer with slim or straight structured trousers and sleek shoes (Chelsea boots, minimal sneakers, lace-ups).",
+   "why": "A tapered lower half avoids a blocky look.",
+   "topics": [
+    "proportions",
+    "outerwear",
+    "shoes"
+   ],
+   "occasions": [
+    "casual",
+    "smart"
+   ],
+   "strength": "tip",
+   "support": 1,
+   "rank": 0.8,
+   "sources": [
+    "Puffer Jacket Style: How to Look Sharp (Real Men Real Style)"
+   ]
+  },
+  {
+   "id": "realmenrealstyle-com-puffer-jacket-style-4",
+   "text": "Layer a hoodie or a turtleneck under a puffer, keeping layers flat.",
+   "why": "Flat layers keep clean lines.",
+   "topics": [
+    "layering",
+    "outerwear"
+   ],
+   "occasions": [
+    "casual",
+    "smart"
+   ],
+   "strength": "tip",
+   "support": 1,
+   "rank": 0.8,
+   "sources": [
+    "Puffer Jacket Style: How to Look Sharp (Real Men Real Style)"
+   ]
+  },
+  {
+   "id": "themodestman-com-how-to-wear-a-bomber-jacket-1",
+   "text": "A bomber goes with most neutral combinations, from a tee and jeans to a polo, chinos or a button-down.",
+   "why": "A versatile casual outer layer.",
+   "topics": [
+    "outerwear",
+    "casual",
+    "smart casual"
+   ],
+   "occasions": [
+    "casual",
+    "smart"
+   ],
+   "strength": "tip",
+   "support": 1,
+   "rank": 0.8,
+   "sources": [
+    "How To Wear a Bomber Jacket (The Modest Man)"
+   ]
+  },
+  {
+   "id": "themodestman-com-how-to-wear-a-bomber-jacket-2",
+   "text": "A slim, minimal bomber over a polo or button-down with chinos or trousers works for smart casual.",
+   "why": "A close fit keeps smart-casual lines clean.",
+   "topics": [
+    "outerwear",
+    "fit",
+    "smart casual"
+   ],
+   "occasions": [
+    "smart"
+   ],
+   "strength": "tip",
+   "support": 1,
+   "rank": 0.8,
+   "sources": [
+    "How To Wear a Bomber Jacket (The Modest Man)"
+   ]
+  },
+  {
+   "id": "themodestman-com-how-to-wear-a-bomber-jacket-3",
+   "text": "Use a bright bomber as the single colour against an otherwise monochrome outfit, or a neutral one (olive, grey, khaki) to blend in.",
+   "why": "One colour pop becomes the focal point.",
+   "topics": [
+    "colour",
+    "outerwear"
+   ],
+   "occasions": [
+    "casual",
+    "smart"
+   ],
+   "strength": "tip",
+   "support": 1,
+   "rank": 0.8,
+   "sources": [
+    "How To Wear a Bomber Jacket (The Modest Man)"
+   ]
+  },
+  {
+   "id": "themodestman-com-how-to-wear-a-bomber-jacket-5",
+   "text": "Classic bombers look best with jeans, chinos or trousers; only sporty ones suit shorts.",
+   "why": "A classic bomber with shorts looks unbalanced.",
+   "topics": [
+    "outerwear",
+    "trousers"
+   ],
+   "occasions": [
+    "casual"
+   ],
+   "strength": "tip",
+   "support": 1,
+   "rank": 0.8,
+   "sources": [
+    "How To Wear a Bomber Jacket (The Modest Man)"
+   ]
+  },
+  {
+   "id": "themodestman-com-how-to-wear-a-bomber-jacket-7",
+   "text": "With an athleisure bomber, wear structured pieces like a henley and tapered joggers, not baggy sweats and oversized tees.",
+   "why": "Clean lines keep sporty looks sharp.",
+   "topics": [
+    "sportswear",
+    "fit",
+    "proportions"
+   ],
+   "occasions": [
+    "casual"
+   ],
+   "strength": "tip",
+   "support": 1,
+   "rank": 0.8,
+   "sources": [
+    "How To Wear a Bomber Jacket (The Modest Man)"
+   ]
+  },
+  {
+   "id": "artofmanliness-com-style-clothing-how-to-wear-a-polo-shirt-without-looking-like--2",
+   "text": "Wear pique or jersey cotton polos away from the golf course, not shiny synthetic ones.",
+   "why": "Tech fabrics read as corporate.",
+   "topics": [
+    "fabrics"
+   ],
+   "occasions": [
+    "casual",
+    "smart"
+   ],
+   "strength": "tip",
+   "support": 1,
+   "rank": 0.8,
+   "sources": [
+    "How to Wear a Polo Shirt Without Looking Like a Middle Manager (Art of Manliness)"
+   ]
+  },
+  {
+   "id": "artofmanliness-com-style-clothing-how-to-wear-a-polo-shirt-without-looking-like--3",
+   "text": "Pair a polo with tailored chinos, trousers or well-fitting jeans, and loafers, chukkas or clean sneakers rather than boxy dress shoes.",
+   "why": "Refined but relaxed pieces keep a polo modern.",
+   "topics": [
+    "shoes",
+    "trousers",
+    "smart casual"
+   ],
+   "occasions": [
+    "casual",
+    "smart"
+   ],
+   "strength": "tip",
+   "support": 1,
+   "rank": 0.8,
+   "sources": [
+    "How to Wear a Polo Shirt Without Looking Like a Middle Manager (Art of Manliness)"
+   ]
+  },
+  {
+   "id": "artofmanliness-com-style-clothing-how-to-wear-a-polo-shirt-without-looking-like--4",
+   "text": "Layer a light jacket, cardigan or sport coat over a polo when the weather allows.",
+   "why": "A layer adds interest beyond the polo alone.",
+   "topics": [
+    "layering"
+   ],
+   "occasions": [
+    "casual",
+    "smart"
+   ],
+   "strength": "tip",
+   "support": 1,
+   "rank": 0.8,
+   "sources": [
+    "How to Wear a Polo Shirt Without Looking Like a Middle Manager (Art of Manliness)"
+   ]
+  },
+  {
+   "id": "fashionbeans-com-article-best-zip-up-hoodies-for-men-1",
+   "text": "Give a zip-up hoodie something structured to lean on: denim, tailored trousers or boots, not joggers and other soft pieces.",
+   "why": "All-soft outfits make the hoodie look shapeless.",
+   "topics": [
+    "layering",
+    "proportions",
+    "streetwear"
+   ],
+   "occasions": [
+    "casual"
+   ],
+   "strength": "tip",
+   "support": 1,
+   "rank": 0.8,
+   "sources": [
+    "How to Wear a Zip-Up Hoodie Without Looking Sloppy (FashionBeans)"
+   ]
+  },
+  {
+   "id": "fashionbeans-com-article-best-zip-up-hoodies-for-men-2",
+   "text": "A slim zip-up suits tailored trousers; a relaxed or boxy one suits streetwear looks.",
+   "why": "The hoodie's fit should match the outfit's level.",
+   "topics": [
+    "fit",
+    "proportions",
+    "streetwear"
+   ],
+   "occasions": [
+    "casual",
+    "smart"
+   ],
+   "strength": "tip",
+   "support": 1,
+   "rank": 0.8,
+   "sources": [
+    "How to Wear a Zip-Up Hoodie Without Looking Sloppy (FashionBeans)"
+   ]
+  },
+  {
+   "id": "fashionbeans-com-article-best-zip-up-hoodies-for-men-3",
+   "text": "A thin zip-up works as a mid-layer under a coat or jacket.",
+   "why": "Warmth without bulk.",
+   "topics": [
+    "layering",
+    "outerwear"
+   ],
+   "occasions": [
+    "casual"
+   ],
+   "strength": "tip",
+   "support": 1,
+   "rank": 0.8,
+   "sources": [
+    "How to Wear a Zip-Up Hoodie Without Looking Sloppy (FashionBeans)"
+   ]
+  },
+  {
+   "id": "fashionbeans-com-article-best-zip-up-hoodies-for-men-4",
+   "text": "The hoodie hem should sit just below the waistband; a cropped zip-up pairs best with wide trousers.",
+   "why": "Length balances top against bottom.",
+   "topics": [
+    "proportions",
+    "fit"
+   ],
+   "occasions": [
+    "casual"
+   ],
+   "strength": "tip",
+   "support": 1,
+   "rank": 0.8,
+   "sources": [
+    "How to Wear a Zip-Up Hoodie Without Looking Sloppy (FashionBeans)"
+   ]
+  },
+  {
+   "id": "fashionbeans-com-article-best-zip-up-hoodies-for-men-5",
+   "text": "Wear an open zip-up over a graphic tee to frame the print, and keep the palette tonal (navy on navy, grey on grey, washed black).",
+   "why": "Tonal dressing looks deliberate.",
+   "topics": [
+    "colour",
+    "layering",
+    "streetwear"
+   ],
+   "occasions": [
+    "casual"
+   ],
+   "strength": "tip",
+   "support": 1,
+   "rank": 0.8,
+   "sources": [
+    "How to Wear a Zip-Up Hoodie Without Looking Sloppy (FashionBeans)"
+   ]
+  },
+  {
+   "id": "fashionbeans-com-article-breaking-down-the-street-style-look-thats-taking-over-t-1",
+   "text": "Build streetwear outfits from a tonal palette (black, grey, off-white, olive, navy) and avoid bright colour blocks.",
+   "why": "Keeps the look cohesive and restrained.",
+   "topics": [
+    "colour",
+    "streetwear"
+   ],
+   "occasions": [
+    "casual"
+   ],
+   "strength": "tip",
+   "support": 1,
+   "rank": 0.8,
+   "sources": [
+    "Breaking Down The Tokyo Minimal Utility Street Style (FashionBeans)"
+   ]
+  },
+  {
+   "id": "fashionbeans-com-article-breaking-down-the-street-style-look-thats-taking-over-t-2",
+   "text": "Create interest through fabric and layering rather than prints, graphics or logos.",
+   "why": "Texture adds interest without loud signals.",
+   "topics": [
+    "fabrics",
+    "layering",
+    "streetwear"
+   ],
+   "occasions": [
+    "casual"
+   ],
+   "strength": "tip",
+   "support": 1,
+   "rank": 0.8,
+   "sources": [
+    "Breaking Down The Tokyo Minimal Utility Street Style (FashionBeans)"
+   ]
+  },
+  {
+   "id": "fashionbeans-com-article-breaking-down-the-street-style-look-thats-taking-over-t-3",
+   "text": "Pair wide or stacked trousers with a cropped, boxy jacket to balance the volume.",
+   "why": "A shorter top offsets loose bottoms.",
+   "topics": [
+    "proportions",
+    "outerwear"
+   ],
+   "occasions": [
+    "casual"
+   ],
+   "strength": "tip",
+   "support": 1,
+   "rank": 0.8,
+   "sources": [
+    "Breaking Down The Tokyo Minimal Utility Street Style (FashionBeans)"
+   ]
+  },
+  {
+   "id": "fashionbeans-com-article-breaking-down-the-street-style-look-thats-taking-over-t-4",
+   "text": "Layer a light technical shell over a soft knit for depth.",
+   "why": "Mixes a sharp outer layer with a soft inner one.",
+   "topics": [
+    "layering",
+    "outerwear"
+   ],
+   "occasions": [
+    "casual"
+   ],
+   "strength": "tip",
+   "support": 1,
+   "rank": 0.8,
+   "sources": [
+    "Breaking Down The Tokyo Minimal Utility Street Style (FashionBeans)"
+   ]
+  },
+  {
+   "id": "fashionbeans-com-article-breaking-down-the-street-style-look-thats-taking-over-t-5",
+   "text": "Keep shoes muted, like black runners or low-profile sneakers, so the layers stay the focus.",
+   "why": "Quiet shoes keep a minimal look calm.",
+   "topics": [
+    "shoes",
+    "streetwear"
+   ],
+   "occasions": [
+    "casual"
+   ],
+   "strength": "tip",
+   "support": 1,
+   "rank": 0.8,
+   "sources": [
+    "Breaking Down The Tokyo Minimal Utility Street Style (FashionBeans)"
+   ]
+  },
+  {
+   "id": "lacoste-com-us-how-to-style-a-hoodie-html-1",
+   "text": "A plain white, black or grey hoodie with jeans and sneakers is an easy everyday base.",
+   "why": "Simple and versatile for casual days.",
+   "topics": [
+    "casual",
+    "denim",
+    "shoes"
+   ],
+   "occasions": [
+    "casual"
+   ],
+   "strength": "tip",
+   "support": 1,
+   "rank": 0.8,
+   "sources": [
+    "How to Style a Hoodie (Lacoste)"
+   ]
+  },
+  {
+   "id": "lacoste-com-us-how-to-style-a-hoodie-html-2",
+   "text": "An oversized hoodie with baggy jeans gives a relaxed streetwear silhouette; a fitted hoodie with slimmer trousers looks cleaner.",
+   "why": "The silhouette sets the mood.",
+   "topics": [
+    "proportions",
+    "streetwear",
+    "fit"
+   ],
+   "occasions": [
+    "casual"
+   ],
+   "strength": "tip",
+   "support": 1,
+   "rank": 0.8,
+   "sources": [
+    "How to Style a Hoodie (Lacoste)"
+   ]
+  },
+  {
+   "id": "lacoste-com-us-how-to-style-a-hoodie-html-3",
+   "text": "Wear a hoodie under a jacket, a denim jacket or a blazer for structure and warmth.",
+   "why": "A structured layer lifts a relaxed hoodie.",
+   "topics": [
+    "layering",
+    "outerwear"
+   ],
+   "occasions": [
+    "casual",
+    "work"
+   ],
+   "strength": "tip",
+   "support": 1,
+   "rank": 0.8,
+   "sources": [
+    "How to Style a Hoodie (Lacoste)"
+   ]
+  },
+  {
+   "id": "lacoste-com-us-how-to-style-a-hoodie-html-4",
+   "text": "A clean hoodie with smart trousers and boots looks polished enough for a relaxed workplace.",
+   "why": "Trousers and boots balance comfort with polish.",
+   "topics": [
+    "smart casual",
+    "trousers",
+    "shoes"
+   ],
+   "occasions": [
+    "work",
+    "casual"
+   ],
+   "strength": "tip",
+   "support": 1,
+   "rank": 0.8,
+   "sources": [
+    "How to Style a Hoodie (Lacoste)"
+   ]
+  },
+  {
+   "id": "gymshark-com-blog-article-how-to-style-oversized-tshirts-for-men-1",
+   "text": "Balance an oversized tee with straight or tapered bottoms, or go fully relaxed with baggy cargos for a streetwear look; avoid super skinny jeans.",
+   "why": "Extreme contrast looks unbalanced.",
+   "topics": [
+    "proportions",
+    "streetwear"
+   ],
+   "occasions": [
+    "casual"
+   ],
+   "strength": "tip",
+   "support": 1,
+   "rank": 0.8,
+   "sources": [
+    "How Guys Are Styling Oversized T-Shirts (Gymshark)"
+   ]
+  },
+  {
+   "id": "gymshark-com-blog-article-how-to-style-oversized-tshirts-for-men-2",
+   "text": "An oversized tee with shorts should end just below the waistband so the shorter bottom balances it.",
+   "why": "Shorter bottoms let the tee run longer.",
+   "topics": [
+    "proportions"
+   ],
+   "occasions": [
+    "casual"
+   ],
+   "strength": "tip",
+   "support": 1,
+   "rank": 0.8,
+   "sources": [
+    "How Guys Are Styling Oversized T-Shirts (Gymshark)"
+   ]
+  },
+  {
+   "id": "gymshark-com-blog-article-how-to-style-oversized-tshirts-for-men-3",
+   "text": "A tee cropped near the waistband balances slouchy, baggy jeans.",
+   "why": "A short top offsets loose bottoms.",
+   "topics": [
+    "proportions",
+    "denim"
+   ],
+   "occasions": [
+    "casual"
+   ],
+   "strength": "tip",
+   "support": 1,
+   "rank": 0.8,
+   "sources": [
+    "How Guys Are Styling Oversized T-Shirts (Gymshark)"
+   ]
+  },
+  {
+   "id": "gymshark-com-blog-article-how-to-style-oversized-tshirts-for-men-4",
+   "text": "Dress up an oversized tee with tailored trousers or a structured coat for contrast.",
+   "why": "Mixing casual and smart adds interest.",
+   "topics": [
+    "smart casual",
+    "layering"
+   ],
+   "occasions": [
+    "casual",
+    "smart"
+   ],
+   "strength": "tip",
+   "support": 1,
+   "rank": 0.8,
+   "sources": [
+    "How Guys Are Styling Oversized T-Shirts (Gymshark)"
+   ]
+  },
+  {
+   "id": "gymshark-com-blog-article-how-to-style-oversized-tshirts-for-men-6",
+   "text": "A graphic tee goes well with an all-black outfit, light baggy denim or cargos.",
+   "why": "Graphics pair with simple bottoms.",
+   "topics": [
+    "patterns",
+    "streetwear"
+   ],
+   "occasions": [
+    "casual"
+   ],
+   "strength": "tip",
+   "support": 1,
+   "rank": 0.8,
+   "sources": [
+    "How Guys Are Styling Oversized T-Shirts (Gymshark)"
+   ]
+  },
+  {
+   "id": "mensflair-com-what-to-wear-club-1",
+   "text": "For nights out favour dark colours (black, navy, charcoal, deep khaki); they look sharp in low light and hide spills.",
+   "why": "Dark outfits stay sharp after dark.",
+   "topics": [
+    "colour",
+    "occasions"
+   ],
+   "occasions": [
+    "night"
+   ],
+   "strength": "tip",
+   "support": 1,
+   "rank": 0.8,
+   "sources": [
+    "What To Wear To The Club: Night Out Outfits for Men (Mens Flair)"
+   ]
+  },
+  {
+   "id": "mensflair-com-what-to-wear-club-2",
+   "text": "Dark jeans in black or deep indigo, slim or straight, are the easiest base for a night out.",
+   "why": "They go with almost anything.",
+   "topics": [
+    "denim",
+    "occasions"
+   ],
+   "occasions": [
+    "night"
+   ],
+   "strength": "tip",
+   "support": 1,
+   "rank": 0.8,
+   "sources": [
+    "What To Wear To The Club: Night Out Outfits for Men (Mens Flair)"
+   ]
+  },
+  {
+   "id": "mensflair-com-what-to-wear-club-3",
+   "text": "Match the venue: casual for dive bars, an unstructured blazer or knit and boots for upscale bars and rooftops.",
+   "why": "You blend in with the crowd.",
+   "topics": [
+    "occasions",
+    "smart casual"
+   ],
+   "occasions": [
+    "night"
+   ],
+   "strength": "tip",
+   "support": 1,
+   "rank": 0.8,
+   "sources": [
+    "What To Wear To The Club: Night Out Outfits for Men (Mens Flair)"
+   ]
+  },
+  {
+   "id": "mensflair-com-what-to-wear-club-4",
+   "text": "Add a light layer for a night out: a bomber, denim jacket, leather jacket, overshirt or chore coat over a tee.",
+   "why": "Handles temperature changes between venues.",
+   "topics": [
+    "layering",
+    "outerwear"
+   ],
+   "occasions": [
+    "night"
+   ],
+   "strength": "tip",
+   "support": 1,
+   "rank": 0.8,
+   "sources": [
+    "What To Wear To The Club: Night Out Outfits for Men (Mens Flair)"
+   ]
+  },
+  {
+   "id": "mensflair-com-what-to-wear-club-6",
+   "text": "An all-black outfit (tee, jeans, jacket, boots) is a foolproof night-out look for any venue.",
+   "why": "Monochrome looks deliberate and sharp.",
+   "topics": [
+    "colour"
+   ],
+   "occasions": [
+    "night"
+   ],
+   "strength": "tip",
+   "support": 1,
+   "rank": 0.8,
+   "sources": [
+    "What To Wear To The Club: Night Out Outfits for Men (Mens Flair)"
+   ]
+  },
+  {
+   "id": "thesolesupplier-co-uk-news-how-to-wear-jordans-1",
+   "text": "Link the sneakers to the outfit subtly, with a neutral palette or one tonal echo of the shoe, without looking over-coordinated.",
+   "why": "Subtle matching looks cohesive.",
+   "topics": [
+    "colour",
+    "shoes",
+    "streetwear"
+   ],
+   "occasions": [
+    "casual"
+   ],
+   "strength": "tip",
+   "support": 1,
+   "rank": 0.8,
+   "sources": [
+    "How to Wear Jordans: Outfits and Styling Advice (The Sole Supplier)"
+   ]
+  },
+  {
+   "id": "thesolesupplier-co-uk-news-how-to-wear-jordans-2",
+   "text": "With a simple outfit, let a loud sneaker colourway be the focal point.",
+   "why": "A standout shoe carries a plain outfit.",
+   "topics": [
+    "shoes",
+    "streetwear"
+   ],
+   "occasions": [
+    "casual"
+   ],
+   "strength": "tip",
+   "support": 1,
+   "rank": 0.8,
+   "sources": [
+    "How to Wear Jordans: Outfits and Styling Advice (The Sole Supplier)"
+   ]
+  },
+  {
+   "id": "thesolesupplier-co-uk-news-how-to-wear-jordans-3",
+   "text": "An all-black tee with black jeans or joggers goes with almost any colourful sneaker.",
+   "why": "Black is neutral against any colour.",
+   "topics": [
+    "colour",
+    "shoes"
+   ],
+   "occasions": [
+    "casual",
+    "night"
+   ],
+   "strength": "tip",
+   "support": 1,
+   "rank": 0.8,
+   "sources": [
+    "How to Wear Jordans: Outfits and Styling Advice (The Sole Supplier)"
+   ]
+  },
+  {
+   "id": "thesolesupplier-co-uk-news-how-to-wear-jordans-4",
+   "text": "A plain tee under a varsity or bomber jacket with cargo trousers and high-tops is a classic streetwear look.",
+   "why": "Collegiate layering is a streetwear staple.",
+   "topics": [
+    "layering",
+    "streetwear"
+   ],
+   "occasions": [
+    "casual"
+   ],
+   "strength": "tip",
+   "support": 1,
+   "rank": 0.8,
+   "sources": [
+    "How to Wear Jordans: Outfits and Styling Advice (The Sole Supplier)"
+   ]
+  },
+  {
+   "id": "thesolesupplier-co-uk-news-how-to-wear-jordans-5",
+   "text": "Straight-leg jeans or carpenter trousers with a workwear jacket and basketball sneakers make a reliable everyday outfit.",
+   "why": "Rugged practical pieces suit everyday wear.",
+   "topics": [
+    "streetwear",
+    "outerwear"
+   ],
+   "occasions": [
+    "casual"
+   ],
+   "strength": "tip",
+   "support": 1,
+   "rank": 0.8,
+   "sources": [
+    "How to Wear Jordans: Outfits and Styling Advice (The Sole Supplier)"
+   ]
+  },
+  {
+   "id": "thesolesupplier-co-uk-news-how-to-wear-jordans-6",
+   "text": "Show high-tops with shorts, slim joggers or cropped trousers that don't cover the shoe.",
+   "why": "Shorter hems reveal the whole shoe.",
+   "topics": [
+    "proportions",
+    "shoes"
+   ],
+   "occasions": [
+    "casual"
+   ],
+   "strength": "tip",
+   "support": 1,
+   "rank": 0.8,
+   "sources": [
+    "How to Wear Jordans: Outfits and Styling Advice (The Sole Supplier)"
+   ]
+  },
+  {
    "id": "yt-vu-Zj7FWDwY-15",
    "text": "For a special evening, a velvet dinner jacket in a rich colour such as deep blue is a stylish alternative to plain black.",
    "why": "Velvet holds colour beautifully at night.",
@@ -11020,6 +12775,28 @@
    "sources": [
     "A TAKE ON MODERN TAILORING | In Conversation with Mike Amiri & GQ Italia",
     "Mi faccio creare un abito custom made da Suitsupply per Miami"
+   ]
+  },
+  {
+   "id": "mrporter-com-en-us-journal-fashion-you-asked-how-do-i-make-streetwear-smart-4482-1",
+   "text": "Wear a plain hoodie under a blazer or smart jacket on cooler days.",
+   "why": "It blends street and tailored clothing and adds a warm layer.",
+   "topics": [
+    "streetwear",
+    "layering",
+    "smart casual",
+    "outerwear"
+   ],
+   "occasions": [
+    "casual",
+    "smart"
+   ],
+   "strength": "opinion",
+   "support": 2,
+   "rank": 0.677,
+   "sources": [
+    "You Asked: How Do I Make Streetwear Smart?",
+    "You Asked: How Do I Make Streetwear Smart? (MR PORTER)"
    ]
   },
   {
@@ -11935,26 +13712,6 @@
    "rank": 0.4,
    "sources": [
     "Tips: How to dress in a STREETWEAR style?"
-   ]
-  },
-  {
-   "id": "mrporter-com-en-us-journal-fashion-you-asked-how-do-i-make-streetwear-smart-4482-1",
-   "text": "Wear a plain hoodie under a blazer or smart jacket on cooler days.",
-   "why": "It blends street and tailored clothing and adds a warm layer.",
-   "topics": [
-    "streetwear",
-    "layering",
-    "smart casual"
-   ],
-   "occasions": [
-    "casual",
-    "smart"
-   ],
-   "strength": "opinion",
-   "support": 1,
-   "rank": 0.4,
-   "sources": [
-    "You Asked: How Do I Make Streetwear Smart?"
    ]
   },
   {
@@ -13426,6 +15183,139 @@
    "sources": [
     "運動風穿搭成新潮流？看看男星們都怎樣穿衛衣風褸等單品 隨性同時展現活力 (Is Athleisure the New Trend? How Male Stars Wear Hoodies and Windbreakers)"
    ]
+  },
+  {
+   "id": "complex-com-style-how-to-wear-air-jordan-1-guide-7",
+   "text": "Elastic-cuffed joggers belong to sweatpants; denim or khaki joggers with high-tops look dated.",
+   "why": "Cuffed non-sweat trousers look like a past trend.",
+   "topics": [
+    "trousers",
+    "streetwear"
+   ],
+   "occasions": [
+    "casual"
+   ],
+   "strength": "opinion",
+   "support": 1,
+   "rank": 0.4,
+   "sources": [
+    "How to Properly Style and Wear Air Jordan 1s (Complex)"
+   ]
+  },
+  {
+   "id": "complex-com-style-how-to-wear-air-jordan-1-guide-9",
+   "text": "Relaxed tailored trousers can be dressed up while still working with clean high-top sneakers.",
+   "why": "A slouchy cut bridges tailoring and sneakers.",
+   "topics": [
+    "trousers",
+    "smart casual",
+    "shoes"
+   ],
+   "occasions": [
+    "casual",
+    "night"
+   ],
+   "strength": "opinion",
+   "support": 1,
+   "rank": 0.4,
+   "sources": [
+    "How to Properly Style and Wear Air Jordan 1s (Complex)"
+   ]
+  },
+  {
+   "id": "opumo-com-magazine-streetwear-outfits-for-men-6",
+   "text": "A suit worn with a crewneck tee and clean sneakers bridges tailoring and streetwear for smart-casual events.",
+   "why": "Casual top and shoes soften a suit.",
+   "topics": [
+    "suits",
+    "shoes",
+    "smart casual"
+   ],
+   "occasions": [
+    "smart",
+    "night"
+   ],
+   "strength": "opinion",
+   "support": 1,
+   "rank": 0.4,
+   "sources": [
+    "8 fail-safe streetwear outfits for men (OPUMO)"
+   ]
+  },
+  {
+   "id": "realmenrealstyle-com-puffer-jacket-style-5",
+   "text": "Avoid an oversized puffer over baggy jeans unless you want a full streetwear silhouette.",
+   "why": "Volume top and bottom balloons the outline.",
+   "topics": [
+    "proportions",
+    "outerwear"
+   ],
+   "occasions": [
+    "casual"
+   ],
+   "strength": "opinion",
+   "support": 1,
+   "rank": 0.4,
+   "sources": [
+    "Puffer Jacket Style: How to Look Sharp (Real Men Real Style)"
+   ]
+  },
+  {
+   "id": "themodestman-com-how-to-wear-a-bomber-jacket-6",
+   "text": "A black bomber works wherever a leather jacket would: with denim and boots or sneakers.",
+   "why": "It shares the moto jacket's edge.",
+   "topics": [
+    "outerwear",
+    "colour",
+    "shoes"
+   ],
+   "occasions": [
+    "casual",
+    "night"
+   ],
+   "strength": "opinion",
+   "support": 1,
+   "rank": 0.4,
+   "sources": [
+    "How To Wear a Bomber Jacket (The Modest Man)"
+   ]
+  },
+  {
+   "id": "artofmanliness-com-style-clothing-how-to-wear-a-polo-shirt-without-looking-like--5",
+   "text": "A polo tucked into pleated khakis with boxy dress shoes reads corporate; keep it relaxed.",
+   "why": "It looks like an office uniform.",
+   "topics": [
+    "smart casual",
+    "shoes"
+   ],
+   "occasions": [
+    "work",
+    "casual"
+   ],
+   "strength": "opinion",
+   "support": 1,
+   "rank": 0.4,
+   "sources": [
+    "How to Wear a Polo Shirt Without Looking Like a Middle Manager (Art of Manliness)"
+   ]
+  },
+  {
+   "id": "mensflair-com-what-to-wear-club-5",
+   "text": "Black leather sneakers or Chelsea boots suit dark night-out outfits better than bright white sneakers.",
+   "why": "They look sleeker in dim light.",
+   "topics": [
+    "shoes",
+    "colour"
+   ],
+   "occasions": [
+    "night"
+   ],
+   "strength": "opinion",
+   "support": 1,
+   "rank": 0.4,
+   "sources": [
+    "What To Wear To The Club: Night Out Outfits for Men (Mens Flair)"
+   ]
   }
  ],
  "sources": [
@@ -14031,6 +15921,168 @@
    "learned_at": "2026-10-17T18:47:59+00:00",
    "tips": 7,
    "outfits": 1
+  },
+  {
+   "kind": "article",
+   "url": "https://www.complex.com/style/how-to-wear-air-jordan-1-guide",
+   "title": "How to Properly Style and Wear Air Jordan 1s (Complex)",
+   "author": "",
+   "learned_at": "2026-10-28T15:52:45+00:00",
+   "tips": 9,
+   "outfits": 8
+  },
+  {
+   "kind": "article",
+   "url": "https://mensflair.com/baggy-jeans-outfits/",
+   "title": "How To Wear Baggy Jeans: 19 Modern Looks (Mens Flair)",
+   "author": "",
+   "learned_at": "2026-10-28T15:52:45+00:00",
+   "tips": 8,
+   "outfits": 17
+  },
+  {
+   "kind": "article",
+   "url": "https://www.mrporter.com/en-ie/journal/fashion/you-asked-how-do-i-make-streetwear-smart-448234",
+   "title": "You Asked: How Do I Make Streetwear Smart? (MR PORTER)",
+   "author": "",
+   "learned_at": "2026-10-28T15:52:45+00:00",
+   "tips": 5,
+   "outfits": 2
+  },
+  {
+   "kind": "article",
+   "url": "https://www.opumo.com/magazine/streetwear-outfits-for-men/",
+   "title": "8 fail-safe streetwear outfits for men (OPUMO)",
+   "author": "",
+   "learned_at": "2026-10-28T15:52:46+00:00",
+   "tips": 7,
+   "outfits": 7
+  },
+  {
+   "kind": "article",
+   "url": "https://theessentialman.com/mens-graphic-t-shirt-outfits/",
+   "title": "The Grown Man's Guide to Wearing Graphic T-Shirts (The Essential Man)",
+   "author": "",
+   "learned_at": "2026-10-28T15:52:46+00:00",
+   "tips": 7,
+   "outfits": 4
+  },
+  {
+   "kind": "article",
+   "url": "https://www.themodestman.com/?p=596796",
+   "title": "What To Wear With Cargo Pants (The Modest Man)",
+   "author": "",
+   "learned_at": "2026-10-28T15:52:46+00:00",
+   "tips": 6,
+   "outfits": 10
+  },
+  {
+   "kind": "article",
+   "url": "https://www.timberland.com/en-gb/blog/faq/what-to-wear-with-timberland-boots",
+   "title": "What to wear with Timberland boots (Timberland)",
+   "author": "",
+   "learned_at": "2026-10-28T15:52:46+00:00",
+   "tips": 4,
+   "outfits": 4
+  },
+  {
+   "kind": "article",
+   "url": "https://content-prod.adc-blue.infra.complex.com/sneakers/a/calvy-click/rules-for-matching-your-sneakers-to-your-outfit",
+   "title": "Rules for Matching Your Sneakers to Your Outfit (Complex)",
+   "author": "",
+   "learned_at": "2026-10-28T15:52:47+00:00",
+   "tips": 5,
+   "outfits": 0
+  },
+  {
+   "kind": "article",
+   "url": "https://www.opumo.com/magazine/blazer-with-hoodie",
+   "title": "How to perfect the blazer with hoodie combination (OPUMO)",
+   "author": "",
+   "learned_at": "2026-10-28T15:52:47+00:00",
+   "tips": 5,
+   "outfits": 5
+  },
+  {
+   "kind": "article",
+   "url": "https://www.realmenrealstyle.com/puffer-jacket-style/",
+   "title": "Puffer Jacket Style: How to Look Sharp (Real Men Real Style)",
+   "author": "",
+   "learned_at": "2026-10-28T15:52:47+00:00",
+   "tips": 5,
+   "outfits": 4
+  },
+  {
+   "kind": "article",
+   "url": "https://www.themodestman.com/how-to-wear-a-bomber-jacket/",
+   "title": "How To Wear a Bomber Jacket (The Modest Man)",
+   "author": "",
+   "learned_at": "2026-10-28T15:52:47+00:00",
+   "tips": 7,
+   "outfits": 9
+  },
+  {
+   "kind": "article",
+   "url": "https://www.artofmanliness.com/style/clothing/how-to-wear-a-polo-shirt-without-looking-like-a-middle-manager/",
+   "title": "How to Wear a Polo Shirt Without Looking Like a Middle Manager (Art of Manliness)",
+   "author": "",
+   "learned_at": "2026-10-28T15:52:48+00:00",
+   "tips": 5,
+   "outfits": 5
+  },
+  {
+   "kind": "article",
+   "url": "https://www.fashionbeans.com/article/best-zip-up-hoodies-for-men/",
+   "title": "How to Wear a Zip-Up Hoodie Without Looking Sloppy (FashionBeans)",
+   "author": "",
+   "learned_at": "2026-10-28T15:52:48+00:00",
+   "tips": 5,
+   "outfits": 4
+  },
+  {
+   "kind": "article",
+   "url": "https://www.fashionbeans.com/article/breaking-down-the-street-style-look-thats-taking-over-tokyo/",
+   "title": "Breaking Down The Tokyo Minimal Utility Street Style (FashionBeans)",
+   "author": "",
+   "learned_at": "2026-10-28T15:52:48+00:00",
+   "tips": 5,
+   "outfits": 3
+  },
+  {
+   "kind": "article",
+   "url": "https://www.lacoste.com/us/how-to-style-a-hoodie.html",
+   "title": "How to Style a Hoodie (Lacoste)",
+   "author": "",
+   "learned_at": "2026-10-28T15:52:48+00:00",
+   "tips": 4,
+   "outfits": 4
+  },
+  {
+   "kind": "article",
+   "url": "https://www.gymshark.com/blog/article/how-to-style-oversized-tshirts-for-men",
+   "title": "How Guys Are Styling Oversized T-Shirts (Gymshark)",
+   "author": "",
+   "learned_at": "2026-10-28T15:52:49+00:00",
+   "tips": 6,
+   "outfits": 7
+  },
+  {
+   "kind": "article",
+   "url": "https://mensflair.com/what-to-wear-club/",
+   "title": "What To Wear To The Club: Night Out Outfits for Men (Mens Flair)",
+   "author": "",
+   "learned_at": "2026-10-28T15:52:49+00:00",
+   "tips": 6,
+   "outfits": 14
+  },
+  {
+   "kind": "article",
+   "url": "https://thesolesupplier.co.uk/news/how-to-wear-jordans/",
+   "title": "How to Wear Jordans: Outfits and Styling Advice (The Sole Supplier)",
+   "author": "",
+   "learned_at": "2026-10-28T15:52:49+00:00",
+   "tips": 6,
+   "outfits": 8
   }
  ],
  "examples": [
@@ -14966,7 +17018,812 @@
    "verdict": "good",
    "why": "A tracksuit in one deep grey looks unified and relaxed.",
    "source": "運動風穿搭成新潮流？看看男星們都怎樣穿衛衣風褸等單品 隨性同時展現活力 (Is Athleisure the New Trend? How Male Stars Wear Hoodies and Windbreakers)"
+  },
+  {
+   "outfit": "tshirt white regular casual, jeans denim straight casual, sneakers red streetwear +high-top",
+   "occasion": "casual",
+   "verdict": "good",
+   "why": "Neutral tee and denim let the sneakers lead.",
+   "source": "How to Properly Style and Wear Air Jordan 1s (Complex)"
+  },
+  {
+   "outfit": "tshirt black regular casual, jeans black slim casual, sneakers red streetwear +high-top",
+   "occasion": "casual",
+   "verdict": "good",
+   "why": "Black tee and black denim are a clean base for colourful high-tops.",
+   "source": "How to Properly Style and Wear Air Jordan 1s (Complex)"
+  },
+  {
+   "outfit": "tshirt black streetwear +graphic, jeans denim straight casual, sneakers black streetwear +high-top",
+   "occasion": "casual",
+   "verdict": "good",
+   "why": "A graphic tee that picks up the sneakers' colours ties the outfit together.",
+   "source": "How to Properly Style and Wear Air Jordan 1s (Complex)"
+  },
+  {
+   "outfit": "tshirt white casual, trousers black baggy streetwear +workwear, sneakers black streetwear +high-top",
+   "occasion": "casual",
+   "verdict": "good",
+   "why": "Roomy work trousers balance the high-tops.",
+   "source": "How to Properly Style and Wear Air Jordan 1s (Complex)"
+  },
+  {
+   "outfit": "tshirt grey casual, trousers beige baggy streetwear +cargo, sneakers white streetwear +high-top",
+   "occasion": "casual",
+   "verdict": "good",
+   "why": "Khaki cargo trousers with a baggy fit suit the sneakers.",
+   "source": "How to Properly Style and Wear Air Jordan 1s (Complex)"
+  },
+  {
+   "outfit": "tshirt white casual, shorts black sporty +mesh, sneakers red streetwear +high-top",
+   "occasion": "casual",
+   "verdict": "good",
+   "why": "Simple knee-length shorts keep the focus on the shoes.",
+   "source": "How to Properly Style and Wear Air Jordan 1s (Complex)"
+  },
+  {
+   "outfit": "tshirt white casual, joggers beige casual +elastic-cuff, sneakers red streetwear +high-top",
+   "occasion": "casual",
+   "verdict": "avoid",
+   "why": "Khaki joggers with elastic cuffs look dated with high-tops.",
+   "source": "How to Properly Style and Wear Air Jordan 1s (Complex)"
+  },
+  {
+   "outfit": "tshirt red casual, trousers red casual, sneakers red streetwear +high-top",
+   "occasion": "casual",
+   "verdict": "avoid",
+   "why": "Matching every piece to the shoes looks cheesy.",
+   "source": "How to Properly Style and Wear Air Jordan 1s (Complex)"
+  },
+  {
+   "outfit": "jacket black streetwear +bomber, zip-hoodie grey relaxed streetwear, tshirt white casual, jeans black baggy streetwear, dress-shoes brown formal +loafers +suede",
+   "occasion": "casual",
+   "verdict": "good",
+   "why": "Classic streetwear layering in black, grey and white.",
+   "source": "How To Wear Baggy Jeans: 19 Modern Looks (Mens Flair)"
+  },
+  {
+   "outfit": "sweater green relaxed casual +cardigan, tshirt white oversized casual, jeans light blue baggy casual, sneakers white streetwear +chunky",
+   "occasion": "casual",
+   "verdict": "good",
+   "why": "Cardigan over an oversized tee: skate style with polish.",
+   "source": "How To Wear Baggy Jeans: 19 Modern Looks (Mens Flair)"
+  },
+  {
+   "outfit": "shirt navy smart casual +stripes, jeans cream baggy smart casual, dress-shoes black smart +loafers",
+   "occasion": "smart",
+   "verdict": "good",
+   "why": "Cream baggy jeans and loafers look dapper.",
+   "source": "How To Wear Baggy Jeans: 19 Modern Looks (Mens Flair)"
+  },
+  {
+   "outfit": "sweater black oversized smart casual, jeans black baggy smart casual, dress-shoes black smart casual +loafers",
+   "occasion": "casual",
+   "verdict": "good",
+   "why": "Tonal black outfit lifted by shiny loafers.",
+   "source": "How To Wear Baggy Jeans: 19 Modern Looks (Mens Flair)"
+  },
+  {
+   "outfit": "shirt light blue relaxed casual +denim, tshirt white casual, jeans light blue baggy casual, sneakers cream casual +canvas",
+   "occasion": "casual",
+   "verdict": "good",
+   "why": "Light denim shirt over a tee: easy summer casual.",
+   "source": "How To Wear Baggy Jeans: 19 Modern Looks (Mens Flair)"
+  },
+  {
+   "outfit": "jacket green casual +chore, sweater white smart casual +turtleneck, jeans denim wide smart casual, dress-shoes black smart +derby",
+   "occasion": "smart",
+   "verdict": "good",
+   "why": "Chore jacket and polished derbies make wide jeans office-ready.",
+   "source": "How To Wear Baggy Jeans: 19 Modern Looks (Mens Flair)"
+  },
+  {
+   "outfit": "tshirt white casual, jeans light blue baggy casual, sneakers beige casual +chunky",
+   "occasion": "casual",
+   "verdict": "good",
+   "why": "A tucked tee and high waist exaggerate the proportions well.",
+   "source": "How To Wear Baggy Jeans: 19 Modern Looks (Mens Flair)"
+  },
+  {
+   "outfit": "overshirt red casual +check +flannel, tshirt white casual, jeans black baggy casual +carpenter, sneakers black casual",
+   "occasion": "casual",
+   "verdict": "good",
+   "why": "Carpenter jeans and a check overshirt blend streetwear and workwear.",
+   "source": "How To Wear Baggy Jeans: 19 Modern Looks (Mens Flair)"
+  },
+  {
+   "outfit": "sweater black casual +quarter-zip, tshirt grey casual, jeans black baggy casual, sneakers black casual",
+   "occasion": "casual",
+   "verdict": "good",
+   "why": "Near-blackout look; a quarter-zip works preppy or hip-hop.",
+   "source": "How To Wear Baggy Jeans: 19 Modern Looks (Mens Flair)"
+  },
+  {
+   "outfit": "sweater brown relaxed luxury +cardigan, tshirt white casual, jeans cream baggy casual, sneakers cream minimal",
+   "occasion": "casual",
+   "verdict": "good",
+   "why": "A tonal minimal palette lets the baggy silhouette stand out.",
+   "source": "How To Wear Baggy Jeans: 19 Modern Looks (Mens Flair)"
+  },
+  {
+   "outfit": "jacket purple oversized streetwear +bomber, hoodie black streetwear, jeans black baggy streetwear, sneakers black streetwear +chunky",
+   "occasion": "casual",
+   "verdict": "good",
+   "why": "Bomber over a hoodie; the bold jacket adds the colour.",
+   "source": "How To Wear Baggy Jeans: 19 Modern Looks (Mens Flair)"
+  },
+  {
+   "outfit": "shirt black oversized smart casual, tshirt white casual, jeans light blue baggy smart casual, dress-shoes black smart casual +loafers",
+   "occasion": "smart",
+   "verdict": "good",
+   "why": "Ankle-length jeans, an open shirt and loafers feel sharp.",
+   "source": "How To Wear Baggy Jeans: 19 Modern Looks (Mens Flair)"
+  },
+  {
+   "outfit": "shirt navy relaxed preppy +rugby, jeans light blue wide preppy, sneakers navy casual +suede",
+   "occasion": "casual",
+   "verdict": "good",
+   "why": "A tucked rugby shirt and belt add preppy polish.",
+   "source": "How To Wear Baggy Jeans: 19 Modern Looks (Mens Flair)"
+  },
+  {
+   "outfit": "sweater beige smart casual, jeans light blue baggy smart casual, dress-shoes black smart +derby",
+   "occasion": "smart",
+   "verdict": "good",
+   "why": "90s denim and a knit sharpened by black derbies.",
+   "source": "How To Wear Baggy Jeans: 19 Modern Looks (Mens Flair)"
+  },
+  {
+   "outfit": "tshirt black streetwear, jeans cream baggy streetwear, sneakers black streetwear, cap black casual streetwear",
+   "occasion": "casual",
+   "verdict": "good",
+   "why": "Two-colour skatewear minimalism.",
+   "source": "How To Wear Baggy Jeans: 19 Modern Looks (Mens Flair)"
+  },
+  {
+   "outfit": "jacket grey casual +denim +trucker, tshirt white casual, jeans light blue baggy casual, sneakers black casual +canvas",
+   "occasion": "casual",
+   "verdict": "good",
+   "why": "Denim jacket and baggy jeans in different washes with a white tee.",
+   "source": "How To Wear Baggy Jeans: 19 Modern Looks (Mens Flair)"
+  },
+  {
+   "outfit": "jacket beige relaxed smart casual +suede, shirt white relaxed smart casual, jeans light blue baggy smart casual, dress-shoes black smart +derby",
+   "occasion": "smart",
+   "verdict": "good",
+   "why": "A soft suede jacket and loose shirt: relaxed smart casual.",
+   "source": "How To Wear Baggy Jeans: 19 Modern Looks (Mens Flair)"
+  },
+  {
+   "outfit": "jacket grey smart casual +workwear, shirt white smart casual +grandad-collar, trousers navy smart, sneakers white minimal",
+   "occasion": "smart",
+   "verdict": "good",
+   "why": "Workwear jacket and navy trousers sharpen a streetwear base.",
+   "source": "You Asked: How Do I Make Streetwear Smart? (MR PORTER)"
+  },
+  {
+   "outfit": "coat navy smart, hoodie grey minimal, trousers navy smart casual, sneakers white minimal",
+   "occasion": "smart",
+   "verdict": "good",
+   "why": "A plain hoodie under a smart coat with trousers and clean sneakers.",
+   "source": "You Asked: How Do I Make Streetwear Smart? (MR PORTER)"
+  },
+  {
+   "outfit": "jacket navy vintage +windbreaker, tshirt white vintage +graphic, joggers black sporty, sneakers white vintage",
+   "occasion": "casual",
+   "verdict": "good",
+   "why": "Retro graphic tee and track pants feel nostalgic.",
+   "source": "8 fail-safe streetwear outfits for men (OPUMO)"
+  },
+  {
+   "outfit": "tshirt black slim minimal, trousers black minimal +cargo, sneakers black minimal +low-top",
+   "occasion": "casual",
+   "verdict": "good",
+   "why": "All-black tee, cargos and low-tops: clean and minimal.",
+   "source": "8 fail-safe streetwear outfits for men (OPUMO)"
+  },
+  {
+   "outfit": "hoodie grey oversized sporty, joggers grey sporty, sneakers white sporty",
+   "occasion": "casual",
+   "verdict": "good",
+   "why": "Athleisure that moves from the gym to a casual night.",
+   "source": "8 fail-safe streetwear outfits for men (OPUMO)"
+  },
+  {
+   "outfit": "jacket green smart casual +suit, tshirt white minimal, trousers green smart casual +suit, sneakers white minimal",
+   "occasion": "smart",
+   "verdict": "good",
+   "why": "A coloured suit with a crewneck tee and sneakers bridges formal and street.",
+   "source": "8 fail-safe streetwear outfits for men (OPUMO)"
+  },
+  {
+   "outfit": "jacket black outdoor +waterproof, tshirt grey sporty, joggers black sporty, sneakers black sporty",
+   "occasion": "casual",
+   "verdict": "good",
+   "why": "A tech jacket over a base layer and joggers is practical.",
+   "source": "8 fail-safe streetwear outfits for men (OPUMO)"
+  },
+  {
+   "outfit": "jacket denim oversized streetwear, tshirt white streetwear +graphic, jeans black streetwear +ripped, sneakers white streetwear +high-top",
+   "occasion": "casual",
+   "verdict": "good",
+   "why": "Distressed denim and an artwork tee: an expressive street look.",
+   "source": "8 fail-safe streetwear outfits for men (OPUMO)"
+  },
+  {
+   "outfit": "zip-hoodie black streetwear, tshirt white streetwear +graphic, jeans denim slim streetwear, sneakers black streetwear +high-top",
+   "occasion": "casual",
+   "verdict": "good",
+   "why": "Cuffed jeans, a graphic tee and a zip hoodie feel skater.",
+   "source": "8 fail-safe streetwear outfits for men (OPUMO)"
+  },
+  {
+   "outfit": "jacket denim casual, tshirt white casual +logo, trousers grey smart, sneakers cream minimal",
+   "occasion": "work",
+   "verdict": "good",
+   "why": "Dressy trousers and a simple logo tee for a casual Friday.",
+   "source": "The Grown Man's Guide to Wearing Graphic T-Shirts (The Essential Man)"
+  },
+  {
+   "outfit": "jacket black smart casual, tshirt pink casual +graphic, trousers grey smart casual +chinos, boots black casual",
+   "occasion": "work",
+   "verdict": "good",
+   "why": "A soft pink graphic tee tamed by grey and black.",
+   "source": "The Grown Man's Guide to Wearing Graphic T-Shirts (The Essential Man)"
+  },
+  {
+   "outfit": "jacket olive casual, tshirt white casual +graphic, trousers beige relaxed casual, sneakers brown minimal",
+   "occasion": "casual",
+   "verdict": "good",
+   "why": "An illustrated tee, a light jacket and brown sneakers for lunch.",
+   "source": "The Grown Man's Guide to Wearing Graphic T-Shirts (The Essential Man)"
+  },
+  {
+   "outfit": "jacket beige smart casual +blazer +linen, tshirt white casual +graphic, shorts navy smart casual +linen, dress-shoes brown smart casual +loafers +suede",
+   "occasion": "night",
+   "verdict": "good",
+   "why": "A linen blazer and suede loafers dress up shorts for a rooftop evening.",
+   "source": "The Grown Man's Guide to Wearing Graphic T-Shirts (The Essential Man)"
+  },
+  {
+   "outfit": "shirt white casual +button-down, trousers olive slim casual +cargo, sneakers white minimal",
+   "occasion": "casual",
+   "verdict": "good",
+   "why": "Slim cargos with a clean shirt for a relaxed party.",
+   "source": "What To Wear With Cargo Pants (The Modest Man)"
+  },
+  {
+   "outfit": "jacket navy smart casual +blazer, shirt white smart casual +button-down, trousers black slim minimal +cargo, dress-shoes black smart casual +loafers",
+   "occasion": "smart",
+   "verdict": "good",
+   "why": "Black slim cargos fit a smart-casual blazer look.",
+   "source": "What To Wear With Cargo Pants (The Modest Man)"
+  },
+  {
+   "outfit": "tshirt white relaxed casual, trousers black relaxed streetwear +cargo, boots brown outdoor +workboot",
+   "occasion": "casual",
+   "verdict": "good",
+   "why": "A structured tee, relaxed cargos and work boots: an urban look.",
+   "source": "What To Wear With Cargo Pants (The Modest Man)"
+  },
+  {
+   "outfit": "sweater yellow casual, trousers black relaxed streetwear +cargo +corduroy, boots brown casual",
+   "occasion": "casual",
+   "verdict": "good",
+   "why": "A mustard knit contrasts well with black cargos.",
+   "source": "What To Wear With Cargo Pants (The Modest Man)"
+  },
+  {
+   "outfit": "overshirt beige outdoor, tshirt white casual, trousers olive relaxed outdoor +cargo, boots black outdoor +combat",
+   "occasion": "casual",
+   "verdict": "good",
+   "why": "Olive cargos with a utility overshirt feel purposeful.",
+   "source": "What To Wear With Cargo Pants (The Modest Man)"
+  },
+  {
+   "outfit": "tshirt grey casual, trousers olive relaxed outdoor +cargo, sneakers white casual",
+   "occasion": "casual",
+   "verdict": "good",
+   "why": "Green cargos with a tee and sneakers stay easygoing.",
+   "source": "What To Wear With Cargo Pants (The Modest Man)"
+  },
+  {
+   "outfit": "jacket navy smart casual +chore, shirt light blue smart casual +button-down, trousers brown slim smart casual +cargo, dress-shoes brown smart casual +loafers",
+   "occasion": "smart",
+   "verdict": "good",
+   "why": "Slim brown cargos for a smart-casual Friday.",
+   "source": "What To Wear With Cargo Pants (The Modest Man)"
+  },
+  {
+   "outfit": "coat navy vintage, shirt white vintage +stripes, trousers brown relaxed vintage +cargo, boots brown vintage +leather",
+   "occasion": "casual",
+   "verdict": "good",
+   "why": "Breton stripes and a car coat give cargos a classic feel.",
+   "source": "What To Wear With Cargo Pants (The Modest Man)"
+  },
+  {
+   "outfit": "tshirt black casual, trousers beige baggy casual +cargo, boots brown outdoor",
+   "occasion": "casual",
+   "verdict": "good",
+   "why": "Baggy cargos with a tee and boots look relaxed and tidy.",
+   "source": "What To Wear With Cargo Pants (The Modest Man)"
+  },
+  {
+   "outfit": "jacket black formal +suit, shirt white formal, trousers black slim casual +cargo, dress-shoes black formal",
+   "occasion": "event",
+   "verdict": "avoid",
+   "why": "Cargos clash with formal dress.",
+   "source": "What To Wear With Cargo Pants (The Modest Man)"
+  },
+  {
+   "outfit": "hoodie grey casual, jeans denim casual, boots beige outdoor +workboot",
+   "occasion": "casual",
+   "verdict": "good",
+   "why": "A hoodie with jeans keeps work boots balanced.",
+   "source": "What to wear with Timberland boots (Timberland)"
+  },
+  {
+   "outfit": "sweater navy smart casual, joggers grey casual, boots beige outdoor +workboot",
+   "occasion": "casual",
+   "verdict": "good",
+   "why": "A smart knit balances sweatpants and boots.",
+   "source": "What to wear with Timberland boots (Timberland)"
+  },
+  {
+   "outfit": "coat navy smart casual +wool, shirt light blue smart casual, trousers grey smart casual +chinos, boots brown smart casual +workboot",
+   "occasion": "smart",
+   "verdict": "good",
+   "why": "Chinos, a shirt and a wool coat make boots smart casual.",
+   "source": "What to wear with Timberland boots (Timberland)"
+  },
+  {
+   "outfit": "jacket black streetwear +bomber, tshirt white casual, jeans denim casual, boots beige outdoor +workboot",
+   "occasion": "casual",
+   "verdict": "good",
+   "why": "Wheat boots and a bomber: a streetwear classic.",
+   "source": "What to wear with Timberland boots (Timberland)"
+  },
+  {
+   "outfit": "jacket charcoal smart casual +blazer, hoodie black minimal, trousers black slim smart casual, boots black smart casual +chelsea",
+   "occasion": "night",
+   "verdict": "good",
+   "why": "Sleek monochrome for city nights.",
+   "source": "How to perfect the blazer with hoodie combination (OPUMO)"
+  },
+  {
+   "outfit": "jacket navy smart casual +blazer, hoodie grey minimal, jeans navy casual, dress-shoes brown formal +loafers",
+   "occasion": "work",
+   "verdict": "good",
+   "why": "Office polish with relaxed comfort for a casual Friday.",
+   "source": "How to perfect the blazer with hoodie combination (OPUMO)"
+  },
+  {
+   "outfit": "jacket olive smart casual +blazer, hoodie green casual, trousers olive slim outdoor, boots brown smart casual",
+   "occasion": "casual",
+   "verdict": "good",
+   "why": "Earthy tones and rugged boots for a weekend.",
+   "source": "How to perfect the blazer with hoodie combination (OPUMO)"
+  },
+  {
+   "outfit": "jacket beige smart casual +blazer, hoodie white minimal, trousers beige slim smart casual +chinos, sneakers white minimal",
+   "occasion": "casual",
+   "verdict": "good",
+   "why": "Soft neutrals and minimal sneakers: a relaxed gallery look.",
+   "source": "How to perfect the blazer with hoodie combination (OPUMO)"
+  },
+  {
+   "outfit": "jacket navy smart casual +blazer, hoodie navy minimal, trousers grey smart casual, boots brown smart casual",
+   "occasion": "night",
+   "verdict": "good",
+   "why": "Tonal navy layers with grey trousers for a date.",
+   "source": "How to perfect the blazer with hoodie combination (OPUMO)"
+  },
+  {
+   "outfit": "puffer olive casual, hoodie grey casual, jeans denim slim casual, sneakers white casual",
+   "occasion": "casual",
+   "verdict": "good",
+   "why": "Weather-ready and balanced by slim jeans.",
+   "source": "Puffer Jacket Style: How to Look Sharp (Real Men Real Style)"
+  },
+  {
+   "outfit": "puffer black casual, sweatshirt grey casual, joggers black slim casual, sneakers white casual",
+   "occasion": "casual",
+   "verdict": "good",
+   "why": "Tapered joggers keep an off-duty look clean.",
+   "source": "Puffer Jacket Style: How to Look Sharp (Real Men Real Style)"
+  },
+  {
+   "outfit": "puffer navy smart casual, sweater grey smart casual +turtleneck, trousers beige slim smart casual +chinos, boots brown smart casual +chelsea",
+   "occasion": "smart",
+   "verdict": "good",
+   "why": "Polished layers and sleek boots keep it sharp.",
+   "source": "Puffer Jacket Style: How to Look Sharp (Real Men Real Style)"
+  },
+  {
+   "outfit": "puffer black oversized casual, hoodie black casual, jeans denim baggy casual, sneakers white casual",
+   "occasion": "casual",
+   "verdict": "avoid",
+   "why": "Oversized top and baggy bottom balloon the outfit.",
+   "source": "Puffer Jacket Style: How to Look Sharp (Real Men Real Style)"
+  },
+  {
+   "outfit": "jacket black casual +bomber, tshirt white casual, jeans denim casual, sneakers white casual",
+   "occasion": "casual",
+   "verdict": "good",
+   "why": "A classic casual base with an easy outer layer.",
+   "source": "How To Wear a Bomber Jacket (The Modest Man)"
+  },
+  {
+   "outfit": "jacket brown casual +bomber +suede, tshirt white casual, jeans denim casual, boots brown casual",
+   "occasion": "casual",
+   "verdict": "good",
+   "why": "Boots add a workwear edge.",
+   "source": "How To Wear a Bomber Jacket (The Modest Man)"
+  },
+  {
+   "outfit": "jacket navy slim minimal +bomber, polo white smart casual, trousers beige smart casual +chinos, sneakers white minimal",
+   "occasion": "smart",
+   "verdict": "good",
+   "why": "A polo and chinos with a close-fitting bomber.",
+   "source": "How To Wear a Bomber Jacket (The Modest Man)"
+  },
+  {
+   "outfit": "jacket black slim minimal +bomber, shirt light blue smart +button-down, trousers grey smart +wool, dress-shoes brown smart +loafers",
+   "occasion": "smart",
+   "verdict": "good",
+   "why": "A minimal bomber over polished trousers.",
+   "source": "How To Wear a Bomber Jacket (The Modest Man)"
+  },
+  {
+   "outfit": "jacket navy sporty +bomber, tshirt grey casual +henley, shorts beige casual, sneakers white casual",
+   "occasion": "casual",
+   "verdict": "good",
+   "why": "A sporty bomber keeps shorts looking intentional.",
+   "source": "How To Wear a Bomber Jacket (The Modest Man)"
+  },
+  {
+   "outfit": "jacket olive vintage +bomber +nylon, shirt olive outdoor +utility, trousers beige outdoor +chinos, boots brown outdoor",
+   "occasion": "casual",
+   "verdict": "good",
+   "why": "A military-leaning mix.",
+   "source": "How To Wear a Bomber Jacket (The Modest Man)"
+  },
+  {
+   "outfit": "jacket red minimal +bomber, sweater cream luxury +cashmere, trousers cream minimal +chinos, sneakers white minimal",
+   "occasion": "smart",
+   "verdict": "good",
+   "why": "A tonal base lets a bright bomber pop.",
+   "source": "How To Wear a Bomber Jacket (The Modest Man)"
+  },
+  {
+   "outfit": "jacket olive casual +bomber, shirt grey casual, trousers beige casual, dress-shoes brown casual +loafers",
+   "occasion": "casual",
+   "verdict": "good",
+   "why": "Subtle contrasts let the bomber blend in.",
+   "source": "How To Wear a Bomber Jacket (The Modest Man)"
+  },
+  {
+   "outfit": "jacket black sporty +bomber, tshirt white oversized sporty, joggers grey baggy sporty, sneakers white sporty",
+   "occasion": "casual",
+   "verdict": "avoid",
+   "why": "Baggy sweats and an oversized tee fight a structured sporty bomber.",
+   "source": "How To Wear a Bomber Jacket (The Modest Man)"
+  },
+  {
+   "outfit": "polo navy slim preppy, trousers beige casual +chinos, dress-shoes brown formal +loafers",
+   "occasion": "casual",
+   "verdict": "good",
+   "why": "A navy polo with light trousers looks put-together.",
+   "source": "How to Wear a Polo Shirt Without Looking Like a Middle Manager (Art of Manliness)"
+  },
+  {
+   "outfit": "polo white preppy, jeans denim casual, dress-shoes brown formal +loafers",
+   "occasion": "casual",
+   "verdict": "good",
+   "why": "A polo with good jeans and loafers is refined yet relaxed.",
+   "source": "How to Wear a Polo Shirt Without Looking Like a Middle Manager (Art of Manliness)"
+  },
+  {
+   "outfit": "polo black smart casual, trousers grey smart casual, sneakers white minimal",
+   "occasion": "casual",
+   "verdict": "good",
+   "why": "Dress trousers with clean sneakers: relaxed and modern.",
+   "source": "How to Wear a Polo Shirt Without Looking Like a Middle Manager (Art of Manliness)"
+  },
+  {
+   "outfit": "polo navy casual, trousers beige casual +chinos, sneakers red casual",
+   "occasion": "casual",
+   "verdict": "good",
+   "why": "Chinos with red sneakers add a pop of colour.",
+   "source": "How to Wear a Polo Shirt Without Looking Like a Middle Manager (Art of Manliness)"
+  },
+  {
+   "outfit": "polo light blue smart casual, trousers beige smart casual +chinos +pleated, dress-shoes black smart",
+   "occasion": "work",
+   "verdict": "avoid",
+   "why": "Tucked polo, pleated khakis and boxy shoes read corporate.",
+   "source": "How to Wear a Polo Shirt Without Looking Like a Middle Manager (Art of Manliness)"
+  },
+  {
+   "outfit": "zip-hoodie navy cropped minimal, tshirt white minimal, trousers navy wide minimal, sneakers white minimal",
+   "occasion": "casual",
+   "verdict": "good",
+   "why": "Tonal navy with a short top and wide trousers.",
+   "source": "How to Wear a Zip-Up Hoodie Without Looking Sloppy (FashionBeans)"
+  },
+  {
+   "outfit": "zip-hoodie grey casual, tshirt white casual, jeans denim casual, sneakers white casual",
+   "occasion": "casual",
+   "verdict": "good",
+   "why": "Denim and clean sneakers give a zip-up structure.",
+   "source": "How to Wear a Zip-Up Hoodie Without Looking Sloppy (FashionBeans)"
+  },
+  {
+   "outfit": "zip-hoodie black slim smart casual, tshirt white minimal, trousers grey smart casual, sneakers white minimal",
+   "occasion": "casual",
+   "verdict": "good",
+   "why": "A slim zip-up with tailored trousers looks sharper.",
+   "source": "How to Wear a Zip-Up Hoodie Without Looking Sloppy (FashionBeans)"
+  },
+  {
+   "outfit": "zip-hoodie grey relaxed casual, tshirt grey casual, joggers grey relaxed casual, sneakers white sporty",
+   "occasion": "casual",
+   "verdict": "avoid",
+   "why": "All-soft layers make the hoodie look sloppy.",
+   "source": "How to Wear a Zip-Up Hoodie Without Looking Sloppy (FashionBeans)"
+  },
+  {
+   "outfit": "jacket black cropped streetwear +technical, sweater grey minimal, trousers black wide minimal, sneakers black minimal",
+   "occasion": "casual",
+   "verdict": "good",
+   "why": "A cropped jacket balances wide trousers in a tonal palette.",
+   "source": "Breaking Down The Tokyo Minimal Utility Street Style (FashionBeans)"
+  },
+  {
+   "outfit": "overshirt olive streetwear, tshirt black streetwear, trousers black outdoor +cargo, sneakers black minimal",
+   "occasion": "casual",
+   "verdict": "good",
+   "why": "An overshirt over a long tee with utility cargos.",
+   "source": "Breaking Down The Tokyo Minimal Utility Street Style (FashionBeans)"
+  },
+  {
+   "outfit": "jacket black cropped minimal +technical, tshirt white minimal, trousers grey straight minimal, sneakers black minimal",
+   "occasion": "casual",
+   "verdict": "good",
+   "why": "Tapered trousers keep technical layers clean.",
+   "source": "Breaking Down The Tokyo Minimal Utility Street Style (FashionBeans)"
+  },
+  {
+   "outfit": "hoodie black casual, jeans denim slim casual, sneakers white casual",
+   "occasion": "casual",
+   "verdict": "good",
+   "why": "A simple everyday look.",
+   "source": "How to Style a Hoodie (Lacoste)"
+  },
+  {
+   "outfit": "hoodie black oversized streetwear, jeans denim baggy streetwear, sneakers white streetwear",
+   "occasion": "casual",
+   "verdict": "good",
+   "why": "Oversized hoodie and baggy denim: relaxed streetwear.",
+   "source": "How to Style a Hoodie (Lacoste)"
+  },
+  {
+   "outfit": "hoodie grey minimal, trousers navy smart casual, boots brown smart casual +leather",
+   "occasion": "work",
+   "verdict": "good",
+   "why": "A clean hoodie with trousers and boots for a relaxed office.",
+   "source": "How to Style a Hoodie (Lacoste)"
+  },
+  {
+   "outfit": "jacket denim casual, hoodie grey casual, trousers black baggy streetwear, sneakers white casual",
+   "occasion": "casual",
+   "verdict": "good",
+   "why": "A jacket over a hoodie with baggy trousers.",
+   "source": "How to Style a Hoodie (Lacoste)"
+  },
+  {
+   "outfit": "tshirt white oversized casual, shorts black casual, sneakers white casual",
+   "occasion": "casual",
+   "verdict": "good",
+   "why": "Shorts keep the proportions balanced.",
+   "source": "How Guys Are Styling Oversized T-Shirts (Gymshark)"
+  },
+  {
+   "outfit": "tshirt black oversized streetwear, trousers olive baggy streetwear +cargo, sneakers black streetwear",
+   "occasion": "casual",
+   "verdict": "good",
+   "why": "Baggy cargos with an oversized tee: relaxed, not scruffy.",
+   "source": "How Guys Are Styling Oversized T-Shirts (Gymshark)"
+  },
+  {
+   "outfit": "tshirt grey oversized casual, jeans denim straight casual, sneakers white casual",
+   "occasion": "casual",
+   "verdict": "good",
+   "why": "Straighter jeans balance a baggy tee.",
+   "source": "How Guys Are Styling Oversized T-Shirts (Gymshark)"
+  },
+  {
+   "outfit": "tshirt white cropped casual, jeans light blue baggy casual, sneakers white casual",
+   "occasion": "casual",
+   "verdict": "good",
+   "why": "A cropped tee balances slouchy denim.",
+   "source": "How Guys Are Styling Oversized T-Shirts (Gymshark)"
+  },
+  {
+   "outfit": "coat smart, tshirt white oversized minimal, trousers grey smart casual, sneakers white minimal",
+   "occasion": "smart",
+   "verdict": "good",
+   "why": "Tailored trousers and a structured coat add smart contrast.",
+   "source": "How Guys Are Styling Oversized T-Shirts (Gymshark)"
+  },
+  {
+   "outfit": "tshirt black oversized streetwear, joggers grey straight streetwear, sneakers white streetwear +high-top",
+   "occasion": "casual",
+   "verdict": "good",
+   "why": "Straight sweatpants and high-tops: a streetwear staple.",
+   "source": "How Guys Are Styling Oversized T-Shirts (Gymshark)"
+  },
+  {
+   "outfit": "tshirt white oversized casual, trousers grey smart, dress-shoes black smart",
+   "occasion": "work",
+   "verdict": "avoid",
+   "why": "Oversized tees clash with business settings.",
+   "source": "How Guys Are Styling Oversized T-Shirts (Gymshark)"
+  },
+  {
+   "outfit": "overshirt green casual, tshirt black casual, jeans black casual, sneakers black casual",
+   "occasion": "night",
+   "verdict": "good",
+   "why": "Dark jeans with an overshirt hide spills well.",
+   "source": "What To Wear To The Club: Night Out Outfits for Men (Mens Flair)"
+  },
+  {
+   "outfit": "jacket black casual +leather, shirt navy casual +print, jeans black casual, boots black smart casual +chelsea",
+   "occasion": "night",
+   "verdict": "good",
+   "why": "A patterned shirt under a leather jacket adds edge.",
+   "source": "What To Wear To The Club: Night Out Outfits for Men (Mens Flair)"
+  },
+  {
+   "outfit": "overshirt black casual +flannel, tshirt white casual, jeans denim casual, boots brown casual",
+   "occasion": "night",
+   "verdict": "good",
+   "why": "Rugged denim and flannel handle a messy night.",
+   "source": "What To Wear To The Club: Night Out Outfits for Men (Mens Flair)"
+  },
+  {
+   "outfit": "overshirt blue casual, tshirt black casual, trousers black casual +chinos, sneakers black casual",
+   "occasion": "night",
+   "verdict": "good",
+   "why": "A layered casual look with dark, durable pieces.",
+   "source": "What To Wear To The Club: Night Out Outfits for Men (Mens Flair)"
+  },
+  {
+   "outfit": "jacket black casual +leather, tshirt black casual, jeans black casual, boots black casual",
+   "occasion": "night",
+   "verdict": "good",
+   "why": "All black: foolproof for any venue.",
+   "source": "What To Wear To The Club: Night Out Outfits for Men (Mens Flair)"
+  },
+  {
+   "outfit": "overshirt black casual, sweater black smart casual, jeans black casual, boots black smart casual +chelsea",
+   "occasion": "night",
+   "verdict": "good",
+   "why": "Smart-casual all black with Chelsea boots.",
+   "source": "What To Wear To The Club: Night Out Outfits for Men (Mens Flair)"
+  },
+  {
+   "outfit": "tshirt black minimal, trousers black smart casual +pleated, sneakers white minimal",
+   "occasion": "night",
+   "verdict": "good",
+   "why": "A tucked tee with pleated trousers and white sneakers.",
+   "source": "What To Wear To The Club: Night Out Outfits for Men (Mens Flair)"
+  },
+  {
+   "outfit": "overshirt black casual, tshirt white casual, jeans black casual, dress-shoes black formal +derby",
+   "occasion": "night",
+   "verdict": "good",
+   "why": "A black overshirt over a white tee with derbies.",
+   "source": "What To Wear To The Club: Night Out Outfits for Men (Mens Flair)"
+  },
+  {
+   "outfit": "jacket denim casual, tshirt black casual, jeans black casual, sneakers black streetwear +high-top",
+   "occasion": "night",
+   "verdict": "good",
+   "why": "Faded black jeans, a denim jacket and high-tops.",
+   "source": "What To Wear To The Club: Night Out Outfits for Men (Mens Flair)"
+  },
+  {
+   "outfit": "overshirt brown casual, tshirt black casual, jeans black casual, boots brown smart casual +chelsea",
+   "occasion": "night",
+   "verdict": "good",
+   "why": "A brown overshirt over black jeans with Chelsea boots.",
+   "source": "What To Wear To The Club: Night Out Outfits for Men (Mens Flair)"
+  },
+  {
+   "outfit": "jacket green smart casual +blazer, sweater navy smart casual +turtleneck, jeans black casual, boots black smart casual +chelsea",
+   "occasion": "night",
+   "verdict": "good",
+   "why": "A blazer with a turtleneck and black jeans.",
+   "source": "What To Wear To The Club: Night Out Outfits for Men (Mens Flair)"
+  },
+  {
+   "outfit": "jacket black casual +bomber, tshirt white casual, jeans denim casual, dress-shoes black formal +loafers",
+   "occasion": "night",
+   "verdict": "good",
+   "why": "A black bomber over a white tee with jeans.",
+   "source": "What To Wear To The Club: Night Out Outfits for Men (Mens Flair)"
+  },
+  {
+   "outfit": "jacket black casual +leather, sweater black casual, jeans grey casual, boots black smart casual +chelsea",
+   "occasion": "night",
+   "verdict": "good",
+   "why": "A biker jacket adds edge to grey jeans.",
+   "source": "What To Wear To The Club: Night Out Outfits for Men (Mens Flair)"
+  },
+  {
+   "outfit": "jacket brown casual +leather, sweater black smart casual +turtleneck, jeans denim casual, boots brown casual",
+   "occasion": "night",
+   "verdict": "good",
+   "why": "A brown leather jacket over a black roll neck.",
+   "source": "What To Wear To The Club: Night Out Outfits for Men (Mens Flair)"
+  },
+  {
+   "outfit": "tshirt black minimal, jeans black minimal, sneakers red streetwear +high-top",
+   "occasion": "casual",
+   "verdict": "good",
+   "why": "A black base suits almost any colourway.",
+   "source": "How to Wear Jordans: Outfits and Styling Advice (The Sole Supplier)"
+  },
+  {
+   "outfit": "tshirt black minimal, joggers black minimal, sneakers yellow streetwear +high-top",
+   "occasion": "casual",
+   "verdict": "good",
+   "why": "Black joggers keep the monochrome look easy.",
+   "source": "How to Wear Jordans: Outfits and Styling Advice (The Sole Supplier)"
+  },
+  {
+   "outfit": "jacket navy streetwear +varsity, tshirt white streetwear, trousers beige streetwear +cargo, sneakers white streetwear +high-top",
+   "occasion": "casual",
+   "verdict": "good",
+   "why": "Collegiate layering with cargos.",
+   "source": "How to Wear Jordans: Outfits and Styling Advice (The Sole Supplier)"
+  },
+  {
+   "outfit": "jacket brown casual +workwear, tshirt white casual, jeans denim straight casual, sneakers black streetwear +high-top",
+   "occasion": "casual",
+   "verdict": "good",
+   "why": "A workwear jacket and straight jeans for every day.",
+   "source": "How to Wear Jordans: Outfits and Styling Advice (The Sole Supplier)"
+  },
+  {
+   "outfit": "hoodie grey casual, trousers black streetwear +cargo, sneakers red streetwear +high-top",
+   "occasion": "casual",
+   "verdict": "good",
+   "why": "A grey hoodie and cargos are comfortable and balanced.",
+   "source": "How to Wear Jordans: Outfits and Styling Advice (The Sole Supplier)"
+  },
+  {
+   "outfit": "tshirt olive streetwear +logo, trousers olive streetwear +cargo, sneakers black streetwear +high-top",
+   "occasion": "casual",
+   "verdict": "good",
+   "why": "A logo tee with cargos: a classic.",
+   "source": "How to Wear Jordans: Outfits and Styling Advice (The Sole Supplier)"
+  },
+  {
+   "outfit": "track-jacket navy sporty, tshirt white minimal, joggers grey minimal, sneakers grey streetwear +high-top",
+   "occasion": "casual",
+   "verdict": "good",
+   "why": "Grey sweats, a white tee and a track jacket look minimal.",
+   "source": "How to Wear Jordans: Outfits and Styling Advice (The Sole Supplier)"
+  },
+  {
+   "outfit": "sweatshirt grey casual, jeans black casual, sneakers red streetwear +high-top",
+   "occasion": "casual",
+   "verdict": "good",
+   "why": "A grey sweatshirt with black jeans: classic off-duty.",
+   "source": "How to Wear Jordans: Outfits and Styling Advice (The Sole Supplier)"
   }
  ],
- "prompt": "Menswear rules, most important first:\n- Don't mix gym kit with tailoring.\n- Dress for the occasion.\n- A tie needs a collar and long trousers.\n- Keep pieces at one level of dressiness.\n- Sports clothes for training.\n- Neutrals first, one accent colour.\n- Belt matches the shoes.\n- Colours that fight.\n- Shorts only when it's warm.\n- Shoes at the level of the outfit.\n- Fabrics for the season.\n- Dress for the temperature.\n- Go easy on patterns.\n- Denim on denim needs contrast.\n- Ready for rain.\n- The coat matches the outfit.\n- One statement piece.\n- Balance volume.\n- Three colours at most.\n- Classic colour pairings.\n- Suits want shirts and leather shoes.\nTips:\n- Buy fewer, better pieces in natural fabrics; they last longer and look better as they age.\n- Budget for a tailor: shortening sleeves and trousers and taking in a waist costs little and makes clothes look made for you.\n- Keep accessories few and purposeful: a watch, a belt, maybe one bracelet or ring.\n- Fit matters more than brand or price: a cheap piece that fits beats an expensive one that doesn't.\n- Trousers should have little or no break: the hem just touches the shoe. Slim trousers look best with no break at all.\n- Match the width of the tie to the width of the lapels.\n- A capsule wardrobe: a few pieces in neutral colours that all combine gives more outfits than many loud pieces.\n- Core menswear basics: white and navy tees, an oxford shirt, a grey or navy knit, dark jeans, chinos, a navy blazer, an overcoat, white sneakers, brown leather shoes or boots.\n- Rest leather shoes a day between wears and keep cedar shoe trees in them.\n- A jacket collar should rest against the back of your neck without a gap.\n- A jacket must fit in the shoulders: the seam ends where your shoulder ends, with no dent or overhang.\n- The tip of the tie touches the top of the belt buckle.\n- A pocket square should pick up a colour from the tie or shirt, not be the same fabric as the tie.\n- A white or light blue oxford shirt works with suits, chinos and jeans alike.\n- Slim or straight jeans that sit on the hips without sagging work for nearly everyone.\n- When wearing one colour head to toe, vary the textures (knit, cotton, wool) so it doesn't look flat.\n- Earth tones (olive, brown, beige, cream, rust) all mix easily with each other and with navy.\n- Black tie means a black or midnight-navy dinner suit, white dress shirt, black bow tie and black patent or polished shoes."
+ "prompt": "Menswear rules, most important first:\n- Don't mix gym kit with tailoring.\n- Keep pieces at one level of dressiness.\n- A tie needs a collar and long trousers.\n- Sports clothes for training.\n- Colours that fight.\n- Dress for the occasion.\n- Belt matches the shoes.\n- Shorts only when it's warm.\n- Neutrals first, one accent colour.\n- Fabrics for the season.\n- Shoes at the level of the outfit.\n- Dress for the temperature.\n- One statement piece.\n- Go easy on patterns.\n- Balance volume.\n- Three colours at most.\n- Ready for rain.\n- Denim on denim needs contrast.\n- The coat matches the outfit.\n- Classic colour pairings.\n- Styles that suit the occasion.\n- Suits want shirts and leather shoes.\nTips:\n- Buy fewer, better pieces in natural fabrics; they last longer and look better as they age.\n- Budget for a tailor: shortening sleeves and trousers and taking in a waist costs little and makes clothes look made for you.\n- Keep accessories few and purposeful: a watch, a belt, maybe one bracelet or ring.\n- Fit matters more than brand or price: a cheap piece that fits beats an expensive one that doesn't.\n- Trousers should have little or no break: the hem just touches the shoe. Slim trousers look best with no break at all.\n- Match the width of the tie to the width of the lapels.\n- A capsule wardrobe: a few pieces in neutral colours that all combine gives more outfits than many loud pieces.\n- Core menswear basics: white and navy tees, an oxford shirt, a grey or navy knit, dark jeans, chinos, a navy blazer, an overcoat, white sneakers, brown leather shoes or boots.\n- Rest leather shoes a day between wears and keep cedar shoe trees in them.\n- A jacket collar should rest against the back of your neck without a gap.\n- A jacket must fit in the shoulders: the seam ends where your shoulder ends, with no dent or overhang.\n- The tip of the tie touches the top of the belt buckle.\n- A pocket square should pick up a colour from the tie or shirt, not be the same fabric as the tie.\n- A white or light blue oxford shirt works with suits, chinos and jeans alike.\n- Slim or straight jeans that sit on the hips without sagging work for nearly everyone.\n- When wearing one colour head to toe, vary the textures (knit, cotton, wool) so it doesn't look flat.\n- Earth tones (olive, brown, beige, cream, rust) all mix easily with each other and with navy.\n- Black tie means a black or midnight-navy dinner suit, white dress shirt, black bow tie and black patent or polished shoes."
 }

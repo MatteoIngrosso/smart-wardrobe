@@ -1,0 +1,190 @@
+{
+  "source": {
+    "kind": "article",
+    "url": "https://www.complex.com/style/how-to-wear-air-jordan-1-guide",
+    "title": "How to Properly Style and Wear Air Jordan 1s (Complex)",
+    "author": ""
+  },
+  "learned_at": "2026-10-28T15:52:45+00:00",
+  "model": "by hand",
+  "tokens": {
+    "in": 0,
+    "out": 0
+  },
+  "tips": [
+    {
+      "id": "complex-com-style-how-to-wear-air-jordan-1-guide-1",
+      "text": "With bold sneakers like Jordan 1s, keep the rest of the outfit neutral (black, white, grey) so the shoes stand out.",
+      "why": "Neutral basics pair cleanly with colourful sneakers.",
+      "topics": [
+        "colour",
+        "shoes",
+        "streetwear"
+      ],
+      "occasions": [
+        "casual"
+      ],
+      "strength": "tip"
+    },
+    {
+      "id": "complex-com-style-how-to-wear-air-jordan-1-guide-2",
+      "text": "Don't match every piece to the sneakers; echo the shoe colourway in one piece only, such as a cap, a bag or the print of a tee.",
+      "why": "Head-to-toe matching looks forced.",
+      "topics": [
+        "colour",
+        "shoes",
+        "streetwear"
+      ],
+      "occasions": [
+        "casual"
+      ],
+      "strength": "tip"
+    },
+    {
+      "id": "complex-com-style-how-to-wear-air-jordan-1-guide-3",
+      "text": "A graphic tee with subtle details in the sneakers' colours ties the outfit together better than a bright tee that competes with them.",
+      "why": "Subtle colour echoes connect top and shoes.",
+      "topics": [
+        "colour",
+        "streetwear"
+      ],
+      "occasions": [
+        "casual"
+      ],
+      "strength": "tip"
+    },
+    {
+      "id": "complex-com-style-how-to-wear-air-jordan-1-guide-4",
+      "text": "With high-top sneakers, wear trousers that just touch the tongue with a slight break; avoid hems that bunch over the shoe.",
+      "why": "The shoe stays visible and the hem looks tidy.",
+      "topics": [
+        "trousers",
+        "proportions",
+        "shoes"
+      ],
+      "occasions": [
+        "casual"
+      ],
+      "strength": "rule"
+    },
+    {
+      "id": "complex-com-style-how-to-wear-air-jordan-1-guide-5",
+      "text": "Skinny trousers make chunky high-tops look oversized; straight, tapered or roomy cuts balance them.",
+      "why": "Tight hems make the shoe look too big.",
+      "topics": [
+        "fit",
+        "proportions",
+        "shoes"
+      ],
+      "occasions": [
+        "casual"
+      ],
+      "strength": "rule"
+    },
+    {
+      "id": "complex-com-style-how-to-wear-air-jordan-1-guide-6",
+      "text": "Roomy work pants and cargo trousers go well with high-top basketball sneakers.",
+      "why": "Wider legs balance the bulk of the shoe.",
+      "topics": [
+        "trousers",
+        "streetwear",
+        "shoes"
+      ],
+      "occasions": [
+        "casual"
+      ],
+      "strength": "tip"
+    },
+    {
+      "id": "complex-com-style-how-to-wear-air-jordan-1-guide-7",
+      "text": "Elastic-cuffed joggers belong to sweatpants; denim or khaki joggers with high-tops look dated.",
+      "why": "Cuffed non-sweat trousers look like a past trend.",
+      "topics": [
+        "trousers",
+        "streetwear"
+      ],
+      "occasions": [
+        "casual"
+      ],
+      "strength": "opinion"
+    },
+    {
+      "id": "complex-com-style-how-to-wear-air-jordan-1-guide-8",
+      "text": "With shorts and high-top sneakers, wear plain white or black crew socks, never no-show socks.",
+      "why": "Bare ankles above a high-top look awkward.",
+      "topics": [
+        "shoes",
+        "accessories"
+      ],
+      "occasions": [
+        "casual"
+      ],
+      "strength": "rule"
+    },
+    {
+      "id": "complex-com-style-how-to-wear-air-jordan-1-guide-9",
+      "text": "Relaxed tailored trousers can be dressed up while still working with clean high-top sneakers.",
+      "why": "A slouchy cut bridges tailoring and sneakers.",
+      "topics": [
+        "trousers",
+        "smart casual",
+        "shoes"
+      ],
+      "occasions": [
+        "casual",
+        "night"
+      ],
+      "strength": "opinion"
+    }
+  ],
+  "outfits": [
+    {
+      "outfit": "tshirt white regular casual, jeans denim straight casual, sneakers red streetwear +high-top",
+      "occasion": "casual",
+      "verdict": "good",
+      "why": "Neutral tee and denim let the sneakers lead."
+    },
+    {
+      "outfit": "tshirt black regular casual, jeans black slim casual, sneakers red streetwear +high-top",
+      "occasion": "casual",
+      "verdict": "good",
+      "why": "Black tee and black denim are a clean base for colourful high-tops."
+    },
+    {
+      "outfit": "tshirt black streetwear +graphic, jeans denim straight casual, sneakers black streetwear +high-top",
+      "occasion": "casual",
+      "verdict": "good",
+      "why": "A graphic tee that picks up the sneakers' colours ties the outfit together."
+    },
+    {
+      "outfit": "tshirt white casual, trousers black baggy streetwear +workwear, sneakers black streetwear +high-top",
+      "occasion": "casual",
+      "verdict": "good",
+      "why": "Roomy work trousers balance the high-tops."
+    },
+    {
+      "outfit": "tshirt grey casual, trousers beige baggy streetwear +cargo, sneakers white streetwear +high-top",
+      "occasion": "casual",
+      "verdict": "good",
+      "why": "Khaki cargo trousers with a baggy fit suit the sneakers."
+    },
+    {
+      "outfit": "tshirt white casual, shorts black sporty +mesh, sneakers red streetwear +high-top",
+      "occasion": "casual",
+      "verdict": "good",
+      "why": "Simple knee-length shorts keep the focus on the shoes."
+    },
+    {
+      "outfit": "tshirt white casual, joggers beige casual +elastic-cuff, sneakers red streetwear +high-top",
+      "occasion": "casual",
+      "verdict": "avoid",
+      "why": "Khaki joggers with elastic cuffs look dated with high-tops."
+    },
+    {
+      "outfit": "tshirt red casual, trousers red casual, sneakers red streetwear +high-top",
+      "occasion": "casual",
+      "verdict": "avoid",
+      "why": "Matching every piece to the shoes looks cheesy."
+    }
+  ]
+}

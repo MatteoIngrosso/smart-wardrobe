@@ -1,0 +1,179 @@
+{
+  "source": {
+    "kind": "article",
+    "url": "https://mensflair.com/what-to-wear-club/",
+    "title": "What To Wear To The Club: Night Out Outfits for Men (Mens Flair)",
+    "author": ""
+  },
+  "learned_at": "2026-10-28T15:52:49+00:00",
+  "model": "by hand",
+  "tokens": {
+    "in": 0,
+    "out": 0
+  },
+  "tips": [
+    {
+      "id": "mensflair-com-what-to-wear-club-1",
+      "text": "For nights out favour dark colours (black, navy, charcoal, deep khaki); they look sharp in low light and hide spills.",
+      "why": "Dark outfits stay sharp after dark.",
+      "topics": [
+        "colour",
+        "occasions"
+      ],
+      "occasions": [
+        "night"
+      ],
+      "strength": "tip"
+    },
+    {
+      "id": "mensflair-com-what-to-wear-club-2",
+      "text": "Dark jeans in black or deep indigo, slim or straight, are the easiest base for a night out.",
+      "why": "They go with almost anything.",
+      "topics": [
+        "denim",
+        "occasions"
+      ],
+      "occasions": [
+        "night"
+      ],
+      "strength": "tip"
+    },
+    {
+      "id": "mensflair-com-what-to-wear-club-3",
+      "text": "Match the venue: casual for dive bars, an unstructured blazer or knit and boots for upscale bars and rooftops.",
+      "why": "You blend in with the crowd.",
+      "topics": [
+        "occasions",
+        "smart casual"
+      ],
+      "occasions": [
+        "night"
+      ],
+      "strength": "tip"
+    },
+    {
+      "id": "mensflair-com-what-to-wear-club-4",
+      "text": "Add a light layer for a night out: a bomber, denim jacket, leather jacket, overshirt or chore coat over a tee.",
+      "why": "Handles temperature changes between venues.",
+      "topics": [
+        "layering",
+        "outerwear"
+      ],
+      "occasions": [
+        "night"
+      ],
+      "strength": "tip"
+    },
+    {
+      "id": "mensflair-com-what-to-wear-club-5",
+      "text": "Black leather sneakers or Chelsea boots suit dark night-out outfits better than bright white sneakers.",
+      "why": "They look sleeker in dim light.",
+      "topics": [
+        "shoes",
+        "colour"
+      ],
+      "occasions": [
+        "night"
+      ],
+      "strength": "opinion"
+    },
+    {
+      "id": "mensflair-com-what-to-wear-club-6",
+      "text": "An all-black outfit (tee, jeans, jacket, boots) is a foolproof night-out look for any venue.",
+      "why": "Monochrome looks deliberate and sharp.",
+      "topics": [
+        "colour"
+      ],
+      "occasions": [
+        "night"
+      ],
+      "strength": "tip"
+    }
+  ],
+  "outfits": [
+    {
+      "outfit": "overshirt green casual, tshirt black casual, jeans black casual, sneakers black casual",
+      "occasion": "night",
+      "verdict": "good",
+      "why": "Dark jeans with an overshirt hide spills well."
+    },
+    {
+      "outfit": "jacket black casual +leather, shirt navy casual +print, jeans black casual, boots black smart casual +chelsea",
+      "occasion": "night",
+      "verdict": "good",
+      "why": "A patterned shirt under a leather jacket adds edge."
+    },
+    {
+      "outfit": "overshirt black casual +flannel, tshirt white casual, jeans denim casual, boots brown casual",
+      "occasion": "night",
+      "verdict": "good",
+      "why": "Rugged denim and flannel handle a messy night."
+    },
+    {
+      "outfit": "overshirt blue casual, tshirt black casual, trousers black casual +chinos, sneakers black casual",
+      "occasion": "night",
+      "verdict": "good",
+      "why": "A layered casual look with dark, durable pieces."
+    },
+    {
+      "outfit": "jacket black casual +leather, tshirt black casual, jeans black casual, boots black casual",
+      "occasion": "night",
+      "verdict": "good",
+      "why": "All black: foolproof for any venue."
+    },
+    {
+      "outfit": "overshirt black casual, sweater black smart casual, jeans black casual, boots black smart casual +chelsea",
+      "occasion": "night",
+      "verdict": "good",
+      "why": "Smart-casual all black with Chelsea boots."
+    },
+    {
+      "outfit": "tshirt black minimal, trousers black smart casual +pleated, sneakers white minimal",
+      "occasion": "night",
+      "verdict": "good",
+      "why": "A tucked tee with pleated trousers and white sneakers."
+    },
+    {
+      "outfit": "overshirt black casual, tshirt white casual, jeans black casual, dress-shoes black formal +derby",
+      "occasion": "night",
+      "verdict": "good",
+      "why": "A black overshirt over a white tee with derbies."
+    },
+    {
+      "outfit": "jacket denim casual, tshirt black casual, jeans black casual, sneakers black streetwear +high-top",
+      "occasion": "night",
+      "verdict": "good",
+      "why": "Faded black jeans, a denim jacket and high-tops."
+    },
+    {
+      "outfit": "overshirt brown casual, tshirt black casual, jeans black casual, boots brown smart casual +chelsea",
+      "occasion": "night",
+      "verdict": "good",
+      "why": "A brown overshirt over black jeans with Chelsea boots."
+    },
+    {
+      "outfit": "jacket green smart casual +blazer, sweater navy smart casual +turtleneck, jeans black casual, boots black smart casual +chelsea",
+      "occasion": "night",
+      "verdict": "good",
+      "why": "A blazer with a turtleneck and black jeans."
+    },
+    {
+      "outfit": "jacket black casual +bomber, tshirt white casual, jeans denim casual, dress-shoes black formal +loafers",
+      "occasion": "night",
+      "verdict": "good",
+      "why": "A black bomber over a white tee with jeans."
+    },
+    {
+      "outfit": "jacket black casual +leather, sweater black casual, jeans grey casual, boots black smart casual +chelsea",
+      "occasion": "night",
+      "verdict": "good",
+      "why": "A biker jacket adds edge to grey jeans."
+    },
+    {
+      "outfit": "jacket brown casual +leather, sweater black smart casual +turtleneck, jeans denim casual, boots brown casual",
+      "occasion": "night",
+      "verdict": "good",
+      "why": "A brown leather jacket over a black roll neck."
+    }
+  ]
+}

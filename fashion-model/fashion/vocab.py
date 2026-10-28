@@ -86,7 +86,7 @@ OCCASIONS = {
     "casual": ("Everyday", 1.3, ["casual", "streetwear", "sporty", "outdoor", "minimal", "vintage"]),
     "smart": ("Smart casual", 2.3, ["smart casual", "minimal", "preppy", "smart"]),
     "work": ("Work / meeting", 2.9, ["smart", "smart casual", "preppy", "formal", "minimal"]),
-    "night": ("Night out", 2.1, ["streetwear", "luxury", "smart casual", "minimal", "smart"]),
+    "night": ("Night out", 2.1, ["streetwear", "casual", "luxury", "smart casual", "minimal", "smart"]),
     "event": ("Elegant", 3.4, ["formal", "smart", "luxury"]),
     "gym": ("Gym", 1.0, ["sporty", "outdoor", "casual"]),
 }

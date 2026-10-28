@@ -1,0 +1,117 @@
+{
+  "source": {
+    "kind": "article",
+    "url": "https://www.artofmanliness.com/style/clothing/how-to-wear-a-polo-shirt-without-looking-like-a-middle-manager/",
+    "title": "How to Wear a Polo Shirt Without Looking Like a Middle Manager (Art of Manliness)",
+    "author": ""
+  },
+  "learned_at": "2026-10-28T15:52:48+00:00",
+  "model": "by hand",
+  "tokens": {
+    "in": 0,
+    "out": 0
+  },
+  "tips": [
+    {
+      "id": "artofmanliness-com-style-clothing-how-to-wear-a-polo-shirt-without-looking-like--1",
+      "text": "A polo should be slim but not tight: sleeves mid-bicep, hem around mid-fly; avoid baggy polos with long sleeves.",
+      "why": "A shapeless polo looks like an afterthought.",
+      "topics": [
+        "fit",
+        "casual"
+      ],
+      "occasions": [
+        "casual",
+        "smart"
+      ],
+      "strength": "rule"
+    },
+    {
+      "id": "artofmanliness-com-style-clothing-how-to-wear-a-polo-shirt-without-looking-like--2",
+      "text": "Wear pique or jersey cotton polos away from the golf course, not shiny synthetic ones.",
+      "why": "Tech fabrics read as corporate.",
+      "topics": [
+        "fabrics"
+      ],
+      "occasions": [
+        "casual",
+        "smart"
+      ],
+      "strength": "tip"
+    },
+    {
+      "id": "artofmanliness-com-style-clothing-how-to-wear-a-polo-shirt-without-looking-like--3",
+      "text": "Pair a polo with tailored chinos, trousers or well-fitting jeans, and loafers, chukkas or clean sneakers rather than boxy dress shoes.",
+      "why": "Refined but relaxed pieces keep a polo modern.",
+      "topics": [
+        "shoes",
+        "trousers",
+        "smart casual"
+      ],
+      "occasions": [
+        "casual",
+        "smart"
+      ],
+      "strength": "tip"
+    },
+    {
+      "id": "artofmanliness-com-style-clothing-how-to-wear-a-polo-shirt-without-looking-like--4",
+      "text": "Layer a light jacket, cardigan or sport coat over a polo when the weather allows.",
+      "why": "A layer adds interest beyond the polo alone.",
+      "topics": [
+        "layering"
+      ],
+      "occasions": [
+        "casual",
+        "smart"
+      ],
+      "strength": "tip"
+    },
+    {
+      "id": "artofmanliness-com-style-clothing-how-to-wear-a-polo-shirt-without-looking-like--5",
+      "text": "A polo tucked into pleated khakis with boxy dress shoes reads corporate; keep it relaxed.",
+      "why": "It looks like an office uniform.",
+      "topics": [
+        "smart casual",
+        "shoes"
+      ],
+      "occasions": [
+        "work",
+        "casual"
+      ],
+      "strength": "opinion"
+    }
+  ],
+  "outfits": [
+    {
+      "outfit": "polo navy slim preppy, trousers beige casual +chinos, dress-shoes brown formal +loafers",
+      "occasion": "casual",
+      "verdict": "good",
+      "why": "A navy polo with light trousers looks put-together."
+    },
+    {
+      "outfit": "polo white preppy, jeans denim casual, dress-shoes brown formal +loafers",
+      "occasion": "casual",
+      "verdict": "good",
+      "why": "A polo with good jeans and loafers is refined yet relaxed."
+    },
+    {
+      "outfit": "polo black smart casual, trousers grey smart casual, sneakers white minimal",
+      "occasion": "casual",
+      "verdict": "good",
+      "why": "Dress trousers with clean sneakers: relaxed and modern."
+    },
+    {
+      "outfit": "polo navy casual, trousers beige casual +chinos, sneakers red casual",
+      "occasion": "casual",
+      "verdict": "good",
+      "why": "Chinos with red sneakers add a pop of colour."
+    },
+    {
+      "outfit": "polo light blue smart casual, trousers beige smart casual +chinos +pleated, dress-shoes black smart",
+      "occasion": "work",
+      "verdict": "avoid",
+      "why": "Tucked polo, pleated khakis and boxy shoes read corporate."
+    }
+  ]
+}

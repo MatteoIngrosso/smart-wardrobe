@@ -1,0 +1,111 @@
+{
+  "source": {
+    "kind": "article",
+    "url": "https://www.fashionbeans.com/article/best-zip-up-hoodies-for-men/",
+    "title": "How to Wear a Zip-Up Hoodie Without Looking Sloppy (FashionBeans)",
+    "author": ""
+  },
+  "learned_at": "2026-10-28T15:52:48+00:00",
+  "model": "by hand",
+  "tokens": {
+    "in": 0,
+    "out": 0
+  },
+  "tips": [
+    {
+      "id": "fashionbeans-com-article-best-zip-up-hoodies-for-men-1",
+      "text": "Give a zip-up hoodie something structured to lean on: denim, tailored trousers or boots, not joggers and other soft pieces.",
+      "why": "All-soft outfits make the hoodie look shapeless.",
+      "topics": [
+        "layering",
+        "proportions",
+        "streetwear"
+      ],
+      "occasions": [
+        "casual"
+      ],
+      "strength": "tip"
+    },
+    {
+      "id": "fashionbeans-com-article-best-zip-up-hoodies-for-men-2",
+      "text": "A slim zip-up suits tailored trousers; a relaxed or boxy one suits streetwear looks.",
+      "why": "The hoodie's fit should match the outfit's level.",
+      "topics": [
+        "fit",
+        "proportions",
+        "streetwear"
+      ],
+      "occasions": [
+        "casual",
+        "smart"
+      ],
+      "strength": "tip"
+    },
+    {
+      "id": "fashionbeans-com-article-best-zip-up-hoodies-for-men-3",
+      "text": "A thin zip-up works as a mid-layer under a coat or jacket.",
+      "why": "Warmth without bulk.",
+      "topics": [
+        "layering",
+        "outerwear"
+      ],
+      "occasions": [
+        "casual"
+      ],
+      "strength": "tip"
+    },
+    {
+      "id": "fashionbeans-com-article-best-zip-up-hoodies-for-men-4",
+      "text": "The hoodie hem should sit just below the waistband; a cropped zip-up pairs best with wide trousers.",
+      "why": "Length balances top against bottom.",
+      "topics": [
+        "proportions",
+        "fit"
+      ],
+      "occasions": [
+        "casual"
+      ],
+      "strength": "tip"
+    },
+    {
+      "id": "fashionbeans-com-article-best-zip-up-hoodies-for-men-5",
+      "text": "Wear an open zip-up over a graphic tee to frame the print, and keep the palette tonal (navy on navy, grey on grey, washed black).",
+      "why": "Tonal dressing looks deliberate.",
+      "topics": [
+        "colour",
+        "layering",
+        "streetwear"
+      ],
+      "occasions": [
+        "casual"
+      ],
+      "strength": "tip"
+    }
+  ],
+  "outfits": [
+    {
+      "outfit": "zip-hoodie navy cropped minimal, tshirt white minimal, trousers navy wide minimal, sneakers white minimal",
+      "occasion": "casual",
+      "verdict": "good",
+      "why": "Tonal navy with a short top and wide trousers."
+    },
+    {
+      "outfit": "zip-hoodie grey casual, tshirt white casual, jeans denim casual, sneakers white casual",
+      "occasion": "casual",
+      "verdict": "good",
+      "why": "Denim and clean sneakers give a zip-up structure."
+    },
+    {
+      "outfit": "zip-hoodie black slim smart casual, tshirt white minimal, trousers grey smart casual, sneakers white minimal",
+      "occasion": "casual",
+      "verdict": "good",
+      "why": "A slim zip-up with tailored trousers looks sharper."
+    },
+    {
+      "outfit": "zip-hoodie grey relaxed casual, tshirt grey casual, joggers grey relaxed casual, sneakers white sporty",
+      "occasion": "casual",
+      "verdict": "avoid",
+      "why": "All-soft layers make the hoodie look sloppy."
+    }
+  ]
+}

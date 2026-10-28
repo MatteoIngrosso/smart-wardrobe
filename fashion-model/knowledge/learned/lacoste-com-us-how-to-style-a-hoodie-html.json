@@ -1,0 +1,99 @@
+{
+  "source": {
+    "kind": "article",
+    "url": "https://www.lacoste.com/us/how-to-style-a-hoodie.html",
+    "title": "How to Style a Hoodie (Lacoste)",
+    "author": ""
+  },
+  "learned_at": "2026-10-28T15:52:48+00:00",
+  "model": "by hand",
+  "tokens": {
+    "in": 0,
+    "out": 0
+  },
+  "tips": [
+    {
+      "id": "lacoste-com-us-how-to-style-a-hoodie-html-1",
+      "text": "A plain white, black or grey hoodie with jeans and sneakers is an easy everyday base.",
+      "why": "Simple and versatile for casual days.",
+      "topics": [
+        "casual",
+        "denim",
+        "shoes"
+      ],
+      "occasions": [
+        "casual"
+      ],
+      "strength": "tip"
+    },
+    {
+      "id": "lacoste-com-us-how-to-style-a-hoodie-html-2",
+      "text": "An oversized hoodie with baggy jeans gives a relaxed streetwear silhouette; a fitted hoodie with slimmer trousers looks cleaner.",
+      "why": "The silhouette sets the mood.",
+      "topics": [
+        "proportions",
+        "streetwear",
+        "fit"
+      ],
+      "occasions": [
+        "casual"
+      ],
+      "strength": "tip"
+    },
+    {
+      "id": "lacoste-com-us-how-to-style-a-hoodie-html-3",
+      "text": "Wear a hoodie under a jacket, a denim jacket or a blazer for structure and warmth.",
+      "why": "A structured layer lifts a relaxed hoodie.",
+      "topics": [
+        "layering",
+        "outerwear"
+      ],
+      "occasions": [
+        "casual",
+        "work"
+      ],
+      "strength": "tip"
+    },
+    {
+      "id": "lacoste-com-us-how-to-style-a-hoodie-html-4",
+      "text": "A clean hoodie with smart trousers and boots looks polished enough for a relaxed workplace.",
+      "why": "Trousers and boots balance comfort with polish.",
+      "topics": [
+        "smart casual",
+        "trousers",
+        "shoes"
+      ],
+      "occasions": [
+        "work",
+        "casual"
+      ],
+      "strength": "tip"
+    }
+  ],
+  "outfits": [
+    {
+      "outfit": "hoodie black casual, jeans denim slim casual, sneakers white casual",
+      "occasion": "casual",
+      "verdict": "good",
+      "why": "A simple everyday look."
+    },
+    {
+      "outfit": "hoodie black oversized streetwear, jeans denim baggy streetwear, sneakers white streetwear",
+      "occasion": "casual",
+      "verdict": "good",
+      "why": "Oversized hoodie and baggy denim: relaxed streetwear."
+    },
+    {
+      "outfit": "hoodie grey minimal, trousers navy smart casual, boots brown smart casual +leather",
+      "occasion": "work",
+      "verdict": "good",
+      "why": "A clean hoodie with trousers and boots for a relaxed office."
+    },
+    {
+      "outfit": "jacket denim casual, hoodie grey casual, trousers black baggy streetwear, sneakers white casual",
+      "occasion": "casual",
+      "verdict": "good",
+      "why": "A jacket over a hoodie with baggy trousers."
+    }
+  ]
+}

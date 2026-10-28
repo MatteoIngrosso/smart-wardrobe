@@ -1,0 +1,104 @@
+{
+  "source": {
+    "kind": "article",
+    "url": "https://www.mrporter.com/en-ie/journal/fashion/you-asked-how-do-i-make-streetwear-smart-448234",
+    "title": "You Asked: How Do I Make Streetwear Smart? (MR PORTER)",
+    "author": ""
+  },
+  "learned_at": "2026-10-28T15:52:45+00:00",
+  "model": "by hand",
+  "tokens": {
+    "in": 0,
+    "out": 0
+  },
+  "tips": [
+    {
+      "id": "mrporter-com-en-ie-journal-fashion-you-asked-how-do-i-make-streetwear-smart-4482-1",
+      "text": "A plain hoodie can go under a smart jacket, overcoat or blazer to make a streetwear look sharper, especially when it's cool.",
+      "why": "Layering a casual hoodie under tailoring works in practice.",
+      "topics": [
+        "layering",
+        "outerwear",
+        "smart casual",
+        "streetwear"
+      ],
+      "occasions": [
+        "casual",
+        "smart"
+      ],
+      "strength": "tip"
+    },
+    {
+      "id": "mrporter-com-en-ie-journal-fashion-you-asked-how-do-i-make-streetwear-smart-4482-2",
+      "text": "For layering under tailoring, pick a hoodie with few or no logos in a mid-weight jersey, so it sits flat under the jacket.",
+      "why": "Bulky or loud hoodies ruin the line of a jacket.",
+      "topics": [
+        "layering",
+        "streetwear",
+        "fabrics"
+      ],
+      "occasions": [
+        "casual",
+        "smart"
+      ],
+      "strength": "tip"
+    },
+    {
+      "id": "mrporter-com-en-ie-journal-fashion-you-asked-how-do-i-make-streetwear-smart-4482-3",
+      "text": "To make a streetwear outfit sharper, swap the jeans for trousers, ideally navy.",
+      "why": "Trousers raise the polish while the rest stays relaxed.",
+      "topics": [
+        "trousers",
+        "smart casual",
+        "streetwear"
+      ],
+      "occasions": [
+        "smart"
+      ],
+      "strength": "tip"
+    },
+    {
+      "id": "mrporter-com-en-ie-journal-fashion-you-asked-how-do-i-make-streetwear-smart-4482-4",
+      "text": "When dressing streetwear up, choose minimal sneakers over chunky trainers.",
+      "why": "Chunky shoes pull attention from the rest.",
+      "topics": [
+        "shoes",
+        "smart casual",
+        "streetwear"
+      ],
+      "occasions": [
+        "smart"
+      ],
+      "strength": "tip"
+    },
+    {
+      "id": "mrporter-com-en-ie-journal-fashion-you-asked-how-do-i-make-streetwear-smart-4482-5",
+      "text": "Mixing workwear, tailoring and streetwear is fine now, but do it deliberately: piece by piece, not just sneakers thrown on with formal clothes.",
+      "why": "Hybrid looks need thought to work.",
+      "topics": [
+        "smart casual",
+        "streetwear",
+        "occasions"
+      ],
+      "occasions": [
+        "casual",
+        "smart"
+      ],
+      "strength": "tip"
+    }
+  ],
+  "outfits": [
+    {
+      "outfit": "jacket grey smart casual +workwear, shirt white smart casual +grandad-collar, trousers navy smart, sneakers white minimal",
+      "occasion": "smart",
+      "verdict": "good",
+      "why": "Workwear jacket and navy trousers sharpen a streetwear base."
+    },
+    {
+      "outfit": "coat navy smart, hoodie grey minimal, trousers navy smart casual, sneakers white minimal",
+      "occasion": "smart",
+      "verdict": "good",
+      "why": "A plain hoodie under a smart coat with trousers and clean sneakers."
+    }
+  ]
+}

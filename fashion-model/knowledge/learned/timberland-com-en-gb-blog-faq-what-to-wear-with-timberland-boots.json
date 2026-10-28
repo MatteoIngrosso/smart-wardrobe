@@ -1,0 +1,101 @@
+{
+  "source": {
+    "kind": "article",
+    "url": "https://www.timberland.com/en-gb/blog/faq/what-to-wear-with-timberland-boots",
+    "title": "What to wear with Timberland boots (Timberland)",
+    "author": ""
+  },
+  "learned_at": "2026-10-28T15:52:46+00:00",
+  "model": "by hand",
+  "tokens": {
+    "in": 0,
+    "out": 0
+  },
+  "tips": [
+    {
+      "id": "timberland-com-en-gb-blog-faq-what-to-wear-with-timberland-boots-1",
+      "text": "Timberland-style work boots suit casual basics (jeans, tees, hoodies, sweats) and smarter pieces like chinos, shirts and a wool coat for smart casual.",
+      "why": "Rugged boots bridge relaxed and smarter outfits.",
+      "topics": [
+        "shoes",
+        "casual",
+        "smart casual"
+      ],
+      "occasions": [
+        "casual",
+        "smart"
+      ],
+      "strength": "tip"
+    },
+    {
+      "id": "timberland-com-en-gb-blog-faq-what-to-wear-with-timberland-boots-2",
+      "text": "Wheat or yellow boots go with lighter denim and light chinos; dark brown or black boots with dark denim and grey or black chinos for a sharper look.",
+      "why": "Boot and trouser tones should agree.",
+      "topics": [
+        "colour",
+        "denim",
+        "shoes"
+      ],
+      "occasions": [
+        "casual",
+        "smart"
+      ],
+      "strength": "tip"
+    },
+    {
+      "id": "timberland-com-en-gb-blog-faq-what-to-wear-with-timberland-boots-3",
+      "text": "With boots and sweatpants, add a smart knit; with a hoodie, wear jeans rather than sweats, so the outfit isn't all lounge.",
+      "why": "One smarter piece balances relaxed boots outfits.",
+      "topics": [
+        "layering",
+        "streetwear",
+        "casual"
+      ],
+      "occasions": [
+        "casual"
+      ],
+      "strength": "tip"
+    },
+    {
+      "id": "timberland-com-en-gb-blog-faq-what-to-wear-with-timberland-boots-4",
+      "text": "Wheat work boots and a bomber jacket make a classic streetwear pairing; darker boots go with a dark raincoat or car coat for a polished look.",
+      "why": "Outerwear sets the boots' mood.",
+      "topics": [
+        "outerwear",
+        "shoes",
+        "streetwear"
+      ],
+      "occasions": [
+        "casual",
+        "smart"
+      ],
+      "strength": "tip"
+    }
+  ],
+  "outfits": [
+    {
+      "outfit": "hoodie grey casual, jeans denim casual, boots beige outdoor +workboot",
+      "occasion": "casual",
+      "verdict": "good",
+      "why": "A hoodie with jeans keeps work boots balanced."
+    },
+    {
+      "outfit": "sweater navy smart casual, joggers grey casual, boots beige outdoor +workboot",
+      "occasion": "casual",
+      "verdict": "good",
+      "why": "A smart knit balances sweatpants and boots."
+    },
+    {
+      "outfit": "coat navy smart casual +wool, shirt light blue smart casual, trousers grey smart casual +chinos, boots brown smart casual +workboot",
+      "occasion": "smart",
+      "verdict": "good",
+      "why": "Chinos, a shirt and a wool coat make boots smart casual."
+    },
+    {
+      "outfit": "jacket black streetwear +bomber, tshirt white casual, jeans denim casual, boots beige outdoor +workboot",
+      "occasion": "casual",
+      "verdict": "good",
+      "why": "Wheat boots and a bomber: a streetwear classic."
+    }
+  ]
+}

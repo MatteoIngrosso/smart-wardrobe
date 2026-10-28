@@ -1,0 +1,171 @@
+{
+  "source": {
+    "kind": "article",
+    "url": "https://www.themodestman.com/how-to-wear-a-bomber-jacket/",
+    "title": "How To Wear a Bomber Jacket (The Modest Man)",
+    "author": ""
+  },
+  "learned_at": "2026-10-28T15:52:47+00:00",
+  "model": "by hand",
+  "tokens": {
+    "in": 0,
+    "out": 0
+  },
+  "tips": [
+    {
+      "id": "themodestman-com-how-to-wear-a-bomber-jacket-1",
+      "text": "A bomber goes with most neutral combinations, from a tee and jeans to a polo, chinos or a button-down.",
+      "why": "A versatile casual outer layer.",
+      "topics": [
+        "outerwear",
+        "casual",
+        "smart casual"
+      ],
+      "occasions": [
+        "casual",
+        "smart"
+      ],
+      "strength": "tip"
+    },
+    {
+      "id": "themodestman-com-how-to-wear-a-bomber-jacket-2",
+      "text": "A slim, minimal bomber over a polo or button-down with chinos or trousers works for smart casual.",
+      "why": "A close fit keeps smart-casual lines clean.",
+      "topics": [
+        "outerwear",
+        "fit",
+        "smart casual"
+      ],
+      "occasions": [
+        "smart"
+      ],
+      "strength": "tip"
+    },
+    {
+      "id": "themodestman-com-how-to-wear-a-bomber-jacket-3",
+      "text": "Use a bright bomber as the single colour against an otherwise monochrome outfit, or a neutral one (olive, grey, khaki) to blend in.",
+      "why": "One colour pop becomes the focal point.",
+      "topics": [
+        "colour",
+        "outerwear"
+      ],
+      "occasions": [
+        "casual",
+        "smart"
+      ],
+      "strength": "tip"
+    },
+    {
+      "id": "themodestman-com-how-to-wear-a-bomber-jacket-4",
+      "text": "Only roomy classic bombers fit a hoodie or flannel layered underneath; slim bombers bunch up.",
+      "why": "Slim bombers have no room for layers.",
+      "topics": [
+        "layering",
+        "outerwear",
+        "fit"
+      ],
+      "occasions": [
+        "casual"
+      ],
+      "strength": "rule"
+    },
+    {
+      "id": "themodestman-com-how-to-wear-a-bomber-jacket-5",
+      "text": "Classic bombers look best with jeans, chinos or trousers; only sporty ones suit shorts.",
+      "why": "A classic bomber with shorts looks unbalanced.",
+      "topics": [
+        "outerwear",
+        "trousers"
+      ],
+      "occasions": [
+        "casual"
+      ],
+      "strength": "tip"
+    },
+    {
+      "id": "themodestman-com-how-to-wear-a-bomber-jacket-6",
+      "text": "A black bomber works wherever a leather jacket would: with denim and boots or sneakers.",
+      "why": "It shares the moto jacket's edge.",
+      "topics": [
+        "outerwear",
+        "colour",
+        "shoes"
+      ],
+      "occasions": [
+        "casual",
+        "night"
+      ],
+      "strength": "opinion"
+    },
+    {
+      "id": "themodestman-com-how-to-wear-a-bomber-jacket-7",
+      "text": "With an athleisure bomber, wear structured pieces like a henley and tapered joggers, not baggy sweats and oversized tees.",
+      "why": "Clean lines keep sporty looks sharp.",
+      "topics": [
+        "sportswear",
+        "fit",
+        "proportions"
+      ],
+      "occasions": [
+        "casual"
+      ],
+      "strength": "tip"
+    }
+  ],
+  "outfits": [
+    {
+      "outfit": "jacket black casual +bomber, tshirt white casual, jeans denim casual, sneakers white casual",
+      "occasion": "casual",
+      "verdict": "good",
+      "why": "A classic casual base with an easy outer layer."
+    },
+    {
+      "outfit": "jacket brown casual +bomber +suede, tshirt white casual, jeans denim casual, boots brown casual",
+      "occasion": "casual",
+      "verdict": "good",
+      "why": "Boots add a workwear edge."
+    },
+    {
+      "outfit": "jacket navy slim minimal +bomber, polo white smart casual, trousers beige smart casual +chinos, sneakers white minimal",
+      "occasion": "smart",
+      "verdict": "good",
+      "why": "A polo and chinos with a close-fitting bomber."
+    },
+    {
+      "outfit": "jacket black slim minimal +bomber, shirt light blue smart +button-down, trousers grey smart +wool, dress-shoes brown smart +loafers",
+      "occasion": "smart",
+      "verdict": "good",
+      "why": "A minimal bomber over polished trousers."
+    },
+    {
+      "outfit": "jacket navy sporty +bomber, tshirt grey casual +henley, shorts beige casual, sneakers white casual",
+      "occasion": "casual",
+      "verdict": "good",
+      "why": "A sporty bomber keeps shorts looking intentional."
+    },
+    {
+      "outfit": "jacket olive vintage +bomber +nylon, shirt olive outdoor +utility, trousers beige outdoor +chinos, boots brown outdoor",
+      "occasion": "casual",
+      "verdict": "good",
+      "why": "A military-leaning mix."
+    },
+    {
+      "outfit": "jacket red minimal +bomber, sweater cream luxury +cashmere, trousers cream minimal +chinos, sneakers white minimal",
+      "occasion": "smart",
+      "verdict": "good",
+      "why": "A tonal base lets a bright bomber pop."
+    },
+    {
+      "outfit": "jacket olive casual +bomber, shirt grey casual, trousers beige casual, dress-shoes brown casual +loafers",
+      "occasion": "casual",
+      "verdict": "good",
+      "why": "Subtle contrasts let the bomber blend in."
+    },
+    {
+      "outfit": "jacket black sporty +bomber, tshirt white oversized sporty, joggers grey baggy sporty, sneakers white sporty",
+      "occasion": "casual",
+      "verdict": "avoid",
+      "why": "Baggy sweats and an oversized tee fight a structured sporty bomber."
+    }
+  ]
+}

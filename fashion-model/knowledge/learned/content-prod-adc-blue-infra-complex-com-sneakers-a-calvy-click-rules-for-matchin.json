@@ -1,0 +1,87 @@
+{
+  "source": {
+    "kind": "article",
+    "url": "https://content-prod.adc-blue.infra.complex.com/sneakers/a/calvy-click/rules-for-matching-your-sneakers-to-your-outfit",
+    "title": "Rules for Matching Your Sneakers to Your Outfit (Complex)",
+    "author": ""
+  },
+  "learned_at": "2026-10-28T15:52:47+00:00",
+  "model": "by hand",
+  "tokens": {
+    "in": 0,
+    "out": 0
+  },
+  "tips": [
+    {
+      "id": "content-prod-adc-blue-infra-complex-com-sneakers-a-calvy-click-rules-for-matchin-1",
+      "text": "Don't match the sneakers' colour on every item; pick complementary textures and styles instead.",
+      "why": "Full colour matching looks costumed.",
+      "topics": [
+        "colour",
+        "shoes",
+        "streetwear"
+      ],
+      "occasions": [
+        "casual"
+      ],
+      "strength": "tip"
+    },
+    {
+      "id": "content-prod-adc-blue-infra-complex-com-sneakers-a-calvy-click-rules-for-matchin-2",
+      "text": "Match trouser width to sneaker bulk: chunky sneakers with straight or wider legs, slim sneakers with slim trousers.",
+      "why": "Balanced widths keep proportions right.",
+      "topics": [
+        "proportions",
+        "shoes",
+        "trousers"
+      ],
+      "occasions": [
+        "casual"
+      ],
+      "strength": "tip"
+    },
+    {
+      "id": "content-prod-adc-blue-infra-complex-com-sneakers-a-calvy-click-rules-for-matchin-3",
+      "text": "When the sneakers are the focal point, cut fabric at the ankle: pin-roll or crop jeans, or wear tapered trousers.",
+      "why": "Less bunched fabric keeps the sneakers visible.",
+      "topics": [
+        "proportions",
+        "shoes",
+        "denim"
+      ],
+      "occasions": [
+        "casual"
+      ],
+      "strength": "tip"
+    },
+    {
+      "id": "content-prod-adc-blue-infra-complex-com-sneakers-a-calvy-click-rules-for-matchin-4",
+      "text": "Keep running sneakers away from business attire.",
+      "why": "Athletic shoes clash with work dress.",
+      "topics": [
+        "shoes",
+        "occasions"
+      ],
+      "occasions": [
+        "work",
+        "smart"
+      ],
+      "strength": "rule"
+    },
+    {
+      "id": "content-prod-adc-blue-infra-complex-com-sneakers-a-calvy-click-rules-for-matchin-5",
+      "text": "Contrasting categories works when colours agree: technical outerwear with retro sneakers, or a classic topcoat with sneaker boots.",
+      "why": "A shared palette makes contrast look deliberate.",
+      "topics": [
+        "layering",
+        "shoes",
+        "colour"
+      ],
+      "occasions": [
+        "casual"
+      ],
+      "strength": "tip"
+    }
+  ],
+  "outfits": []
+}
