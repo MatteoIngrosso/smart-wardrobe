@@ -179,7 +179,7 @@ const OCCASIONS = [
   { id: "casual", label: "Everyday", target: 1.3, likes: ["casual", "streetwear", "sporty", "outdoor", "minimal", "vintage"] },
   { id: "smart", label: "Smart casual", target: 2.3, likes: ["smart casual", "minimal", "preppy", "smart"] },
   { id: "work", label: "Work / meeting", target: 2.9, likes: ["smart", "smart casual", "preppy", "formal", "minimal"] },
-  { id: "night", label: "Night out", target: 2.1, likes: ["streetwear", "luxury", "smart casual", "minimal", "smart"] },
+  { id: "night", label: "Night out", target: 2.1, likes: ["streetwear", "casual", "luxury", "smart casual", "minimal", "smart"] },
   { id: "event", label: "Elegant", target: 3.4, likes: ["formal", "smart", "luxury"] },
   { id: "gym", label: "Gym", target: 1, likes: ["sporty", "outdoor", "casual"] },
 ];

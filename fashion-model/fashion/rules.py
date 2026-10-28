@@ -156,8 +156,8 @@ def occasion_styles(o, ctx):
 
 @check
 def style_clash(o, ctx, pairs=()):
-    """Styles that don't belong in the same outfit (gym kit with tailoring...)."""
-    present = {s for p in o.core for s in p.styles}
+    """Styles that don't belong in the same outfit (gym kit with tailoring...). Shoes have their own rule."""
+    present = {s for p in clothes(o) for s in p.styles}
     for a, b in pairs:
         if a in present and b in present:
             return -1.0, f"{a.capitalize()} and {b} pieces clash"

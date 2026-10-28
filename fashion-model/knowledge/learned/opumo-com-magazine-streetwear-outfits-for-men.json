@@ -1,0 +1,157 @@
+{
+  "source": {
+    "kind": "article",
+    "url": "https://www.opumo.com/magazine/streetwear-outfits-for-men/",
+    "title": "8 fail-safe streetwear outfits for men (OPUMO)",
+    "author": ""
+  },
+  "learned_at": "2026-10-28T15:52:46+00:00",
+  "model": "by hand",
+  "tokens": {
+    "in": 0,
+    "out": 0
+  },
+  "tips": [
+    {
+      "id": "opumo-com-magazine-streetwear-outfits-for-men-1",
+      "text": "Mixing a few high-end pieces with affordable streetwear staples is what gives streetwear its character.",
+      "why": "Contrast between price tiers looks authentic.",
+      "topics": [
+        "streetwear",
+        "wardrobe"
+      ],
+      "occasions": [
+        "casual"
+      ],
+      "strength": "tip"
+    },
+    {
+      "id": "opumo-com-magazine-streetwear-outfits-for-men-2",
+      "text": "Layer hoodies, bomber jackets and longline tees to add depth to a streetwear outfit.",
+      "why": "Layering is a core streetwear technique.",
+      "topics": [
+        "layering",
+        "outerwear",
+        "streetwear"
+      ],
+      "occasions": [
+        "casual"
+      ],
+      "strength": "tip"
+    },
+    {
+      "id": "opumo-com-magazine-streetwear-outfits-for-men-3",
+      "text": "In streetwear the sneakers are the centrepiece: start with clean white pairs, then add statement ones.",
+      "why": "Shoes anchor the outfit.",
+      "topics": [
+        "shoes",
+        "streetwear"
+      ],
+      "occasions": [
+        "casual"
+      ],
+      "strength": "tip"
+    },
+    {
+      "id": "opumo-com-magazine-streetwear-outfits-for-men-4",
+      "text": "Go relaxed in fit, but not so baggy or so tight that it looks unintentional.",
+      "why": "Balanced looseness keeps streetwear deliberate.",
+      "topics": [
+        "fit",
+        "proportions",
+        "streetwear"
+      ],
+      "occasions": [
+        "casual"
+      ],
+      "strength": "rule"
+    },
+    {
+      "id": "opumo-com-magazine-streetwear-outfits-for-men-5",
+      "text": "An all-black outfit of tee, cargo pants and low-top sneakers is a clean, minimal streetwear base.",
+      "why": "Monochrome is cohesive and timeless.",
+      "topics": [
+        "colour",
+        "streetwear"
+      ],
+      "occasions": [
+        "casual",
+        "night"
+      ],
+      "strength": "tip"
+    },
+    {
+      "id": "opumo-com-magazine-streetwear-outfits-for-men-6",
+      "text": "A suit worn with a crewneck tee and clean sneakers bridges tailoring and streetwear for smart-casual events.",
+      "why": "Casual top and shoes soften a suit.",
+      "topics": [
+        "suits",
+        "shoes",
+        "smart casual"
+      ],
+      "occasions": [
+        "smart",
+        "night"
+      ],
+      "strength": "opinion"
+    },
+    {
+      "id": "opumo-com-magazine-streetwear-outfits-for-men-7",
+      "text": "A plain hoodie with joggers and clean sneakers works from the gym to a casual evening.",
+      "why": "Athleisure crosses casual occasions.",
+      "topics": [
+        "sportswear",
+        "casual"
+      ],
+      "occasions": [
+        "casual",
+        "gym"
+      ],
+      "strength": "tip"
+    }
+  ],
+  "outfits": [
+    {
+      "outfit": "jacket navy vintage +windbreaker, tshirt white vintage +graphic, joggers black sporty, sneakers white vintage",
+      "occasion": "casual",
+      "verdict": "good",
+      "why": "Retro graphic tee and track pants feel nostalgic."
+    },
+    {
+      "outfit": "tshirt black slim minimal, trousers black minimal +cargo, sneakers black minimal +low-top",
+      "occasion": "casual",
+      "verdict": "good",
+      "why": "All-black tee, cargos and low-tops: clean and minimal."
+    },
+    {
+      "outfit": "hoodie grey oversized sporty, joggers grey sporty, sneakers white sporty",
+      "occasion": "casual",
+      "verdict": "good",
+      "why": "Athleisure that moves from the gym to a casual night."
+    },
+    {
+      "outfit": "jacket green smart casual +suit, tshirt white minimal, trousers green smart casual +suit, sneakers white minimal",
+      "occasion": "smart",
+      "verdict": "good",
+      "why": "A coloured suit with a crewneck tee and sneakers bridges formal and street."
+    },
+    {
+      "outfit": "jacket black outdoor +waterproof, tshirt grey sporty, joggers black sporty, sneakers black sporty",
+      "occasion": "casual",
+      "verdict": "good",
+      "why": "A tech jacket over a base layer and joggers is practical."
+    },
+    {
+      "outfit": "jacket denim oversized streetwear, tshirt white streetwear +graphic, jeans black streetwear +ripped, sneakers white streetwear +high-top",
+      "occasion": "casual",
+      "verdict": "good",
+      "why": "Distressed denim and an artwork tee: an expressive street look."
+    },
+    {
+      "outfit": "zip-hoodie black streetwear, tshirt white streetwear +graphic, jeans denim slim streetwear, sneakers black streetwear +high-top",
+      "occasion": "casual",
+      "verdict": "good",
+      "why": "Cuffed jeans, a graphic tee and a zip hoodie feel skater."
+    }
+  ]
+}

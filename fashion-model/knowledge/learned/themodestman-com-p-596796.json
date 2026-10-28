@@ -1,0 +1,164 @@
+{
+  "source": {
+    "kind": "article",
+    "url": "https://www.themodestman.com/?p=596796",
+    "title": "What To Wear With Cargo Pants (The Modest Man)",
+    "author": ""
+  },
+  "learned_at": "2026-10-28T15:52:46+00:00",
+  "model": "by hand",
+  "tokens": {
+    "in": 0,
+    "out": 0
+  },
+  "tips": [
+    {
+      "id": "themodestman-com-p-596796-1",
+      "text": "Slim cargo pants with few pockets read dressier; relaxed or baggy cuts with many pockets keep the look casual.",
+      "why": "Fit and pockets set how formal cargos look.",
+      "topics": [
+        "fit",
+        "trousers",
+        "smart casual"
+      ],
+      "occasions": [
+        "casual",
+        "smart"
+      ],
+      "strength": "rule"
+    },
+    {
+      "id": "themodestman-com-p-596796-2",
+      "text": "Black cargos suit high-low dressing: with a polo, a button-down or a sport coat they work for smart casual nights out.",
+      "why": "Black blends into dressier outfits.",
+      "topics": [
+        "colour",
+        "trousers",
+        "smart casual"
+      ],
+      "occasions": [
+        "smart",
+        "night"
+      ],
+      "strength": "tip"
+    },
+    {
+      "id": "themodestman-com-p-596796-3",
+      "text": "Olive, khaki, grey and brown cargos keep a military feel; pair them with workwear shirts, overshirts and boots.",
+      "why": "The classic utility look hangs together.",
+      "topics": [
+        "colour",
+        "trousers",
+        "outerwear"
+      ],
+      "occasions": [
+        "casual"
+      ],
+      "strength": "tip"
+    },
+    {
+      "id": "themodestman-com-p-596796-4",
+      "text": "Cargo pants are never formal: keep them away from suits, dress shoes and evening dress codes.",
+      "why": "Cargos stay casual whatever you pair them with.",
+      "topics": [
+        "formal",
+        "trousers"
+      ],
+      "occasions": [
+        "event",
+        "work"
+      ],
+      "strength": "rule"
+    },
+    {
+      "id": "themodestman-com-p-596796-5",
+      "text": "Avoid cinched or elastic hems on cargos with leather boots or dress shoes; they make them look like joggers.",
+      "why": "Cinched hems clash with leather footwear.",
+      "topics": [
+        "trousers",
+        "shoes"
+      ],
+      "occasions": [
+        "casual",
+        "smart"
+      ],
+      "strength": "rule"
+    },
+    {
+      "id": "themodestman-com-p-596796-6",
+      "text": "Baggy cargos look tidy with a single break at the shoe and a higher waist; wear them with a tee or crewneck and boots or sneakers.",
+      "why": "Clean lines keep loose cargos intentional.",
+      "topics": [
+        "fit",
+        "proportions",
+        "casual"
+      ],
+      "occasions": [
+        "casual"
+      ],
+      "strength": "tip"
+    }
+  ],
+  "outfits": [
+    {
+      "outfit": "shirt white casual +button-down, trousers olive slim casual +cargo, sneakers white minimal",
+      "occasion": "casual",
+      "verdict": "good",
+      "why": "Slim cargos with a clean shirt for a relaxed party."
+    },
+    {
+      "outfit": "jacket navy smart casual +blazer, shirt white smart casual +button-down, trousers black slim minimal +cargo, dress-shoes black smart casual +loafers",
+      "occasion": "smart",
+      "verdict": "good",
+      "why": "Black slim cargos fit a smart-casual blazer look."
+    },
+    {
+      "outfit": "tshirt white relaxed casual, trousers black relaxed streetwear +cargo, boots brown outdoor +workboot",
+      "occasion": "casual",
+      "verdict": "good",
+      "why": "A structured tee, relaxed cargos and work boots: an urban look."
+    },
+    {
+      "outfit": "sweater yellow casual, trousers black relaxed streetwear +cargo +corduroy, boots brown casual",
+      "occasion": "casual",
+      "verdict": "good",
+      "why": "A mustard knit contrasts well with black cargos."
+    },
+    {
+      "outfit": "overshirt beige outdoor, tshirt white casual, trousers olive relaxed outdoor +cargo, boots black outdoor +combat",
+      "occasion": "casual",
+      "verdict": "good",
+      "why": "Olive cargos with a utility overshirt feel purposeful."
+    },
+    {
+      "outfit": "tshirt grey casual, trousers olive relaxed outdoor +cargo, sneakers white casual",
+      "occasion": "casual",
+      "verdict": "good",
+      "why": "Green cargos with a tee and sneakers stay easygoing."
+    },
+    {
+      "outfit": "jacket navy smart casual +chore, shirt light blue smart casual +button-down, trousers brown slim smart casual +cargo, dress-shoes brown smart casual +loafers",
+      "occasion": "smart",
+      "verdict": "good",
+      "why": "Slim brown cargos for a smart-casual Friday."
+    },
+    {
+      "outfit": "coat navy vintage, shirt white vintage +stripes, trousers brown relaxed vintage +cargo, boots brown vintage +leather",
+      "occasion": "casual",
+      "verdict": "good",
+      "why": "Breton stripes and a car coat give cargos a classic feel."
+    },
+    {
+      "outfit": "tshirt black casual, trousers beige baggy casual +cargo, boots brown outdoor",
+      "occasion": "casual",
+      "verdict": "good",
+      "why": "Baggy cargos with a tee and boots look relaxed and tidy."
+    },
+    {
+      "outfit": "jacket black formal +suit, shirt white formal, trousers black slim casual +cargo, dress-shoes black formal",
+      "occasion": "event",
+      "verdict": "avoid",
+      "why": "Cargos clash with formal dress."
+    }
+  ]
+}

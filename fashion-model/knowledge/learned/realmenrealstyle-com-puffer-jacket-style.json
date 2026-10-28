@@ -1,0 +1,112 @@
+{
+  "source": {
+    "kind": "article",
+    "url": "https://www.realmenrealstyle.com/puffer-jacket-style/",
+    "title": "Puffer Jacket Style: How to Look Sharp (Real Men Real Style)",
+    "author": ""
+  },
+  "learned_at": "2026-10-28T15:52:47+00:00",
+  "model": "by hand",
+  "tokens": {
+    "in": 0,
+    "out": 0
+  },
+  "tips": [
+    {
+      "id": "realmenrealstyle-com-puffer-jacket-style-1",
+      "text": "A puffer should fit: shoulder seams on the shoulder, sleeves to the wrist, hem around the waist; narrow baffles keep it from ballooning.",
+      "why": "Fit keeps a bulky jacket from looking shapeless.",
+      "topics": [
+        "fit",
+        "outerwear",
+        "proportions"
+      ],
+      "occasions": [
+        "casual"
+      ],
+      "strength": "rule"
+    },
+    {
+      "id": "realmenrealstyle-com-puffer-jacket-style-2",
+      "text": "Pick puffers in charcoal, navy, olive, burgundy or matte black; skip neon and shiny finishes unless going full streetwear.",
+      "why": "Muted shades pair with the rest of the wardrobe.",
+      "topics": [
+        "colour",
+        "outerwear"
+      ],
+      "occasions": [
+        "casual",
+        "smart"
+      ],
+      "strength": "tip"
+    },
+    {
+      "id": "realmenrealstyle-com-puffer-jacket-style-3",
+      "text": "Balance a bulky puffer with slim or straight structured trousers and sleek shoes (Chelsea boots, minimal sneakers, lace-ups).",
+      "why": "A tapered lower half avoids a blocky look.",
+      "topics": [
+        "proportions",
+        "outerwear",
+        "shoes"
+      ],
+      "occasions": [
+        "casual",
+        "smart"
+      ],
+      "strength": "tip"
+    },
+    {
+      "id": "realmenrealstyle-com-puffer-jacket-style-4",
+      "text": "Layer a hoodie or a turtleneck under a puffer, keeping layers flat.",
+      "why": "Flat layers keep clean lines.",
+      "topics": [
+        "layering",
+        "outerwear"
+      ],
+      "occasions": [
+        "casual",
+        "smart"
+      ],
+      "strength": "tip"
+    },
+    {
+      "id": "realmenrealstyle-com-puffer-jacket-style-5",
+      "text": "Avoid an oversized puffer over baggy jeans unless you want a full streetwear silhouette.",
+      "why": "Volume top and bottom balloons the outline.",
+      "topics": [
+        "proportions",
+        "outerwear"
+      ],
+      "occasions": [
+        "casual"
+      ],
+      "strength": "opinion"
+    }
+  ],
+  "outfits": [
+    {
+      "outfit": "puffer olive casual, hoodie grey casual, jeans denim slim casual, sneakers white casual",
+      "occasion": "casual",
+      "verdict": "good",
+      "why": "Weather-ready and balanced by slim jeans."
+    },
+    {
+      "outfit": "puffer black casual, sweatshirt grey casual, joggers black slim casual, sneakers white casual",
+      "occasion": "casual",
+      "verdict": "good",
+      "why": "Tapered joggers keep an off-duty look clean."
+    },
+    {
+      "outfit": "puffer navy smart casual, sweater grey smart casual +turtleneck, trousers beige slim smart casual +chinos, boots brown smart casual +chelsea",
+      "occasion": "smart",
+      "verdict": "good",
+      "why": "Polished layers and sleek boots keep it sharp."
+    },
+    {
+      "outfit": "puffer black oversized casual, hoodie black casual, jeans denim baggy casual, sneakers white casual",
+      "occasion": "casual",
+      "verdict": "avoid",
+      "why": "Oversized top and baggy bottom balloon the outfit."
+    }
+  ]
+}

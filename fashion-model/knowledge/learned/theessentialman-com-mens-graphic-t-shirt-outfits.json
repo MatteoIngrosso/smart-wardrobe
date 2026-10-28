@@ -1,0 +1,138 @@
+{
+  "source": {
+    "kind": "article",
+    "url": "https://theessentialman.com/mens-graphic-t-shirt-outfits/",
+    "title": "The Grown Man's Guide to Wearing Graphic T-Shirts (The Essential Man)",
+    "author": ""
+  },
+  "learned_at": "2026-10-28T15:52:46+00:00",
+  "model": "by hand",
+  "tokens": {
+    "in": 0,
+    "out": 0
+  },
+  "tips": [
+    {
+      "id": "theessentialman-com-mens-graphic-t-shirt-outfits-1",
+      "text": "Favour abstract or minimal graphics that could pass as art; they look more grown-up than busy slogans or big logos.",
+      "why": "Art-like prints read more refined.",
+      "topics": [
+        "patterns",
+        "casual",
+        "streetwear"
+      ],
+      "occasions": [
+        "casual"
+      ],
+      "strength": "tip"
+    },
+    {
+      "id": "theessentialman-com-mens-graphic-t-shirt-outfits-2",
+      "text": "Logo and band tees are the most casual tees; keep them for relaxed days rather than polished looks.",
+      "why": "Logos add casualness to an already casual shirt.",
+      "topics": [
+        "casual",
+        "patterns"
+      ],
+      "occasions": [
+        "casual"
+      ],
+      "strength": "tip"
+    },
+    {
+      "id": "theessentialman-com-mens-graphic-t-shirt-outfits-3",
+      "text": "A graphic tee with dressy trousers and minimal sneakers or boots works for a smart-casual office day.",
+      "why": "Dressy bottoms balance the tee.",
+      "topics": [
+        "smart casual",
+        "trousers"
+      ],
+      "occasions": [
+        "work",
+        "smart"
+      ],
+      "strength": "tip"
+    },
+    {
+      "id": "theessentialman-com-mens-graphic-t-shirt-outfits-4",
+      "text": "Calm a bold or pastel graphic tee with dark neutrals: grey chinos, black or olive.",
+      "why": "Dark neutrals tame a tricky colour.",
+      "topics": [
+        "colour",
+        "trousers"
+      ],
+      "occasions": [
+        "casual",
+        "work"
+      ],
+      "strength": "tip"
+    },
+    {
+      "id": "theessentialman-com-mens-graphic-t-shirt-outfits-5",
+      "text": "When the tee has an all-over print, keep everything else plain so the shirt is the focal point.",
+      "why": "Solids let a busy print stand out without clashing.",
+      "topics": [
+        "patterns",
+        "colour"
+      ],
+      "occasions": [
+        "casual"
+      ],
+      "strength": "rule"
+    },
+    {
+      "id": "theessentialman-com-mens-graphic-t-shirt-outfits-6",
+      "text": "A blazer and loafers over a graphic tee and shorts or trousers make it evening-appropriate.",
+      "why": "A tailored layer lifts a relaxed tee for nights out.",
+      "topics": [
+        "smart casual",
+        "layering",
+        "shoes"
+      ],
+      "occasions": [
+        "night"
+      ],
+      "strength": "tip"
+    },
+    {
+      "id": "theessentialman-com-mens-graphic-t-shirt-outfits-7",
+      "text": "For a weekend look, an illustrated tee with a light jacket and minimal sneakers in a neutral colour stays tidy.",
+      "why": "Neutral shoes calm the graphic.",
+      "topics": [
+        "casual",
+        "shoes",
+        "layering"
+      ],
+      "occasions": [
+        "casual"
+      ],
+      "strength": "tip"
+    }
+  ],
+  "outfits": [
+    {
+      "outfit": "jacket denim casual, tshirt white casual +logo, trousers grey smart, sneakers cream minimal",
+      "occasion": "work",
+      "verdict": "good",
+      "why": "Dressy trousers and a simple logo tee for a casual Friday."
+    },
+    {
+      "outfit": "jacket black smart casual, tshirt pink casual +graphic, trousers grey smart casual +chinos, boots black casual",
+      "occasion": "work",
+      "verdict": "good",
+      "why": "A soft pink graphic tee tamed by grey and black."
+    },
+    {
+      "outfit": "jacket olive casual, tshirt white casual +graphic, trousers beige relaxed casual, sneakers brown minimal",
+      "occasion": "casual",
+      "verdict": "good",
+      "why": "An illustrated tee, a light jacket and brown sneakers for lunch."
+    },
+    {
+      "outfit": "jacket beige smart casual +blazer +linen, tshirt white casual +graphic, shorts navy smart casual +linen, dress-shoes brown smart casual +loafers +suede",
+      "occasion": "night",
+      "verdict": "good",
+      "why": "A linen blazer and suede loafers dress up shorts for a rooftop evening."
+    }
+  ]
+}

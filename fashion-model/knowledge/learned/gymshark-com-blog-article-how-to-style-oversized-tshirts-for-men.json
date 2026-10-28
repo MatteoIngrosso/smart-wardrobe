@@ -1,0 +1,138 @@
+{
+  "source": {
+    "kind": "article",
+    "url": "https://www.gymshark.com/blog/article/how-to-style-oversized-tshirts-for-men",
+    "title": "How Guys Are Styling Oversized T-Shirts (Gymshark)",
+    "author": ""
+  },
+  "learned_at": "2026-10-28T15:52:49+00:00",
+  "model": "by hand",
+  "tokens": {
+    "in": 0,
+    "out": 0
+  },
+  "tips": [
+    {
+      "id": "gymshark-com-blog-article-how-to-style-oversized-tshirts-for-men-1",
+      "text": "Balance an oversized tee with straight or tapered bottoms, or go fully relaxed with baggy cargos for a streetwear look; avoid super skinny jeans.",
+      "why": "Extreme contrast looks unbalanced.",
+      "topics": [
+        "proportions",
+        "streetwear"
+      ],
+      "occasions": [
+        "casual"
+      ],
+      "strength": "tip"
+    },
+    {
+      "id": "gymshark-com-blog-article-how-to-style-oversized-tshirts-for-men-2",
+      "text": "An oversized tee with shorts should end just below the waistband so the shorter bottom balances it.",
+      "why": "Shorter bottoms let the tee run longer.",
+      "topics": [
+        "proportions"
+      ],
+      "occasions": [
+        "casual"
+      ],
+      "strength": "tip"
+    },
+    {
+      "id": "gymshark-com-blog-article-how-to-style-oversized-tshirts-for-men-3",
+      "text": "A tee cropped near the waistband balances slouchy, baggy jeans.",
+      "why": "A short top offsets loose bottoms.",
+      "topics": [
+        "proportions",
+        "denim"
+      ],
+      "occasions": [
+        "casual"
+      ],
+      "strength": "tip"
+    },
+    {
+      "id": "gymshark-com-blog-article-how-to-style-oversized-tshirts-for-men-4",
+      "text": "Dress up an oversized tee with tailored trousers or a structured coat for contrast.",
+      "why": "Mixing casual and smart adds interest.",
+      "topics": [
+        "smart casual",
+        "layering"
+      ],
+      "occasions": [
+        "casual",
+        "smart"
+      ],
+      "strength": "tip"
+    },
+    {
+      "id": "gymshark-com-blog-article-how-to-style-oversized-tshirts-for-men-5",
+      "text": "Keep oversized tees out of formal and business settings.",
+      "why": "They suit relaxed dress codes only.",
+      "topics": [
+        "occasions"
+      ],
+      "occasions": [
+        "work",
+        "event"
+      ],
+      "strength": "rule"
+    },
+    {
+      "id": "gymshark-com-blog-article-how-to-style-oversized-tshirts-for-men-6",
+      "text": "A graphic tee goes well with an all-black outfit, light baggy denim or cargos.",
+      "why": "Graphics pair with simple bottoms.",
+      "topics": [
+        "patterns",
+        "streetwear"
+      ],
+      "occasions": [
+        "casual"
+      ],
+      "strength": "tip"
+    }
+  ],
+  "outfits": [
+    {
+      "outfit": "tshirt white oversized casual, shorts black casual, sneakers white casual",
+      "occasion": "casual",
+      "verdict": "good",
+      "why": "Shorts keep the proportions balanced."
+    },
+    {
+      "outfit": "tshirt black oversized streetwear, trousers olive baggy streetwear +cargo, sneakers black streetwear",
+      "occasion": "casual",
+      "verdict": "good",
+      "why": "Baggy cargos with an oversized tee: relaxed, not scruffy."
+    },
+    {
+      "outfit": "tshirt grey oversized casual, jeans denim straight casual, sneakers white casual",
+      "occasion": "casual",
+      "verdict": "good",
+      "why": "Straighter jeans balance a baggy tee."
+    },
+    {
+      "outfit": "tshirt white cropped casual, jeans light blue baggy casual, sneakers white casual",
+      "occasion": "casual",
+      "verdict": "good",
+      "why": "A cropped tee balances slouchy denim."
+    },
+    {
+      "outfit": "coat smart, tshirt white oversized minimal, trousers grey smart casual, sneakers white minimal",
+      "occasion": "smart",
+      "verdict": "good",
+      "why": "Tailored trousers and a structured coat add smart contrast."
+    },
+    {
+      "outfit": "tshirt black oversized streetwear, joggers grey straight streetwear, sneakers white streetwear +high-top",
+      "occasion": "casual",
+      "verdict": "good",
+      "why": "Straight sweatpants and high-tops: a streetwear staple."
+    },
+    {
+      "outfit": "tshirt white oversized casual, trousers grey smart, dress-shoes black smart",
+      "occasion": "work",
+      "verdict": "avoid",
+      "why": "Oversized tees clash with business settings."
+    }
+  ]
+}

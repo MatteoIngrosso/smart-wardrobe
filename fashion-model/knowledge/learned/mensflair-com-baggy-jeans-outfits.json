@@ -1,0 +1,233 @@
+{
+  "source": {
+    "kind": "article",
+    "url": "https://mensflair.com/baggy-jeans-outfits/",
+    "title": "How To Wear Baggy Jeans: 19 Modern Looks (Mens Flair)",
+    "author": ""
+  },
+  "learned_at": "2026-10-28T15:52:45+00:00",
+  "model": "by hand",
+  "tokens": {
+    "in": 0,
+    "out": 0
+  },
+  "tips": [
+    {
+      "id": "mensflair-com-baggy-jeans-outfits-1",
+      "text": "Baggy jeans should sit at the waist; the room should start below the waistband, not from jeans sliding down.",
+      "why": "Keeps the loose silhouette intentional.",
+      "topics": [
+        "fit",
+        "denim"
+      ],
+      "occasions": [
+        "casual"
+      ],
+      "strength": "rule"
+    },
+    {
+      "id": "mensflair-com-baggy-jeans-outfits-2",
+      "text": "Pair baggy jeans with streetwear pieces like graphic tees, hoodies and sportswear for relaxed casual outfits.",
+      "why": "Matches the streetwear roots of the baggy silhouette.",
+      "topics": [
+        "streetwear",
+        "denim",
+        "casual"
+      ],
+      "occasions": [
+        "casual"
+      ],
+      "strength": "tip"
+    },
+    {
+      "id": "mensflair-com-baggy-jeans-outfits-3",
+      "text": "A bomber over a hoodie or tee, with baggy jeans and sneakers, is a reliable streetwear formula.",
+      "why": "A proven layering combination in any colour.",
+      "topics": [
+        "outerwear",
+        "streetwear",
+        "layering"
+      ],
+      "occasions": [
+        "casual"
+      ],
+      "strength": "tip"
+    },
+    {
+      "id": "mensflair-com-baggy-jeans-outfits-4",
+      "text": "Workwear shirts, flannels and chore jackets bring baggy jeans into smart casual.",
+      "why": "Workwear and loose denim share a relaxed, utilitarian logic.",
+      "topics": [
+        "layering",
+        "outerwear",
+        "smart casual",
+        "denim"
+      ],
+      "occasions": [
+        "casual",
+        "smart"
+      ],
+      "strength": "tip"
+    },
+    {
+      "id": "mensflair-com-baggy-jeans-outfits-5",
+      "text": "Keep colours and patterns minimal with baggy jeans, so the loose silhouette is the statement.",
+      "why": "Tonal outfits let the proportions do the talking.",
+      "topics": [
+        "colour",
+        "proportions",
+        "denim"
+      ],
+      "occasions": [
+        "casual"
+      ],
+      "strength": "tip"
+    },
+    {
+      "id": "mensflair-com-baggy-jeans-outfits-6",
+      "text": "Black, grey and white layered from light to dark is an easy palette with baggy jeans.",
+      "why": "Tonal layering keeps loose outfits cohesive.",
+      "topics": [
+        "colour",
+        "layering",
+        "streetwear"
+      ],
+      "occasions": [
+        "casual"
+      ],
+      "strength": "tip"
+    },
+    {
+      "id": "mensflair-com-baggy-jeans-outfits-7",
+      "text": "Baggy jeans can be dressed up with a knit or a shirt and loafers or derbies; light washes suit the casual look, dark or cream ones the smarter one.",
+      "why": "Polished shoes and tops sharpen a loose fit.",
+      "topics": [
+        "denim",
+        "shoes",
+        "smart casual"
+      ],
+      "occasions": [
+        "smart"
+      ],
+      "strength": "tip"
+    },
+    {
+      "id": "mensflair-com-baggy-jeans-outfits-8",
+      "text": "Cropped or rolled hems on baggy jeans show the shoe; long hems that puddle over sneakers suit skate looks only.",
+      "why": "Hem length decides how tidy the outfit looks.",
+      "topics": [
+        "proportions",
+        "denim",
+        "shoes"
+      ],
+      "occasions": [
+        "casual"
+      ],
+      "strength": "tip"
+    }
+  ],
+  "outfits": [
+    {
+      "outfit": "jacket black streetwear +bomber, zip-hoodie grey relaxed streetwear, tshirt white casual, jeans black baggy streetwear, dress-shoes brown formal +loafers +suede",
+      "occasion": "casual",
+      "verdict": "good",
+      "why": "Classic streetwear layering in black, grey and white."
+    },
+    {
+      "outfit": "sweater green relaxed casual +cardigan, tshirt white oversized casual, jeans light blue baggy casual, sneakers white streetwear +chunky",
+      "occasion": "casual",
+      "verdict": "good",
+      "why": "Cardigan over an oversized tee: skate style with polish."
+    },
+    {
+      "outfit": "shirt navy smart casual +stripes, jeans cream baggy smart casual, dress-shoes black smart +loafers",
+      "occasion": "smart",
+      "verdict": "good",
+      "why": "Cream baggy jeans and loafers look dapper."
+    },
+    {
+      "outfit": "sweater black oversized smart casual, jeans black baggy smart casual, dress-shoes black smart casual +loafers",
+      "occasion": "casual",
+      "verdict": "good",
+      "why": "Tonal black outfit lifted by shiny loafers."
+    },
+    {
+      "outfit": "shirt light blue relaxed casual +denim, tshirt white casual, jeans light blue baggy casual, sneakers cream casual +canvas",
+      "occasion": "casual",
+      "verdict": "good",
+      "why": "Light denim shirt over a tee: easy summer casual."
+    },
+    {
+      "outfit": "jacket green casual +chore, sweater white smart casual +turtleneck, jeans denim wide smart casual, dress-shoes black smart +derby",
+      "occasion": "smart",
+      "verdict": "good",
+      "why": "Chore jacket and polished derbies make wide jeans office-ready."
+    },
+    {
+      "outfit": "tshirt white casual, jeans light blue baggy casual, sneakers beige casual +chunky",
+      "occasion": "casual",
+      "verdict": "good",
+      "why": "A tucked tee and high waist exaggerate the proportions well."
+    },
+    {
+      "outfit": "overshirt red casual +check +flannel, tshirt white casual, jeans black baggy casual +carpenter, sneakers black casual",
+      "occasion": "casual",
+      "verdict": "good",
+      "why": "Carpenter jeans and a check overshirt blend streetwear and workwear."
+    },
+    {
+      "outfit": "sweater black casual +quarter-zip, tshirt grey casual, jeans black baggy casual, sneakers black casual",
+      "occasion": "casual",
+      "verdict": "good",
+      "why": "Near-blackout look; a quarter-zip works preppy or hip-hop."
+    },
+    {
+      "outfit": "sweater brown relaxed luxury +cardigan, tshirt white casual, jeans cream baggy casual, sneakers cream minimal",
+      "occasion": "casual",
+      "verdict": "good",
+      "why": "A tonal minimal palette lets the baggy silhouette stand out."
+    },
+    {
+      "outfit": "jacket purple oversized streetwear +bomber, hoodie black streetwear, jeans black baggy streetwear, sneakers black streetwear +chunky",
+      "occasion": "casual",
+      "verdict": "good",
+      "why": "Bomber over a hoodie; the bold jacket adds the colour."
+    },
+    {
+      "outfit": "shirt black oversized smart casual, tshirt white casual, jeans light blue baggy smart casual, dress-shoes black smart casual +loafers",
+      "occasion": "smart",
+      "verdict": "good",
+      "why": "Ankle-length jeans, an open shirt and loafers feel sharp."
+    },
+    {
+      "outfit": "shirt navy relaxed preppy +rugby, jeans light blue wide preppy, sneakers navy casual +suede",
+      "occasion": "casual",
+      "verdict": "good",
+      "why": "A tucked rugby shirt and belt add preppy polish."
+    },
+    {
+      "outfit": "sweater beige smart casual, jeans light blue baggy smart casual, dress-shoes black smart +derby",
+      "occasion": "smart",
+      "verdict": "good",
+      "why": "90s denim and a knit sharpened by black derbies."
+    },
+    {
+      "outfit": "tshirt black streetwear, jeans cream baggy streetwear, sneakers black streetwear, cap black casual streetwear",
+      "occasion": "casual",
+      "verdict": "good",
+      "why": "Two-colour skatewear minimalism."
+    },
+    {
+      "outfit": "jacket grey casual +denim +trucker, tshirt white casual, jeans light blue baggy casual, sneakers black casual +canvas",
+      "occasion": "casual",
+      "verdict": "good",
+      "why": "Denim jacket and baggy jeans in different washes with a white tee."
+    },
+    {
+      "outfit": "jacket beige relaxed smart casual +suede, shirt white relaxed smart casual, jeans light blue baggy smart casual, dress-shoes black smart +derby",
+      "occasion": "smart",
+      "verdict": "good",
+      "why": "A soft suede jacket and loose shirt: relaxed smart casual."
+    }
+  ]
+}

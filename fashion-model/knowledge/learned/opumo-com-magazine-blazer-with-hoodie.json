@@ -1,0 +1,124 @@
+{
+  "source": {
+    "kind": "article",
+    "url": "https://www.opumo.com/magazine/blazer-with-hoodie",
+    "title": "How to perfect the blazer with hoodie combination (OPUMO)",
+    "author": ""
+  },
+  "learned_at": "2026-10-28T15:52:47+00:00",
+  "model": "by hand",
+  "tokens": {
+    "in": 0,
+    "out": 0
+  },
+  "tips": [
+    {
+      "id": "opumo-com-magazine-blazer-with-hoodie-1",
+      "text": "For a blazer over a hoodie, pick a navy, charcoal or grey blazer and a plain grey, black or navy hoodie.",
+      "why": "Neutral layers make the mix look intentional.",
+      "topics": [
+        "colour",
+        "layering",
+        "streetwear"
+      ],
+      "occasions": [
+        "casual",
+        "smart",
+        "night"
+      ],
+      "strength": "tip"
+    },
+    {
+      "id": "opumo-com-magazine-blazer-with-hoodie-2",
+      "text": "Under a blazer, wear a slim mid-weight hoodie, not a bulky baggy one, and let the hood sit over the collar.",
+      "why": "A bulky hoodie spoils the jacket's line.",
+      "topics": [
+        "layering",
+        "fit"
+      ],
+      "occasions": [
+        "casual",
+        "smart"
+      ],
+      "strength": "tip"
+    },
+    {
+      "id": "opumo-com-magazine-blazer-with-hoodie-3",
+      "text": "With a blazer and hoodie, wear slim trousers, chinos or dark jeans rather than ripped jeans or joggers.",
+      "why": "Tailored bottoms keep the mix polished.",
+      "topics": [
+        "trousers",
+        "smart casual",
+        "streetwear"
+      ],
+      "occasions": [
+        "casual",
+        "smart",
+        "work"
+      ],
+      "strength": "rule"
+    },
+    {
+      "id": "opumo-com-magazine-blazer-with-hoodie-4",
+      "text": "Shoes set the level of a blazer-and-hoodie outfit: Chelsea boots or derbies for evenings, loafers or clean sneakers for daytime.",
+      "why": "Footwear decides how dressed up it looks.",
+      "topics": [
+        "shoes",
+        "smart casual"
+      ],
+      "occasions": [
+        "casual",
+        "night",
+        "smart"
+      ],
+      "strength": "tip"
+    },
+    {
+      "id": "opumo-com-magazine-blazer-with-hoodie-5",
+      "text": "On cold days add an overcoat over the blazer and hoodie.",
+      "why": "Keeps the layered look with more warmth.",
+      "topics": [
+        "outerwear",
+        "layering",
+        "weather"
+      ],
+      "occasions": [
+        "casual",
+        "smart"
+      ],
+      "strength": "tip"
+    }
+  ],
+  "outfits": [
+    {
+      "outfit": "jacket charcoal smart casual +blazer, hoodie black minimal, trousers black slim smart casual, boots black smart casual +chelsea",
+      "occasion": "night",
+      "verdict": "good",
+      "why": "Sleek monochrome for city nights."
+    },
+    {
+      "outfit": "jacket navy smart casual +blazer, hoodie grey minimal, jeans navy casual, dress-shoes brown formal +loafers",
+      "occasion": "work",
+      "verdict": "good",
+      "why": "Office polish with relaxed comfort for a casual Friday."
+    },
+    {
+      "outfit": "jacket olive smart casual +blazer, hoodie green casual, trousers olive slim outdoor, boots brown smart casual",
+      "occasion": "casual",
+      "verdict": "good",
+      "why": "Earthy tones and rugged boots for a weekend."
+    },
+    {
+      "outfit": "jacket beige smart casual +blazer, hoodie white minimal, trousers beige slim smart casual +chinos, sneakers white minimal",
+      "occasion": "casual",
+      "verdict": "good",
+      "why": "Soft neutrals and minimal sneakers: a relaxed gallery look."
+    },
+    {
+      "outfit": "jacket navy smart casual +blazer, hoodie navy minimal, trousers grey smart casual, boots brown smart casual",
+      "occasion": "night",
+      "verdict": "good",
+      "why": "Tonal navy layers with grey trousers for a date."
+    }
+  ]
+}

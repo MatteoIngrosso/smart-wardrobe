@@ -1,8 +1,8 @@
 # Fashion bible
 
-Built 2026-10-18 from 67 learnt sources, 26 rules, 715 tips and 127 example outfits.
+Built 2026-10-28 from 85 learnt sources, 26 rules, 815 tips and 242 example outfits.
 
-Model accuracy on outfits it hadn't seen: **87%** (rulebook weights alone: 85%).
+Model accuracy on outfits it hadn't seen: **90%** (rulebook weights alone: 86%).
 
 ## Rules
 
@@ -10,32 +10,32 @@ Checked automatically on every outfit. Weight is how much each one matters after
 
 | Rule | Weight | Why |
 |---|---|---|
-| Don't mix gym kit with tailoring | 1.98 (1.8) | Sportswear and formal pieces come from different worlds; together they look accidental. |
-| Dress for the occasion | 1.87 (2.0) | Being clearly under- or overdressed is the most noticed mistake; aim for the level of the room. |
-| A tie needs a collar and long trousers | 1.67 (2.0) | A tie only works with a collared shirt and tailored trousers, never with a hoodie or shorts. |
-| Keep pieces at one level of dressiness | 1.62 (1.5) | A very casual piece next to a very dressy one makes both look wrong; step at most one level apart. |
-| Sports clothes for training | 1.59 (1.5) | At the gym, clothes made to move and breathe, and proper training shoes. |
-| Neutrals first, one accent colour | 1.41 (1.5) | Navy, grey, white, beige, brown, olive and black all go together; one brighter colour on top of them looks chosen, two or three look random. |
+| Don't mix gym kit with tailoring | 1.97 (1.8) | Gym kit and formal pieces come from different worlds; together they look accidental. Sporty with smart casual (a hoodie over a polo, a track jacket over a shirt) is a normal high-low streetwear mix. |
+| Keep pieces at one level of dressiness | 1.64 (1.5) | A very casual piece next to a very dressy one makes both look wrong; step at most one level apart. |
+| A tie needs a collar and long trousers | 1.62 (2.0) | A tie only works with a collared shirt and tailored trousers, never with a hoodie or shorts. |
+| Sports clothes for training | 1.55 (1.5) | At the gym, clothes made to move and breathe, and proper training shoes. |
+| Colours that fight | 1.45 (1.2) | Two loud colours of similar strength compete instead of working together. |
+| Dress for the occasion | 1.40 (2.0) | Being clearly under- or overdressed is the most noticed mistake; aim for the level of the room. |
 | Belt matches the shoes | 1.40 (0.9) | With leather shoes, the belt is in the same colour family: black with black, brown with brown. |
-| Colours that fight | 1.37 (1.2) | Two loud colours of similar strength compete instead of working together. |
-| Shorts only when it's warm | 1.36 (1.4) | Shorts below about 17°C look out of season. |
-| Shoes at the level of the outfit | 1.29 (1.6) | Shoes are read first: dress shoes with joggers or trainers with a tie break the look. |
-| Fabrics for the season | 1.27 (0.8) | Linen and seersucker for heat, tweed, flannel and corduroy for cold. |
-| Dress for the temperature | 1.26 (1.5) | Too many layers is as uncomfortable as too few: about one warm layer above 24°C, three or four when mild, six or more when cold. |
-| Go easy on patterns | 1.15 (0.7) | One pattern is easy. Two need clearly different scales (fine stripe with a large check), so most days keep it to one. |
-| Denim on denim needs contrast | 1.09 (0.8) | A denim top with jeans in the same wash reads as a uniform; pick clearly different washes or break it up. |
-| Ready for rain | 1.04 (0.8) | On wet days a jacket that sheds water and shoes that don't mind puddles; suede and white trainers suffer. |
-| The coat matches the outfit | 1.02 (0.9) | A puffer or rain shell over tailoring undoes it; an overcoat finishes a smart outfit. |
-| One statement piece | 1.01 (1.0) | A big graphic, logo or loud piece needs quiet pieces around it to stand out. |
-| Balance volume | 1.01 (1.2) | A roomy top looks best over slimmer trousers and the other way round; roomy on roomy only works as a deliberate streetwear look. |
-| Three colours at most | 1.00 (0.8) | Past three colours an outfit gets busy and the eye has nowhere to rest. |
-| Classic colour pairings | 0.85 (0.8) | Some top and bottom colours are proven together: navy and grey, white and denim, olive and cream. |
-| Suits want shirts and leather shoes | 0.69 (1.5) | A suit is the dressiest thing most men own; a T-shirt or trainers pull it down to casual. |
-| Styles that suit the occasion | 0.47 (0.8) | Each occasion has its own vocabulary: tailoring for work, sportswear for the gym. |
-| One metal for accessories | 0.41 (0.4) | Watch, rings and bracelet look tidier all gold or all silver. |
-| Tonal dressing works | 0.34 (0.6) | Shades of one colour from head to toe look calm and expensive. |
-| Mix light and dark | 0.12 (0.6) | Contrast between top and bottom gives the outfit shape; all mid-tones look flat. |
-| One story per outfit | 0.00 (0.6) | When every piece shares a style the outfit reads as intentional. |
+| Shorts only when it's warm | 1.40 (1.4) | Shorts below about 17°C look out of season. |
+| Neutrals first, one accent colour | 1.39 (1.5) | Navy, grey, white, beige, brown, olive and black all go together; one brighter colour on top of them looks chosen, two or three look random. |
+| Fabrics for the season | 1.35 (0.8) | Linen and seersucker for heat, tweed, flannel and corduroy for cold. |
+| Shoes at the level of the outfit | 1.30 (1.6) | Shoes are read first: dress shoes with joggers or trainers with a tie break the look. |
+| Dress for the temperature | 1.20 (1.5) | Too many layers is as uncomfortable as too few: about one warm layer above 24°C, three or four when mild, six or more when cold. |
+| One statement piece | 1.20 (1.0) | A big graphic, logo or loud piece needs quiet pieces around it to stand out. |
+| Go easy on patterns | 1.19 (0.7) | One pattern is easy. Two need clearly different scales (fine stripe with a large check), so most days keep it to one. |
+| Balance volume | 1.11 (1.2) | A roomy top looks best over slimmer trousers and the other way round; roomy on roomy only works as a deliberate streetwear look. |
+| Three colours at most | 1.11 (0.8) | Past three colours an outfit gets busy and the eye has nowhere to rest. |
+| Ready for rain | 1.09 (0.8) | On wet days a jacket that sheds water and shoes that don't mind puddles; suede and white trainers suffer. |
+| Denim on denim needs contrast | 1.04 (0.8) | A denim top with jeans in the same wash reads as a uniform; pick clearly different washes or break it up. |
+| The coat matches the outfit | 0.96 (0.9) | A puffer or rain shell over tailoring undoes it; an overcoat finishes a smart outfit. |
+| Classic colour pairings | 0.72 (0.8) | Some top and bottom colours are proven together: navy and grey, white and denim, olive and cream. |
+| Styles that suit the occasion | 0.69 (0.8) | Each occasion has its own vocabulary: tailoring for work, sportswear for the gym. |
+| Suits want shirts and leather shoes | 0.58 (1.5) | A suit is the dressiest thing most men own; a T-shirt or trainers pull it down to casual. |
+| One metal for accessories | 0.40 (0.4) | Watch, rings and bracelet look tidier all gold or all silver. |
+| Tonal dressing works | 0.20 (0.6) | Shades of one colour from head to toe look calm and expensive. |
+| One story per outfit | 0.08 (0.6) | When every piece shares a style the outfit reads as intentional. |
+| Mix light and dark | 0.00 (0.6) | Contrast between top and bottom gives the outfit shape; all mid-tones look flat. |
 
 ## Tips
 
@@ -88,6 +88,26 @@ Checked automatically on every outfit. Weight is how much each one matters after
 - Match your outfit's contrast to your own: strong dark-and-light colouring suits dramatic dark tailoring, softer colouring suits muted slate and charcoal. _Clothes that are far bolder or softer than your features overwhelm or flatten you._ (Work / meeting, Smart casual)
 - Notice which colours bring you compliments; they usually point to your best palette. _Other people judge your face more objectively than you do._ (Everyday, Smart casual)
 - In daytime heat wear breathable fabrics in lighter tones; save richer, darker colours for the evening. _Light colours stay cooler, and dark ones feel right after dark._ (Everyday, Night out)
+- With bold sneakers like Jordan 1s, keep the rest of the outfit neutral (black, white, grey) so the shoes stand out. _Neutral basics pair cleanly with colourful sneakers._ (Everyday)
+- Don't match every piece to the sneakers; echo the shoe colourway in one piece only, such as a cap, a bag or the print of a tee. _Head-to-toe matching looks forced._ (Everyday)
+- A graphic tee with subtle details in the sneakers' colours ties the outfit together better than a bright tee that competes with them. _Subtle colour echoes connect top and shoes._ (Everyday)
+- Keep colours and patterns minimal with baggy jeans, so the loose silhouette is the statement. _Tonal outfits let the proportions do the talking._ (Everyday)
+- Black, grey and white layered from light to dark is an easy palette with baggy jeans. _Tonal layering keeps loose outfits cohesive._ (Everyday)
+- An all-black outfit of tee, cargo pants and low-top sneakers is a clean, minimal streetwear base. _Monochrome is cohesive and timeless._ (Everyday, Night out)
+- Calm a bold or pastel graphic tee with dark neutrals: grey chinos, black or olive. _Dark neutrals tame a tricky colour._ (Everyday, Work / meeting)
+- Black cargos suit high-low dressing: with a polo, a button-down or a sport coat they work for smart casual nights out. _Black blends into dressier outfits._ (Smart casual, Night out)
+- Olive, khaki, grey and brown cargos keep a military feel; pair them with workwear shirts, overshirts and boots. _The classic utility look hangs together._ (Everyday)
+- Wheat or yellow boots go with lighter denim and light chinos; dark brown or black boots with dark denim and grey or black chinos for a sharper look. _Boot and trouser tones should agree._ (Everyday, Smart casual)
+- Don't match the sneakers' colour on every item; pick complementary textures and styles instead. _Full colour matching looks costumed._ (Everyday)
+- For a blazer over a hoodie, pick a navy, charcoal or grey blazer and a plain grey, black or navy hoodie. _Neutral layers make the mix look intentional._ (Everyday, Smart casual, Night out)
+- Pick puffers in charcoal, navy, olive, burgundy or matte black; skip neon and shiny finishes unless going full streetwear. _Muted shades pair with the rest of the wardrobe._ (Everyday, Smart casual)
+- Use a bright bomber as the single colour against an otherwise monochrome outfit, or a neutral one (olive, grey, khaki) to blend in. _One colour pop becomes the focal point._ (Everyday, Smart casual)
+- Wear an open zip-up over a graphic tee to frame the print, and keep the palette tonal (navy on navy, grey on grey, washed black). _Tonal dressing looks deliberate._ (Everyday)
+- Build streetwear outfits from a tonal palette (black, grey, off-white, olive, navy) and avoid bright colour blocks. _Keeps the look cohesive and restrained._ (Everyday)
+- For nights out favour dark colours (black, navy, charcoal, deep khaki); they look sharp in low light and hide spills. _Dark outfits stay sharp after dark._ (Night out)
+- An all-black outfit (tee, jeans, jacket, boots) is a foolproof night-out look for any venue. _Monochrome looks deliberate and sharp._ (Night out)
+- Link the sneakers to the outfit subtly, with a neutral palette or one tonal echo of the shoe, without looking over-coordinated. _Subtle matching looks cohesive._ (Everyday)
+- An all-black tee with black jeans or joggers goes with almost any colourful sneaker. _Black is neutral against any colour._ (Everyday, Night out)
 - Colours in the same family as your hair and skin tone, such as browns and olives on warm colouring, can look especially rich. _Tonal harmony with your colouring looks deliberate._ (opinion)
 - Light colours are fine in winter; a military-style coat keeps a pale outfit looking tough. _Season does not have to mean dark colours only._ (opinion; Everyday)
 - Don't lean on the old complementary colour-wheel rule; use proven pairings such as black and camel, navy and burgundy, green and brown, pink and grey. _Opposite colours often clash, and tested pairings are safer._ (opinion)
@@ -114,6 +134,11 @@ Checked automatically on every outfit. Weight is how much each one matters after
 - The jacket should button without pulling, leaving room to slide a flat hand inside. _Too tight causes strain lines; too loose looks sloppy._ (Work / meeting, Elegant)
 - Read the jacket's back: horizontal creases mean too tight, vertical folds mean excess cloth, and spreading vents mean tight hips or seat. _The back exposes fit problems that are hard to hide._ (Work / meeting, Elegant)
 - Choose the size that fits shoulders, chest and seat, then have the waist, sleeves and trouser length tailored. _Structural changes are costly and rarely succeed, and making a suit smaller is easier than larger._ (Work / meeting, Elegant)
+- Baggy jeans should sit at the waist; the room should start below the waistband, not from jeans sliding down. _Keeps the loose silhouette intentional._ (Everyday)
+- Go relaxed in fit, but not so baggy or so tight that it looks unintentional. _Balanced looseness keeps streetwear deliberate._ (Everyday)
+- Slim cargo pants with few pockets read dressier; relaxed or baggy cuts with many pockets keep the look casual. _Fit and pockets set how formal cargos look._ (Everyday, Smart casual)
+- A puffer should fit: shoulder seams on the shoulder, sleeves to the wrist, hem around the waist; narrow baffles keep it from ballooning. _Fit keeps a bulky jacket from looking shapeless._ (Everyday)
+- A polo should be slim but not tight: sleeves mid-bicep, hem around mid-fly; avoid baggy polos with long sleeves. _A shapeless polo looks like an afterthought._ (Everyday, Smart casual)
 - Choose clothes for your own build rather than copying a celebrity's exact cut; slimmer, broader or shorter men need different proportions. _The goal is the effect, not someone else's measurements._
 - Know your measurements and what fits your body; a lean frame of average height looks best between tailored and relaxed, not skin tight. _Clothes with shape and some ease look natural rather than tense._
 - Tight all-black clothes such as skinny black jeans, a tight shirt and a cropped jacket miss the point of minimalism; the clothes need air around the body. _Colour alone doesn't make the look; silhouette does._
@@ -142,6 +167,8 @@ Checked automatically on every outfit. Weight is how much each one matters after
 - Give skinny fits shape with sharp elements: dress shoes, tops with defined shoulders and waist, or a slight flare at the hem. _They stop a slim outfit reading as one straight, thin line._ (Everyday, Smart casual)
 - Don't overdo looseness; an outfit that is baggy everywhere can look as if you didn't try. _Too much volume reads sloppy rather than relaxed._ (Everyday)
 - Anchor a baggy outfit at the waist: tuck the top in and add a belt. _A defined middle makes the look deliberate and shows your shape._ (Everyday, Smart casual)
+- Baggy cargos look tidy with a single break at the shoe and a higher waist; wear them with a tee or crewneck and boots or sneakers. _Clean lines keep loose cargos intentional._ (Everyday)
+- A slim zip-up suits tailored trousers; a relaxed or boxy one suits streetwear looks. _The hoodie's fit should match the outfit's level._ (Everyday, Smart casual)
 - A boxy T-shirt should fall at the waist with sleeves reaching below mid-upper-arm; very short sleeves look shrunken on a boxy cut. _Boxy proportions need length in the sleeve._ (opinion; Everyday)
 - Wide-leg trousers flatter a broader range of builds than slim fits. _Their extra room is more forgiving._ (opinion)
 - Choose how tight or loose to wear clothes by your body and taste, not by what the current trend dictates. _Fit that suits you outlasts any trend cycle._ (opinion; Everyday, Smart casual)
@@ -150,6 +177,7 @@ Checked automatically on every outfit. Weight is how much each one matters after
 
 - To look taller: one colour from shoes to waist, no-break trousers, and fitted rather than baggy pieces. _Unbroken lines lengthen the body._ (2 sources)
 - Match the looseness of top and bottom: don't pair loose trousers with a tight shirt or the other way round. _Consistent volume keeps the silhouette coherent._ (2 sources)
+- Balance wide trousers with a roomy, oversized top. _A slim top over wide legs makes the torso look small; a loose top keeps the proportions even._ (2 sources; Everyday)
 - For a bigger frame: darker colours, vertical lines, structured jackets and plain fabrics rather than clingy or shiny ones. _Structure and dark colours slim the outline._
 - Choose controlled volume: trousers with room through the hip that taper gently, and relaxed jackets that still follow the body. _It sits between 2010s skinny and today's oversized extremes._
 - If you are slim, avoid oversized collars and very wide lapels. _Big details overwhelm a slight frame._
@@ -162,13 +190,24 @@ Checked automatically on every outfit. Weight is how much each one matters after
 - Favour cropped jackets such as a Harrington or bomber, and keep overcoats above mid-thigh. _Long coats swamp a short frame like a cape._
 - Judge jacket length by balance: back collar to hem should roughly equal hem to trouser bottom, which normally still covers the seat. _Balanced proportions outlast trends; jackets too short or too long look off._ (Work / meeting, Elegant)
 - Place the jacket button at the natural waist; shorter men may raise it slightly, but the tie should never show below it. _The buttoning point sets your proportions, and a tie tip peeking out looks sloppy._ (Work / meeting, Elegant)
-- Balance wide trousers with a roomy, oversized top. _A slim top over wide legs makes the torso look small; a loose top keeps the proportions even._ (Everyday)
 - When mixing tight and loose, let one half lead: an oversized tee over slim jeans, or a cropped boxy hoodie over barrel-leg trousers. _Contrasting volumes look intentional when one piece clearly dominates._ (Everyday)
+- Cropped or rolled hems on baggy jeans show the shoe; long hems that puddle over sneakers suit skate looks only. _Hem length decides how tidy the outfit looks._ (Everyday)
+- Match trouser width to sneaker bulk: chunky sneakers with straight or wider legs, slim sneakers with slim trousers. _Balanced widths keep proportions right._ (Everyday)
+- When the sneakers are the focal point, cut fabric at the ankle: pin-roll or crop jeans, or wear tapered trousers. _Less bunched fabric keeps the sneakers visible._ (Everyday)
+- Balance a bulky puffer with slim or straight structured trousers and sleek shoes (Chelsea boots, minimal sneakers, lace-ups). _A tapered lower half avoids a blocky look._ (Everyday, Smart casual)
+- The hoodie hem should sit just below the waistband; a cropped zip-up pairs best with wide trousers. _Length balances top against bottom._ (Everyday)
+- Pair wide or stacked trousers with a cropped, boxy jacket to balance the volume. _A shorter top offsets loose bottoms._ (Everyday)
+- An oversized hoodie with baggy jeans gives a relaxed streetwear silhouette; a fitted hoodie with slimmer trousers looks cleaner. _The silhouette sets the mood._ (Everyday)
+- Balance an oversized tee with straight or tapered bottoms, or go fully relaxed with baggy cargos for a streetwear look; avoid super skinny jeans. _Extreme contrast looks unbalanced._ (Everyday)
+- An oversized tee with shorts should end just below the waistband so the shorter bottom balances it. _Shorter bottoms let the tee run longer._ (Everyday)
+- A tee cropped near the waistband balances slouchy, baggy jeans. _A short top offsets loose bottoms._ (Everyday)
+- Show high-tops with shorts, slim joggers or cropped trousers that don't cover the shoe. _Shorter hems reveal the whole shoe._ (Everyday)
 - For extra height, pick chunky-soled trainers, commando-soled shoes or work boots rather than Cuban heels. _They add height quietly; obvious heels can look desperate._ (opinion)
 - With wide or barrel-leg trousers, either balance with a neater, smaller top or commit to an equally slouchy one. _Every layer's shape changes the overall silhouette._ (opinion; Everyday, Smart casual)
 - Wide-leg trousers and relaxed blazers work especially well with sneakers. _Loose tailoring shares the ease of casual shoes._ (opinion; Smart casual, Everyday)
 - A double-breasted navy blazer adds structure and can make you look taller and broader; it suits most builds. _Its overlapping front and strong lines sharpen the silhouette._ (opinion; Smart casual, Work / meeting)
 - Play a hoodie against wide-leg trousers or a long formal coat for high-low contrast. _The mix of casual and formal looks deliberate._ (opinion; Everyday, Smart casual)
+- Avoid an oversized puffer over baggy jeans unless you want a full streetwear silhouette. _Volume top and bottom balloons the outline._ (opinion; Everyday)
 
 ### Suits
 
@@ -220,6 +259,7 @@ Checked automatically on every outfit. Weight is how much each one matters after
 - Avoid pairing a slim suit with bare ankles and loafers. _The look has become a cliche, much like an extra shirt button undone._ (opinion; Work / meeting, Elegant)
 - Borrow 1980s Miami Vice style through its relaxed tailoring and colour rather than recreating the full costume. _The look nods to its era without seeming dated or flashy._ (opinion; Smart casual, Night out)
 - Start from a roomy suit with generous, broad shoulders, like the Armani tailoring in American Gigolo. _The easy silhouette is the base of the look._ (opinion; Smart casual, Night out)
+- A suit worn with a crewneck tee and clean sneakers bridges tailoring and streetwear for smart-casual events. _Casual top and shoes soften a suit._ (opinion; Smart casual, Night out)
 
 ### Shirts
 
@@ -286,6 +326,12 @@ Checked automatically on every outfit. Weight is how much each one matters after
 - Skip technical mountain or sports jackets at the office; a trench or mac covers cool, wet days. _Performance outerwear looks out of place over office clothes._ (Work / meeting)
 - Dress up a rugged suede jacket with a crisp white shirt. _The clean shirt makes it fit for smarter settings._ (Smart casual)
 - For a first overshirt, a military-style cotton one in olive or khaki is a safe pick. _It reflects the garment's fatigue-shirt origins and goes with most casual clothes._ (Everyday)
+- A bomber over a hoodie or tee, with baggy jeans and sneakers, is a reliable streetwear formula. _A proven layering combination in any colour._ (Everyday)
+- Wheat work boots and a bomber jacket make a classic streetwear pairing; darker boots go with a dark raincoat or car coat for a polished look. _Outerwear sets the boots' mood._ (Everyday, Smart casual)
+- On cold days add an overcoat over the blazer and hoodie. _Keeps the layered look with more warmth._ (Everyday, Smart casual)
+- A bomber goes with most neutral combinations, from a tee and jeans to a polo, chinos or a button-down. _A versatile casual outer layer._ (Everyday, Smart casual)
+- A slim, minimal bomber over a polo or button-down with chinos or trousers works for smart casual. _A close fit keeps smart-casual lines clean._ (Smart casual)
+- Classic bombers look best with jeans, chinos or trousers; only sporty ones suit shorts. _A classic bomber with shorts looks unbalanced._ (Everyday)
 - Save raglan sleeves for raincoats; on a smart overcoat they lose too much shape. _Without a defined shoulder line the coat looks shapeless and less elegant._ (opinion)
 - A sharply roped, structured shoulder suits a coat worn with tailoring, not one worn with denim and boots. _Its formality clashes with rugged casual clothes._ (opinion)
 - For a first overcoat, navy is the most versatile colour, pale grey next, camel the least. _Navy sits comfortably over the widest range of outfits._ (opinion)
@@ -295,12 +341,17 @@ Checked automatically on every outfit. Weight is how much each one matters after
 - Break up a heavy suede coat with patterned trousers. _Pattern gives a classic suede piece a modern edge._ (opinion; Everyday)
 - Leave the cuffs of a suede jacket open or roll the sleeves. _It gives an easy, slightly careless feel that suits the material._ (opinion; Everyday)
 - A suede trench in a versatile shade such as dusty tan makes a long-term outerwear investment. _A neutral suede coat gets better with age and goes with much._ (opinion)
+- A black bomber works wherever a leather jacket would: with denim and boots or sneakers. _It shares the moto jacket's edge._ (opinion; Everyday, Night out)
 
 ### Trousers
 
 - Trousers should have little or no break: the hem just touches the shoe. Slim trousers look best with no break at all. _Fabric pooling at the ankle looks sloppy._ (4 sources)
+- Swap jeans for tailored trousers, ideally navy, to sharpen a streetwear outfit. _Trousers lift the formality while the rest stays relaxed._ (2 sources; Smart casual)
 - Chinos in navy, beige or olive bridge the gap between jeans and suit trousers. _They go with everything from a T-shirt to a blazer._
 - Suit trousers should be neither tight nor baggy, with pleats lying flat and a slight break or none. _Clean trouser lines finish the suit._ (Work / meeting, Elegant)
+- With high-top sneakers, wear trousers that just touch the tongue with a slight break; avoid hems that bunch over the shoe. _The shoe stays visible and the hem looks tidy._ (Everyday)
+- Avoid cinched or elastic hems on cargos with leather boots or dress shoes; they make them look like joggers. _Cinched hems clash with leather footwear._ (Everyday, Smart casual)
+- With a blazer and hoodie, wear slim trousers, chinos or dark jeans rather than ripped jeans or joggers. _Tailored bottoms keep the mix polished._ (Everyday, Smart casual, Work / meeting)
 - Grey flannel trousers are the step up from chinos when an autumn outfit needs to be dressier. _Flannel is smart but soft and textured._ (Smart casual, Work / meeting)
 - Own trousers in several fabrics, such as cotton twill, linen, chinos and denim, mostly in neutral colours; the same few shapes look different each time. _Material variety multiplies outfits._
 - Trousers worn with a double-breasted jacket look clean with side adjusters instead of belt loops, and a single pleat adds softness. _No belt keeps the line uninterrupted._ (Elegant, Work / meeting)
@@ -309,7 +360,6 @@ Checked automatically on every outfit. Weight is how much each one matters after
 - Start a minimal wardrobe with trousers that have presence: pleated or flat-front charcoal wool that doesn't cling to thigh or calf. _Fuller trousers give simple tops shape._ (Smart casual, Work / meeting)
 - If you're short, have one pair of trousers hemmed to the perfect length and use it as the template for hemming every future pair. _Off-the-rack trousers are usually too long and pool at the ankle._
 - Own grey flannel trousers: they go with jackets of any colour or texture and look more elegant than jeans. _They are the most versatile odd trouser for cold months._ (Smart casual, Work / meeting)
-- Swap jeans for tailored trousers, ideally navy, to sharpen a streetwear outfit. _Trousers lift the formality while the rest stays relaxed._ (Smart casual)
 - Match the room: cargo trousers at a gathering where everyone else wears smart trousers will look out of place. _Smart casual still has to fit the setting._ (Smart casual)
 - Wear dress trousers or chinos to an interview, not shorts, cargos or sweatpants; if you must wear jeans, add a blazer or sport coat. _Jeans still read casual on their own._ (Work / meeting)
 - Cut summer trousers wide enough to let air through and long enough to rest on the shoe. _Roomy legs keep you cool and the full length keeps them smart._ (Elegant, Smart casual)
@@ -327,6 +377,7 @@ Checked automatically on every outfit. Weight is how much each one matters after
 - If you're new to tailored trousers, skip loud colours and prints. _Plain trousers are easier to wear well._
 - Leave room to move and a rise high enough that the seat doesn't sag. _Comfort and a clean line go together._
 - Set the trouser hem by the shoe: a longer hem over the heel with chunky loafers or sneakers, ankle length or slightly shorter with slim dress shoes. _The hem should match the shoe's bulk and the outfit's formality._ (Everyday, Smart casual)
+- Roomy work pants and cargo trousers go well with high-top basketball sneakers. _Wider legs balance the bulk of the shoe._ (Everyday)
 - Pleated trousers in cream or khaki bring ease and a vintage touch to casual outfits. _Pleats add room and character._ (opinion; Everyday, Smart casual)
 - Choose summer trousers with side adjusters or a Gurkha waist instead of belt loops. _Skipping the belt removes bulk and heat at the waist._ (opinion; Smart casual)
 - Workwear-style trousers make a practical, everyday option for smart-casual outfits. _They are hard-wearing yet tidier than jeans or cargos._ (opinion; Smart casual, Everyday)
@@ -338,6 +389,8 @@ Checked automatically on every outfit. Weight is how much each one matters after
 - A fuller leg and higher rise flatter most men. _They lengthen the silhouette._ (opinion)
 - Hem trousers with a light to full break, the front meeting the top of the shoe; looser legs can sit slightly longer. _It suits today's fuller trouser shapes._ (opinion)
 - Mid-grey trousers suit tailored outfits, while navy and black lean casual or fashion-forward. _Each colour sets a different tone._ (opinion; Smart casual, Work / meeting)
+- Elastic-cuffed joggers belong to sweatpants; denim or khaki joggers with high-tops look dated. _Cuffed non-sweat trousers look like a past trend._ (opinion; Everyday)
+- Relaxed tailored trousers can be dressed up while still working with clean high-top sneakers. _A slouchy cut bridges tailoring and sneakers._ (opinion; Everyday, Night out)
 
 ### Denim
 
@@ -358,6 +411,8 @@ Checked automatically on every outfit. Weight is how much each one matters after
 - Avoid extreme skinny or extreme baggy jeans; stay near the middle. _Extreme cuts date quickly._ (Everyday)
 - Stick to timeless jean colours: indigo is always versatile and white is underrated. _Classic colours outlast trendy ones._ (Everyday)
 - Pick jeans with a realistic wash and minimal distressing. _Heavy fake wear looks dated._ (Everyday)
+- Baggy jeans can be dressed up with a knit or a shirt and loafers or derbies; light washes suit the casual look, dark or cream ones the smarter one. _Polished shoes and tops sharpen a loose fit._ (Smart casual)
+- Dark jeans in black or deep indigo, slim or straight, are the easiest base for a night out. _They go with almost anything._ (Night out)
 - Raw selvedge denim is a strong choice for streetwear jeans; a turn-up shows the selvedge edge. _Raw denim ages well and the edge is a subtle detail._ (opinion; Everyday)
 - Black denim looks best in a slimmer fit, while blue workwear-style denim can be relaxed. _Each fit suits the character of the fabric._ (opinion; Everyday)
 - Dark straight-leg jeans look sharp with loafers. _The clean leg and smart shoe dress denim up._ (opinion; Everyday, Smart casual)
@@ -367,6 +422,7 @@ Checked automatically on every outfit. Weight is how much each one matters after
 - Spend on shoes and keep them clean; scuffed shoes ruin a good outfit. _Shoes are noticed more than most men think._ (2 sources)
 - Minimal white leather sneakers can go with chinos or a casual blazer, but not with a business suit or a tie. _They are smart casual, not formal._ (2 sources)
 - Socks match the trousers (or the shoes); with shorts or loafers in summer, invisible no-show socks. _It lengthens the leg and keeps the eye moving._ (2 sources)
+- To smarten streetwear, choose minimal low-profile sneakers over chunky trainers. _Bulky trainers pull attention away from the rest of the outfit._ (2 sources; Everyday, Smart casual)
 - From dressiest to most casual: black oxfords, brown oxfords, derbies and brogues, loafers, boots, clean leather sneakers, canvas or running shoes. _Pick the shoe from the same rung as the rest of the outfit._
 - Suede shoes are less formal than polished leather and hate rain. _Texture lowers formality._
 - Brown shoes with a navy or grey suit are a classic; black shoes for the most formal settings and dark suits. _Brown is warmer and more versatile; black is stricter._
@@ -379,6 +435,8 @@ Checked automatically on every outfit. Weight is how much each one matters after
 - Brown shoes suit almost everything except black suits and the most formal offices. _Brown is less formal than black but far more versatile._
 - Keep polished oxfords for the occasions and jobs that still call for them. _Sneakers don't replace formal shoes everywhere._ (Work / meeting, Elegant)
 - With a dark suit at a cocktail-dress event, wear dark socks with your loafers. _Bare ankles are too casual for that level of formality._ (Elegant, Night out)
+- With shorts and high-top sneakers, wear plain white or black crew socks, never no-show socks. _Bare ankles above a high-top look awkward._ (Everyday)
+- Keep running sneakers away from business attire. _Athletic shoes clash with work dress._ (Work / meeting, Smart casual)
 - Pointed boots under creased trousers extend the line of the leg; with a higher waist they make legs look longer. _An unbroken vertical line adds height._ (Night out)
 - Suede chukkas bridge rugged and refined: smarter than sneakers, less formal than dress shoes, and they go with almost any trousers. _Versatile shoes cover more outfits._ (Everyday, Smart casual)
 - A few versatile shoes cover most needs: dark chukkas, dark leather boots, clean minimal sneakers and a pair of loafers. _Shoes that cross categories save money._
@@ -393,7 +451,6 @@ Checked automatically on every outfit. Weight is how much each one matters after
 - Keep a beater pair, such as an old daily shoe or a durable hiking shoe, for rain, mud and chores. _It saves your good shoes and lets them last for years._ (Everyday)
 - Contrast glossy shoes, such as polished leather loafers, with matte or textured clothes. _The shine adds polish against soft fabrics._ (Smart casual)
 - Pick simple, versatile sneakers and avoid flashy colours or bulky oversized shapes. _Sneakers should blend into the outfit, not steal attention._ (Everyday)
-- To smarten streetwear, choose minimal low-profile sneakers over chunky trainers. _Bulky trainers pull attention away from the rest of the outfit._ (Everyday, Smart casual)
 - Have your feet measured properly before buying good shoes. _Many men wear the wrong shoe size._
 - Use shoes to tune the formality: loafers lift a casual outfit, sneakers relax a dressier one. _Footwear shifts the whole look up or down quickly._ (Smart casual)
 - With light-wash jeans at work, wear loafers or Chelsea boots rather than sneakers. _Sneakers would push an already casual wash too far._ (Work / meeting)
@@ -417,6 +474,12 @@ Checked automatically on every outfit. Weight is how much each one matters after
 - Sockless loafers suit very casual outfits, such as denim shorts and a tank top. _The relaxed clothes make bare ankles look natural._ (Everyday)
 - Bare ankles are at home in hot, waterside settings, though boat shoes or sandals may suit them better than loafers. _Heat and water call for footwear meant to be worn without socks._ (Everyday)
 - In summer, socks are the practical choice with loafers. _They prevent blisters and keep sweat off the leather._ (Everyday, Smart casual)
+- In streetwear the sneakers are the centrepiece: start with clean white pairs, then add statement ones. _Shoes anchor the outfit._ (Everyday)
+- Timberland-style work boots suit casual basics (jeans, tees, hoodies, sweats) and smarter pieces like chinos, shirts and a wool coat for smart casual. _Rugged boots bridge relaxed and smarter outfits._ (Everyday, Smart casual)
+- Shoes set the level of a blazer-and-hoodie outfit: Chelsea boots or derbies for evenings, loafers or clean sneakers for daytime. _Footwear decides how dressed up it looks._ (Everyday, Night out, Smart casual)
+- Pair a polo with tailored chinos, trousers or well-fitting jeans, and loafers, chukkas or clean sneakers rather than boxy dress shoes. _Refined but relaxed pieces keep a polo modern._ (Everyday, Smart casual)
+- Keep shoes muted, like black runners or low-profile sneakers, so the layers stay the focus. _Quiet shoes keep a minimal look calm._ (Everyday)
+- With a simple outfit, let a loud sneaker colourway be the focal point. _A standout shoe carries a plain outfit._ (Everyday)
 - A comfort shoe such as foam slides, a leather mule or a wide anatomical shoe is worth having for travel and errands. _Some days need maximum comfort._ (opinion; Everyday)
 - In summer, wear loafers or white or tan sneakers without socks. _Bare ankles look and feel cooler._ (opinion; Everyday, Smart casual)
 - Velvet slippers worn without socks give a summer evening outfit a cocktail touch. _They dress up most looks instantly._ (opinion; Night out, Elegant)
@@ -430,6 +493,7 @@ Checked automatically on every outfit. Weight is how much each one matters after
 - Don't add dressy shoes such as double monks to an already flamboyant suit. _Stacking formality on a statement suit looks overdone._ (opinion; Smart casual, Elegant)
 - Skip no-show socks with loafers: either wear proper socks or go bare. _The experts quoted see them as a half-measure._ (opinion; Everyday, Smart casual)
 - White socks with black loafers is a long-standing casual classic. _The contrast reads deliberate and a little preppy._ (opinion; Everyday)
+- Black leather sneakers or Chelsea boots suit dark night-out outfits better than bright white sneakers. _They look sleeker in dim light._ (opinion; Night out)
 
 ### Accessories
 
@@ -528,6 +592,7 @@ Checked automatically on every outfit. Weight is how much each one matters after
 
 - An overshirt is the easy layer for mild days: over a tee, open, with jeans or chinos. _Warmer than a shirt, lighter than a jacket._ (2 sources)
 - Layer from thin to thick: tee or shirt, then knit or overshirt, then jacket, then coat. _Thin inner layers keep the outer ones from bulging._
+- Only roomy classic bombers fit a hoodie or flannel layered underneath; slim bombers bunch up. _Slim bombers have no room for layers._ (Everyday)
 - Give each layer a different fabric or texture. _Varied surfaces add depth, and each piece can change role as the weather shifts._ (Everyday, Smart casual)
 - Build autumn layers so the outfit still works when one is taken off, e.g. tee, cardigan, suede jacket and coat over jeans. _Temperatures change through the day, and you'll shed layers._ (Everyday)
 - Layer tonally within one colour family, such as browns or blues, then add one piece in a contrasting shade. _Tonal looks are balanced, and the contrast stops them looking flat._ (Everyday, Smart casual)
@@ -540,6 +605,19 @@ Checked automatically on every outfit. Weight is how much each one matters after
 - Air-conditioned offices let you wear more structured pieces and layers than the outdoor heat does. _The cooler indoor climate makes jackets and layers comfortable._ (Work / meeting)
 - When the setting is already loud, rely on texture and layering rather than loud pieces. _Texture adds interest while keeping the look grounded._ (Everyday, Night out)
 - Layer a scarf over a sporty jacket. _It adds depth to a streetwear look._ (Everyday)
+- Workwear shirts, flannels and chore jackets bring baggy jeans into smart casual. _Workwear and loose denim share a relaxed, utilitarian logic._ (Everyday, Smart casual)
+- Layer hoodies, bomber jackets and longline tees to add depth to a streetwear outfit. _Layering is a core streetwear technique._ (Everyday)
+- With boots and sweatpants, add a smart knit; with a hoodie, wear jeans rather than sweats, so the outfit isn't all lounge. _One smarter piece balances relaxed boots outfits._ (Everyday)
+- Contrasting categories works when colours agree: technical outerwear with retro sneakers, or a classic topcoat with sneaker boots. _A shared palette makes contrast look deliberate._ (Everyday)
+- Under a blazer, wear a slim mid-weight hoodie, not a bulky baggy one, and let the hood sit over the collar. _A bulky hoodie spoils the jacket's line._ (Everyday, Smart casual)
+- Layer a hoodie or a turtleneck under a puffer, keeping layers flat. _Flat layers keep clean lines._ (Everyday, Smart casual)
+- Layer a light jacket, cardigan or sport coat over a polo when the weather allows. _A layer adds interest beyond the polo alone._ (Everyday, Smart casual)
+- Give a zip-up hoodie something structured to lean on: denim, tailored trousers or boots, not joggers and other soft pieces. _All-soft outfits make the hoodie look shapeless._ (Everyday)
+- A thin zip-up works as a mid-layer under a coat or jacket. _Warmth without bulk._ (Everyday)
+- Layer a light technical shell over a soft knit for depth. _Mixes a sharp outer layer with a soft inner one._ (Everyday)
+- Wear a hoodie under a jacket, a denim jacket or a blazer for structure and warmth. _A structured layer lifts a relaxed hoodie._ (Everyday, Work / meeting)
+- Add a light layer for a night out: a bomber, denim jacket, leather jacket, overshirt or chore coat over a tee. _Handles temperature changes between venues._ (Night out)
+- A plain tee under a varsity or bomber jacket with cargo trousers and high-tops is a classic streetwear look. _Collegiate layering is a streetwear staple._ (Everyday)
 - Wear an open linen shirt like a light jacket over a plain T-shirt, with fuller pleated trousers and turn-ups. _It is a cool, relaxed take on classic summer elegance._ (opinion; Everyday)
 - Wear a hoodie under a leather jacket, trying different hoodie colours. _It is an easy way to vary a classic jacket._ (opinion; Everyday, Night out)
 - Try fastening only the top two buttons of an overshirt and leaving the rest open. _It looks relaxed while keeping some shape._ (opinion; Everyday)
@@ -556,6 +634,7 @@ Checked automatically on every outfit. Weight is how much each one matters after
 
 - Linen creases; accept it as part of the summer look rather than fighting it. _Relaxed creases are the point of linen._ (2 sources)
 - Lightweight (tropical) wool suits work in summer better than polyester ones. _Wool breathes, plastic doesn't._ (2 sources)
+- Choose a mid-weight hoodie to layer under a jacket. _A thick one bunches up and looks bulky beneath tailoring._ (2 sources; Everyday, Smart casual)
 - In cold months, texture matters most: swap light chinos for olive or tobacco corduroy and bring in tweed, flannel, suede, waxed cotton and Shetland wool. _Rich textures make simple outfits interesting._ (Everyday, Smart casual)
 - Don't pay luxury prices for jackets made of polyurethane or other plastic coatings. _The material is cheap and ages badly whatever the label says._
 - For hoodies and sweatshirts, a heavy fleece of around 400 to 500 grams per square metre is a sign of quality. _Heavier fabric holds its shape and lasts longer._ (Everyday)
@@ -572,7 +651,6 @@ Checked automatically on every outfit. Weight is how much each one matters after
 - Wear a tweed hacking jacket off duty with a roll-neck, slim wool trousers, Chelsea boots and a knotted scarf. _It makes a country jacket look modern and easy._ (Smart casual, Everyday)
 - Pair a Norfolk or heavy tweed jacket with dark jeans and suede chukkas or loafers, not cavalry twills and a flat cap, when in town. _Full country dress in the city looks like a costume._ (Smart casual, Everyday)
 - Choose woollen flannel for warmth and rustic character, worsted flannel for a lighter, sharper business suit. _Woollen yarn is thicker and fuzzier; worsted is finer and smoother._ (Work / meeting)
-- Choose a mid-weight hoodie to layer under a jacket. _A thick one bunches up and looks bulky beneath tailoring._ (Everyday, Smart casual)
 - In a less formal office, a textured or patterned sport coat (herringbone, houndstooth, tweed or tartan) with flannel or corduroy trousers suits a winter party. _Rustic textures feel seasonal while staying smart._ (Work / meeting, Smart casual)
 - For outdoor summer weddings, linen or seersucker suits are good choices. _They keep you cool and suit warm daytime settings._ (Elegant)
 - When suede is the statement piece, keep the rest simple: few pieces, few colours, few accessories. _Extra elements overwhelm the suede's appeal._ (Everyday)
@@ -587,12 +665,15 @@ Checked automatically on every outfit. Weight is how much each one matters after
 - Keep hoodie logos minimal and get interest from a mottled or flecked fabric instead. _Texture looks more grown-up than branding._ (Everyday)
 - Choose overshirt fabric for the mood: sturdy canvas for rugged, brushed flannel for soft and relaxed, checked wool twill for outdoorsy cold days. _The cloth sets the character and warmth._ (Everyday)
 - Put linen suits away once autumn arrives and switch to wool. _Linen is too light for windy, cool days._ (Smart casual, Work / meeting)
+- Wear pique or jersey cotton polos away from the golf course, not shiny synthetic ones. _Tech fabrics read as corporate._ (Everyday, Smart casual)
+- Create interest through fabric and layering rather than prints, graphics or logos. _Texture adds interest without loud signals._ (Everyday)
 
 ### Patterns
 
 - When combining patterns, vary their scale: a fine pattern with a bold one, never two of the same size. _Same-size patterns vibrate against each other._ (3 sources)
 - When mixing patterns, keep to a tight colour palette and add any pop of colour through an accessory or a small detail. _Shared colours stop the patterns fighting each other._
 - In a formal outfit, keep at least one of the suit, shirt or tie plain. _Three patterned pieces together are very hard to pull off._ (Work / meeting, Smart casual, Elegant)
+- When the tee has an all-over print, keep everything else plain so the shirt is the focal point. _Solids let a busy print stand out without clashing._ (Everyday)
 - Autumn lets you layer patterns: a striped oxford under a Fair Isle sweater, a tartan scarf over a camel coat, a striped tie under a cardigan. _Heavier textures make pattern mixing look natural._ (Everyday, Smart casual)
 - When mixing a bold patterned shirt with tailoring, choose muted colours that blend with the suit rather than loud ones. _Toned-down patterns stay believable and wearable._ (Night out)
 - When combining different pattern types, choose ones that look clearly different, such as stripes with florals, not dots with puppytooth. _Patterns that are too alike blur together and look like a mistake._
@@ -611,6 +692,8 @@ Checked automatically on every outfit. Weight is how much each one matters after
 - Add pattern in a top layer, such as a sweater vest over a shirt or a striped long-sleeved tee. _It brings interest without changing the whole outfit._ (Everyday, Smart casual)
 - Use fine stripes or heathered cotton to add interest to plain tops instead of graphics. _They give texture without shouting._ (Everyday)
 - With a patterned tie, wear a plain or finely patterned shirt rather than a bold check. _A busy shirt competes with the tie._ (Work / meeting, Smart casual)
+- Favour abstract or minimal graphics that could pass as art; they look more grown-up than busy slogans or big logos. _Art-like prints read more refined._ (Everyday)
+- A graphic tee goes well with an all-black outfit, light baggy denim or cargos. _Graphics pair with simple bottoms._ (Everyday)
 - For a casual pattern mix, wear an open check overshirt over a striped knit or a graphic tee. _The outer check and inner pattern contrast in type and scale._ (opinion; Everyday)
 - Keep prints on tops understated; all-over patterns like camouflage are the exception. _Loud prints overwhelm a simple outfit._ (opinion; Everyday)
 
@@ -625,6 +708,7 @@ Checked automatically on every outfit. Weight is how much each one matters after
 - Follow the wedding invitation's dress code exactly, neither under- nor overdressing. _Ignoring it is rude, and dressing above it can upstage the groom._ (Elegant)
 - Unless the invitation allows it, don't wear sandals, flip-flops, shorts, T-shirts, hoodies, trainers or casual jeans to a wedding. _They are far too casual for the occasion._ (Elegant)
 - Avoid white clothing that could compete with the bride. _White is traditionally reserved for her._ (Elegant)
+- Keep oversized tees out of formal and business settings. _They suit relaxed dress codes only._ (Work / meeting, Elegant)
 - For a summer cocktail dress code, a dark suit is enough; a dinner jacket with cream or ecru trousers is the more striking choice. _Cocktail dress leans towards evening wear._ (Elegant, Night out)
 - When an invitation names a dress code, follow it; when it says nothing, smart casual is a safe default. _It suits most gatherings without looking out of place._ (Smart casual, Elegant)
 - When a holiday party's dress code is unclear, lean towards the formal end, unless the hosts have said it's a playful ugly-sweater party. _Nobody faults a guest for looking put together._ (Elegant, Night out)
@@ -643,6 +727,7 @@ Checked automatically on every outfit. Weight is how much each one matters after
 - At a summer work party, wear a blazer only if it is very informal, and choose a low-key shirt over a vest or tank top. _Relaxed but never showy or too bare in front of colleagues._ (Work / meeting)
 - Gauge a wedding's formality from the invitation, what you know of the hosts, or someone close to them; if in doubt, dress smartly. _It's the hosts' event, and their expectations set the level._ (Elegant)
 - Follow a wedding's dress code even when it's unusual, such as black tie in the daytime or beachwear. _Respecting the hosts' wishes matters more than convention._ (Elegant)
+- Match the venue: casual for dive bars, an unstructured blazer or knit and boots for upscale bars and rooftops. _You blend in with the crowd._ (Night out)
 - When a summer wedding's dress code is relaxed, a camp-collar shirt with trousers and leather loafers can stand in for a suit. _It stays dressed-up while keeping you cool._ (opinion; Elegant)
 - As a spectator at a summer tennis event, tennis whites (white polo, white trousers, loafers) are a fitting, practical look. _All-white is cool in the heat and nods to the occasion._ (opinion; Smart casual)
 - For a summer country-house weekend, go preppy: a button-down linen shirt, pleated trousers or shorts, and loafers. _Relaxed classic pieces suit the setting._ (opinion; Everyday, Smart casual)
@@ -659,6 +744,7 @@ Checked automatically on every outfit. Weight is how much each one matters after
 - Never substitute a black business suit with a long tie, a black shirt or novelties like sequins or cowboy boots for black tie. _They miss the code and look like you didn't understand it._ (Elegant)
 - Don't wear a tweed sport coat to a black-tie event. _Country tailoring is too casual for evening formal dress._ (Elegant)
 - A tuxedo should be black or midnight blue, not a brighter blue. _Other colours break the black-tie code._ (Elegant)
+- Cargo pants are never formal: keep them away from suits, dress shoes and evening dress codes. _Cargos stay casual whatever you pair them with._ (Elegant, Work / meeting)
 - When dressing formally, do it properly: a well-tailored oxford, quiet colours and everything buttoned as it should be. _There is a time and place for relaxed details._ (Work / meeting, Elegant)
 - Patent oxfords are the classic black-tie shoe, but plain, highly polished black calf oxfords are acceptable and easier to wear again. _Both keep the shoe sleek and plain._ (Elegant)
 - With a dinner suit, choose a turn-down collar shirt over a wing collar; a pleated or bib front is optional. _Wing collars belong with white tie and look dated with a dinner suit._ (Elegant)
@@ -700,6 +786,11 @@ Checked automatically on every outfit. Weight is how much each one matters after
 - Owning any navy blazer isn't enough; choose the cloth, cut and buttoning that suit where you'll wear it. _A work blazer, a summer blazer and a casual blazer are different garments._ (Smart casual, Work / meeting)
 - For the office, a cotton-twill blazer with patch pockets worn with straight chinos can stand in for a suit. _It is tidy enough for work but less stiff than a suit._ (Work / meeting)
 - After 40, choose a hoodie in a luxurious fabric and wear it with tailored pieces. _It looks polished rather than juvenile._ (Everyday, Smart casual)
+- Mixing workwear, tailoring and streetwear is fine now, but do it deliberately: piece by piece, not just sneakers thrown on with formal clothes. _Hybrid looks need thought to work._ (Everyday, Smart casual)
+- A graphic tee with dressy trousers and minimal sneakers or boots works for a smart-casual office day. _Dressy bottoms balance the tee._ (Work / meeting, Smart casual)
+- A blazer and loafers over a graphic tee and shorts or trousers make it evening-appropriate. _A tailored layer lifts a relaxed tee for nights out._ (Night out)
+- A clean hoodie with smart trousers and boots looks polished enough for a relaxed workplace. _Trousers and boots balance comfort with polish._ (Work / meeting, Everyday)
+- Dress up an oversized tee with tailored trousers or a structured coat for contrast. _Mixing casual and smart adds interest._ (Everyday, Smart casual)
 - Relax classic preppy clothes: let an oxford wrinkle, push up sleeves, wear loafers with faded jeans or a sweatshirt under a blazer. _Good prep should look lived-in, not arranged._ (opinion; Everyday, Smart casual)
 - A statement tuxedo-style blazer can be dressed down with dark creased jeans and boots instead of matching trousers. _Mixing tailoring with denim makes a formal piece wearable._ (opinion; Night out, Smart casual)
 - Avoid putting a sharp double-breasted blazer over a boxy, heavy workwear tee. _The two pieces are too far apart in spirit and the mismatch shows._ (opinion; Smart casual)
@@ -708,6 +799,7 @@ Checked automatically on every outfit. Weight is how much each one matters after
 - A navy sport coat can sometimes work with jeans, but it is not a guaranteed match. _Navy isn't rustic, so success depends on the cloth and cut._ (opinion; Smart casual)
 - Dress a double-breasted blazer down with a printed camp-collar shirt or a striped T-shirt and faded jeans. _Casual pieces soften its formality and make it an all-day jacket._ (opinion; Everyday, Smart casual)
 - Pair a neutral hoodie with smart trousers; pinstripe or check trousers make it bolder. _The tailored bottom lifts the casual top._ (opinion; Smart casual)
+- A polo tucked into pleated khakis with boxy dress shoes reads corporate; keep it relaxed. _It looks like an office uniform._ (opinion; Work / meeting, Everyday)
 
 ### Casual
 
@@ -716,6 +808,9 @@ Checked automatically on every outfit. Weight is how much each one matters after
 - For a rugged casual look, pair slim dark jeans and brown leather boots with a denim shirt and a suede trucker jacket. _Rugged textures and earth tones dress down well._ (Everyday)
 - For a Western touch, take one or two rugged elements and set them in normal clothes; never wear every cowboy signifier at once. _One accent reads as style, the full set as fancy dress._ (Everyday)
 - Dressing down still takes effort; choose casual clothes you feel genuinely comfortable in. _Discomfort shows and makes the outfit look careless or forced._ (Everyday)
+- Logo and band tees are the most casual tees; keep them for relaxed days rather than polished looks. _Logos add casualness to an already casual shirt._ (Everyday)
+- For a weekend look, an illustrated tee with a light jacket and minimal sneakers in a neutral colour stays tidy. _Neutral shoes calm the graphic._ (Everyday)
+- A plain white, black or grey hoodie with jeans and sneakers is an easy everyday base. _Simple and versatile for casual days._ (Everyday)
 - Swim shorts look classiest fitted and fairly short, around a 15 cm inseam, plain or simply striped; throw an open linen shirt over them. _Plain, well-fitting swimwear keeps style at the beach._ (opinion; Everyday)
 - Short, detailed casual jackets in casual fabrics go well with jeans, but treat them as outerwear rather than work tailoring. _They are cut and styled as casual pieces, not office sport coats._ (opinion; Everyday)
 - A pullover hoodie looks smarter than a zip-up. _Its cleaner front reads less sporty._ (opinion; Everyday, Smart casual)
@@ -735,10 +830,13 @@ Checked automatically on every outfit. Weight is how much each one matters after
 - Look to streetwear labels' more refined pieces, such as work jackets, and wear them over a collared shirt. _They bridge street style and smart dressing._ (Everyday, Smart casual)
 - Plan how street and smart pieces combine instead of throwing them together at random. _The mix only works when it looks deliberate._ (Everyday, Smart casual)
 - Skip graphic, band and novelty hoodies once you're past your teens. _They look juvenile and dated._ (Everyday)
+- Pair baggy jeans with streetwear pieces like graphic tees, hoodies and sportswear for relaxed casual outfits. _Matches the streetwear roots of the baggy silhouette._ (Everyday)
+- Mixing a few high-end pieces with affordable streetwear staples is what gives streetwear its character. _Contrast between price tiers looks authentic._ (Everyday)
+- Straight-leg jeans or carpenter trousers with a workwear jacket and basketball sneakers make a reliable everyday outfit. _Rugged practical pieces suit everyday wear._ (Everyday)
+- Wear a plain hoodie under a blazer or smart jacket on cooler days. _It blends street and tailored clothing and adds a warm layer._ (2 sources; opinion; Everyday, Smart casual)
 - Mix second-hand and vintage finds, such as a 90s puffer or old denim, with newer pieces; thrifted items make a street outfit personal. _Unique vintage pieces stop an outfit looking bought off one rack._ (opinion; Everyday)
 - A head-to-toe workwear look, such as a canvas work jacket with work trousers and chunky sneakers, is an easy streetwear uniform. _Sturdy, plain workwear reads cool without effort._ (opinion; Everyday)
 - Keep the hood down when you wear a hoodie out. _A raised hood looks hostile and careless._ (opinion; Everyday)
-- Wear a plain hoodie under a blazer or smart jacket on cooler days. _It blends street and tailored clothing and adds a warm layer._ (opinion; Everyday, Smart casual)
 - Build Y2K streetwear from thrifted and vintage pieces so the outfit looks like your own wardrobe, not a copied mood board. _Clothes that seem collected over time look personal._ (opinion; Everyday)
 - For a vintage athletic look, use old-school sportswear such as track jackets, windbreakers and hoodies. _Retro sportswear gives an energetic, relaxed feel._ (opinion; Everyday)
 - For everyday Y2K style, wear a graphic tee with straight-leg or bootcut jeans and worn-in sneakers. _It is the simplest version of the vintage look._ (opinion; Everyday)
@@ -750,6 +848,8 @@ Checked automatically on every outfit. Weight is how much each one matters after
 - An easy athleisure formula: a windbreaker with joggers, or a sweatshirt with a cap. _Both pairings are simple and hard to get wrong._ (Everyday)
 - Make sporty pieces look considered through colour coordination and layering. _Planned colours and layers lift basic sportswear above gym clothes._ (Everyday)
 - Wear a tracksuit in one deep colour from top to bottom, with flat shoes. _A single dark shade looks unified; flat shoes keep it casual._ (Everyday)
+- A plain hoodie with joggers and clean sneakers works from the gym to a casual evening. _Athleisure crosses casual occasions._ (Everyday, Gym)
+- With an athleisure bomber, wear structured pieces like a henley and tapered joggers, not baggy sweats and oversized tees. _Clean lines keep sporty looks sharp._ (Everyday)
 - Use athleisure for relaxed weekend dressing. _It is practical and comfortable across many casual situations._ (opinion; Everyday)
 - If an all-black, white and grey athleisure outfit feels flat, add one contrasting coloured jacket, such as a mint windbreaker. _One fresh colour gives neutral sportswear a focal point._ (opinion; Everyday)
 
@@ -926,6 +1026,113 @@ Checked automatically on every outfit. Weight is how much each one matters after
 - **Smart casual**: jacket grey smart casual +blazer +herringbone +unstructured, tshirt white casual, jeans white casual. White jeans and a white tee under a light unstructured grey herringbone blazer for summer.
 - **Everyday**: track-jacket red vintage +sportswear, tshirt black streetwear +graphic, track-pants navy sporty +stripes. A vintage track jacket over a graphic tee with striped track pants gives a retro athletic look.
 - **Everyday**: track-jacket charcoal sporty +tracksuit, track-pants charcoal sporty +tracksuit. A tracksuit in one deep grey looks unified and relaxed.
+- **Everyday**: tshirt white regular casual, jeans denim straight casual, sneakers red streetwear +high-top. Neutral tee and denim let the sneakers lead.
+- **Everyday**: tshirt black regular casual, jeans black slim casual, sneakers red streetwear +high-top. Black tee and black denim are a clean base for colourful high-tops.
+- **Everyday**: tshirt black streetwear +graphic, jeans denim straight casual, sneakers black streetwear +high-top. A graphic tee that picks up the sneakers' colours ties the outfit together.
+- **Everyday**: tshirt white casual, trousers black baggy streetwear +workwear, sneakers black streetwear +high-top. Roomy work trousers balance the high-tops.
+- **Everyday**: tshirt grey casual, trousers beige baggy streetwear +cargo, sneakers white streetwear +high-top. Khaki cargo trousers with a baggy fit suit the sneakers.
+- **Everyday**: tshirt white casual, shorts black sporty +mesh, sneakers red streetwear +high-top. Simple knee-length shorts keep the focus on the shoes.
+- **Everyday**: jacket black streetwear +bomber, zip-hoodie grey relaxed streetwear, tshirt white casual, jeans black baggy streetwear, dress-shoes brown formal +loafers +suede. Classic streetwear layering in black, grey and white.
+- **Everyday**: sweater green relaxed casual +cardigan, tshirt white oversized casual, jeans light blue baggy casual, sneakers white streetwear +chunky. Cardigan over an oversized tee: skate style with polish.
+- **Smart casual**: shirt navy smart casual +stripes, jeans cream baggy smart casual, dress-shoes black smart +loafers. Cream baggy jeans and loafers look dapper.
+- **Everyday**: sweater black oversized smart casual, jeans black baggy smart casual, dress-shoes black smart casual +loafers. Tonal black outfit lifted by shiny loafers.
+- **Everyday**: shirt light blue relaxed casual +denim, tshirt white casual, jeans light blue baggy casual, sneakers cream casual +canvas. Light denim shirt over a tee: easy summer casual.
+- **Smart casual**: jacket green casual +chore, sweater white smart casual +turtleneck, jeans denim wide smart casual, dress-shoes black smart +derby. Chore jacket and polished derbies make wide jeans office-ready.
+- **Everyday**: tshirt white casual, jeans light blue baggy casual, sneakers beige casual +chunky. A tucked tee and high waist exaggerate the proportions well.
+- **Everyday**: overshirt red casual +check +flannel, tshirt white casual, jeans black baggy casual +carpenter, sneakers black casual. Carpenter jeans and a check overshirt blend streetwear and workwear.
+- **Everyday**: sweater black casual +quarter-zip, tshirt grey casual, jeans black baggy casual, sneakers black casual. Near-blackout look; a quarter-zip works preppy or hip-hop.
+- **Everyday**: sweater brown relaxed luxury +cardigan, tshirt white casual, jeans cream baggy casual, sneakers cream minimal. A tonal minimal palette lets the baggy silhouette stand out.
+- **Everyday**: jacket purple oversized streetwear +bomber, hoodie black streetwear, jeans black baggy streetwear, sneakers black streetwear +chunky. Bomber over a hoodie; the bold jacket adds the colour.
+- **Smart casual**: shirt black oversized smart casual, tshirt white casual, jeans light blue baggy smart casual, dress-shoes black smart casual +loafers. Ankle-length jeans, an open shirt and loafers feel sharp.
+- **Everyday**: shirt navy relaxed preppy +rugby, jeans light blue wide preppy, sneakers navy casual +suede. A tucked rugby shirt and belt add preppy polish.
+- **Smart casual**: sweater beige smart casual, jeans light blue baggy smart casual, dress-shoes black smart +derby. 90s denim and a knit sharpened by black derbies.
+- **Everyday**: tshirt black streetwear, jeans cream baggy streetwear, sneakers black streetwear, cap black casual streetwear. Two-colour skatewear minimalism.
+- **Everyday**: jacket grey casual +denim +trucker, tshirt white casual, jeans light blue baggy casual, sneakers black casual +canvas. Denim jacket and baggy jeans in different washes with a white tee.
+- **Smart casual**: jacket beige relaxed smart casual +suede, shirt white relaxed smart casual, jeans light blue baggy smart casual, dress-shoes black smart +derby. A soft suede jacket and loose shirt: relaxed smart casual.
+- **Smart casual**: jacket grey smart casual +workwear, shirt white smart casual +grandad-collar, trousers navy smart, sneakers white minimal. Workwear jacket and navy trousers sharpen a streetwear base.
+- **Smart casual**: coat navy smart, hoodie grey minimal, trousers navy smart casual, sneakers white minimal. A plain hoodie under a smart coat with trousers and clean sneakers.
+- **Everyday**: jacket navy vintage +windbreaker, tshirt white vintage +graphic, joggers black sporty, sneakers white vintage. Retro graphic tee and track pants feel nostalgic.
+- **Everyday**: tshirt black slim minimal, trousers black minimal +cargo, sneakers black minimal +low-top. All-black tee, cargos and low-tops: clean and minimal.
+- **Everyday**: hoodie grey oversized sporty, joggers grey sporty, sneakers white sporty. Athleisure that moves from the gym to a casual night.
+- **Smart casual**: jacket green smart casual +suit, tshirt white minimal, trousers green smart casual +suit, sneakers white minimal. A coloured suit with a crewneck tee and sneakers bridges formal and street.
+- **Everyday**: jacket black outdoor +waterproof, tshirt grey sporty, joggers black sporty, sneakers black sporty. A tech jacket over a base layer and joggers is practical.
+- **Everyday**: jacket denim oversized streetwear, tshirt white streetwear +graphic, jeans black streetwear +ripped, sneakers white streetwear +high-top. Distressed denim and an artwork tee: an expressive street look.
+- **Everyday**: zip-hoodie black streetwear, tshirt white streetwear +graphic, jeans denim slim streetwear, sneakers black streetwear +high-top. Cuffed jeans, a graphic tee and a zip hoodie feel skater.
+- **Work / meeting**: jacket denim casual, tshirt white casual +logo, trousers grey smart, sneakers cream minimal. Dressy trousers and a simple logo tee for a casual Friday.
+- **Work / meeting**: jacket black smart casual, tshirt pink casual +graphic, trousers grey smart casual +chinos, boots black casual. A soft pink graphic tee tamed by grey and black.
+- **Everyday**: jacket olive casual, tshirt white casual +graphic, trousers beige relaxed casual, sneakers brown minimal. An illustrated tee, a light jacket and brown sneakers for lunch.
+- **Night out**: jacket beige smart casual +blazer +linen, tshirt white casual +graphic, shorts navy smart casual +linen, dress-shoes brown smart casual +loafers +suede. A linen blazer and suede loafers dress up shorts for a rooftop evening.
+- **Everyday**: shirt white casual +button-down, trousers olive slim casual +cargo, sneakers white minimal. Slim cargos with a clean shirt for a relaxed party.
+- **Smart casual**: jacket navy smart casual +blazer, shirt white smart casual +button-down, trousers black slim minimal +cargo, dress-shoes black smart casual +loafers. Black slim cargos fit a smart-casual blazer look.
+- **Everyday**: tshirt white relaxed casual, trousers black relaxed streetwear +cargo, boots brown outdoor +workboot. A structured tee, relaxed cargos and work boots: an urban look.
+- **Everyday**: sweater yellow casual, trousers black relaxed streetwear +cargo +corduroy, boots brown casual. A mustard knit contrasts well with black cargos.
+- **Everyday**: overshirt beige outdoor, tshirt white casual, trousers olive relaxed outdoor +cargo, boots black outdoor +combat. Olive cargos with a utility overshirt feel purposeful.
+- **Everyday**: tshirt grey casual, trousers olive relaxed outdoor +cargo, sneakers white casual. Green cargos with a tee and sneakers stay easygoing.
+- **Smart casual**: jacket navy smart casual +chore, shirt light blue smart casual +button-down, trousers brown slim smart casual +cargo, dress-shoes brown smart casual +loafers. Slim brown cargos for a smart-casual Friday.
+- **Everyday**: coat navy vintage, shirt white vintage +stripes, trousers brown relaxed vintage +cargo, boots brown vintage +leather. Breton stripes and a car coat give cargos a classic feel.
+- **Everyday**: tshirt black casual, trousers beige baggy casual +cargo, boots brown outdoor. Baggy cargos with a tee and boots look relaxed and tidy.
+- **Everyday**: hoodie grey casual, jeans denim casual, boots beige outdoor +workboot. A hoodie with jeans keeps work boots balanced.
+- **Everyday**: sweater navy smart casual, joggers grey casual, boots beige outdoor +workboot. A smart knit balances sweatpants and boots.
+- **Smart casual**: coat navy smart casual +wool, shirt light blue smart casual, trousers grey smart casual +chinos, boots brown smart casual +workboot. Chinos, a shirt and a wool coat make boots smart casual.
+- **Everyday**: jacket black streetwear +bomber, tshirt white casual, jeans denim casual, boots beige outdoor +workboot. Wheat boots and a bomber: a streetwear classic.
+- **Night out**: jacket charcoal smart casual +blazer, hoodie black minimal, trousers black slim smart casual, boots black smart casual +chelsea. Sleek monochrome for city nights.
+- **Work / meeting**: jacket navy smart casual +blazer, hoodie grey minimal, jeans navy casual, dress-shoes brown formal +loafers. Office polish with relaxed comfort for a casual Friday.
+- **Everyday**: jacket olive smart casual +blazer, hoodie green casual, trousers olive slim outdoor, boots brown smart casual. Earthy tones and rugged boots for a weekend.
+- **Everyday**: jacket beige smart casual +blazer, hoodie white minimal, trousers beige slim smart casual +chinos, sneakers white minimal. Soft neutrals and minimal sneakers: a relaxed gallery look.
+- **Night out**: jacket navy smart casual +blazer, hoodie navy minimal, trousers grey smart casual, boots brown smart casual. Tonal navy layers with grey trousers for a date.
+- **Everyday**: puffer olive casual, hoodie grey casual, jeans denim slim casual, sneakers white casual. Weather-ready and balanced by slim jeans.
+- **Everyday**: puffer black casual, sweatshirt grey casual, joggers black slim casual, sneakers white casual. Tapered joggers keep an off-duty look clean.
+- **Smart casual**: puffer navy smart casual, sweater grey smart casual +turtleneck, trousers beige slim smart casual +chinos, boots brown smart casual +chelsea. Polished layers and sleek boots keep it sharp.
+- **Everyday**: jacket black casual +bomber, tshirt white casual, jeans denim casual, sneakers white casual. A classic casual base with an easy outer layer.
+- **Everyday**: jacket brown casual +bomber +suede, tshirt white casual, jeans denim casual, boots brown casual. Boots add a workwear edge.
+- **Smart casual**: jacket navy slim minimal +bomber, polo white smart casual, trousers beige smart casual +chinos, sneakers white minimal. A polo and chinos with a close-fitting bomber.
+- **Smart casual**: jacket black slim minimal +bomber, shirt light blue smart +button-down, trousers grey smart +wool, dress-shoes brown smart +loafers. A minimal bomber over polished trousers.
+- **Everyday**: jacket navy sporty +bomber, tshirt grey casual +henley, shorts beige casual, sneakers white casual. A sporty bomber keeps shorts looking intentional.
+- **Everyday**: jacket olive vintage +bomber +nylon, shirt olive outdoor +utility, trousers beige outdoor +chinos, boots brown outdoor. A military-leaning mix.
+- **Smart casual**: jacket red minimal +bomber, sweater cream luxury +cashmere, trousers cream minimal +chinos, sneakers white minimal. A tonal base lets a bright bomber pop.
+- **Everyday**: jacket olive casual +bomber, shirt grey casual, trousers beige casual, dress-shoes brown casual +loafers. Subtle contrasts let the bomber blend in.
+- **Everyday**: polo navy slim preppy, trousers beige casual +chinos, dress-shoes brown formal +loafers. A navy polo with light trousers looks put-together.
+- **Everyday**: polo white preppy, jeans denim casual, dress-shoes brown formal +loafers. A polo with good jeans and loafers is refined yet relaxed.
+- **Everyday**: polo black smart casual, trousers grey smart casual, sneakers white minimal. Dress trousers with clean sneakers: relaxed and modern.
+- **Everyday**: polo navy casual, trousers beige casual +chinos, sneakers red casual. Chinos with red sneakers add a pop of colour.
+- **Everyday**: zip-hoodie navy cropped minimal, tshirt white minimal, trousers navy wide minimal, sneakers white minimal. Tonal navy with a short top and wide trousers.
+- **Everyday**: zip-hoodie grey casual, tshirt white casual, jeans denim casual, sneakers white casual. Denim and clean sneakers give a zip-up structure.
+- **Everyday**: zip-hoodie black slim smart casual, tshirt white minimal, trousers grey smart casual, sneakers white minimal. A slim zip-up with tailored trousers looks sharper.
+- **Everyday**: jacket black cropped streetwear +technical, sweater grey minimal, trousers black wide minimal, sneakers black minimal. A cropped jacket balances wide trousers in a tonal palette.
+- **Everyday**: overshirt olive streetwear, tshirt black streetwear, trousers black outdoor +cargo, sneakers black minimal. An overshirt over a long tee with utility cargos.
+- **Everyday**: jacket black cropped minimal +technical, tshirt white minimal, trousers grey straight minimal, sneakers black minimal. Tapered trousers keep technical layers clean.
+- **Everyday**: hoodie black casual, jeans denim slim casual, sneakers white casual. A simple everyday look.
+- **Everyday**: hoodie black oversized streetwear, jeans denim baggy streetwear, sneakers white streetwear. Oversized hoodie and baggy denim: relaxed streetwear.
+- **Work / meeting**: hoodie grey minimal, trousers navy smart casual, boots brown smart casual +leather. A clean hoodie with trousers and boots for a relaxed office.
+- **Everyday**: jacket denim casual, hoodie grey casual, trousers black baggy streetwear, sneakers white casual. A jacket over a hoodie with baggy trousers.
+- **Everyday**: tshirt white oversized casual, shorts black casual, sneakers white casual. Shorts keep the proportions balanced.
+- **Everyday**: tshirt black oversized streetwear, trousers olive baggy streetwear +cargo, sneakers black streetwear. Baggy cargos with an oversized tee: relaxed, not scruffy.
+- **Everyday**: tshirt grey oversized casual, jeans denim straight casual, sneakers white casual. Straighter jeans balance a baggy tee.
+- **Everyday**: tshirt white cropped casual, jeans light blue baggy casual, sneakers white casual. A cropped tee balances slouchy denim.
+- **Smart casual**: coat smart, tshirt white oversized minimal, trousers grey smart casual, sneakers white minimal. Tailored trousers and a structured coat add smart contrast.
+- **Everyday**: tshirt black oversized streetwear, joggers grey straight streetwear, sneakers white streetwear +high-top. Straight sweatpants and high-tops: a streetwear staple.
+- **Night out**: overshirt green casual, tshirt black casual, jeans black casual, sneakers black casual. Dark jeans with an overshirt hide spills well.
+- **Night out**: jacket black casual +leather, shirt navy casual +print, jeans black casual, boots black smart casual +chelsea. A patterned shirt under a leather jacket adds edge.
+- **Night out**: overshirt black casual +flannel, tshirt white casual, jeans denim casual, boots brown casual. Rugged denim and flannel handle a messy night.
+- **Night out**: overshirt blue casual, tshirt black casual, trousers black casual +chinos, sneakers black casual. A layered casual look with dark, durable pieces.
+- **Night out**: jacket black casual +leather, tshirt black casual, jeans black casual, boots black casual. All black: foolproof for any venue.
+- **Night out**: overshirt black casual, sweater black smart casual, jeans black casual, boots black smart casual +chelsea. Smart-casual all black with Chelsea boots.
+- **Night out**: tshirt black minimal, trousers black smart casual +pleated, sneakers white minimal. A tucked tee with pleated trousers and white sneakers.
+- **Night out**: overshirt black casual, tshirt white casual, jeans black casual, dress-shoes black formal +derby. A black overshirt over a white tee with derbies.
+- **Night out**: jacket denim casual, tshirt black casual, jeans black casual, sneakers black streetwear +high-top. Faded black jeans, a denim jacket and high-tops.
+- **Night out**: overshirt brown casual, tshirt black casual, jeans black casual, boots brown smart casual +chelsea. A brown overshirt over black jeans with Chelsea boots.
+- **Night out**: jacket green smart casual +blazer, sweater navy smart casual +turtleneck, jeans black casual, boots black smart casual +chelsea. A blazer with a turtleneck and black jeans.
+- **Night out**: jacket black casual +bomber, tshirt white casual, jeans denim casual, dress-shoes black formal +loafers. A black bomber over a white tee with jeans.
+- **Night out**: jacket black casual +leather, sweater black casual, jeans grey casual, boots black smart casual +chelsea. A biker jacket adds edge to grey jeans.
+- **Night out**: jacket brown casual +leather, sweater black smart casual +turtleneck, jeans denim casual, boots brown casual. A brown leather jacket over a black roll neck.
+- **Everyday**: tshirt black minimal, jeans black minimal, sneakers red streetwear +high-top. A black base suits almost any colourway.
+- **Everyday**: tshirt black minimal, joggers black minimal, sneakers yellow streetwear +high-top. Black joggers keep the monochrome look easy.
+- **Everyday**: jacket navy streetwear +varsity, tshirt white streetwear, trousers beige streetwear +cargo, sneakers white streetwear +high-top. Collegiate layering with cargos.
+- **Everyday**: jacket brown casual +workwear, tshirt white casual, jeans denim straight casual, sneakers black streetwear +high-top. A workwear jacket and straight jeans for every day.
+- **Everyday**: hoodie grey casual, trousers black streetwear +cargo, sneakers red streetwear +high-top. A grey hoodie and cargos are comfortable and balanced.
+- **Everyday**: tshirt olive streetwear +logo, trousers olive streetwear +cargo, sneakers black streetwear +high-top. A logo tee with cargos: a classic.
+- **Everyday**: track-jacket navy sporty, tshirt white minimal, joggers grey minimal, sneakers grey streetwear +high-top. Grey sweats, a white tee and a track jacket look minimal.
+- **Everyday**: sweatshirt grey casual, jeans black casual, sneakers red streetwear +high-top. A grey sweatshirt with black jeans: classic off-duty.
 
 ### Avoid
 
@@ -957,6 +1164,14 @@ Checked automatically on every outfit. Weight is how much each one matters after
 - **Night out**: jacket black cropped smart casual, shirt black slim smart casual, jeans black slim casual, boots black smart casual. Tight all-black follows the colours but misses the relaxed silhouette.
 - **Work / meeting**: tshirt black casual, shorts green casual, sneakers black casual. A tee, shorts and sneakers are far too casual for a job interview.
 - **Elegant**: jacket black smart +suit, shirt black smart, trousers black smart +suit, tie black smart. Head-to-toe black suit, shirt and tie is dated and draws attention at a wedding.
+- **Everyday**: tshirt white casual, joggers beige casual +elastic-cuff, sneakers red streetwear +high-top. Khaki joggers with elastic cuffs look dated with high-tops.
+- **Everyday**: tshirt red casual, trousers red casual, sneakers red streetwear +high-top. Matching every piece to the shoes looks cheesy.
+- **Elegant**: jacket black formal +suit, shirt white formal, trousers black slim casual +cargo, dress-shoes black formal. Cargos clash with formal dress.
+- **Everyday**: puffer black oversized casual, hoodie black casual, jeans denim baggy casual, sneakers white casual. Oversized top and baggy bottom balloon the outfit.
+- **Everyday**: jacket black sporty +bomber, tshirt white oversized sporty, joggers grey baggy sporty, sneakers white sporty. Baggy sweats and an oversized tee fight a structured sporty bomber.
+- **Work / meeting**: polo light blue smart casual, trousers beige smart casual +chinos +pleated, dress-shoes black smart. Tucked polo, pleated khakis and boxy shoes read corporate.
+- **Everyday**: zip-hoodie grey relaxed casual, tshirt grey casual, joggers grey relaxed casual, sneakers white sporty. All-soft layers make the hoodie look sloppy.
+- **Work / meeting**: tshirt white oversized casual, trousers grey smart, dress-shoes black smart. Oversized tees clash with business settings.
 
 ## Sources
 
@@ -1027,3 +1242,21 @@ Checked automatically on every outfit. Weight is how much each one matters after
 - [How to Look Good in Both Skinny and Baggy Fits](https://gqphilippines.com/style/how-to-look-good-in-both-skinny-and-baggy-fits/) GQ Philippines: 7 tips, 0 outfits
 - [How to channel Cortis's Y2K thrift store style](https://vogue.sg/cortis-y2k-thrift-store-style/) Vogue Singapore: 6 tips, 1 outfits
 - [運動風穿搭成新潮流？看看男星們都怎樣穿衛衣風褸等單品 隨性同時展現活力 (Is Athleisure the New Trend? How Male Stars Wear Hoodies and Windbreakers)](https://www.voguehk.com/zh/article/fashion/mens-athleisure/) Vogue Hong Kong: 7 tips, 1 outfits
+- [How to Properly Style and Wear Air Jordan 1s (Complex)](https://www.complex.com/style/how-to-wear-air-jordan-1-guide) : 9 tips, 8 outfits
+- [How To Wear Baggy Jeans: 19 Modern Looks (Mens Flair)](https://mensflair.com/baggy-jeans-outfits/) : 8 tips, 17 outfits
+- [You Asked: How Do I Make Streetwear Smart? (MR PORTER)](https://www.mrporter.com/en-ie/journal/fashion/you-asked-how-do-i-make-streetwear-smart-448234) : 5 tips, 2 outfits
+- [8 fail-safe streetwear outfits for men (OPUMO)](https://www.opumo.com/magazine/streetwear-outfits-for-men/) : 7 tips, 7 outfits
+- [The Grown Man's Guide to Wearing Graphic T-Shirts (The Essential Man)](https://theessentialman.com/mens-graphic-t-shirt-outfits/) : 7 tips, 4 outfits
+- [What To Wear With Cargo Pants (The Modest Man)](https://www.themodestman.com/?p=596796) : 6 tips, 10 outfits
+- [What to wear with Timberland boots (Timberland)](https://www.timberland.com/en-gb/blog/faq/what-to-wear-with-timberland-boots) : 4 tips, 4 outfits
+- [Rules for Matching Your Sneakers to Your Outfit (Complex)](https://content-prod.adc-blue.infra.complex.com/sneakers/a/calvy-click/rules-for-matching-your-sneakers-to-your-outfit) : 5 tips, 0 outfits
+- [How to perfect the blazer with hoodie combination (OPUMO)](https://www.opumo.com/magazine/blazer-with-hoodie) : 5 tips, 5 outfits
+- [Puffer Jacket Style: How to Look Sharp (Real Men Real Style)](https://www.realmenrealstyle.com/puffer-jacket-style/) : 5 tips, 4 outfits
+- [How To Wear a Bomber Jacket (The Modest Man)](https://www.themodestman.com/how-to-wear-a-bomber-jacket/) : 7 tips, 9 outfits
+- [How to Wear a Polo Shirt Without Looking Like a Middle Manager (Art of Manliness)](https://www.artofmanliness.com/style/clothing/how-to-wear-a-polo-shirt-without-looking-like-a-middle-manager/) : 5 tips, 5 outfits
+- [How to Wear a Zip-Up Hoodie Without Looking Sloppy (FashionBeans)](https://www.fashionbeans.com/article/best-zip-up-hoodies-for-men/) : 5 tips, 4 outfits
+- [Breaking Down The Tokyo Minimal Utility Street Style (FashionBeans)](https://www.fashionbeans.com/article/breaking-down-the-street-style-look-thats-taking-over-tokyo/) : 5 tips, 3 outfits
+- [How to Style a Hoodie (Lacoste)](https://www.lacoste.com/us/how-to-style-a-hoodie.html) : 4 tips, 4 outfits
+- [How Guys Are Styling Oversized T-Shirts (Gymshark)](https://www.gymshark.com/blog/article/how-to-style-oversized-tshirts-for-men) : 6 tips, 7 outfits
+- [What To Wear To The Club: Night Out Outfits for Men (Mens Flair)](https://mensflair.com/what-to-wear-club/) : 6 tips, 14 outfits
+- [How to Wear Jordans: Outfits and Styling Advice (The Sole Supplier)](https://thesolesupplier.co.uk/news/how-to-wear-jordans/) : 6 tips, 8 outfits

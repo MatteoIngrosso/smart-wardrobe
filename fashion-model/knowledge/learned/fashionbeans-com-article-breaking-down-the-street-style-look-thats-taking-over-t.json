@@ -1,0 +1,102 @@
+{
+  "source": {
+    "kind": "article",
+    "url": "https://www.fashionbeans.com/article/breaking-down-the-street-style-look-thats-taking-over-tokyo/",
+    "title": "Breaking Down The Tokyo Minimal Utility Street Style (FashionBeans)",
+    "author": ""
+  },
+  "learned_at": "2026-10-28T15:52:48+00:00",
+  "model": "by hand",
+  "tokens": {
+    "in": 0,
+    "out": 0
+  },
+  "tips": [
+    {
+      "id": "fashionbeans-com-article-breaking-down-the-street-style-look-thats-taking-over-t-1",
+      "text": "Build streetwear outfits from a tonal palette (black, grey, off-white, olive, navy) and avoid bright colour blocks.",
+      "why": "Keeps the look cohesive and restrained.",
+      "topics": [
+        "colour",
+        "streetwear"
+      ],
+      "occasions": [
+        "casual"
+      ],
+      "strength": "tip"
+    },
+    {
+      "id": "fashionbeans-com-article-breaking-down-the-street-style-look-thats-taking-over-t-2",
+      "text": "Create interest through fabric and layering rather than prints, graphics or logos.",
+      "why": "Texture adds interest without loud signals.",
+      "topics": [
+        "fabrics",
+        "layering",
+        "streetwear"
+      ],
+      "occasions": [
+        "casual"
+      ],
+      "strength": "tip"
+    },
+    {
+      "id": "fashionbeans-com-article-breaking-down-the-street-style-look-thats-taking-over-t-3",
+      "text": "Pair wide or stacked trousers with a cropped, boxy jacket to balance the volume.",
+      "why": "A shorter top offsets loose bottoms.",
+      "topics": [
+        "proportions",
+        "outerwear"
+      ],
+      "occasions": [
+        "casual"
+      ],
+      "strength": "tip"
+    },
+    {
+      "id": "fashionbeans-com-article-breaking-down-the-street-style-look-thats-taking-over-t-4",
+      "text": "Layer a light technical shell over a soft knit for depth.",
+      "why": "Mixes a sharp outer layer with a soft inner one.",
+      "topics": [
+        "layering",
+        "outerwear"
+      ],
+      "occasions": [
+        "casual"
+      ],
+      "strength": "tip"
+    },
+    {
+      "id": "fashionbeans-com-article-breaking-down-the-street-style-look-thats-taking-over-t-5",
+      "text": "Keep shoes muted, like black runners or low-profile sneakers, so the layers stay the focus.",
+      "why": "Quiet shoes keep a minimal look calm.",
+      "topics": [
+        "shoes",
+        "streetwear"
+      ],
+      "occasions": [
+        "casual"
+      ],
+      "strength": "tip"
+    }
+  ],
+  "outfits": [
+    {
+      "outfit": "jacket black cropped streetwear +technical, sweater grey minimal, trousers black wide minimal, sneakers black minimal",
+      "occasion": "casual",
+      "verdict": "good",
+      "why": "A cropped jacket balances wide trousers in a tonal palette."
+    },
+    {
+      "outfit": "overshirt olive streetwear, tshirt black streetwear, trousers black outdoor +cargo, sneakers black minimal",
+      "occasion": "casual",
+      "verdict": "good",
+      "why": "An overshirt over a long tee with utility cargos."
+    },
+    {
+      "outfit": "jacket black cropped minimal +technical, tshirt white minimal, trousers grey straight minimal, sneakers black minimal",
+      "occasion": "casual",
+      "verdict": "good",
+      "why": "Tapered trousers keep technical layers clean."
+    }
+  ]
+}
