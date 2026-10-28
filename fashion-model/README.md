@@ -113,6 +113,7 @@ What the app does with it:
 
 - **Outfit ideas** (Today, Start from a piece, swaps, Discover): every candidate is scored by the bible's rules, together with the app's own weather comfort, rotation and taste. A candidate that breaks an important rule (weight 0.5 or more, broken by half or more) is only shown when nothing else is left, and then its card says what is off. Belts are matched to the shoes.
 - **Ask the stylist and Discover looks**: each request carries the mandatory rules (about 20 short lines) plus the few tips that best answer the question (found with the same search as `python -m fashion search`), roughly 400 tokens. The outfits that come back are checked against the same rules; if one breaks an important rule, the AI is asked once to fix it, and anything still broken is flagged on its card. Weather and occasion aren't checked on the AI's outfits, because the question may be about another day.
+- **Age**: the checks get the wearer's age from Settings > Look (`Context(age=...)` in Python, `ctx.age` in the app; left out, it isn't judged). Under 30, `proportions` takes an oversized top over baggy or wide bottoms as the current look (smart casual included). The app adds its own points for what's in fashion at each age.
 - Settings has a Fashion bible card with what it knows.
 
 If the bible can't be loaded (first visit offline), the app falls back to its older built-in rules.

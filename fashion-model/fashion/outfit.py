@@ -124,6 +124,7 @@ class Context:
     feels: float = None
     wet: bool = False
     offset: float = 0.0  # warmth points the wearer likes to add (or drop) compared with the usual rule of thumb
+    age: float = None  # the wearer's age: under 30, roomy on roomy is today's look, not a mistake
 
 
 class Outfit:

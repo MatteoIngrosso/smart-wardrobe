@@ -155,12 +155,18 @@ def occasion_styles(o, ctx):
 
 
 @check
-def style_clash(o, ctx, pairs=()):
-    """Styles that don't belong in the same outfit (gym kit with tailoring...). Shoes have their own rule."""
-    present = {s for p in clothes(o) for s in p.styles}
+def style_clash(o, ctx, pairs=(), kit=()):
+    """Styles that don't belong in the same outfit (gym kit with tailoring...). Shoes have their own rule.
+    `kit` pairs count the first style only on pieces that have no other: a pure gym top clashes with
+    smart pieces, a sporty streetwear hoodie over a smart polo doesn't."""
+    worn = clothes(o)
+    present = {s for p in worn for s in p.styles}
     for a, b in pairs:
         if a in present and b in present:
             return -1.0, f"{a.capitalize()} and {b} pieces clash"
+    for a, b in kit:
+        if b in present and any(set(p.styles) == {a} for p in worn):
+            return -1.0, f"{a.capitalize()} kit with {b} pieces"
     return None, None
 
 
@@ -179,7 +185,8 @@ def consistent_style(o, ctx):
 
 @check
 def proportions(o, ctx):
-    """Balance volume: roomy with slim. Baggy on baggy only as a streetwear look."""
+    """Balance volume: roomy with slim. Baggy on baggy only as a streetwear look, or on anyone under 30,
+    for whom an oversized top over baggy or wide trousers is the look of the moment (smart casual too)."""
     h, b = o.hero, o.bottom
     if not (h and b) or h.volume is None or b.volume is None or ctx.occasion == "gym":
         return None, None
@@ -190,8 +197,11 @@ def proportions(o, ctx):
         return 0.8, f"Fitted top with {b.fit} {b.category}"
     if top >= 2 and bottom >= 2:
         street = any("streetwear" in p.styles for p in o.core)
+        young = ctx.age is not None and ctx.age < 30
         relaxed = ctx.occasion in (None, "casual", "night")
-        return (0.3, "Relaxed streetwear proportions") if street and relaxed else (-1.0, "Roomy top and roomy bottom: shapeless")
+        if relaxed and (street or young):
+            return 0.3, "Relaxed streetwear proportions"
+        return (0.0, None) if young and ctx.occasion == "smart" else (-1.0, "Roomy top and roomy bottom: shapeless")
     if top <= -1 and bottom <= -1:
         return 0.4, None
     return 0.0, None
@@ -247,8 +257,20 @@ def shoe_formality(o, ctx):
     tailored = bool(o.find("tie")) or _is_suit(o)
     if s.category == "dress-shoes" and casual_bits and not s.has("loafers"):
         return -1.0, f"Dress shoes with {casual_bits[0].category}"
+    dressy_day = ctx.occasion in ("event", "work")
+    if s.category in ("sneakers", "training-shoes") and tailored and (dressy_day or o.find("tie")):
+        return -1.0, "Sneakers with tailoring"
+    # Sporty sneakers or rugged boots with dressy clothes: a formal piece (dress shirt, formal trousers) and
+    # nothing casual to balance it, or for work a mostly dressy outfit. Clean leather sneakers are fine, and so
+    # is the high-low mix of a blazer over a T-shirt and jeans.
+    worn = clothes(o)
+    if s.category in ("sneakers", "boots") and s.formality <= 1.5 and any(st in ("sporty", "streetwear", "outdoor") for st in s.styles) and worn:
+        unbalanced = any(p.formality >= 3.5 for p in worn) and not any(p.formality <= 1.5 for p in worn)
+        if unbalanced or (dressy_day and sum(p.formality for p in worn) / len(worn) >= 2.3):
+            return (-1.0 if dressy_day else -0.7 if ctx.occasion == "smart" else -0.4), \
+                f"{'Sneakers' if s.category == 'sneakers' else 'Boots'} too casual for the rest"
     if s.category in ("sneakers", "training-shoes") and tailored:
-        return (-1.0 if ctx.occasion in ("event", "work") or o.find("tie") else -0.4), "Sneakers with tailoring"
+        return -0.4, "Sneakers with tailoring"
     if s.category == "training-shoes" and ctx.occasion != "gym":
         return -0.5, "Training shoes outside the gym"
     if s.category in ("dress-shoes", "boots") and o.bottom and o.bottom.formality >= 2:
