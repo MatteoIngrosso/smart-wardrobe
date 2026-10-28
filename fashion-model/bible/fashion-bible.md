@@ -10,7 +10,7 @@ Checked automatically on every outfit. Weight is how much each one matters after
 
 | Rule | Weight | Why |
 |---|---|---|
-| Don't mix gym kit with tailoring | 1.97 (1.8) | Gym kit and formal pieces come from different worlds; together they look accidental. Sporty with smart casual (a hoodie over a polo, a track jacket over a shirt) is a normal high-low streetwear mix. |
+| Don't mix gym kit with tailoring | 1.97 (1.8) | Gym kit and formal pieces come from different worlds; together they look accidental. A piece that is only sporty (a gym top) still clashes with smart pieces, but sporty streetwear with smart casual (a hoodie over a polo) is a normal high-low mix. |
 | Keep pieces at one level of dressiness | 1.64 (1.5) | A very casual piece next to a very dressy one makes both look wrong; step at most one level apart. |
 | A tie needs a collar and long trousers | 1.62 (2.0) | A tie only works with a collared shirt and tailored trousers, never with a hoodie or shorts. |
 | Sports clothes for training | 1.55 (1.5) | At the gym, clothes made to move and breathe, and proper training shoes. |

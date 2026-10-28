@@ -37,6 +37,9 @@ OUTFITS = [
     "tshirt navy slim, jeans navy slim, sneakers navy",
     "shirt navy +check, jacket grey +tweed +blazer, trousers charcoal +stripes, dress-shoes black",
     "tank-top black sporty, track-pants black sporty, shirt white, dress-shoes black",
+    "jacket black minimal, shirt white formal luxury, trousers navy slim formal luxury, sneakers black streetwear sporty",
+    "sweater grey smart, trousers charcoal formal, boots brown outdoor",
+    "jacket navy formal +blazer, tshirt white, jeans black baggy streetwear, sneakers red streetwear sporty",
 ]
 SEARCHES = [
     ("how long should my tie be", None), ("what to wear with a navy blazer", "smart"), ("white sneakers", None),
@@ -75,6 +78,9 @@ def build():
         o = Outfit.parse(text)
         for ctx in contexts():
             add(o, ctx)
+        for occasion in ("casual", "smart", "work"):
+            for age in (19, 45):
+                add(o, {"occasion": occasion, "feels": None, "wet": False, "offset": 0, "age": age})
     tips = merged_tips(load_rulebook(), [])
     slim = [{k: t[k] for k in ("id", "text", "why", "topics", "occasions", "strength", "support", "rank") if k in t} for t in tips]
     search = Search(tips)

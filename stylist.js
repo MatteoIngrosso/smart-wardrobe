@@ -163,9 +163,10 @@ const CHECKS = {
     const suits = (p) => (p.styles.some((s) => likes.includes(s)) ? 1 : ctx.occasion !== "gym" && p.formality - target > 0 && p.formality - target <= 1.5 ? 0.75 : 0);
     return [clamp((o.core.reduce((a, p) => a + suits(p), 0) / o.core.length) * 2 - 1), null];
   },
-  style_clash(o, ctx, { pairs = [] }) {
-    const present = new Set(clothes(o).flatMap((p) => p.styles));
+  style_clash(o, ctx, { pairs = [], kit = [] }) {
+    const worn = clothes(o), present = new Set(worn.flatMap((p) => p.styles));
     for (const [a, b] of pairs) if (present.has(a) && present.has(b)) return [-1, `${cap(a)} and ${b} pieces clash`];
+    for (const [a, b] of kit) if (present.has(b) && worn.some((p) => p.styles.length && p.styles.every((st) => st === a))) return [-1, `${cap(a)} kit with ${b} pieces`];
     return NONE;
   },
   consistent_style(o) {
@@ -181,8 +182,10 @@ const CHECKS = {
     if (top <= -1 && bottom >= 1) return [0.8, `Fitted top with ${b.fit} ${b.category}`];
     if (top >= 2 && bottom >= 2) {
       const street = o.core.some((p) => p.styles.includes("streetwear"));
+      const young = ctx.age != null && ctx.age < 30;
       const relaxed = [null, undefined, "casual", "night"].includes(ctx.occasion);
-      return street && relaxed ? [0.3, "Relaxed streetwear proportions"] : [-1, "Roomy top and roomy bottom: shapeless"];
+      if (relaxed && (street || young)) return [0.3, "Relaxed streetwear proportions"];
+      return young && ctx.occasion === "smart" ? [0, null] : [-1, "Roomy top and roomy bottom: shapeless"];
     }
     if (top <= -1 && bottom <= -1) return [0.4, null];
     return [0, null];
@@ -212,7 +215,17 @@ const CHECKS = {
     const tie = o.find("tie").length > 0;
     const tailored = tie || isSuit(o);
     if (s.category === "dress-shoes" && casualBits.length && !s.has("loafers")) return [-1, `Dress shoes with ${casualBits[0].category}`];
-    if (["sneakers", "training-shoes"].includes(s.category) && tailored) return [["event", "work"].includes(ctx.occasion) || tie ? -1 : -0.4, "Sneakers with tailoring"];
+    const dressyDay = ["event", "work"].includes(ctx.occasion);
+    if (["sneakers", "training-shoes"].includes(s.category) && tailored && (dressyDay || tie)) return [-1, "Sneakers with tailoring"];
+    // Sporty sneakers or rugged boots with dressy clothes: a formal piece and nothing casual to balance it,
+    // or for work a mostly dressy outfit. Clean leather sneakers and a blazer over a T-shirt and jeans are fine.
+    const worn = clothes(o);
+    if (["sneakers", "boots"].includes(s.category) && s.formality <= 1.5 && s.styles.some((st) => ["sporty", "streetwear", "outdoor"].includes(st)) && worn.length) {
+      const unbalanced = worn.some((p) => p.formality >= 3.5) && !worn.some((p) => p.formality <= 1.5);
+      if (unbalanced || (dressyDay && worn.reduce((a, p) => a + p.formality, 0) / worn.length >= 2.3))
+        return [dressyDay ? -1 : ctx.occasion === "smart" ? -0.7 : -0.4, `${s.category === "sneakers" ? "Sneakers" : "Boots"} too casual for the rest`];
+    }
+    if (["sneakers", "training-shoes"].includes(s.category) && tailored) return [-0.4, "Sneakers with tailoring"];
     if (s.category === "training-shoes" && ctx.occasion !== "gym") return [-0.5, "Training shoes outside the gym"];
     if (["dress-shoes", "boots"].includes(s.category) && o.bottom && o.bottom.formality >= 2) return [0.6, null];
     return [0, null];
@@ -311,7 +324,7 @@ export function isSuit(o) {
 }
 
 /* ---------- Judging ---------- */
-// ctx: { occasion, feels, wet, offset }. Anything left out is simply not judged.
+// ctx: { occasion, feels, wet, offset, age }. Anything left out is simply not judged.
 // Returns the rules that apply: [{ rule, score, note, points }], points being weight × score.
 export function evaluate(outfit, ctx = {}) {
   const out = [];

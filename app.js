@@ -256,6 +256,7 @@ const state = {
     city: "", lat: null, lon: null, unit: "C", theme: "auto",
     region: (navigator.language || "en").slice(0, 2) === "it" ? "it" : "com",
     gender: "men", // who the shopping ideas are for: "men" or "women"
+    age: null, // the wearer's age: outfit ideas and the AI follow what's in fashion now at that age (see AGE_BANDS)
     touches: true, // a "Finish it with…" line on Today when an accessory you don't own would help
     scents: true, // a scent from your cabinet on each outfit idea (Wardrobe > Fragrances)
     aiProvider: "gemini", geminiKey: "", geminiModel: "gemini-flash-latest", apiKey: "",
@@ -1333,7 +1334,42 @@ async function loadBible() {
   else fetched.then((changed) => { if (changed) { tasteMemo = null; state.outfits = []; if (view === "today") render(); } });
 }
 // What the rules need to know about the day. Warmth rules use how warm this person likes to dress.
-const styleCtx = (cond, occ, t) => ({ occasion: occ.id, feels: cond.feels, wet: cond.wet, offset: occ.id === "gym" ? 0 : t?.offset || 0 });
+const styleCtx = (cond, occ, t) => ({ occasion: occ.id, feels: cond.feels, wet: cond.wet, offset: occ.id === "gym" ? 0 : t?.offset || 0, age: state.settings.age || null });
+
+// What's in fashion now at each age (Settings > Look > Age). `fit` and `style` are points for the top,
+// the bottoms and each piece's styles: under 25 baggy and wide jeans, boxy and oversized tops and
+// streetwear; then straighter, cleaner lines; from 50 classic regular fits and quiet pieces.
+// `now` goes to the AI stylist, Discover looks and the audit in a few words.
+const AGE_BANDS = [
+  { upTo: 24, now: "baggy or wide-leg jeans and cargos, boxy or oversized tees and hoodies, statement sneakers, layered streetwear and outdoor pieces",
+    fit: { baggy: 0.8, wide: 0.8, oversized: 0.6, relaxed: 0.4, slim: -0.5 }, style: { streetwear: 0.5, vintage: 0.3, outdoor: 0.2, sporty: 0.2, preppy: -0.2 } },
+  { upTo: 34, now: "straight or relaxed jeans, relaxed tailoring, overshirts, clean minimal sneakers, streetwear mixed with smart pieces",
+    fit: { straight: 0.4, relaxed: 0.4, regular: 0.2, baggy: 0.2, wide: 0.2, oversized: 0.1, slim: -0.2 }, style: { minimal: 0.3, "smart casual": 0.3, streetwear: 0.1 } },
+  { upTo: 49, now: "regular and straight fits, tailoring that isn't tight, knitwear and overshirts, leather sneakers and loafers, quiet logos",
+    fit: { regular: 0.4, straight: 0.4, slim: 0.2, relaxed: 0.1, oversized: -0.6, baggy: -0.6, wide: -0.3 }, style: { "smart casual": 0.3, minimal: 0.3, preppy: 0.2, streetwear: -0.4 } },
+  { upTo: Infinity, now: "classic regular fits, quality knits, chinos, loafers and clean leather sneakers, few or no logos",
+    fit: { regular: 0.5, straight: 0.4, slim: 0.1, relaxed: 0.1, oversized: -1, baggy: -1, wide: -0.4 }, style: { "smart casual": 0.3, smart: 0.3, preppy: 0.2, minimal: 0.2, luxury: 0.2, streetwear: -0.7, sporty: -0.3 } },
+];
+const ageBand = (age = state.settings.age) => (age ? AGE_BANDS.find((b) => age <= b.upTo) : null);
+const ageNow = () => (ageBand() ? ` In fashion now at ${state.settings.age}: ${ageBand().now}.` : "");
+// How current an outfit looks for the wearer's age: the fit of the top and the bottoms, and the pieces'
+// styles. Dressier occasions follow it less (a suit is a suit at any age), the gym not at all.
+function ageScore(o, pieces, occ) {
+  const band = ageBand();
+  if (!band || occ.id === "gym") return { s: 0 };
+  let s = 0, best = null;
+  for (const p of [heroOf(o), o.bottom].filter(Boolean)) {
+    let v = band.fit[p.fit] || 0;
+    if (v < 0 && p.fit === "slim" && p.category !== "jeans") v = 0; // slim tailoring is fine at any age, skinny jeans aren't now
+    s += v;
+    if (v >= 0.6 && v > (best?.v || 0)) best = { v, p };
+  }
+  const styled = pieces.filter((p) => p.styles?.length);
+  s += 1.5 * mean(styled.map((p) => p.styles.map((st) => band.style[st] || 0).reduce((a, v) => (Math.abs(v) > Math.abs(a) ? v : a), 0)));
+  s = Math.max(-1.5, Math.min(1.5, s)) * (occ.level >= 4 || ["work", "event"].includes(occ.id) ? 0.4 : occ.id === "smart" ? 0.7 : 1);
+  const reason = best && s >= 0.6 ? `${FITS[best.p.fit].label} ${catLabel(best.p.category).toLowerCase()}: in fashion at ${state.settings.age}` : null;
+  return { s, reason };
+}
 // The rules the engine scores in its own, personal way (see scoreOutfit); they still count as violations.
 const OWN_COMFORT_RULES = ["warmth", "shorts-weather"];
 const ruleLine = (v) => v.note || v.rule.title;
@@ -1527,7 +1563,7 @@ function scoreOutfit(o, cond, occ, t = taste()) {
       if (top >= 1 && bottom <= 0) { s += 1; reasons.push(`${FITS[hero.fit].label} top balanced by ${FITS[o.bottom.fit].label.toLowerCase()} ${catLabel(o.bottom.category).toLowerCase()}`); }
       else if (top <= -1 && bottom >= 1) { s += 0.8; reasons.push(`Fitted top with ${FITS[o.bottom.fit].label.toLowerCase()} ${catLabel(o.bottom.category).toLowerCase()}`); }
       else if (top >= 2 && bottom >= 2) {
-        const street = pieces.some((p) => (p.styles || []).includes("streetwear"));
+        const street = pieces.some((p) => (p.styles || []).includes("streetwear")) || (state.settings.age || 99) < 30;
         if (street && occ.target < 2.2) { s += 0.5; reasons.push("Relaxed streetwear proportions"); } else s -= 1.5;
       } else if (top <= -1 && bottom <= -1 && occ.target >= 2.2) s += 0.5;
     }
@@ -1547,6 +1583,9 @@ function scoreOutfit(o, cond, occ, t = taste()) {
   const common = sense(pieces, feels, occ);
   s += common.s;
   reasons.push(...common.reasons);
+  const now = ageScore(o, pieces, occ);
+  s += now.s;
+  if (now.reason) reasons.splice(1, 0, now.reason);
 
   // Elegance: each step outside the levels the occasion wants costs more than a loved piece earns
   // (a level you picked by hand even more), the best level for it earns a little. Elegant wants a full
@@ -2401,7 +2440,11 @@ function analyse() {
 const GENDER_WORDS = { men: { en: "men", it: "uomo" }, women: { en: "women", it: "donna" } };
 const forWho = (query, lang = state.settings.region === "it" ? "it" : "en") =>
   /\b(men|man|mens|women|woman|womens|uomo|donna|unisex)\b/i.test(query) ? query : `${query} ${GENDER_WORDS[state.settings.gender]?.[lang] || "men"}`;
-const shopperText = () => (state.settings.gender === "women" ? "a woman (womenswear)" : "a man (menswear)");
+// Settings > Look > Age: what it changes, in a line.
+const ageHint = () => (ageBand()
+  ? `Outfit ideas follow what's in fashion now at ${state.settings.age}: ${ageBand().now}. The AI stylist, Discover and the audit know it too.`
+  : "Outfit ideas, the AI stylist and Discover follow what's in fashion now at your age.");
+const shopperText = () => (state.settings.gender === "women" ? "a woman (womenswear)" : "a man (menswear)") + (state.settings.age ? `, aged ${state.settings.age}` : "");
 function shopLinks(query) {
   const r = state.settings.region;
   const q = encodeURIComponent(forWho(query));
@@ -4737,7 +4780,7 @@ function verdictHTML(b) {
 const MULTI_GOOD = 0.6; // how sure the fashion bible's model must be that it's a good outfit
 // `o`: the pieces, or the outfit Style.outfitFrom built from them (quicker when judged for several occasions).
 const goodOutfit = (o, occ, feels) => {
-  const j = Style.judge(o, { occasion: occ, feels, wet: false, offset: 0 });
+  const j = Style.judge(o, { occasion: occ, feels, wet: false, offset: 0, age: state.settings.age || null });
   return !j.violations.length && j.prob >= MULTI_GOOD;
 };
 // The pieces you own that can go in an everyday outfit (not disliked, not gym), by role.
@@ -4791,7 +4834,7 @@ function multiplier(b) {
   const role = roleOf(piece);
   if (!CORE.includes(role) || slotOf(piece) === "gym") return null;
   const by = ownedByRole(piece);
-  const key = `${sigOf(b)}|${Object.values(ownedByRole()).flat().map((i) => i.id).join()}`;
+  const key = `${sigOf(b)}|${state.settings.age}|${Object.values(ownedByRole()).flat().map((i) => i.id).join()}`;
   if (multiMemo.has(key)) return multiMemo.get(key);
   const found = new Map(); // outfit → occasions it works for
   const tried = new Set(), every = new Set();
@@ -5196,7 +5239,7 @@ function eventDetail(ev) {
    Ideas from the full audit (AI, on request) and analyse()'s rules of thumb join them. */
 const COVER_CAP = 25;
 let coverMemo = null;
-const coverSig = () => Object.values(ownedByRole()).flat().map((i) => i.id).join();
+const coverSig = () => `${state.settings.age}|` + Object.values(ownedByRole()).flat().map((i) => i.id).join();
 // False while the audit still has to look through the wardrobe (a moment on a big one).
 const coverageDone = () => !Style.ready() || coverMemo?.sig === coverSig();
 function coverage() {
@@ -5415,7 +5458,7 @@ async function runAudit(auto = false) {
   try {
     const text = await aiGenerate({
       system: `You are a personal stylist auditing a client's whole wardrobe in a wardrobe app. Find missing essentials, gaps for seasons and occasions, bottlenecks (one piece carrying too many outfits) and accessories that would lift what they own. Only suggest pieces that work with what they already own. Reply with JSON only.\n\n${Style.guideText({ question: "wardrobe essentials capsule gaps", k: 4 })}`,
-      text: `For ${shopperText()}.\nWardrobe:\n${wardrobeText()}\n\nWhat the app found:\n${auditText()}\n\nTheir taste:\n${tasteText() || "Not known yet."}`,
+      text: `For ${shopperText()}.${ageNow()}\nWardrobe:\n${wardrobeText()}\n\nWhat the app found:\n${auditText()}\n\nTheir taste:\n${tasteText() || "Not known yet."}`,
       schema: IDEAS_SCHEMA,
       maxTokens: 900,
     });
@@ -5441,7 +5484,7 @@ async function smarterPicks() {
   try {
     const text = await aiGenerate({
       system: `You are a personal stylist in a wardrobe app. Suggest pieces to buy for what the client asks, that work with what they already own. Reply with JSON only.\n\n${Style.guideText({ question: n.text, k: 4 })}`,
-      text: `For ${shopperText()}. They ask: "${n.text}".${n.ai?.length ? ` Different from: ${n.ai.map((x) => x.noun).join(", ")}.` : ""}\nWardrobe:\n${wardrobeText()}\n\nTheir taste:\n${tasteText() || "Not known yet."}`,
+      text: `For ${shopperText()}.${ageNow()} They ask: "${n.text}".${n.ai?.length ? ` Different from: ${n.ai.map((x) => x.noun).join(", ")}.` : ""}\nWardrobe:\n${wardrobeText()}\n\nTheir taste:\n${tasteText() || "Not known yet."}`,
       schema: IDEAS_SCHEMA,
       maxTokens: 700,
     });
@@ -6003,7 +6046,7 @@ async function makeLook() {
     const guide = Style.guideText({ question: `${styleLabel(style)} ${occ.label} ${SEASONS[season].label}`, occasion: occ.id, k: 4 });
     const request = (fix = "") => aiGenerate({
       system: `You are a stylist in a wardrobe app. Design one complete outfit made only of new pieces the user can buy. Reply with JSON only.${guide ? "\n\n" + guide : ""}`,
-      text: `For ${shopperText()}. Season: ${SEASONS[season].label}. Style: ${styleLabel(style)}. Occasion: ${occ.label}.` +
+      text: `For ${shopperText()}.${ageNow()} Season: ${SEASONS[season].label}. Style: ${styleLabel(style)}. Occasion: ${occ.label}.` +
         (palette ? ` Colours they usually wear: ${palette}.` : "") + (brands ? ` Brands they own: ${brands}.` : "") +
         (shops ? ` Only use pieces sold by these shops and name the shop for each: ${shops}.` : "") +
         ` Real, easy-to-find pieces; at most one accent colour.` + (L.seen.length ? ` Make it different from: ${L.seen.slice(-4).join("; ")}.` : "") + fix,
@@ -6932,6 +6975,7 @@ function renderSettings() {
         <div class="chips">${[["auto", "Match system"], ["dark", "Dark"], ["light", "Light"]].map(([k, l]) => `<button class="chip" aria-pressed="${s.theme === k}" data-theme="${k}">${l}</button>`).join("")}</div>
         <div class="field"><label>Shops</label><div class="chips">${[["it", "Italy"], ["com", "International"]].map(([k, l]) => `<button class="chip" aria-pressed="${s.region === k}" data-region="${k}">${l}</button>`).join("")}</div></div>
         <div class="field"><label>Shop for</label><div class="chips">${[["men", "Men"], ["women", "Women"]].map(([k, l]) => `<button class="chip" aria-pressed="${s.gender === k}" data-gender="${k}">${l}</button>`).join("")}</div><span class="muted small">Shopping ideas, shop links, product photos and new looks are for ${s.gender === "women" ? "women" : "men"}.</span></div>
+        <div class="field"><label for="age">Age</label><input id="age" class="input" style="max-width:7rem" type="number" inputmode="numeric" min="12" max="99" placeholder="e.g. 25" data-input="age" value="${s.age || ""}"><span id="age-hint" class="muted small">${ageHint()}</span></div>
         ${toggle("touches", "Finishing touches", "One line on today's best outfit when an accessory you don't own (a belt, a watch…) would finish it.")}
         ${toggle("scents", "A scent for each outfit", "A fragrance from your cabinet on each outfit idea and event plan, picked for the weather and the occasion. Logged with the outfit when you wear it.")}
         <div class="field"><label>Product photos</label><span class="muted small">${productsOn()
@@ -7192,7 +7236,7 @@ async function ask(question, targetId = "ai-answer") {
     const c = conditions();
     const likes = tasteText();
     const cal = calendarText();
-    const context = `The user is ${shopperText()}.\n${state.event?.day === "tomorrow" ? "Tomorrow" : "Today"}: feels ${Math.round(c.feels)}°C${c.wet ? ", wet" : ""}. Occasion: ${OCCASIONS.find((o) => o.id === state.occasion).label}.${cal ? `\n${cal}` : ""}\nWardrobe (#number name; type; colours; brand; style; fit; warmth 1-5; wear):\n${wardrobeText() || "(empty)"}${likes ? `\nTaste (learnt from what the user wears, likes and skips):\n${likes}` : ""}`;
+    const context = `The user is ${shopperText()}.${ageNow()}\n${state.event?.day === "tomorrow" ? "Tomorrow" : "Today"}: feels ${Math.round(c.feels)}°C${c.wet ? ", wet" : ""}. Occasion: ${OCCASIONS.find((o) => o.id === state.occasion).label}.${cal ? `\n${cal}` : ""}\nWardrobe (#number name; type; colours; brand; style; fit; warmth 1-5; wear):\n${wardrobeText() || "(empty)"}${likes ? `\nTaste (learnt from what the user wears, likes and skips):\n${likes}` : ""}`;
     const refs = state.items.map((i) => i.id);
     const show = (t) => { const el = document.getElementById(targetId); if (el) el.textContent = cleanRefs(t, refs); };
     // The fashion bible: its mandatory rules and the tips that fit this question.
@@ -7730,6 +7774,15 @@ document.addEventListener("input", (e) => {
   if (k === "tripq") { state.disc.tripq = v; return; }
   if (scentDraft && k.startsWith("sc-")) return scentTyped(scentDraft, k.slice(3), v);
   if (["evtext", "evdate", "evtime", "evplace"].includes(k)) { state.disc.evForm[k.slice(2)] = v; return; }
+  if (k === "age") {
+    const n = Math.round(+v);
+    state.settings.age = n >= 12 && n <= 99 ? n : null;
+    const hint = $("#age-hint");
+    if (hint) hint.textContent = ageHint();
+    clearTimeout(e.target._t);
+    e.target._t = setTimeout(() => { state.outfits = []; saveSettings(); }, 400);
+    return;
+  }
   if (k === "temp") {
     state.manualTemp = +v;
     clearTimeout(e.target._t);

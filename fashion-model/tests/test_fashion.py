@@ -332,6 +332,28 @@ class ForTheApp(unittest.TestCase):
         lighter = scores_of(o, Context(feels=12, offset=-2))["warmth"]
         self.assertGreater(lighter, plain)
 
+    def test_gym_kit_clashes_with_smart_but_sporty_streetwear_does_not(self):
+        kit = Outfit.parse("jacket navy smart +blazer, overshirt black sporty, shirt white smart, trousers navy smart, sneakers white")
+        self.assertEqual(scores_of(kit, Context(occasion="smart"))["style-clash"], -1.0)
+        street = Outfit.parse("hoodie black sporty streetwear, tshirt white smart, jeans black, sneakers black sporty streetwear")
+        self.assertNotIn("style-clash", scores_of(street, Context(occasion="casual")))
+
+    def test_sporty_sneakers_are_too_casual_under_dressy_clothes(self):
+        dressy = Outfit.parse("jacket black minimal, shirt white formal, trousers navy slim formal, sneakers black streetwear sporty")
+        self.assertEqual(scores_of(dressy, Context(occasion="work"))["shoe-formality"], -1.0)
+        clean = Outfit.parse("jacket black minimal, shirt white formal, trousers navy slim formal, sneakers white minimal +leather")
+        self.assertGreaterEqual(scores_of(clean, Context(occasion="work"))["shoe-formality"], 0)
+        blazer_tee = Outfit.parse("jacket navy formal +blazer, tshirt white, jeans black, sneakers red streetwear sporty")
+        self.assertEqual(scores_of(blazer_tee, Context(occasion="casual"))["shoe-formality"], 0)
+
+    def test_roomy_on_roomy_is_fine_under_30(self):
+        o = Outfit.parse("tshirt black oversized, jeans black baggy, sneakers white")
+        self.assertEqual(scores_of(o, Context(occasion="casual"))["proportions"], -1.0)
+        self.assertEqual(scores_of(o, Context(occasion="casual", age=45))["proportions"], -1.0)
+        self.assertGreater(scores_of(o, Context(occasion="casual", age=20))["proportions"], 0)
+        self.assertEqual(scores_of(o, Context(occasion="smart", age=20))["proportions"], 0)
+        self.assertEqual(scores_of(o, Context(occasion="work", age=20))["proportions"], -1.0)
+
     def test_export_command(self):
         with tempfile.TemporaryDirectory() as d, mock.patch.object(bible, "APP_BIBLE", Path(d) / "b.json"):
             code, out = CommandLine.run_cli(None, "export")

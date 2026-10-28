@@ -1,7 +1,7 @@
 {
  "name": "Fashion bible",
  "version": 1,
- "built_at": "2026-10-28T15:53:26+00:00",
+ "built_at": "2026-10-28T16:07:57+00:00",
  "about": "Menswear rules, tips and example outfits, in the Smart Wardrobe app's vocabulary (garment types, colours, styles, fits and occasions as in app.js). Score an outfit with: sigmoid(model.bias + sum(rule.weight * check(rule))).",
  "model": {
   "bias": -2.141,
@@ -287,7 +287,7 @@
   {
    "id": "style-clash",
    "title": "Don't mix gym kit with tailoring",
-   "why": "Gym kit and formal pieces come from different worlds; together they look accidental. Sporty with smart casual (a hoodie over a polo, a track jacket over a shirt) is a normal high-low streetwear mix.",
+   "why": "Gym kit and formal pieces come from different worlds; together they look accidental. A piece that is only sporty (a gym top) still clashes with smart pieces, but sporty streetwear with smart casual (a hoodie over a polo) is a normal high-low mix.",
    "check": "style_clash",
    "params": {
     "pairs": [
@@ -302,6 +302,12 @@
      [
       "streetwear",
       "formal"
+     ]
+    ],
+    "kit": [
+     [
+      "sporty",
+      "smart"
      ]
     ]
    },
