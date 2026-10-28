@@ -1396,7 +1396,7 @@ function levelGap(pool) {
   const own = suggestable();
   return { want: range[0], top, needs: (LEVEL_NEEDS[range[0]] || []).filter(([, , has]) => !own.some(has)) };
 }
-// Common sense the fashion bible doesn't check: linen out of season, heavy boots with linen or shorts,
+// Common sense the fashion bible doesn't check: linen out of season, heavy boots with linen, shorts or tailoring,
 // ripped jeans anywhere smart, and colours on the details (a yellow sole, a red logo) that clash with
 // the rest of the outfit.
 function sense(pieces, feels, occ) {
@@ -1406,6 +1406,8 @@ function sense(pieces, feels, occ) {
   if (linen.length && feels < 19) s -= 2;
   const heavyBoots = pieces.find((p) => p.category === "boots" && ((p.warmth || 0) >= 4 || has(p, "timberland", "hiking", "work")));
   if (heavyBoots && pieces.some((p) => /shorts/.test(p.category) || linen.includes(p))) s -= 1.5;
+  // Work or hiking boots with a blazer or tailored trousers.
+  if (heavyBoots && pieces.some((p) => (p.category === "jacket" && (p.formality >= 3 || has(p, "blazer"))) || (p.category === "trousers" && p.formality >= 3))) s -= 2.5;
   if (occ.target >= 2.2 && pieces.some((p) => has(p, "ripped", "distressed", "destroyed"))) s -= 2.5;
   // The loudest piece sets the accent colours; other pieces should echo them or stay neutral.
   const accents = (p) => new Set((p.colors || []).filter((c) => COLORS[c] && !COLORS[c].neutral));
@@ -1523,7 +1525,7 @@ function scoreOutfit(o, cond, occ, t = taste()) {
   s += learnt.score;
   if (learnt.reason) reasons.unshift(learnt.reason);
   if (fresh) reasons.push(`Gives the ${fresh.name} some wear`);
-  return { score: s, reasons: reasons.slice(0, 3), broken: broken.map(ruleLine) };
+  return { score: s, reasons: reasons.slice(0, 3), broken: broken.map(ruleLine), brokenIds: broken.map((v) => v.rule.id) };
 }
 
 // Today's candidates, best first. Cheap enough to redo on every tap (900 tries).
@@ -1587,7 +1589,7 @@ function ideaPool(opts = {}) {
     seen.add(key);
     const scored = scoreOutfit(o, cond, occ, t);
     const level = Style.ready() ? dressLevel(Object.values(o).filter(Boolean)) : 0, range = level && levelsFor(occ);
-    cands.push({ key, pieces: o, ...scored, level, offLevel: !!range && (level < range[0] || level > range[2]), jitter: Math.random() * 0.6, blocked: t.blocked.has(key), isBroken: scored.broken.length > 0 });
+    cands.push({ key, pieces: o, ...scored, level, levelOff: !range ? 0 : level < range[0] ? range[0] - level : Math.max(0, level - range[2]), jitter: Math.random() * 0.6, blocked: t.blocked.has(key), isBroken: scored.broken.length > 0 });
   }
   cands.sort((a, b) => b.score + b.jitter - (a.score + a.jitter));
   const missing = ["bottom", "shoes"].filter((s) => !by[s].length && roleOf(anchor || {}) !== s);
@@ -1608,23 +1610,28 @@ function pickIdeas(pool, n, keep = [], avoid = []) {
   const outers = new Set(keep.map((o) => o.pieces.outer?.id).filter(Boolean));
   const differ = (h, b) => !heroes.has(h) && !(b && bottoms.has(b));
   const half = (h, b) => !heroes.has(h) || !(b && bottoms.has(b));
-  // Outfits too casual or too dressy for the occasion wait with the rule-breakers, when there's anything at the right level.
-  const strict = cands.some((c) => !c.blocked && !c.isBroken && !c.offLevel);
-  const off = (c) => c.isBroken || (strict && c.offLevel);
-  const good = (cands.find((c) => !c.blocked && !off(c))?.score ?? cands.find((c) => !c.blocked)?.score ?? 0) - 3;
+  // Three tiers: outfits at the occasion's level that break no rule, then the ones that break one, then
+  // anything off the level. When nothing you own reaches the level, the closest level comes first, and
+  // shoes too casual for the rest (the only rule broken) don't hold an outfit back: with no dress shoes
+  // yet, the blazer, shirt and trousers with your smartest sneakers can lead for Elegant (the card
+  // above the ideas says dress shoes are missing).
+  const closest = Math.min(...cands.filter((c) => !c.blocked).map((c) => c.levelOff ?? 0), Infinity);
+  const onlyShoes = (c) => closest > 0 && c.brokenIds?.length === 1 && c.brokenIds[0] === "shoe-formality";
+  const tier = (c) => ((c.levelOff ?? 0) > closest ? 2 : c.isBroken && !onlyShoes(c) ? 1 : 0);
+  const good = (cands.find((c) => !c.blocked && tier(c) === 0)?.score ?? cands.find((c) => !c.blocked && tier(c) < 2)?.score ?? cands[0]?.score ?? 0) - 3;
   // A jacket you love shouldn't fill every idea: the first passes want each idea to bring a different one.
   // A slightly weaker outfit with another jacket beats the same jacket three times.
   // Repeating a top or bottom beats an outfit far behind the best (shorts at 17° for Elegant).
   const any = () => true;
   const passes = [[differ, good, true], [half, good, true], [differ, good - 3, true], [half, good - 3, true], [differ, good], [half, good], [any, good], [differ, -Infinity], [half, -Infinity], [any, -Infinity]];
-  for (const [allowBlocked, allowBroken] of [[false, false], [true, false], [true, true]]) {
+  for (const [allowBlocked, maxTier] of [[false, 0], [true, 0], [false, 1], [true, 1], [true, 2]]) {
     for (const [ok, min, newOuter] of passes) {
       for (const c of cands) {
         if (out.length === n) break;
         const hero = heroOf(c.pieces).id;
         const bottom = c.pieces.bottom?.id;
         const outer = c.pieces.outer?.id;
-        if (out.includes(c) || shown.has(c.key) || (c.blocked && !allowBlocked) || (off(c) && !allowBroken) || c.score < min || !ok(hero, bottom) || (newOuter && outer && outers.has(outer))) continue;
+        if (out.includes(c) || shown.has(c.key) || (c.blocked && !allowBlocked) || tier(c) > maxTier || c.score < min || !ok(hero, bottom) || (newOuter && outer && outers.has(outer))) continue;
         if (outer) outers.add(outer);
         heroes.add(hero);
         if (bottom) bottoms.add(bottom);
