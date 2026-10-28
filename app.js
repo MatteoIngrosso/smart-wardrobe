@@ -1360,7 +1360,38 @@ const RELAXED = ["hoodie", "zip-hoodie", "sweatshirt", "joggers", "shorts", "tra
 const EVERYDAY = ["tshirt", "jeans", "tank-top"];
 // A casual piece: a T-shirt or jeans, sneakers that aren't smart (clean leather ones are), or anything
 // whose styles are all casual (streetwear cargo pants, outdoor boots).
-const casualPiece = (p) => EVERYDAY.includes(p.category) || (p.category === "sneakers" && p.formality < 2.5) || p.formality < 1.8;
+// When the AI has looked at the photo, its own dressiness (1-5) decides instead of the styles.
+const casualPiece = (p) => {
+  if (EVERYDAY.includes(p.category)) return true;
+  const look = lookOf(p);
+  if (look?.dressiness) return look.dressiness <= 2;
+  return (p.category === "sneakers" && p.formality < 2.5) || p.formality < 1.8;
+};
+// What the AI saw in a piece's photo (see lookAt), for an app item or a piece of the fashion bible's.
+const lookOf = (p) => p?.look || p?.item?.look || null;
+// Jacket and trousers of one suit: linked by you (item.suit), or the fashion bible's own test.
+const suitPair = (j, t) => {
+  if (!j || !t) return false;
+  const a = j.item || j, b = t.item || t;
+  return (!!a.suit && a.suit === b.suit) || Style.isSuit(Style.outfitFrom([a, b]));
+};
+// How dressy a piece is, 1 (lounge) to 5 (formal): what the AI saw in the photo, else its type nudged
+// by its styles (a blazer 4.5, a dress shirt 4.5, a polo 3.5, a T-shirt 2, a hoodie 1).
+const DRESS_BASE = { tshirt: 2, "tank-top": 1.5, "long-sleeve-top": 2, polo: 3, shirt: 3.5, overshirt: 2.5, sweater: 3, jacket: 2.5, rain: 2, coat: 3.5, puffer: 1.5, jeans: 2, trousers: 3, skirt: 3, sneakers: 2, boots: 2.5, "dress-shoes": 4.5 };
+function dressOf(p) {
+  const it = p?.item || p, look = lookOf(it);
+  if (look?.dressiness) return look.dressiness;
+  if (RELAXED.includes(it.category)) return 1;
+  const words = `${it.name} ${(it.tags || []).join(" ")}`;
+  let base = DRESS_BASE[it.category] ?? (it.formality || 1) + 0.5;
+  if (it.category === "jacket" && /blazer|suit/i.test(words)) base = 4;
+  if (/cargo|parachute/i.test(words)) base -= 0.5;
+  if (it.suit) base = Math.max(base, 4);
+  return Math.min(5, Math.max(1, base + ((it.formality || 1) - 1.5) * 0.6));
+}
+// The pieces of tailoring (levels 4 and 5): a blazer or suit jacket, and smart trousers (not cargo).
+const isBlazer = (p) => p.category === "jacket" && (!!p.suit || lookOf(p)?.tailored || (lookOf(p)?.dressiness ?? 0) >= 4 || (!lookOf(p) && p.formality >= 3) || /blazer|suit/i.test(`${p.name} ${(p.tags || []).join(" ")}`));
+const isSmartTrousers = (p) => p.category === "trousers" && !/cargo|parachute/i.test(`${p.name} ${(p.tags || []).join(" ")}`) && (!!p.suit || lookOf(p)?.tailored || (lookOf(p)?.dressiness ?? 0) >= 3 || (!lookOf(p) && p.formality >= 2));
 const LEVELS = { 1: "Relaxed", 2: "Casual", 3: "Smart casual", 4: "Tailored", 5: "Full suit" };
 // [lowest, best, highest] level for each occasion.
 const OCC_LEVELS = { casual: [1, 2, 3], smart: [3, 3, 4], work: [3, 4, 5], night: [2, 3, 4], event: [4, 5, 5] };
@@ -1369,9 +1400,12 @@ function dressLevel(pieces) {
   const worn = o.core.filter((p) => p !== o.outer || p.category === "jacket");
   if (!worn.length) return 1;
   if (worn.some((p) => RELAXED.includes(p.category))) return 1;
-  const tailored = o.outer && o.outer.category === "jacket" && (o.outer.has("blazer", "suit") || o.outer.formality >= 3) && o.bottom?.category === "trousers" && o.bottom.formality >= 2
-    && o.shoes && ["dress-shoes", "boots"].includes(o.shoes.category) && o.shoes.formality >= 2 && o.base?.category === "shirt";
-  if (tailored) return Style.isSuit(o) ? 5 : 4;
+  const tailoredBit = (p, min) => lookOf(p)?.tailored || (lookOf(p)?.dressiness ?? 0) >= 4 || (!lookOf(p) && p.formality >= min);
+  // 4: a blazer and a shirt with smart trousers and leather shoes (or smart sneakers). 5: the jacket and
+  // trousers are one suit, with dress shoes. A blazer with jeans or over a T-shirt stays smart casual.
+  const blazer = o.outer && isBlazer(o.outer.item), trousers = o.bottom && isSmartTrousers(o.bottom.item);
+  const dressShoes = o.shoes && (o.shoes.category === "dress-shoes" || (o.shoes.category === "boots" && tailoredBit(o.shoes, 2)));
+  if (blazer && trousers && o.base?.category === "shirt" && o.shoes && (dressShoes || !casualPiece(o.shoes))) return dressShoes && suitPair(o.outer, o.bottom) ? 5 : 4;
   const casual = worn.filter(casualPiece).length;
   return casual === 0 || (casual === 1 && mean(worn.map((p) => p.formality)) >= 2) ? 3 : 2;
 }
@@ -1382,19 +1416,21 @@ const LEVEL_NEEDS = {
     ["Trousers", "chinos or smart trousers", (i) => i.category === "trousers" && i.formality >= 2],
     ["Shoes", "leather shoes or smart sneakers", (i) => slotOf(i) === "shoes" && !casualPiece(i) && i.formality >= 2]],
   4: [["Shirts", "a shirt", (i) => i.category === "shirt"],
-    ["Jackets", "a blazer", (i) => i.category === "jacket" && (i.formality >= 3 || /blazer|suit/i.test(`${i.name} ${(i.tags || []).join(" ")}`))],
-    ["Trousers", "tailored trousers", (i) => i.category === "trousers" && i.formality >= 2.5],
-    ["Shoes", "dress shoes", (i) => i.category === "dress-shoes"]],
+    ["Jackets", "a blazer", isBlazer],
+    ["Trousers", "tailored trousers", isSmartTrousers],
+    ["Shoes", "dress shoes", (i) => i.category === "dress-shoes" || (i.category === "boots" && (i.look?.dressiness ?? 0) >= 4)]],
 };
-LEVEL_NEEDS[5] = LEVEL_NEEDS[4];
+LEVEL_NEEDS[5] = [...LEVEL_NEEDS[4], ["Jackets", "a suit (jacket and trousers)", (i) => i.category === "jacket" && !!suitMate(i)]];
 // When none of today's ideas reach the occasion's lowest level: what's missing for it.
 function levelGap(pool) {
   const range = Style.ready() && levelsFor(pool.occ);
   if (!range || !pool.cands.length) return null;
   const top = Math.max(...pool.cands.map((c) => c.level));
-  if (top >= range[0]) return null;
-  const own = suggestable();
-  return { want: range[0], top, needs: (LEVEL_NEEDS[range[0]] || []).filter(([, , has]) => !own.some(has)) };
+  if (top >= range[1]) return null;
+  // Below the lowest level: nothing fits. Below the best (a suit for Elegant): a hint of what's missing.
+  const want = top < range[0] ? range[0] : range[1], own = suggestable();
+  const needs = (LEVEL_NEEDS[want] || []).filter(([, , has]) => !own.some(has));
+  return top < range[0] || needs.length ? { want, top, short: top >= range[0], needs } : null;
 }
 // Common sense the fashion bible doesn't check: linen out of season, heavy boots with linen, shorts or tailoring,
 // ripped jeans anywhere smart, and colours on the details (a yellow sole, a red logo) that clash with
@@ -1402,15 +1438,25 @@ function levelGap(pool) {
 function sense(pieces, feels, occ) {
   let s = 0;
   const reasons = [], has = (p, ...w) => w.some((x) => (p.tags || []).includes(x) || new RegExp(`\\b${x}\\b`, "i").test(`${p.name} ${p.material || ""}`));
-  const linen = pieces.filter((p) => has(p, "linen", "seersucker"));
+  const linen = pieces.filter((p) => has(p, "linen", "seersucker") || lookOf(p)?.material === "linen");
+  // Fabric weight seen in the photo: a heavy piece on a warm day, a summer-weight layer in the cold.
+  for (const p of pieces) {
+    const w = lookOf(p)?.weight;
+    if (w === "heavy" && feels >= 22) s -= 1.5;
+    else if (w === "light" && feels < 10 && ["mid", "outer"].includes(roleOf(p))) s -= 1;
+  }
   if (linen.length && feels < 19) s -= 2;
   const heavyBoots = pieces.find((p) => p.category === "boots" && ((p.warmth || 0) >= 4 || has(p, "timberland", "hiking", "work")));
   if (heavyBoots && pieces.some((p) => /shorts/.test(p.category) || linen.includes(p))) s -= 1.5;
-  // Work or hiking boots with a blazer or tailored trousers.
-  if (heavyBoots && pieces.some((p) => (p.category === "jacket" && (p.formality >= 3 || has(p, "blazer"))) || (p.category === "trousers" && p.formality >= 3))) s -= 2.5;
+  // Work or hiking boots with a blazer or tailored trousers; a blazer with cargo pants, joggers or shorts.
+  const blazer = pieces.some((p) => isBlazer(p.item || p));
+  if (heavyBoots && (blazer || pieces.some((p) => p.category === "trousers" && (p.formality >= 3 || lookOf(p)?.tailored)))) s -= 2.5;
+  if (blazer && pieces.some((p) => ["joggers", "shorts"].includes(p.category) || has(p, "cargo", "parachute", "jogger"))) s -= 2;
+  // A dress shirt under a hoodie or sweatshirt.
+  if (pieces.some((p) => p.category === "shirt" && dressOf(p) >= 4) && pieces.some((p) => ["hoodie", "zip-hoodie", "sweatshirt"].includes(p.category))) s -= 2;
   if (occ.target >= 2.2 && pieces.some((p) => has(p, "ripped", "distressed", "destroyed"))) s -= 2.5;
   // The loudest piece sets the accent colours; other pieces should echo them or stay neutral.
-  const accents = (p) => new Set((p.colors || []).filter((c) => COLORS[c] && !COLORS[c].neutral));
+  const accents = (p) => new Set([...(p.colors || []), ...(lookOf(p)?.details || [])].filter((c) => COLORS[c] && !COLORS[c].neutral));
   const loud = pieces.map(accents).sort((a, b) => b.size - a.size)[0] || new Set();
   const extra = new Set(pieces.flatMap((p) => [...accents(p)]).filter((c) => !loud.has(c)));
   s -= extra.size;
@@ -1510,6 +1556,13 @@ function scoreOutfit(o, cond, occ, t = taste()) {
     const lvl = dressLevel(pieces), [lo, best, hi] = range, step = occ.level ? 4.5 : 3;
     s += lvl < lo ? -step * (lo - lvl) : lvl > hi ? -step * (lvl - hi) : lvl === best ? 1.2 : 0.4;
     if (lvl === 5 && lvl >= lo) reasons.unshift("A full suit: blazer, trousers, shirt and dress shoes");
+    // Within a level, how dressy the pieces themselves are (what the AI saw in the photos, else their
+    // type) should match the level wanted, so the steps are gradual: Elegant reaches for the dressiest
+    // pieces, smart casual leaves the blazer and dress shirt for the levels above.
+    const worn = pieces.filter((p) => roleOf(p) !== "outer" || p.category === "jacket");
+    const dz = mean(worn.map(dressOf)), k = occ.level ? 2 : occ.id === "event" ? 2.5 : 1.2;
+    s -= dz < best ? (best - dz) * k : (dz - best) * k * (hi > best ? 0.5 : 1);
+    if (best >= 4 && suitPair(o.outer, o.bottom)) { s += 1; if (lvl < 5) reasons.push(`The ${o.outer.name} and ${o.bottom.name} as a suit`); }
   }
 
   // Rotation: don't repeat what you wore recently; give the forgotten pieces a turn
@@ -1525,7 +1578,7 @@ function scoreOutfit(o, cond, occ, t = taste()) {
   s += learnt.score;
   if (learnt.reason) reasons.unshift(learnt.reason);
   if (fresh) reasons.push(`Gives the ${fresh.name} some wear`);
-  return { score: s, reasons: reasons.slice(0, 3), broken: broken.map(ruleLine), brokenIds: broken.map((v) => v.rule.id) };
+  return { score: s, love: learnt.love, reasons: reasons.slice(0, 3), broken: broken.map(ruleLine), brokenIds: broken.map((v) => v.rule.id) };
 }
 
 // Today's candidates, best first. Cheap enough to redo on every tap (900 tries).
@@ -1547,8 +1600,11 @@ function ideaPool(opts = {}) {
   const by = opts.by || piecesByRole(occ);
   const cond = opts.cond || conditions();
   const t = taste();
+  const dressy = occ.level ? occ.level >= 4 : occ.target >= 2.9;
   // Pieces you love are tried more often (and the ones you rated low less), so they're in more ideas.
-  const tries = (x) => ({ 5: 3, 4: 2, 2: 0.6, 1: 0.4 })[starsOf(x)] || 1;
+  // For work and Elegant, casual pieces are tried less, so a mostly casual wardrobe still gives the
+  // score enough smart outfits to choose from.
+  const tries = (x) => (({ 5: 3, 4: 2, 2: 0.6, 1: 0.4 })[starsOf(x)] || 1) * (dressy && casualPiece(x) ? 0.35 : 1);
   const pick = (arr) => {
     let r = Math.random() * arr.reduce((a, x) => a + tries(x), 0);
     for (const x of arr) if ((r -= tries(x)) < 0) return x;
@@ -1558,11 +1614,15 @@ function ideaPool(opts = {}) {
   const wantOuter = opts.outer || cond.feels < 15 || cond.wet;
   // Milder days: a light jacket or blazer is tried in about half of the ideas (most of them on dressy
   // occasions) and the score decides; without this a jacket never showed up above 15°.
-  const dressy = occ.target >= 2.9;
   const maybeOuter = !wantOuter && occ.id !== "gym" && cond.feels < (dressy ? 27 : 22) ? (dressy ? 0.8 : 0.5) : 0;
   // Dressy occasions: pairs of jacket and trousers that make one suit, tried in a third of the ideas
   // (picking them by chance would rarely find the match in a big wardrobe).
-  const suits = dressy && Style.ready() ? by.outer.flatMap((j) => by.bottom.filter((b) => Style.isSuit(Style.outfitFrom([j, b]))).map((b) => [j, b])) : [];
+  const suits = dressy && Style.ready() ? by.outer.flatMap((j) => by.bottom.filter((b) => suitPair(j, b)).map((b) => [j, b])) : [];
+  // Levels 4 and 5 wanted: a blazer, a shirt and smart trousers together in a quarter of the ideas, for
+  // the same reason.
+  const kit = dressy && (occ.level || levelsFor(occ)?.[1] || 0) >= 4
+    ? { j: by.outer.filter(isBlazer), s: by.base.filter((p) => p.category === "shirt"), b: by.bottom.filter(isSmartTrousers) } : null;
+  const useKit = kit && kit.j.length && kit.s.length && kit.b.length;
   // A piece you picked goes in every idea; the rest is built around it.
   const anchor = "anchor" in opts ? opts.anchor : state.items.find((i) => i.id === state.anchor && CORE.includes(roleOf(i)) && !i.wash);
 
@@ -1580,6 +1640,7 @@ function ideaPool(opts = {}) {
     if (by.mid.length && (!o.base || (wantMid && !mildJacket) || r < 0.15)) o.mid = pick(by.mid);
     if (by.outer.length && (wantOuter || mildJacket)) o.outer = pick(by.outer);
     if (by.bottom.length) o.bottom = pick(by.bottom);
+    if (useKit && Math.random() < 0.25) [o.outer, o.base, o.bottom] = [pick(kit.j), pick(kit.s), pick(kit.b)];
     if (suits.length && Math.random() < 0.33) [o.outer, o.bottom] = pick(suits);
     if (by.shoes.length) o.shoes = pick(by.shoes);
     if (anchor) o[roleOf(anchor)] = anchor;
@@ -1610,6 +1671,13 @@ function pickIdeas(pool, n, keep = [], avoid = []) {
   const outers = new Set(keep.map((o) => o.pieces.outer?.id).filter(Boolean));
   const differ = (h, b) => !heroes.has(h) && !(b && bottoms.has(b));
   const half = (h, b) => !heroes.has(h) || !(b && bottoms.has(b));
+  // Variety: the first passes want each idea to bring clothes not in the other ideas (and other shoes,
+  // and for "New ideas" clothes not in the ideas just shown; then shoes may repeat), so a piece you love
+  // comes often but not in all three, and the rest of the wardrobe gets its turn.
+  const clothesOf = (c) => Object.entries(c.pieces).filter(([r, p]) => p && r !== "shoes" && p.id !== state.anchor).map(([, p]) => p.id);
+  const inSet = new Set(keep.flatMap(clothesOf)), shoesInSet = new Set(keep.map((c) => c.pieces.shoes?.id));
+  const justShown = new Set(avoid.flatMap((k) => k.split("|")).filter((id) => roleOf(state.items.find((i) => i.id === id) || {}) !== "shoes"));
+  const fresh = (c, level) => !level || (clothesOf(c).every((id) => !inSet.has(id) && (level < 2 || !justShown.has(id))) && (level < 2 || !shoesInSet.has(c.pieces.shoes?.id)));
   // Three tiers: outfits at the occasion's level that break no rule, then the ones that break one, then
   // anything off the level. When nothing you own reaches the level, the closest level comes first, and
   // shoes too casual for the rest (the only rule broken) don't hold an outfit back: with no dress shoes
@@ -1619,19 +1687,26 @@ function pickIdeas(pool, n, keep = [], avoid = []) {
   const onlyShoes = (c) => closest > 0 && c.brokenIds?.length === 1 && c.brokenIds[0] === "shoe-formality";
   const tier = (c) => ((c.levelOff ?? 0) > closest ? 2 : c.isBroken && !onlyShoes(c) ? 1 : 0);
   const good = (cands.find((c) => !c.blocked && tier(c) === 0)?.score ?? cands.find((c) => !c.blocked && tier(c) < 2)?.score ?? cands[0]?.score ?? 0) - 3;
+  // For variety an outfit is judged without the pull of the stars on its pieces: one that is good on its
+  // own and brings other clothes beats a third idea with the same loved shirt.
+  const own = (c) => c.score - (c.love || 0);
+  const goodOwn = Math.max(...cands.filter((c) => !c.blocked && tier(c) === 0).map(own), -Infinity) - 3;
   // A jacket you love shouldn't fill every idea: the first passes want each idea to bring a different one.
   // A slightly weaker outfit with another jacket beats the same jacket three times.
   // Repeating a top or bottom beats an outfit far behind the best (shorts at 17° for Elegant).
   const any = () => true;
-  const passes = [[differ, good, true], [half, good, true], [differ, good - 3, true], [half, good - 3, true], [differ, good], [half, good], [any, good], [differ, -Infinity], [half, -Infinity], [any, -Infinity]];
+  const passes = [[differ, good, true, 2], [differ, good, true, 1], [differ, good, false, 1], [differ, good, true], [half, good, true], [differ, good - 3, true], [half, good - 3, true], [differ, good], [half, good], [any, good], [differ, -Infinity], [half, -Infinity], [any, -Infinity]];
   for (const [allowBlocked, maxTier] of [[false, 0], [true, 0], [false, 1], [true, 1], [true, 2]]) {
-    for (const [ok, min, newOuter] of passes) {
+    for (const [ok, min, newOuter, freshness] of passes) {
       for (const c of cands) {
         if (out.length === n) break;
         const hero = heroOf(c.pieces).id;
         const bottom = c.pieces.bottom?.id;
         const outer = c.pieces.outer?.id;
-        if (out.includes(c) || shown.has(c.key) || (c.blocked && !allowBlocked) || tier(c) > maxTier || c.score < min || !ok(hero, bottom) || (newOuter && outer && outers.has(outer))) continue;
+        if (out.includes(c) || shown.has(c.key) || (c.blocked && !allowBlocked) || tier(c) > maxTier || !ok(hero, bottom) || (newOuter && outer && outers.has(outer))) continue;
+        if (freshness ? !fresh(c, freshness) || (c.score < min && own(c) < goodOwn) : c.score < min) continue;
+        clothesOf(c).forEach((id) => inSet.add(id));
+        shoesInSet.add(c.pieces.shoes?.id);
         if (outer) outers.add(outer);
         heroes.add(hero);
         if (bottom) bottoms.add(bottom);
@@ -1905,12 +1980,13 @@ function tasteScore(o, occ, t) {
     sp += p.disliked ? -3 : STAR_PULL[starsOf(p)] || 0;
     for (const k of traitsOf(p)) rs += (t.traits[k] || 0) * 0.3;
   }
-  s += clamp(sp, -5, 5) + clamp(rs, -1, 1);
+  const love = clamp(sp, -5, 5);
+  s += love + clamp(rs, -1, 1);
   const loved = pieces.find((p) => starsOf(p) === 5);
   if (loved) reason = `With your ${loved.name}: you love it`;
   else if (best) reason = `You like the ${best[1].name} with the ${best[2].name}`;
   else if (colourLiked) reason = `${cap(hero.colors[0])} with ${o.bottom.colors[0]}: a pairing you go for`;
-  return { score: s, reason };
+  return { score: s, reason, love };
 }
 
 // One line under the ideas saying what they've learnt so far.
@@ -2525,6 +2601,8 @@ function wardrobeText() {
       `#${n + 1} ${i.name}`, catLabel(i.category), (i.colors || []).join("/"),
       i.brand ? i.brand + (b?.tier ? ` (${b.tier})` : "") : "",
       (i.styles || []).join("/"), FITS[i.fit] ? `${i.fit} fit` : "", `w${i.warmth}`,
+      i.look ? `looks ${DRESSINESS[i.look.dressiness].toLowerCase()}${i.look.material !== "other" ? `, ${i.look.material}` : ""}` : "",
+      suitMate(i) ? `suit with #${state.items.indexOf(suitMate(i)) + 1}` : "",
       i.wearCount ? `worn ${i.wearCount}x${daysSince(i.lastWorn) <= 7 ? `, last ${daysSince(i.lastWorn)}d ago` : ""}` : "unworn",
       i.wash ? "IN THE WASH" : "",
     ].filter(Boolean).join("; ");
@@ -2737,11 +2815,120 @@ function answerHTML(ans) {
   return `<div class="ai-rich">${tipsHTML(intro, ans.refs, named)}<div class="looks">${looks.map((l) => `<article class="look"><h3>${esc(cleanRefs(l.title, ans.refs))}</h3><div class="pieces">${l.items.map(pieceTile).join("")}${l.buy.map(buyTile).join("")}</div>${l.lines.length ? `<p class="why">${esc(l.lines.map((x) => cleanRefs(x, ans.refs)).join("\n"))}</p>` : ""}${ans.warn?.[looks.indexOf(l)]?.length ? `<p class="why warn">Heads up: ${ans.warn[looks.indexOf(l)].map(esc).join(" · ")}</p>` : ""}${l.items.length ? `<div class="row"><button class="btn" data-wearids="${l.items.map((i) => i.id).join(",")}">Wear this today</button><button class="btn icon-btn like" data-likeids="${l.items.map((i) => i.id).join(",")}" aria-pressed="false" aria-label="Like this outfit">${ICON_HEART}</button></div>` : ""}</article>`).join("")}</div></div>`;
 }
 
-// Recognise type, colours, brand and style from one photo.
+/* ---------- What the AI sees in a piece's photo ----------
+   Read once per piece (with the first recognition of a new photo, or from Settings for pieces saved
+   before) and kept on the item as `look`, so outfit ideas use it offline at no further cost:
+   how dressy it really looks, fabric, pattern, the colours of small details, tailoring, whether it's
+   half of a suit, and how heavy the fabric is. */
+const MATERIALS = ["cotton", "denim", "wool", "linen", "leather", "suede", "knit", "jersey", "fleece", "nylon", "polyester", "corduroy", "silk", "cashmere", "velvet", "tweed", "flannel", "canvas", "mesh", "other"];
+const PATTERNS = ["solid", "stripes", "check", "print", "graphic", "logo", "camo", "floral", "other"];
+const PATTERN_TAG = { stripes: "striped", check: "check", print: "print", graphic: "graphic", logo: "logo", camo: "camo", floral: "floral" };
+const DRESSINESS = ["", "Sporty or lounge", "Casual", "Smart casual", "Smart", "Formal"];
+const LOOK_FIELDS = {
+  dressiness: { type: "integer", description: "How dressy it looks in the photo: 1 sporty or lounge, 2 casual, 3 smart casual, 4 smart (blazer, dress shirt, tailored trousers, leather shoes), 5 formal (suit, tuxedo, oxfords)" },
+  material: { type: "string", enum: MATERIALS, description: "Main fabric or material as it looks" },
+  pattern: { type: "string", enum: PATTERNS, description: "solid if plain; logo for a small logo only on an otherwise plain piece" },
+  details: { type: "array", items: { type: "string", enum: Object.keys(COLORS) }, description: "Colours of small details that differ from the main colours (logo, sole, trim, stitching, buttons); empty if none" },
+  tailored: { type: "boolean", description: "Structured tailoring: a blazer or suit jacket, trousers with a crease, a dress shirt, dress shoes" },
+  suit_part: { type: "boolean", description: "Looks like the jacket or the trousers of a matching suit" },
+  weight: { type: "string", enum: ["light", "mid", "heavy"], description: "Fabric weight: light for summer, heavy for winter" },
+};
+// Turn an AI answer into the `look` kept on the item (null if it says nothing useful).
+function lookFrom(r) {
+  if (!r || !(r.dressiness >= 1)) return null;
+  return {
+    dressiness: Math.min(5, Math.max(1, Math.round(r.dressiness))),
+    material: MATERIALS.includes(r.material) ? r.material : "other",
+    pattern: PATTERNS.includes(r.pattern) ? r.pattern : "solid",
+    details: [...new Set((r.details || []).filter((c) => COLORS[c]))].slice(0, 3),
+    tailored: !!r.tailored, suitPart: !!r.suit_part,
+    weight: ["light", "mid", "heavy"].includes(r.weight) ? r.weight : "mid",
+    at: new Date().toISOString(),
+  };
+}
+// Keep the look on the item, and give the fashion bible what it reads from names and tags: the
+// material (fabric for the season, the cloth of a suit) and the pattern (pattern mixing, logos).
+function applyLook(item, look) {
+  if (!look) return;
+  item.look = look;
+  if (!item.material && look.material !== "other") item.material = look.material;
+  const tag = PATTERN_TAG[look.pattern];
+  if (tag && !(item.tags || []).includes(tag)) item.tags = [...(item.tags || []), tag];
+}
+const lookLine = (l) => [`${DRESSINESS[l.dressiness]} (${l.dressiness}/5)`, l.material !== "other" && l.material, l.pattern !== "solid" && l.pattern, l.tailored && "tailored", l.suitPart && "looks like part of a suit", `${l.weight} fabric`, l.details.length && `${l.details.join(", ")} details`].filter(Boolean).join(" · ");
+async function lookAt(item) {
+  const text = await aiGenerate({
+    system: "You describe clothes for a wardrobe app's stylist, judging from the photo. Reply with JSON only.",
+    text: `This is a ${catLabel(item.category).toLowerCase()} saved as "${item.name}".${item.photos[1] ? " Left: front. Right: back." : ""}`,
+    image: await aiImage(item.photos[0], item.photos[1]),
+    schema: { type: "object", additionalProperties: false, required: Object.keys(LOOK_FIELDS), properties: LOOK_FIELDS },
+    maxTokens: 140,
+  });
+  const look = lookFrom(JSON.parse(text.replace(/^```(json)?|```$/g, "").trim()));
+  if (!look) throw new Error("The AI didn't describe the photo");
+  applyLook(item, look);
+  await store.put("items", item);
+  return look;
+}
+const unlooked = () => state.items.filter((i) => !i.look && i.photos?.length && slotOf(i) !== "under");
+// Pieces saved before: one small request each (about 350 tokens), then suits are paired up.
+async function lookAll() {
+  const todo = unlooked();
+  let done = 0, err = "";
+  for (const [k, it] of todo.entries()) {
+    toast(`Looking at the photos… ${k + 1} of ${todo.length}`);
+    try { await lookAt(it); done++; } catch (e) { err = e.message || "Couldn't look at the photo"; break; }
+  }
+  const linked = await autoLinkSuits();
+  state.outfits = [];
+  tasteMemo = null;
+  toast(`${done || !err ? `Looked at ${done} piece${done === 1 ? "" : "s"}` : err}${linked.length ? `; linked ${linked.join(" and ")} as one suit` : ""}${done && err ? `. Stopped: ${err}` : ""}`);
+  render();
+}
+
+/* ---------- Suits ----------
+   A suit saved as two pieces: the jacket and the trousers share `suit` (an id), and both carry the
+   tag "suit" so the fashion bible sees it too. Linked by hand on either piece, or by the app when
+   the AI saw exactly one jacket and one pair of trousers of a suit in the same colour. */
+async function linkSuit(a, b) {
+  const id = a.suit || b.suit || uid();
+  for (const it of [a, b]) {
+    it.suit = id;
+    if (!(it.tags || []).includes("suit")) it.tags = [...(it.tags || []), "suit"];
+    await store.put("items", it);
+  }
+}
+async function unlinkSuit(it) {
+  for (const x of state.items.filter((x) => x.suit && x.suit === it.suit)) {
+    delete x.suit;
+    x.tags = (x.tags || []).filter((t) => t !== "suit");
+    await store.put("items", x);
+  }
+}
+const suitMate = (it) => it.suit && state.items.find((x) => x !== it && x.suit === it.suit);
+// The other half a piece could form a suit with: trousers for a jacket and the other way round,
+// the same main colour first.
+function suitCandidates(it) {
+  const want = it.category === "jacket" ? "trousers" : it.category === "trousers" ? "jacket" : null;
+  if (!want) return [];
+  return state.items.filter((x) => x.category === want && !x.suit).sort((a, b) => (b.colors?.[0] === it.colors?.[0]) - (a.colors?.[0] === it.colors?.[0]));
+}
+async function autoLinkSuits() {
+  const halves = (cat) => state.items.filter((i) => i.category === cat && !i.suit && i.look?.suitPart);
+  const linked = [];
+  for (const j of halves("jacket")) {
+    const same = halves("trousers").filter((t) => t.colors?.[0] === j.colors?.[0] && (t.look.material === j.look.material || [t.look.material, j.look.material].includes("other")));
+    const rivals = halves("jacket").filter((x) => x.colors?.[0] === j.colors?.[0]);
+    if (same.length === 1 && rivals.length === 1) { await linkSuit(j, same[0]); linked.push(j.name, same[0].name); }
+  }
+  return linked;
+}
+
+// Recognise type, colours, brand and style from one photo (and what it looks like, see above).
 const TAG_SCHEMA = {
   type: "object",
   additionalProperties: false,
-  required: ["name", "category", "colors", "brand", "styles", "fit", "warmth", "tags", "front_top", "back_top"],
+  required: ["name", "category", "colors", "brand", "styles", "fit", "warmth", "tags", "front_top", "back_top", ...Object.keys(LOOK_FIELDS)],
   properties: {
     name: { type: "string", description: "Short name, e.g. 'Navy cable-knit sweater'" },
     category: { type: "string", enum: CATS.map((c) => c.id), description: "Use the gym types (gym-top, leggings, training-shoes…) only for clothes made for training" },
@@ -2753,6 +2940,7 @@ const TAG_SCHEMA = {
     tags: { type: "array", items: { type: "string" }, description: "Up to 4 short lowercase tags, e.g. graphic, knit, logo, cargo" },
     front_top: { type: "string", enum: ["up", "right", "down", "left"], description: "In the front photo, which way the collar, hood or waistband points" },
     back_top: { type: "string", enum: ["up", "right", "down", "left"], description: "Same for the back photo; 'up' if there is none" },
+    ...LOOK_FIELDS,
   },
 };
 // Clockwise turn that brings the collar or waistband to the top.
@@ -2765,7 +2953,7 @@ async function aiTagPhoto(front, back) {
       : "Catalogue this garment. Recognise the brand if a logo or label is visible and describe its style.",
     image: await aiImage(front, back),
     schema: TAG_SCHEMA,
-    maxTokens: 320,
+    maxTokens: 440,
   });
   return JSON.parse(text.replace(/^```(json)?|```$/g, "").trim());
 }
@@ -2978,8 +3166,13 @@ function levelChips() {
 function levelGapLine() {
   const g = state.levelGap;
   if (!g) return "";
-  const what = state.level ? `level ${g.want} (${LEVELS[g.want]})` : `${OCCASIONS.find((o) => o.id === state.occasion).label} (level ${g.want}, ${LEVELS[g.want]})`;
-  return `<div class="card stack" style="gap:8px"><span>None of your clothes make ${esc(what)} yet, so these are the dressiest you have (${esc(LEVELS[g.top])}).</span>${g.needs.length ? `<span class="muted small">Missing: ${g.needs.map(([, l]) => esc(l)).join(", ")}.</span><div class="chips">${g.needs.map(([chip, l]) => `<button class="chip" data-needgo="${esc(chip)}">Find ${esc(l)}</button>`).join("")}</div>` : ""}</div>`;
+  const occ = OCCASIONS.find((o) => o.id === state.occasion).label;
+  const what = state.level ? `level ${g.want} (${LEVELS[g.want]})` : `${occ} (level ${g.want}, ${LEVELS[g.want]})`;
+  const list = (sep) => g.needs.map(([, l]) => esc(l)).join(sep);
+  const line = g.short
+    ? `These ideas reach ${esc(LEVELS[g.top])}. For ${esc(occ)} at its best (${esc(LEVELS[g.want])}) you'd need ${list(" and ")}.`
+    : `None of your clothes make ${esc(what)} yet, so these are the dressiest you have (${esc(LEVELS[g.top])}).`;
+  return `<div class="card stack" style="gap:8px"><span>${line}</span>${g.needs.length ? `${g.short ? "" : `<span class="muted small">Missing: ${list(", ")}.</span>`}<div class="chips">${g.needs.map(([chip, l]) => `<button class="chip" data-needgo="${esc(chip)}">Find ${esc(l)}</button>`).join("")}</div>` : ""}</div>`;
 }
 const levelBadge = (o) => {
   if (!Style.ready() || !o.pieces) return "";
@@ -3116,6 +3309,10 @@ function openItem(id, showOriginal = false) {
       ${i.link && /^https?:\/\//.test(i.link) ? `<div><b>Shop</b><a href="${esc(i.link)}" target="_blank" rel="noopener">Product page ↗</a>${i.reference ? ` · ref ${esc(i.reference)}` : ""}</div>` : ""}
     </div>
     ${fitsFor(i).length ? `<div class="field" style="margin-bottom:14px"><label>Fit</label><div class="chips">${fitsFor(i).map((f) => `<button class="chip" aria-pressed="${i.fit === f}" data-setfit="${i.id}:${f}">${FITS[f].label}</button>`).join("")}</div></div>` : ""}
+    ${suitField(i)}
+    ${i.look || (aiReady() && i.photos?.length) ? `<div class="field" style="margin-bottom:14px"><label>What the AI sees in the photo</label>
+      <div class="row">${i.look ? `<span>${esc(lookLine(i.look))}</span>` : `<span class="muted small">Not looked at yet. Outfit ideas use it once it has (about 350 tokens, once).</span>`}
+      ${aiReady() && i.photos?.length ? `<button class="chip" data-lookat="${i.id}">${i.look ? "Look again" : "Look at the photo"}</button>` : ""}</div></div>` : ""}
     ${i.tags?.length ? `<div class="chips" style="margin-bottom:14px">${i.tags.map((t) => `<span class="chip">${esc(t)}</span>`).join("")}</div>` : ""}
     ${i.notes ? `<p>${esc(i.notes)}</p>` : ""}
     <div class="row">
@@ -3128,6 +3325,14 @@ function openItem(id, showOriginal = false) {
     </div>
     <div class="ai-answer" id="pair-answer" style="margin-top:16px"></div>`;
   $("#sheet").hidden = false;
+}
+// A jacket or trousers: which piece it makes a suit with, or the ones it could.
+function suitField(i) {
+  const mate = suitMate(i);
+  if (mate) return `<div class="field" style="margin-bottom:14px"><label>Suit</label><div class="row"><span>One suit with the <b>${esc(mate.name)}</b></span><button class="chip" data-unsuit="${i.id}">Not a suit</button></div></div>`;
+  const cands = suitCandidates(i);
+  if (!cands.length) return "";
+  return `<div class="field" style="margin-bottom:14px"><label>Part of a suit? Same suit as…</label><div class="chips">${cands.slice(0, 6).map((x) => `<button class="chip" data-suit="${i.id}:${x.id}">${esc(x.name)}</button>`).join("")}</div></div>`;
 }
 const closeSheet = () => ($("#sheet").hidden = true);
 function confirmBox(message, okLabel) {
@@ -3583,6 +3788,7 @@ async function recognise(d) {
       tags: (r.tags || []).join(", "),
     });
     if (FITS[r.fit] && fitsFor(d).includes(r.fit)) d.fit = r.fit;
+    d.look = lookFrom(r) || d.look;
     // The AI also says which way is up in each photo: turn any that are still sideways.
     for (const [k, side] of [[0, r.front_top], [1, r.back_top]]) {
       const p = d.photos[k];
@@ -4258,6 +4464,7 @@ async function saveDraft(next = false) {
     cutGeo: anyCut && d.photos.some((p) => p.useCut && p.geo) ? d.photos.map((p) => (p.useCut && p.cut ? geoList(p.geo) : null) || null) : undefined,
     aiChecked: existing?.aiChecked || d.photos.some((p) => p.aiChecked) || undefined,
   };
+  if (d.look) applyLook(item, d.look);
   await store.put("items", item);
   if (existing) Object.assign(existing, item); else state.items.push(item);
   const bought = d.want && state.wants.find((w) => w.id === d.want);
@@ -6706,6 +6913,7 @@ function renderSettings() {
           </div>` : ""}
         ${prov !== "off" ? toggle("aiAuto", "Recognise new photos automatically", "Fills in type, brand, style and colours, and checks which way is up, right after the cut-out. Roughly 500–1,000 tokens per piece, once.") : ""}
         ${aiReady() && unrecognised ? `<div class="row"><button class="btn" data-act="recognise-all">Recognise ${unrecognised} piece${unrecognised > 1 ? "s" : ""} without a brand</button></div>` : ""}
+        ${aiReady() && unlooked().length ? `<div class="row"><button class="btn" data-act="look-all">Let the AI look at ${unlooked().length} photo${unlooked().length > 1 ? "s" : ""}</button><span class="muted small">Once per piece, about 350 tokens each: how dressy it really looks, fabric, pattern, detail colours and suits. Outfit ideas then use it offline.</span></div>` : ""}
         ${aiReady() && noFit ? `<div class="row"><button class="btn" data-act="fit-all">Find the fit of ${noFit} piece${noFit > 1 ? "s" : ""}</button><span class="muted small">About 300 tokens per piece. You can also tap the fit on any piece.</span></div>` : ""}
         <p class="muted small" style="margin:0">This month: ${u.requests} AI request${u.requests === 1 ? "" : "s"} · ${(u.input + u.output).toLocaleString()} tokens (${u.input.toLocaleString()} in, ${u.output.toLocaleString()} out)</p>
       </section>
@@ -6856,6 +7064,7 @@ async function recogniseAll() {
       const st = (r.styles || []).filter((s) => STYLES[s]);
       if (st.length) { it.styles = st.slice(0, 3); it.formality = formalityOf(it.styles); }
       if (!it.fit && fitsFor(it).includes(r.fit)) it.fit = r.fit;
+      applyLook(it, lookFrom(r));
       it.aiChecked = true; // never pay for the same photo twice
       await store.put("items", it);
     } catch (e) { toast(e.message || "Recognition failed"); break; }
@@ -7196,6 +7405,30 @@ document.addEventListener("click", async (e) => {
     state.outfits = [];
     return openItem(it.id);
   }
+  if (ds.suit) {
+    const [a, b] = ds.suit.split(":").map((id) => state.items.find((i) => i.id === id));
+    if (a && b) { await linkSuit(a, b); toast(`The ${a.name} and the ${b.name} are now one suit`); }
+    state.outfits = [];
+    openItem(a.id);
+    return render();
+  }
+  if (ds.unsuit) {
+    const it = state.items.find((i) => i.id === ds.unsuit);
+    await unlinkSuit(it);
+    state.outfits = [];
+    openItem(it.id);
+    return render();
+  }
+  if (ds.lookat) {
+    const it = state.items.find((i) => i.id === ds.lookat);
+    t.disabled = true;
+    t.textContent = "Looking…";
+    try { await lookAt(it); await autoLinkSuits(); } catch (e) { toast(e.message || "Couldn't look at the photo"); }
+    state.outfits = [];
+    tasteMemo = null;
+    openItem(it.id);
+    return render();
+  }
   if (ds.setfit) {
     const [id, fit] = ds.setfit.split(":");
     const it = state.items.find((i) => i.id === id);
@@ -7392,6 +7625,7 @@ document.addEventListener("click", async (e) => {
     case "cut-all": return cutAll();
     case "recognise-all": return recogniseAll();
     case "fit-all": return fitAll();
+    case "look-all": return lookAll();
     case "anchor-pick": return openAnchorPicker();
     case "see-wash": Object.assign(state.filters, { slot: "wash", cat: "all", q: "", style: "all", color: "all" }); return go("wardrobe");
     case "wash-done": {
