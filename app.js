@@ -1518,14 +1518,17 @@ function scoreOutfit(o, cond, occ, t = taste()) {
 
   // Warmth / layering, shifted by how warm you like to dress (learnt from what you wear)
   const { feels, wet } = cond;
-  const warmth = layerWarmth(pieces);
+  const coat = coatFor(o, cond, occ);
+  const warmth = layerWarmth(pieces) + (coat?.warmth || 0);
   const want = wantedWarmth(feels) + (occ.id === "gym" ? 0 : t.offset);
+  const wOff = occ.id === "gym" ? 0 : Math.abs(warmth - want);
   s -= Math.abs(warmth - want) * 0.7;
   // Too hot for a hoodie or knit (outfits with more pieces collect more style points, so say it clearly).
   if (o.mid && feels >= 24) s -= 3;
   else if (o.mid && feels >= 21 && o.mid.warmth >= 3) s -= 1;
   if (o.outer) {
     if (o.outer.warmth >= 5 && feels > 12) s -= 3;
+    if (feels < 6 && (o.outer.warmth || 0) < 4 && !coat) s -= 1.5 * (4 - (o.outer.warmth || 0)); // a light jacket in the cold
     if (feels < 6 && o.outer.warmth >= 4) reasons.push(`${o.outer.name} keeps you warm at ${fmtTemp(feels)}`);
     else if (feels < 14) reasons.push(`A light layer for ${fmtTemp(feels)}`);
     if (wet && o.outer.category === "rain") { s += 1.5; reasons.push("Rain jacket for the showers"); }
@@ -1533,8 +1536,11 @@ function scoreOutfit(o, cond, occ, t = taste()) {
   if (o.shoes?.category === "boots") s -= feels >= 24 ? 3 : feels >= 20 ? 1 : 0; // boots in the heat
   if (o.bottom) {
     const shorts = /shorts/.test(o.bottom.category);
+    // Everyday on a hot day: shorts first, long trousers and jeans lose more the hotter it is.
+    const relaxed = occ.id === "casual" && !occ.level;
     if (shorts && feels < 17) s -= o.bottom.category === "gym-shorts" ? 1 : 5; // you train indoors in gym shorts
-    else if (shorts && feels >= 23) { s += 1; reasons.push(`Shorts weather at ${fmtTemp(feels)}`); }
+    else if (shorts && feels >= 23) { s += relaxed ? (feels >= 27 ? 2.5 : feels >= 25 ? 2 : 1.8) : 1; reasons.push(`Shorts weather at ${fmtTemp(feels)}`); }
+    else if (!shorts && relaxed && feels >= 23) s -= feels >= 28 ? 3 : feels >= 26 ? 2 : feels >= 24 ? 1 : 0.8;
     else if (!shorts && feels >= 27) s -= 1.5;
   }
   // The style: the fashion bible's rules (colour, dressiness, shoes, proportions, patterns...)
@@ -1629,7 +1635,7 @@ function scoreOutfit(o, cond, occ, t = taste()) {
   s += learnt.score;
   if (learnt.reason) reasons.unshift(learnt.reason);
   if (fresh) reasons.push(`Gives the ${fresh.name} some wear`);
-  return { score: s, love: learnt.love, reasons: reasons.slice(0, 3), broken: broken.map(ruleLine), brokenIds: broken.map((v) => v.rule.id) };
+  return { score: s, wOff, love: learnt.love, reasons: reasons.slice(0, 3), broken: broken.map(ruleLine), brokenIds: broken.map((v) => v.rule.id) };
 }
 
 // Today's candidates, best first. Cheap enough to redo on every tap (900 tries).
@@ -1648,10 +1654,12 @@ function piecesByRole(occ, all = false) {
 function ideaPool(opts = {}) {
   const occNow = OCCASIONS.find((o) => o.id === state.occasion);
   const occ = opts.occ || (state.level && occNow.id !== "gym" ? { ...occNow, level: state.level } : occNow);
-  const by = opts.by || piecesByRole(occ);
   const cond = opts.cond || conditions();
   const t = taste();
   const dressy = occ.level ? occ.level >= 4 : occ.target >= 2.9;
+  const by = weatherPieces(opts.by || piecesByRole(occ), cond, occ, dressy);
+  // Below 6°: most ideas get one of your warm jackets (warmth 4–5), the score decides the rest.
+  const warmOuter = cond.feels < 6 ? by.outer.filter((p) => (p.warmth || 0) >= 4) : [];
   // Pieces you love are tried more often (and the ones you rated low less), so they're in more ideas.
   // For work and Elegant, casual pieces are tried less, so a mostly casual wardrobe still gives the
   // score enough smart outfits to choose from.
@@ -1690,8 +1698,8 @@ function ideaPool(opts = {}) {
     if (by.base.length && (!by.mid.length || r < (wantMid ? 0.85 : 0.7))) o.base = pick(by.base);
     // On a mild day a jacket is the layer: it comes instead of a sweater or hoodie, not on top of one.
     const mildJacket = by.outer.length && !wantOuter && Math.random() < maybeOuter;
-    if (by.mid.length && (!o.base || (wantMid && !mildJacket) || r < 0.15)) o.mid = pick(by.mid);
-    if (by.outer.length && (wantOuter || mildJacket)) o.outer = pick(by.outer);
+    if (by.mid.length && (!o.base || (wantMid && !mildJacket) || (r < 0.15 && cond.feels < 22))) o.mid = pick(by.mid);
+    if (by.outer.length && (wantOuter || mildJacket)) o.outer = warmOuter.length && Math.random() < 0.8 ? pick(warmOuter) : pick(by.outer);
     if (by.bottom.length) o.bottom = pick(by.bottom);
     if (useKit && Math.random() < 0.25) [o.outer, o.base, o.bottom] = [pick(kit.j), pick(kit.s), pick(kit.b)];
     if (suits.length && Math.random() < 0.33) [o.outer, o.bottom] = pick(suits);
@@ -1710,6 +1718,30 @@ function ideaPool(opts = {}) {
   if (!by.base.length && cond.feels >= 22) missing.unshift("base");
   return { occ, cond, cands, missing };
 }
+
+// Comfort before stars: on warm days knits and hoodies stay in the drawer (from 22° everything but a
+// light overshirt or sweatshirt, from 25° all but an overshirt), and jackets too, except a blazer on a dressy day or a rain
+// jacket in the rain. A part of the outfit that would be left empty keeps all its pieces.
+function weatherPieces(by, cond, occ, dressy) {
+  const f = cond.feels;
+  if (occ.id === "gym" || f < 22) return by;
+  const out = { ...by };
+  if (by.base.length) out.mid = by.mid.filter((p) => (p.warmth || 2) <= 2 && p.category !== "sweater" && (f < 25 || p.category === "overshirt"));
+  out.outer = by.outer.filter((p) => (dressy && isBlazer(p)) || (cond.wet && p.category === "rain"));
+  return out;
+}
+// A coat over the blazer on cold days: an outfit has one outer layer, so below 8° the warmest coat,
+// parka or puffer you have goes over the blazer for the way there (on dressy days the dressiest one).
+// It counts for warmth, not for the elegance level or the style rules.
+const COAT_BELOW = 8;
+function coatFor(pieces, cond, occ) {
+  if (cond.feels >= COAT_BELOW || !pieces.outer || !isBlazer(pieces.outer) || occ.id === "gym") return null;
+  const dressy = occ.level ? occ.level >= 4 : occ.target >= 2.9;
+  const coats = suggestable().filter((i) => roleOf(i) === "outer" && slotOf(i) !== "gym" && !isBlazer(i) && (i.warmth || 0) >= 4);
+  return coats.sort((a, b) => (dressy ? dressOf(b) - dressOf(a) : 0) || (b.warmth || 0) - (a.warmth || 0))[0] || null;
+}
+// Everything you'd put on for an idea: its clothes, the coat over the blazer and the accessories.
+const allPieces = (o) => [...Object.values(o.pieces), o.coat, ...(o.extras || [])].filter(Boolean);
 
 // Pick `n` ideas that differ from each other and from the ones in `keep`: ideally no shared
 // hero piece or bottom. If the wardrobe is too small for that (one T-shirt on a hot day),
@@ -1738,7 +1770,11 @@ function pickIdeas(pool, n, keep = [], avoid = []) {
   // above the ideas says dress shoes are missing).
   const closest = Math.min(...cands.filter((c) => !c.blocked).map((c) => c.levelOff ?? 0), Infinity);
   const onlyShoes = (c) => closest > 0 && c.brokenIds?.length === 1 && c.brokenIds[0] === "shoe-formality";
-  const tier = (c) => ((c.levelOff ?? 0) > closest ? 2 : c.isBroken && !onlyShoes(c) ? 1 : 0);
+  // Comfort: an outfit far too warm or too cold for the day (more than 3.5 warmth points off, and a point
+  // worse than the best at the right level) waits with the ones off the level, whatever its stars.
+  const wBest = Math.min(...cands.filter((c) => !c.blocked && (c.levelOff ?? 0) <= closest).map((c) => c.wOff ?? 0), Infinity);
+  const tooFar = (c) => (c.wOff ?? 0) > Math.max(3.5, wBest + 1);
+  const tier = (c) => ((c.levelOff ?? 0) > closest || tooFar(c) ? 2 : c.isBroken && !onlyShoes(c) ? 1 : 0);
   const good = (cands.find((c) => !c.blocked && tier(c) === 0)?.score ?? cands.find((c) => !c.blocked && tier(c) < 2)?.score ?? cands[0]?.score ?? 0) - 3;
   // For variety an outfit is judged without the pull of the stars on its pieces: one that is good on its
   // own and brings other clothes beats a third idea with the same loved shirt.
@@ -1781,7 +1817,11 @@ function ratedToday(key) {
   const l = state.log.find((l) => (l.kind === "rate" || l.kind === "like") && l.date === today() && outfitKey((l.itemIds || []).map((id) => state.items.find((i) => i.id === id))) === key);
   return { ratedId: l?.id || null, stars: l ? (l.kind === "like" ? 5 : l.stars) : 0, rating: false };
 }
-const dressIdea = (c, pool, used) => withWarn({ ...c, missing: pool.missing, ...ratedToday(c.key), ...extrasFor(c.pieces, pool.cond, pool.occ, used) }, pool.cond, pool.occ);
+const dressIdea = (c, pool, used) => {
+  const coat = coatFor(c.pieces, pool.cond, pool.occ), x = extrasFor(c.pieces, pool.cond, pool.occ, used);
+  if (coat) x.extrasWhy.unshift(`${coat.name} over the ${c.pieces.outer.name} at ${fmtTemp(pool.cond.feels)}`);
+  return withWarn({ ...c, coat, missing: pool.missing, ...ratedToday(c.key), ...x }, pool.cond, pool.occ);
+};
 // An idea that still breaks one of the fashion bible's important rules once its headwear and
 // accessories are on (only shown when nothing better is left) says so on its card.
 function withWarn(idea, cond, occ) {
@@ -1825,7 +1865,7 @@ function withLoved(pool, picks, keep, avoid) {
   };
   let best = null, rank = null;
   for (const c of pool.cands) {
-    if (c.blocked || c.isBroken || c.score < top - 5 || keys.has(c.key) || !fits(c)) continue;
+    if (c.blocked || c.isBroken || c.score < top - 5 || keys.has(c.key) || !fits(c) || (c.wOff ?? 0) > 3.5) continue;
     for (const p of Object.values(c.pieces)) {
       if (!p || !loved(p) || shown.has(p.id) || daysSince(p.lastWorn) <= 1 || atBudget(p)) continue;
       const r = [starsOf(p), Math.min(daysSince(p.lastWorn), 365), c.score];
@@ -1845,14 +1885,20 @@ function plannedIdea(pool) {
   const items = (p.itemIds || []).map((id) => state.items.find((i) => i.id === id)).filter(Boolean);
   if (!items.length || items.some((i) => i.wash)) return null;
   const pieces = {}, extras = [];
-  for (const it of items) (CORE.includes(roleOf(it)) && !pieces[roleOf(it)] ? (pieces[roleOf(it)] = it) : extras.push(it));
+  let coat = null;
+  for (const it of items) {
+    if (CORE.includes(roleOf(it)) && !pieces[roleOf(it)]) pieces[roleOf(it)] = it;
+    else if (roleOf(it) === "outer" && !coat) coat = it;
+    else extras.push(it);
+  }
   if (!pieces.base && !pieces.mid) return null;
-  const key = outfitKey(items);
-  return withWarn({ key, pieces, planned: p, missing: [], ...ratedToday(key), ...scoreOutfit(pieces, pool.cond, pool.occ), extras, extrasWhy: [] }, pool.cond, pool.occ);
+  if (coat && pieces.outer && !isBlazer(pieces.outer) && isBlazer(coat)) [pieces.outer, coat] = [coat, pieces.outer];
+  const key = outfitKey([...Object.values(pieces)]);
+  return withWarn({ key, pieces, coat, planned: p, missing: [], ...ratedToday(key), ...scoreOutfit(pieces, pool.cond, pool.occ), extras, extrasWhy: [] }, pool.cond, pool.occ);
 }
 async function planOutfit(o) {
   const e = state.event;
-  state.plan = { date: localDay(1), itemIds: [...Object.values(o.pieces), ...(o.extras || [])].filter(Boolean).map((p) => p.id), occasion: state.occasion, title: e?.title || "", at: new Date().toISOString() };
+  state.plan = { date: localDay(1), itemIds: allPieces(o).map((p) => p.id), occasion: state.occasion, title: e?.title || "", at: new Date().toISOString() };
   await savePlan();
   await addLog({ kind: "like", itemIds: Object.values(o.pieces).filter(Boolean).map((p) => p.id), ...outfitContext(), source: "plan" });
 }
@@ -3304,7 +3350,7 @@ function outfitCard(o, i) {
     <div class="row" style="justify-content:space-between"><h2 style="margin:0">${o.planned ? (o.planned.eventId ? `Planned for ${esc(o.planned.title)}` : `Planned last night${o.planned.title ? `: ${esc(o.planned.title)}` : ""}`) : ["Best match", "Option 2", "Option 3"][i] || "Option"}</h2>${levelBadge(o)}${o.planned ? '<span class="score">Your plan</span>' : i === 0 ? '<span class="score">Top pick</span>' : ""}</div>
     <div class="pieces">${order.filter((k) => o.pieces[k]).map((k) => `<div class="swap-wrap">${pieceTile(o.pieces[k])}<button class="swap-btn" data-swap="${i}:${k}" aria-pressed="${o.swapping === k}" aria-label="Swap the ${esc(o.pieces[k].name)}">${ICON_SWAP}</button></div>`).join("")}${ph}</div>
     ${o.swapping ? swapPicker(o, i) : ""}
-    ${o.extras?.length ? `<div class="pieces extras">${o.extras.map(pieceTile).join("")}</div>` : ""}
+    ${o.coat || o.extras?.length ? `<div class="pieces extras">${[o.coat, ...(o.extras || [])].filter(Boolean).map(pieceTile).join("")}</div>` : ""}
     ${o.reasons.length || o.extrasWhy?.length ? `<p class="why">${[...o.reasons, ...(o.extrasWhy || [])].map(esc).join(" · ")}</p>` : ""}
     ${o.warn?.length ? `<p class="why warn">Heads up: ${o.warn.map(esc).join(" · ")}</p>` : ""}
     ${i === 0 && !o.planned ? finishingTouch(o) : ""}
@@ -5151,7 +5197,7 @@ async function planEvent(id, undo = false) {
     const o = eventIdeas(ev).ideas[state.disc.evPick[id] || 0];
     if (!o) return;
     const sc = scentShown.get(`e:${ev.id}`)?.chosen;
-    ev.outfit = { itemIds: [...Object.values(o.pieces), ...(o.extras || [])].filter(Boolean).map((p) => p.id), ...(sc && { scentId: sc.id }), at: new Date().toISOString() };
+    ev.outfit = { itemIds: allPieces(o).map((p) => p.id), ...(sc && { scentId: sc.id }), at: new Date().toISOString() };
     toast(ev.date === localDay() ? "Planned. It's the first idea on Today." : `Planned. On ${fmtDay(ev.date)} it's the first idea on Today.`);
   }
   if (ev.date === localDay()) state.outfits = [];
@@ -5267,13 +5313,13 @@ function eventDetail(ev) {
   const o = r.ideas[k];
   const order = ["outer", "mid", "base", "bottom", "shoes"];
   const dashed = r.need.filter((n) => CORE.includes(n.role)).map((n) => `<div class="piece"><div class="ph">${kindIcon(SLOT_ICON[n.role])}<small>${esc(n.title)}<br>to buy</small></div><span>${esc(SLOTS[n.role])}</span></div>`).join("");
-  const scent = scentOn() ? scentBlock(`e:${ev.id}`, eventScentContext(ev, planned?.length ? planned : o ? [...Object.values(o.pieces), ...(o.extras || [])].filter(Boolean) : []), ev.outfit?.scentId) : "";
+  const scent = scentOn() ? scentBlock(`e:${ev.id}`, eventScentContext(ev, planned?.length ? planned : o ? allPieces(o) : []), ev.outfit?.scentId) : "";
   const outfit = planned?.length
     ? `<div class="pieces">${planned.map(pieceTile).join("")}</div>${scent}
        <div class="row outfit-actions"><span class="score">Planned for the day</span><button class="btn ghost" data-evunplan="${ev.id}">Change</button></div>`
     : o
       ? `<div class="pieces">${order.filter((x) => o.pieces[x]).map((x) => pieceTile(o.pieces[x])).join("")}${dashed}</div>
-         ${o.extras?.length ? `<div class="pieces extras">${o.extras.map(pieceTile).join("")}</div>` : ""}
+         ${o.coat || o.extras?.length ? `<div class="pieces extras">${[o.coat, ...(o.extras || [])].filter(Boolean).map(pieceTile).join("")}</div>` : ""}
          ${o.reasons.length ? `<p class="why">${o.reasons.map(esc).join(" · ")}</p>` : ""}
          ${o.warn?.length ? `<p class="why warn">Heads up: ${o.warn.map(esc).join(" · ")}</p>` : ""}${scent}
          <div class="row outfit-actions"><button class="btn primary" data-evplan="${ev.id}">Plan it for the day</button>${r.ideas.length > 1 ? `<button class="btn" data-evpick="${ev.id}|${(k + 1) % r.ideas.length}">Another outfit (${k + 1} of ${r.ideas.length})</button>` : ""}</div>`
@@ -6833,7 +6879,7 @@ function scentBlock(key, ctx, saved) {
 }
 const todayKey = (o) => `t:${o.key}`;
 const todaySaved = (o) => (o.planned?.eventId ? state.events.find((e) => e.id === o.planned.eventId)?.outfit?.scentId : undefined);
-const todayPieces = (o) => [...Object.values(o.pieces), ...(o.extras || [])].filter(Boolean);
+const todayPieces = allPieces;
 const todayScent = (o) => (scentOn() && state.occasion !== "gym" ? scentBlock(todayKey(o), scentContext(todayPieces(o)), todaySaved(o)) : "");
 // The scent worn with an outfit from Today (logged with it), or null.
 function outfitScent(o) {
@@ -7514,7 +7560,7 @@ document.addEventListener("click", async (e) => {
   if (ds.wear != null) {
     const o = state.outfits[+ds.wear];
     const sc = outfitScent(o);
-    const washed = await wearOutfit([...Object.values(o.pieces), ...(o.extras || [])].filter(Boolean), { source: o.planned ? "plan" : "idea", ...(sc && { scentIds: [sc.id] }) });
+    const washed = await wearOutfit(allPieces(o), { source: o.planned ? "plan" : "idea", ...(sc && { scentIds: [sc.id] }) });
     if (sc) await countScentWear(sc);
     if (o.planned) { state.plan = null; await savePlan(); }
     state.anchor = null;

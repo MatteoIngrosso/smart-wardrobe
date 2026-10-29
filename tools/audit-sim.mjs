@@ -105,7 +105,7 @@ async function run() {
     m.knit23 = share(c23, (o) => piecesOf(o).some(knit));
     m.tooWarmEvent28 = ideas("event", 28).flat().reduce((a, o) => a + (o.warn || []).filter((w) => /warm/i.test(w)).length, 0);
     const cold = ["casual", "smart", "work", "night", "event"].flatMap((occ) => ideas(occ, 2, 8));
-    m.warmOuter2 = share(cold, (o) => [o.pieces.outer, o.pieces.coat].some((p) => p && (p.warmth || 0) >= 4));
+    m.warmOuter2 = share(cold, (o) => [o.pieces.outer, o.coat].some((p) => p && (p.warmth || 0) >= 4));
     // Tailoring
     const ev15 = ideas("event", 15);
     const soft = (p) => p && /drawstring|linen/i.test(`${p.name} ${(p.tags || []).join(" ")} ${p.material || ""}`);
@@ -193,6 +193,13 @@ async function shots(out) {
   }
 }
 if (opt("--shots")) await shots(opt("--shots"));
+// --eval <file.js>: runs the file's code (an expression or async function body using window.__t) in the app and prints what it returns.
+if (opt("--eval")) {
+  const { ctx, page } = await openApp();
+  const code = readFileSync(opt("--eval"), "utf8");
+  console.log(JSON.stringify(await page.evaluate(`(async () => { const T = window.__t, st = T.state; ${code} })()`), null, 1));
+  await ctx.close();
+}
 const runs = [];
 for (let i = 0; i < RUNS; i++) runs.push(await run());
 await browser.close();
@@ -202,7 +209,7 @@ rmSync(dir, { recursive: true, force: true });
 const avg = (k) => runs.reduce((a, r) => a + (typeof r[k] === "boolean" ? +r[k] : r[k] || 0), 0) / runs.length;
 const pct = (x) => `${Math.round(x * 100)}%`;
 // [label, value, shown, pass, PR]
-const rows = [
+const rows = !RUNS ? [] : [
   ["Days the most-picked top or bottom is in the top pick (of 21)", avg("topDaysMax"), (v) => `${v.toFixed(1)} (${runs.map((r) => r.topDaysPiece).join(", ")})`, (v) => v <= 9, "A"],
   ["Days the most-picked jacket or coat is in the top pick (of 21)", avg("outerDaysMax"), (v) => `${v.toFixed(1)} (${runs.map((r) => r.outerDaysPiece).join(", ")})`, (v) => v <= 12, "A"],
   ["Hoodies worn at least once in 21 days", avg("hoodiesWorn"), (v) => `${v.toFixed(1)} of ${runs[0].hoodies}`, (v) => v >= 7, "A"],
@@ -225,8 +232,8 @@ const rows = [
   ["Doubled words in shopping titles", avg("doubled"), (v) => v.toFixed(0), (v) => v === 0, "E"],
   ["Wardrobe text for the stylist (characters)", avg("promptChars"), (v) => v.toFixed(0), (v) => v < 7000, "F"],
 ];
-console.log(`\n${RUNS} runs on ${backup.items.length} pieces\n`);
-for (const [label, v, show, pass, pr] of rows) console.log(`${pass(v) ? "PASS" : "FAIL"}  [${pr}] ${label}: ${show(v)}`);
+if (RUNS) console.log(`\n${RUNS} runs on ${backup.items.length} pieces\n`);
+if (RUNS) for (const [label, v, show, pass, pr] of rows) console.log(`${pass(v) ? "PASS" : "FAIL"}  [${pr}] ${label}: ${show(v)}`);
 const errs = [...new Set(errors)].filter((e) => !/Failed to fetch|NetworkError|net::/i.test(e));
 if (errs.length) console.log("\nPage errors:\n" + errs.slice(0, 8).join("\n"));
 if (args.includes("--verbose")) for (const r of runs) console.log("\nTop picks:", r.topList.join(" | "), "\nHoodies never worn:", r.hoodiesUnworn.join(", "));
