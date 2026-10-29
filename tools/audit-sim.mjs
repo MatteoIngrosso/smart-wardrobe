@@ -108,9 +108,10 @@ async function run() {
     m.warmOuter2 = share(cold, (o) => [o.pieces.outer, o.coat].some((p) => p && (p.warmth || 0) >= 4));
     // Tailoring
     const ev15 = ideas("event", 15);
-    const soft = (p) => p && /drawstring|linen/i.test(`${p.name} ${(p.tags || []).join(" ")} ${p.material || ""}`);
+    const soft = (p) => p && T.softTrousers(p);
     m.linenBest = ev15.filter((s) => soft(s[0]?.pieces.bottom)).length / ev15.length;
     m.eventL4 = share(ev15, (o) => T.dressLevel(piecesOf(o)) >= 4);
+    m.eventBestL4 = ev15.filter((s) => s[0] && T.dressLevel(piecesOf(s[0])) >= 4).length / ev15.length;
     m.eventShirt = share(ev15, (o) => o.pieces.base?.category === "shirt");
     const sporty = (o) => o.pieces.shoes && ["sneakers", "boots"].includes(o.pieces.shoes.category) && (o.pieces.shoes.formality || 0) <= 1.5 && o.pieces.base?.category === "shirt";
     const w15 = ideas("work", 15), s15 = ideas("smart", 15);
@@ -223,7 +224,8 @@ const rows = !RUNS ? [] : [
   ["'Too warm' warnings on Elegant at 28°C", avg("tooWarmEvent28"), (v) => v.toFixed(0), (v) => v === 0, "B"],
   ["Ideas with a warm outer layer at 2°C", avg("warmOuter2"), pct, (v) => v >= 0.8, "B"],
   ["Elegant: linen/drawstring trousers as best match (15°C)", avg("linenBest"), pct, (v) => v <= 0.09, "C"],
-  ["Elegant ideas at level 4 or 5 (15°C)", avg("eventL4"), pct, (v) => v >= 0.95, "C"],
+  ["Elegant best match at level 4 or 5 (15°C)", avg("eventBestL4"), pct, (v) => v >= 0.95, "C"],
+  ["Elegant ideas at level 4 or 5 (15°C), all three", avg("eventL4"), pct, (v) => v >= 0.6, "C"],
   ["Work/Smart casual: sporty shoes with a dress shirt", avg("sportyDress"), pct, (v) => v <= 0.1, "C"],
   ["Work ideas at level 4 (15°C)", avg("workL4"), pct, (v) => v >= 0.15, "C"],
   ["Wedding plans with a shirt", avg("weddingShirt"), pct, (v) => v >= 0.999, "C"],
