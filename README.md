@@ -212,7 +212,8 @@ Settings shows how many requests and tokens were used this month.
 - `server.py`: serves the app and keeps the shared wardrobe in `data/`, plus the AI lookups kept for every device (Python 3 standard library only)
 - `worker/api.js`, `wrangler.jsonc`, `.assetsignore`: the same sync API as a Cloudflare Worker, plus the AI pass-through that keeps keys off the devices
 - `sample/`: resized copies of your photos (`*.jpg`), their cut-outs (`cut/*.webp`) and `seed.js`, which holds the catalogue data for them
-- `manifest.webmanifest`, `icon.svg`: let you install the app on the home screen
+- `manifest.webmanifest`, `icon.svg`, `apple-touch-icon.png`: let you install the app on the home screen (the PNG is the icon iPhone and iPad use)
+- `device/`: the wall screen, a Raspberry Pi with a touch screen that opens the app full screen (parts, build steps and setup scripts in `device/README.md`; never served)
 - `tools/build_preview.py`: builds a one-page copy in `dist/` for the Claude preview
 - `stylist.js`, `fashion-bible.json`: the fashion bible inside the app. The rules, tips and weights of the Python model below; every outfit idea is scored by them and the AI stylist must follow them (see `fashion-model/README.md`, "In the app")
 - `fashion-model/`: a Python menswear model that learns from videos, magazines and styling rules and builds the "fashion bible" (never served; see its README). Training writes `fashion-bible.json` for the app
