@@ -261,6 +261,8 @@ const state = {
     scents: true, // a scent from your cabinet on each outfit idea (Wardrobe > Fragrances)
     aiProvider: "gemini", geminiKey: "", geminiModel: "gemini-flash-latest", apiKey: "",
     autoCutout: true, aiAuto: true, autoWash: true,
+    washAfter: { hoodies: 3, knits: 4, trousers: 4, jeans: 6 }, // wears before these go in the wash (Settings > Laundry; 0 = never)
+    washBack: 0, // days after which clothes come back from the wash by themselves (0: the app asks)
   },
   usage: { month: "", requests: 0, input: 0, output: 0 },
   wishlist: [], // before Must-Buy: moved into `wants` once (see moveWishlist)
@@ -1431,6 +1433,9 @@ const isSmartTrousers = (p) => p.category === "trousers" && !/cargo|parachute/i.
 const LEVELS = { 1: "Relaxed", 2: "Casual", 3: "Smart casual", 4: "Tailored", 5: "Full suit" };
 // [lowest, best, highest] level for each occasion.
 const OCC_LEVELS = { casual: [1, 2, 3], smart: [3, 3, 4], work: [3, 4, 5], night: [2, 3, 4], event: [4, 5, 5] };
+// Levels that are all at their best for an occasion: a hoodie and jeans is as good an everyday outfit
+// as a T-shirt and chinos. Others: the middle of OCC_LEVELS.
+const BEST_LEVELS = { casual: [1, 2] };
 function dressLevel(pieces) {
   const o = Style.outfitFrom(pieces);
   const worn = o.core.filter((p) => p !== o.outer || p.category === "jacket");
@@ -1593,24 +1598,31 @@ function scoreOutfit(o, cond, occ, t = taste()) {
   const range = Style.ready() && levelsFor(occ);
   if (range) {
     const lvl = dressLevel(pieces), [lo, best, hi] = range, step = occ.level ? 4.5 : 3;
-    s += lvl < lo ? -step * (lo - lvl) : lvl > hi ? -step * (lvl - hi) : lvl === best ? 1.2 : 0.4;
+    const bests = !occ.level && BEST_LEVELS[occ.id] || [best];
+    s += lvl < lo ? -step * (lo - lvl) : lvl > hi ? -step * (lvl - hi) : bests.includes(lvl) ? 1.2 : 0.4;
     if (lvl === 5 && lvl >= lo) reasons.unshift("A full suit: blazer, trousers, shirt and dress shoes");
     // Within a level, how dressy the pieces themselves are (what the AI saw in the photos, else their
     // type) should match the level wanted, so the steps are gradual: Elegant reaches for the dressiest
     // pieces, smart casual leaves the blazer and dress shirt for the levels above.
     const worn = pieces.filter((p) => roleOf(p) !== "outer" || p.category === "jacket");
-    const dz = mean(worn.map(dressOf)), k = occ.level ? 2 : occ.id === "event" ? 2.5 : 1.2;
-    s -= dz < best ? (best - dz) * k : (dz - best) * k * (hi > best ? 0.5 : 1);
+    const aim = mean(bests), dz = mean(worn.map(dressOf)), k = occ.level ? 2 : occ.id === "event" ? 2.5 : bests.length > 1 ? 0.6 : 1.2;
+    s -= dz < aim ? (aim - dz) * k : (dz - aim) * k * (hi > best ? 0.5 : 1);
     if (best >= 4 && suitPair(o.outer, o.bottom)) { s += 1; if (lvl < 5) reasons.push(`The ${o.outer.name} and ${o.bottom.name} as a suit`); }
   }
 
-  // Rotation: don't repeat what you wore recently; give the forgotten pieces a turn
+  // Rotation: don't repeat what you wore recently, keep each piece within its weekly budget (bigger
+  // for pieces you love) and give the ones you haven't worn for two weeks a turn.
+  const recent = recentWears();
+  let idle = 0;
   for (const p of pieces) {
     const d = daysSince(p.lastWorn), k = ROTATION[starsOf(p)] || 1;
     if (d <= 1) s -= 3 * k; else if (d <= 4) s -= 1.2 * k;
-    if (!p.wearCount) s += 0.3;
+    const over = (recent.w7.get(p.id) || 0) + 1 - budgetOf(p);
+    if (over > 0) s -= 3 * over;
+    if (!p.isNew && budgetGroup(p) && !recent.w14.get(p.id) && d > 14) idle += 1.2;
   }
-  const fresh = pieces.find((p) => !p.wearCount || daysSince(p.lastWorn) > 21);
+  s += Math.min(idle, 2);
+  const fresh = pieces.find((p) => !p.isNew && budgetGroup(p) && (!p.wearCount || daysSince(p.lastWorn) > 21));
 
   // Your taste: what you've worn, liked and skipped before
   const learnt = tasteScore(o, occ, t);
@@ -1643,7 +1655,9 @@ function ideaPool(opts = {}) {
   // Pieces you love are tried more often (and the ones you rated low less), so they're in more ideas.
   // For work and Elegant, casual pieces are tried less, so a mostly casual wardrobe still gives the
   // score enough smart outfits to choose from.
-  const tries = (x) => (({ 5: 3, 4: 2, 2: 0.6, 1: 0.4 })[starsOf(x)] || 1) * (dressy && casualPiece(x) ? 0.35 : 1);
+  // A piece already worn as often as its weekly budget allows is tried less, so there are enough
+  // outfits around the others.
+  const tries = (x) => (({ 5: 3, 4: 2, 2: 0.6, 1: 0.4 })[starsOf(x)] || 1) * (dressy && casualPiece(x) ? 0.35 : 1) * (atBudget(x) ? 0.4 : 1);
   const pick = (arr) => {
     let r = Math.random() * arr.reduce((a, x) => a + tries(x), 0);
     for (const x of arr) if ((r -= tries(x)) < 0) return x;
@@ -1734,6 +1748,12 @@ function pickIdeas(pool, n, keep = [], avoid = []) {
   // A slightly weaker outfit with another jacket beats the same jacket three times.
   // Repeating a top or bottom beats an outfit far behind the best (shorts at 17° for Elegant).
   const any = () => true;
+  // A piece already in both other ideas doesn't go in the third as well, unless it's the only one of
+  // its kind that suits the occasion (your only blazer for Elegant).
+  const kinds = {};
+  for (const c of cands) if (!c.blocked && tier(c) < 2) for (const [r, p] of Object.entries(c.pieces)) if (p) (kinds[r] ||= new Set()).add(p.id);
+  const only = (id) => { const p = state.items.find((i) => i.id === id); return !p || (kinds[roleOf(p)]?.size || 0) <= 1; };
+  const inAll = (c) => { const ideas = [...keep, ...out]; return ideas.length === 2 && clothesOf(c).some((id) => !only(id) && ideas.every((o) => clothesOf(o).includes(id))); };
   const passes = [[differ, good, true, 2], [differ, good, true, 1], [differ, good, false, 1], [differ, good, true], [half, good, true], [differ, good - 3, true], [half, good - 3, true], [differ, good], [half, good], [any, good], [differ, -Infinity], [half, -Infinity], [any, -Infinity]];
   for (const [allowBlocked, maxTier] of [[false, 0], [true, 0], [false, 1], [true, 1], [true, 2]]) {
     for (const [ok, min, newOuter, freshness] of passes) {
@@ -1744,6 +1764,7 @@ function pickIdeas(pool, n, keep = [], avoid = []) {
         const outer = c.pieces.outer?.id;
         if (out.includes(c) || shown.has(c.key) || (c.blocked && !allowBlocked) || tier(c) > maxTier || !ok(hero, bottom) || (newOuter && outer && outers.has(outer))) continue;
         if (freshness ? !fresh(c, freshness) || (c.score < min && own(c) < goodOwn) : c.score < min) continue;
+        if (min > -Infinity && inAll(c)) continue;
         clothesOf(c).forEach((id) => inSet.add(id));
         shoesInSet.add(c.pieces.shoes?.id);
         if (outer) outers.add(outer);
@@ -1781,6 +1802,10 @@ function generateOutfits(n = 3, avoid = []) {
   if (!state.anchor) withLoved(pool, picks, keep, avoid);
   state.outfits = [...keep, ...picks.map((c) => dressIdea(c, pool, used))];
   state.levelGap = state.anchor ? null : levelGap(pool);
+  // A piece in all three ideas is the only one of its kind that suits the occasion (see pickIdeas): say so.
+  const clothesIn = (o) => Object.entries(o.pieces).filter(([r, p]) => p && r !== "shoes").map(([, p]) => p);
+  const shared = state.outfits.length === 3 && clothesIn(state.outfits[0]).find((p) => state.outfits.every((o) => clothesIn(o).includes(p)));
+  state.onlyNote = shared ? `Your ${shared.name} is the only ${catLabel(shared.category).toLowerCase()} you have that suits this, so it's in every idea.` : null;
 }
 // A piece you love (5 stars, then 4) that suits today goes in at least one idea, when it's in none
 // yet: the one you wore longest ago, in its best outfit that breaks no rule and isn't far behind.
@@ -1802,7 +1827,7 @@ function withLoved(pool, picks, keep, avoid) {
   for (const c of pool.cands) {
     if (c.blocked || c.isBroken || c.score < top - 5 || keys.has(c.key) || !fits(c)) continue;
     for (const p of Object.values(c.pieces)) {
-      if (!p || !loved(p) || shown.has(p.id) || daysSince(p.lastWorn) <= 1) continue;
+      if (!p || !loved(p) || shown.has(p.id) || daysSince(p.lastWorn) <= 1 || atBudget(p)) continue;
       const r = [starsOf(p), Math.min(daysSince(p.lastWorn), 365), c.score];
       if (!rank || r[0] > rank[0] || (r[0] === rank[0] && (r[1] > rank[1] || (r[1] === rank[1] && r[2] > rank[2])))) { best = c; rank = r; }
     }
@@ -1890,6 +1915,30 @@ const STAR_WORDS = ["", "Hate it", "Meh", "Fine", "Like it", "Love it"];
 const STAR_PULL = { 5: 2.5, 4: 1.2, 3: 0, 2: -1.2, 1: -2.5 };
 // Loved pieces come back sooner after you wore them (the rotation penalty is scaled down).
 const ROTATION = { 5: 0.35, 4: 0.6 };
+// How many times in 7 days a piece can be worn before its outfits lose points (3 for each wear over),
+// by stars 1 to 5 (unrated counts as 3): loved pieces are still worn the most, but not every day, and
+// the rest of the wardrobe gets its turn. Shoes and gym clothes have no budget.
+const WEAR_BUDGET = { top: [1, 1, 1.5, 2, 2.5], bottom: [1, 1, 2, 2.5, 3], outer: [1.5, 1.5, 2.5, 3, 4] };
+const budgetGroup = (p) => (slotOf(p) === "gym" ? null : { base: "top", mid: "top", bottom: "bottom", outer: "outer" }[roleOf(p)] || null);
+const budgetOf = (p) => (budgetGroup(p) ? WEAR_BUDGET[budgetGroup(p)][(starsOf(p) || 3) - 1] : Infinity);
+// How often each piece was worn in the last 7 and 14 days, from the wear log.
+let wearsMemo = null;
+function recentWears() {
+  const key = `${state.log.length}|${today()}`;
+  if (wearsMemo?.key === key) return wearsMemo;
+  const w7 = new Map(), w14 = new Map(), now = Date.now();
+  for (const l of state.log) {
+    if (logKind(l) !== "wear") continue;
+    const d = (now - new Date(l.at || l.date).getTime()) / 864e5;
+    if (!(d < 14)) continue;
+    for (const id of l.itemIds || []) {
+      w14.set(id, (w14.get(id) || 0) + 1);
+      if (d < 7) w7.set(id, (w7.get(id) || 0) + 1);
+    }
+  }
+  return (wearsMemo = { key, w7, w14 });
+}
+const atBudget = (p) => (recentWears().w7.get(p.id) || 0) >= budgetOf(p);
 // What stars on an outfit teach: 4 and 5 count like a wear and more, 3 nothing, 2 and 1 count against it.
 const RATE_WEIGHT = { 5: 2, 4: 1, 3: 0, 2: -1, 1: -2 };
 // What a piece is, for learning from the stars on pieces: its main colour, type, fit and styles.
@@ -2130,11 +2179,20 @@ async function wearOutfit(items, ctx) {
   for (const it of items) {
     it.wearCount = (it.wearCount || 0) + 1;
     it.lastWorn = now;
-    if (washed.includes(it)) it.wash = now;
+    it.wornSinceWash = (it.wornSinceWash || 0) + 1;
+    if (washed.includes(it)) { it.wash = now; it.wornSinceWash = 0; }
     await store.put("items", it);
   }
   await addLog({ itemIds: items.map((i) => i.id), ...(ctx && outfitContext()), ...ctx });
   return washed;
+}
+// Settings > Laundry > Back from the wash: clothes come back by themselves after that many days.
+async function washBack() {
+  const days = state.settings.washBack;
+  const back = days ? inWash().filter((i) => daysSince(i.wash) >= days) : [];
+  if (!back.length) return;
+  await setWash(back, false);
+  toast(`${back.length === 1 ? back[0].name : `${back.length} pieces`} back from the wash`, { label: "Undo", run: async () => { await setWash(back, true); refreshViews(); } });
 }
 // "Logged" with an Undo for the pieces that went in the wash, in case they didn't.
 function wornToast(msg, washed) {
@@ -2153,8 +2211,18 @@ function refreshViews() {
    Laundry: a piece in the wash stays in your wardrobe but is left out of outfit
    ideas, swaps, "Start from a piece" and the stylist's outfits until it's back.
    ====================================================================== */
-// Worn once, then washed: T-shirts and shirts, underwear and socks, and gym clothes (not shoes or bags).
-const washAfterWear = (it) => ["base", "under"].includes(slotOf(it)) || (slotOf(it) === "gym" && ["base", "mid", "bottom"].includes(roleOf(it)));
+// Worn once, then washed: T-shirts and shirts, underwear and socks, and gym clothes. Hoodies, knits,
+// trousers and jeans after a few wears (Settings > Laundry). Jackets, coats, shoes and bags never.
+const WASH_GROUPS = { hoodies: ["hoodie", "zip-hoodie", "sweatshirt"], knits: ["sweater", "overshirt"], trousers: ["trousers", "joggers", "shorts", "skirt"], jeans: ["jeans"] };
+const WASH_LABELS = { hoodies: "Hoodies", knits: "Knits", trousers: "Trousers, shorts", jeans: "Jeans" };
+const WASH_DEFAULTS = { hoodies: 3, knits: 4, trousers: 4, jeans: 6 };
+const washGroup = (it) => Object.keys(WASH_GROUPS).find((g) => WASH_GROUPS[g].includes(it.category));
+function washLimit(it) {
+  if (["base", "under"].includes(slotOf(it)) || (slotOf(it) === "gym" && ["base", "mid", "bottom"].includes(roleOf(it)))) return 1;
+  const g = washGroup(it);
+  return g ? state.settings.washAfter?.[g] ?? WASH_DEFAULTS[g] : 0;
+}
+const washAfterWear = (it) => washLimit(it) > 0 && (it.wornSinceWash || 0) + 1 >= washLimit(it);
 const wearable = () => state.items.filter((i) => !i.wash);
 // What outfit ideas and accessories are picked from: out of the wash, and not disliked.
 // Pieces you're giving away or selling (Wardrobe > Report) are left out of ideas and the audit.
@@ -2165,6 +2233,7 @@ async function setWash(items, on) {
   const now = new Date().toISOString();
   for (const it of items) {
     if (on) it.wash = now; else delete it.wash;
+    it.wornSinceWash = 0;
     await store.put("items", it);
   }
   if (on && items.some((i) => i.id === state.anchor)) state.anchor = null;
@@ -3065,6 +3134,7 @@ function renderToday() {
       ${levelChips()}
       ${anchorBar()}
       ${levelGapLine()}
+      ${state.onlyNote && !state.anchor ? `<p class="muted small" style="margin:0">${esc(state.onlyNote)}</p>` : ""}
       <div class="outfits">${state.outfits.map((o, i) => outfitCard(o, i)).join("") || `<p class="muted">Add a few more tops to get outfit ideas.</p>`}</div>
       ${laundryLine()}
       <p class="muted small" style="margin:0">${esc(tasteLine())}</p>
@@ -3101,6 +3171,11 @@ function dayCard() {
 function laundryLine() {
   const n = inWash().length;
   if (!n) return "";
+  // In the wash for two days or more: probably clean by now (loved pieces first). "Not yet" asks again tomorrow.
+  const due = state.settings.washAskedOn === today() ? [] : inWash().filter((i) => daysSince(i.wash) >= 2).sort((a, b) => (starsOf(b) || 0) - (starsOf(a) || 0));
+  if (due.length) return `<div class="card stack laundry-back" style="gap:8px"><b>Back from the wash?</b>
+    <div class="chips">${due.map((i) => `<button class="chip" data-washback="${i.id}">${esc(i.name)}</button>`).join("")}</div>
+    <div class="row"><button class="btn" data-act="wash-done">All ${n} back</button><button class="btn" data-act="wash-later">Not yet</button><span class="muted small">Tap what's clean. Pieces in the wash are left out of these ideas.</span></div></div>`;
   return `<div class="row laundry-row"><span class="muted small">${n} piece${n === 1 ? " is" : "s are"} in the wash and left out of these ideas.</span><button class="chip" data-act="see-wash">See them</button><button class="chip" data-act="wash-done">Laundry done</button></div>`;
 }
 // Five stars to tap. `key` says what is rated ("o|<card>", "i|<piece id>", "w|<wear id>"); the same star again takes the rating off.
@@ -6921,7 +6996,9 @@ function renderSettings() {
       </section>
       <section class="card stack">
         <h2 style="margin:0">Laundry</h2>
-        ${toggle("autoWash", "Into the wash after one wear", "T-shirts, shirts, underwear, socks and gym clothes go in the wash when you log wearing them, with an Undo. Anything else you mark from its page.")}
+        ${toggle("autoWash", "Into the wash after wearing", "T-shirts, shirts, underwear, socks and gym clothes after one wear, the pieces below after a few, with an Undo when you log the outfit. Jackets, coats and shoes never.")}
+        ${s.autoWash ? `<div class="field"><label>Wears before the wash <i class="muted">(0: never)</i></label><div class="row wash-after">${Object.keys(WASH_GROUPS).map((g) => `<label class="small">${WASH_LABELS[g]} <input class="input" style="max-width:4.5rem" type="number" inputmode="numeric" min="0" max="30" data-input="wash-${g}" value="${s.washAfter?.[g] ?? WASH_DEFAULTS[g]}"></label>`).join("")}</div></div>` : ""}
+        <div class="field"><label>Back from the wash</label><div class="chips">${[[0, "Ask me"], [2, "After 2 days"], [3, "After 3 days"], [4, "After 4 days"]].map(([d, l]) => `<button class="chip" aria-pressed="${(s.washBack || 0) === d}" data-washdays="${d}">${l}</button>`).join("")}</div><span class="muted small">${s.washBack ? `Clothes come back to your wardrobe by themselves ${s.washBack} days after they went in the wash.` : "After two days, Today asks which pieces are clean."}</span></div>
         ${inWash().length ? `<div class="row"><span class="muted small" style="flex:1">${inWash().length} in the wash now.</span><button class="btn" data-act="wash-done">Laundry done: all back</button></div>` : ""}
       </section>
       <section class="card stack">
@@ -7329,6 +7406,14 @@ document.addEventListener("click", async (e) => {
     state.outfits = [];
     return render();
   }
+  if (ds.washback) {
+    const it = state.items.find((i) => i.id === ds.washback);
+    if (!it) return;
+    await setWash([it], false);
+    toast(`${it.name} is back`, { label: "Undo", run: async () => { await setWash([it], true); refreshViews(); } });
+    return render();
+  }
+  if (ds.washdays != null) { state.settings.washBack = +ds.washdays; await saveSettings(); return render(); }
   if (ds.wash) {
     const it = state.items.find((i) => i.id === ds.wash);
     await setWash([it], !it.wash);
@@ -7672,6 +7757,7 @@ document.addEventListener("click", async (e) => {
     case "look-all": return lookAll();
     case "anchor-pick": return openAnchorPicker();
     case "see-wash": Object.assign(state.filters, { slot: "wash", cat: "all", q: "", style: "all", color: "all" }); return go("wardrobe");
+    case "wash-later": state.settings.washAskedOn = today(); await saveSettings(); return render();
     case "wash-done": {
       const back = inWash();
       await setWash(back, false);
@@ -7774,6 +7860,14 @@ document.addEventListener("input", (e) => {
   if (k === "tripq") { state.disc.tripq = v; return; }
   if (scentDraft && k.startsWith("sc-")) return scentTyped(scentDraft, k.slice(3), v);
   if (["evtext", "evdate", "evtime", "evplace"].includes(k)) { state.disc.evForm[k.slice(2)] = v; return; }
+  if (k.startsWith("wash-") && WASH_GROUPS[k.slice(5)]) {
+    const n = Math.round(+v);
+    if (!(n >= 0 && n <= 30) || v === "") return;
+    state.settings.washAfter = { ...WASH_DEFAULTS, ...state.settings.washAfter, [k.slice(5)]: n };
+    clearTimeout(e.target._t);
+    e.target._t = setTimeout(saveSettings, 400);
+    return;
+  }
   if (k === "age") {
     const n = Math.round(+v);
     state.settings.age = n >= 12 && n <= 99 ? n : null;
@@ -7812,6 +7906,7 @@ document.addEventListener("keydown", (e) => {
    Boot
    ====================================================================== */
 await loadAll();
+await washBack();
 await moveWishlist();
 applyTheme();
 await loadBible();
