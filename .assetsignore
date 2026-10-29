@@ -9,6 +9,7 @@ wrangler.jsonc
 worker
 server.py
 tools
+device
 data
 dist
 node_modules
