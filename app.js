@@ -1879,6 +1879,7 @@ function generateOutfits(n = 3, avoid = []) {
   if (plan) { n--; plan.extras.forEach((x) => used.add(x.id)); }
   const keep = plan ? [plan] : [];
   const picks = pickIdeas(pool, n, keep, avoid);
+  state.lastFresh = picks.length; // ideas not in `avoid` (see "New ideas")
   if (picks.length < n) picks.push(...pickIdeas(pool, n - picks.length, [...keep, ...picks])); // small wardrobe: repeats are fine
   if (!state.anchor) withLoved(pool, picks, keep, avoid);
   state.outfits = [...keep, ...picks.map((c) => dressIdea(c, pool, used))];
@@ -2801,18 +2802,23 @@ async function aiGenerate(opts) {
 
 // One line per piece, short fields: keeps the stylist prompt to roughly 15 tokens per item.
 // "#n" numbers let the answer point at pieces, so their photos can be shown.
-function wardrobeText() {
-  // Underwear and socks are left out: they cost tokens and rarely change the advice.
+// The wardrobe for the AI, one short line a piece (#numbers follow state.items, so the app finds them).
+// Left out to save tokens: underwear and socks, pieces you're giving away, and gym clothes unless the
+// question is about training (`gym`). The type, brand or colour isn't repeated when the name says it.
+function wardrobeText({ gym = false } = {}) {
   return state.items.map((i, n) => {
-    if (slotOf(i) === "under") return "";
-    const b = brandInfo(i.brand);
+    if (slotOf(i) === "under" || leaving(i) || (!gym && slotOf(i) === "gym")) return "";
+    const b = brandInfo(i.brand), says = (w) => w && i.name.toLowerCase().includes(String(w).toLowerCase());
+    const type = catLabel(i.category);
     return [
-      `#${n + 1} ${i.name}`, catLabel(i.category), (i.colors || []).join("/"),
-      i.brand ? i.brand + (b?.tier ? ` (${b.tier})` : "") : "",
-      (i.styles || []).join("/"), FITS[i.fit] ? `${i.fit} fit` : "", `w${i.warmth}`,
+      `#${n + 1} ${i.name}`, says(type) || says(type.replace(/s$/, "")) ? "" : type.toLowerCase(),
+      (i.colors || []).filter((c, k) => k || !says(c)).join("/"),
+      i.brand && !says(i.brand) ? i.brand + (b?.tier ? ` (${b.tier})` : "") : b?.tier ? `(${b.tier})` : "",
+      (i.styles || []).join("/"), FITS[i.fit] ? i.fit : "", `w${i.warmth}`,
       i.look ? `looks ${DRESSINESS[i.look.dressiness].toLowerCase()}${i.look.material !== "other" ? `, ${i.look.material}` : ""}` : "",
       suitOf(i) ? `suit with #${state.items.indexOf(suitOf(i)) + 1}` : "",
-      i.wearCount ? `worn ${i.wearCount}x${daysSince(i.lastWorn) <= 7 ? `, last ${daysSince(i.lastWorn)}d ago` : ""}` : "unworn",
+      i.wearCount ? `worn ${i.wearCount}x${daysSince(i.lastWorn) <= 7 ? ` (${daysSince(i.lastWorn)}d ago)` : ""}` : "unworn",
+      i.disliked ? "disliked" : "",
       i.wash ? "IN THE WASH" : "",
     ].filter(Boolean).join("; ");
   }).filter(Boolean).join("\n");
@@ -3279,8 +3285,11 @@ function pendingBuys(all = false) {
     !state.items.some((i) => i.category === w.cat && (i.createdAt || "") >= (w.createdAt || w.decidedAt || "") && (!w.color || !COLORS[w.color] || (i.colors || []).includes(w.color))) &&
     (all || (daysSince(w.decidedAt) >= 2 && !(w.askAfter && Date.now() < Date.parse(w.askAfter)))));
 }
+// A bought piece as a wardrobe piece, for LEVEL_NEEDS' tests.
+const fillsNeed = (w, has) => has({ category: w.cat, name: w.title, tags: [], styles: w.styles || [], formality: 3, colors: [w.color] });
 function boughtLine() {
-  const w = pendingBuys()[0];
+  // Not when the level card above already offers to add it.
+  const w = pendingBuys().find((x) => !state.levelGap?.needs?.some(([, , has]) => fillsNeed(x, has)));
   if (!w) return "";
   return `<div class="card stack" style="gap:8px"><span>Did the <b>${esc(w.title.toLowerCase())}</b> you bought arrive? Add ${/s$/.test(w.title) ? "them" : "it"} and your outfit ideas can use ${/s$/.test(w.title) ? "them" : "it"}.</span>
     <div class="chips"><button class="chip" data-addbought="${w.id}">Add ${/s$/.test(w.title) ? "them" : "it"}</button><button class="chip" data-boughtlater="${w.id}">Not yet</button><button class="chip" data-boughtback="${w.id}">I sent ${/s$/.test(w.title) ? "them" : "it"} back</button></div></div>`;
@@ -3410,7 +3419,7 @@ function levelGapLine() {
     ? `These ideas reach ${esc(LEVELS[g.top])}. For ${esc(occ)} at its best (${esc(LEVELS[g.want])}) you'd need ${list(" and ")}.`
     : `None of your clothes make ${esc(what)} yet, so these are the dressiest you have (${esc(LEVELS[g.top])}).`;
   // A piece you bought on Must-Buy and haven't added yet fills the need: add it instead of finding one.
-  const bought = (has) => pendingBuys(true).find((w) => has({ category: w.cat, name: w.title, tags: [], styles: w.styles || [], formality: 3, colors: [w.color] }));
+  const bought = (has) => pendingBuys(true).find((w) => fillsNeed(w, has));
   const chips = g.needs.map(([chip, l, has]) => { const w = bought(has); return w ? `<button class="chip" data-addbought="${w.id}">Add the ${esc(w.title.toLowerCase())} you bought</button>` : `<button class="chip" data-needgo="${esc(chip)}">Find ${esc(l)}</button>`; });
   chips.push(...washing.map((p) => `<button class="chip" data-washback="${p.id}">${esc(cap(p.name))} is back from the wash</button>`));
   return `<div class="card stack" style="gap:8px"><span>${line}</span>${g.needs.length && !g.short && !washing.length ? `<span class="muted small">Missing: ${list(", ")}.</span>` : ""}${chips.length ? `<div class="chips">${chips.join("")}</div>` : ""}</div>`;
@@ -3424,7 +3433,7 @@ function outfitCard(o, i) {
   const order = ["outer", "mid", "base", "bottom", "shoes"];
   const ph = (o.missing || []).map((m) => `<button class="piece" data-go="shop"><div class="ph">${kindIcon(SLOT_ICON[m])}<small>No ${SLOTS[m].toLowerCase()} yet<br>tap to shop</small></div><span>${SLOTS[m]}</span></button>`).join("");
   return `<article class="card outfit">
-    <div class="row" style="justify-content:space-between"><h2 style="margin:0">${o.planned ? (o.planned.eventId ? `Planned for ${esc(o.planned.title)}` : `Planned last night${o.planned.title ? `: ${esc(o.planned.title)}` : ""}`) : ["Best match", "Option 2", "Option 3"][i] || "Option"}</h2>${levelBadge(o)}${o.planned ? '<span class="score">Your plan</span>' : i === 0 ? '<span class="score">Top pick</span>' : ""}</div>
+    <div class="row" style="justify-content:space-between"><h2 style="margin:0">${o.planned ? (o.planned.eventId ? `Planned for ${esc(o.planned.title)}` : `Planned last night${o.planned.title ? `: ${esc(o.planned.title)}` : ""}`) : ["Best match", "Option 2", "Option 3"][i] || "Option"}</h2>${levelBadge(o)}${o.planned ? '<span class="score">Your plan</span>' : i === 0 ? '<span class="score">Top<span class="wide"> pick</span></span>' : ""}</div>
     <div class="pieces">${order.filter((k) => o.pieces[k]).map((k) => `<div class="swap-wrap">${pieceTile(o.pieces[k])}<button class="swap-btn" data-swap="${i}:${k}" aria-pressed="${o.swapping === k}" aria-label="Swap the ${esc(o.pieces[k].name)}">${ICON_SWAP}</button></div>`).join("")}${ph}</div>
     ${o.swapping ? swapPicker(o, i) : ""}
     ${o.coat || o.extras?.length ? `<div class="pieces extras">${[o.coat, ...(o.extras || [])].filter(Boolean).map(pieceTile).join("")}</div>` : ""}
@@ -7450,7 +7459,14 @@ async function importBackup() {
         await store.put("items", i);
       }
       for (const sc of data.scents || []) if (sc?.id) { sc.photos = await toBlobs(sc.photos); await store.put("scents", sc); }
-      for (const l of data.log || []) { delete l.id; await store.put("log", l); }
+      // Wear-log entries keep their ids (ratings point at them, so answered rating cards don't come
+      // back); one whose id is taken here by a different entry gets a new id.
+      const logs = new Map((await store.all("log")).map((l) => [l.id, l]));
+      for (const l of data.log || []) {
+        const here = l.id != null && logs.get(l.id);
+        if (here && here.at !== l.at) delete l.id;
+        await store.put("log", l);
+      }
       if (data.wishlist?.length) { state.wishlist = data.wishlist; await moveWishlist(); }
       for (const w of data.wants || []) if (w?.id && !state.wants.some((x) => x.id === w.id)) { state.wants.push(w); await store.put("wants", w); }
       for (const e of data.events || []) if (e?.id && !state.events.some((x) => x.id === e.id)) { state.events.push(e); await store.put("events", e); }
@@ -7479,7 +7495,7 @@ async function ask(question, targetId = "ai-answer") {
     const c = conditions();
     const likes = tasteText();
     const cal = calendarText();
-    const context = `The user is ${shopperText()}.${ageNow()}\n${state.event?.day === "tomorrow" ? "Tomorrow" : "Today"}: feels ${Math.round(c.feels)}°C${c.wet ? ", wet" : ""}. Occasion: ${OCCASIONS.find((o) => o.id === state.occasion).label}.${cal ? `\n${cal}` : ""}\nWardrobe (#number name; type; colours; brand; style; fit; warmth 1-5; wear):\n${wardrobeText() || "(empty)"}${likes ? `\nTaste (learnt from what the user wears, likes and skips):\n${likes}` : ""}`;
+    const context = `The user is ${shopperText()}.${ageNow()}\n${state.event?.day === "tomorrow" ? "Tomorrow" : "Today"}: feels ${Math.round(c.feels)}°C${c.wet ? ", wet" : ""}. Occasion: ${OCCASIONS.find((o) => o.id === state.occasion).label}.${cal ? `\n${cal}` : ""}\nWardrobe (#number name; type; colours; brand; style; fit; warmth 1-5; wear):\n${wardrobeText({ gym: state.occasion === "gym" || /\b(gym|run|running|train|training|workout|sport)\b/i.test(question) }) || "(empty)"}${likes ? `\nTaste (learnt from what the user wears, likes and skips):\n${likes}` : ""}`;
     const refs = state.items.map((i) => i.id);
     const show = (t) => { const el = document.getElementById(targetId); if (el) el.textContent = cleanRefs(t, refs); };
     // The fashion bible: its mandatory rules and the tips that fit this question.
@@ -7922,7 +7938,27 @@ document.addEventListener("click", async (e) => {
 
   switch (ds.act) {
     case "seed": return loadSeed();
-    case "shuffle": generateOutfits(3, state.outfits.map((o) => o.key)); return render();
+    case "shuffle": {
+      // Every outfit shown since the morning (for this occasion, level and temperature) stays out, so
+      // "New ideas" doesn't switch between two sets. When the best one left is worse than the first set's
+      // best (off the level, too warm or cold, or breaking a rule) it says so once, and when nothing new
+      // is left it starts from the best again.
+      const sig = `${state.occasion}|${state.level}|${state.anchor}|${Math.round(conditions().feels)}|${localDay()}`;
+      const tierOf = (o) => ((o.levelOff || 0) > 0 || (o.wOff || 0) > 3.5 ? 2 : o.isBroken ? 1 : 0);
+      const best = () => Math.min(2, ...state.outfits.map(tierOf));
+      if (state.shown?.sig !== sig) state.shown = { sig, keys: [], tier: best() };
+      state.shown.keys.push(...state.outfits.map((o) => o.key));
+      generateOutfits(3, state.shown.keys);
+      if (state.lastFresh < state.outfits.length) {
+        state.shown = null;
+        generateOutfits(3);
+        toast("You've seen every outfit for this: back to the best ones");
+      } else if (best() > state.shown.tier && !state.shown.told) {
+        state.shown.told = true;
+        toast(`Every good ${occLabel(state.occasion).toLowerCase()} outfit you have was in the ideas before: these are the next best`);
+      }
+      return render();
+    }
     case "autotemp": e.preventDefault(); state.manualTemp = null; generateOutfits(); return render();
     case "shoot": addingExtraPhoto = false; return startShooting();
     case "shoot-done": { const shots = pendingShots; pendingShots = []; return startDraft(shots); }

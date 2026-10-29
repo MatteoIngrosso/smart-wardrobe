@@ -1,4 +1,4 @@
-// Run with:  node tools/audit-sim.mjs <backup.json> [--runs 3] [--json out.json]
+// Run with:  node tools/audit-sim.mjs <backup.json> [--runs 5] [--json out.json] [--shots dir] [--eval file.js] [--verbose]
 // Uses the app on a real wardrobe backup (Settings > Export backup) and measures how the outfit
 // ideas behave: rotation over 21 days, the weather, tailoring, laundry and the words on screen.
 // Prints one line per metric with PASS or FAIL against the thresholds in the fixing plan.
@@ -17,7 +17,7 @@ const args = process.argv.slice(2);
 const opt = (k, d) => (args.includes(k) ? args[args.indexOf(k) + 1] : d);
 const backupPath = args.find((a) => a.endsWith(".json") && a !== opt("--json"));
 if (!backupPath || !existsSync(backupPath)) { console.error("Usage: node tools/audit-sim.mjs <backup.json> [--runs 3] [--json out.json]"); process.exit(2); }
-const RUNS = +opt("--runs", 3);
+const RUNS = +opt("--runs", 5); // ideas are picked with some chance: the numbers are averages
 
 // A copy of the app with every top-level function and constant of app.js on window.__t.
 const dir = mkdtempSync(join(tmpdir(), "wardrobe-sim-"));
@@ -191,6 +191,8 @@ async function shots(out) {
       const full = await page.evaluate(() => document.querySelector("main")?.scrollHeight || 2000);
       await page.setViewportSize({ width: w, height: Math.min(full + 120, 9000) });
       await page.screenshot({ path: join(out, `today-${occ}-${w}.png`) });
+      const sideways = await page.evaluate(() => document.documentElement.scrollWidth - window.innerWidth);
+      if (sideways > 1) console.log(`Today (${occ}) at ${w}px scrolls sideways by ${sideways}px`);
       await page.setViewportSize({ width: w, height: h });
     }
     await page.evaluate(() => window.__t.go("settings"));
