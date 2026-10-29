@@ -134,6 +134,14 @@ async function run() {
     // Words: doubled words in shopping titles
     const titles = [...st.wants.map((w) => w.title || ""), ...T.auditFeed().map((x) => T.mkIdea({ cat: x.cat, color: x.colors?.[0], noun: x.noun }).title)];
     m.doubled = titles.filter((t) => /\b(\w+) \1\b/i.test(t || "")).length;
+    const samples = [["sweater", "grey", "grey wool crewneck sweater"], ["belt", "brown", "brown leather belt"], ["bag", "black", "black leather crossbody bag"], ["necklace", "grey", "silver chain necklace"]]
+      .map(([cat, color, noun]) => T.mkIdea({ cat, color, noun }).title);
+    m.titleFails = samples.filter((t) => /\b(\w+) \1\b/i.test(t) || /grey silver/i.test(t));
+    const refs = st.items.map((i) => i.id), a = st.items.find((i) => i.name.split(" ").length >= 3), b = st.items[4];
+    const said = T.cleanRefs(`the ${a.name.split(" ").slice(1).join(" ")} #${refs.indexOf(a.id) + 1} with #5`, refs);
+    m.cleanRefsOk = said === `the ${a.name} with ${b.name}`;
+    m.cleanRefsSaid = said;
+    m.ownsNavyCrewneck = !!T.ownsLike({ cat: "sweater", color: "navy", noun: "wool crewneck sweater", title: "Navy wool crewneck sweater" });
     m.promptChars = T.wardrobeText().length;
 
     // 21 days: wear the top idea every day (Everyday, 12–17°C); clothes come back from the wash after 2 days
@@ -232,6 +240,9 @@ const rows = !RUNS ? [] : [
   ["'Missing: a shirt' with the shirt in the wash", avg("missingShirtInWash"), (v) => (v ? "shown" : "never"), (v) => v === 0, "D"],
   ["Statement warnings caused by accessories", avg("accStatement"), (v) => v.toFixed(0), (v) => v === 0, "E"],
   ["Doubled words in shopping titles", avg("doubled"), (v) => v.toFixed(0), (v) => v === 0, "E"],
+  ["Audit titles built without doubled colours", runs[0].titleFails.length, (v) => (v ? runs[0].titleFails.join(", ") : "all 4 clean"), (v) => v === 0, "E"],
+  ["Stylist text names each piece once", avg("cleanRefsOk"), (v) => (v ? "yes" : `no: ${runs[0].cleanRefsSaid}`), (v) => v === 1, "E"],
+  ["Must-Buy knows you own a navy crewneck", avg("ownsNavyCrewneck"), (v) => (v ? "yes" : "no"), (v) => v === 1, "E"],
   ["Wardrobe text for the stylist (characters)", avg("promptChars"), (v) => v.toFixed(0), (v) => v < 7000, "F"],
 ];
 if (RUNS) console.log(`\n${RUNS} runs on ${backup.items.length} pieces\n`);

@@ -191,7 +191,8 @@ const CHECKS = {
     return [0, null];
   },
   statement_limit(o, ctx, { limit = 1 }) {
-    const loud = o.pieces.filter((p) => V.statement_tags.some((t) => p.tags.has(t)));
+    // On an accessory a logo or small graphic is a detail: only a loud or statement one counts.
+    const loud = o.pieces.filter((p) => V.statement_tags.some((t) => p.tags.has(t)) && (CORE.includes(p.slot) || p.tags.has("loud") || p.tags.has("statement")));
     if (!loud.length) return NONE;
     return loud.length <= limit ? [0.5, null] : [clamp(-(loud.length - limit) * 0.7), "More than one statement piece"];
   },

@@ -38,6 +38,8 @@ OUTFITS = [
     "shirt navy +check, jacket grey +tweed +blazer, trousers charcoal +stripes, dress-shoes black",
     "tank-top black sporty, track-pants black sporty, shirt white, dress-shoes black",
     "jacket black minimal, shirt white formal luxury, trousers navy slim formal luxury, sneakers black streetwear sporty",
+    "tshirt navy +logo, jeans black baggy, sneakers black, sunglasses black +logo",
+    "tshirt navy +logo, hoodie white +logo, jeans black, sneakers white, cap black +statement",
     "sweater grey smart, trousers charcoal formal, boots brown outdoor",
     "jacket navy formal +blazer, tshirt white, jeans black baggy streetwear, sneakers red streetwear sporty",
 ]

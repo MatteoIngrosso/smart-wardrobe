@@ -346,6 +346,14 @@ class ForTheApp(unittest.TestCase):
         blazer_tee = Outfit.parse("jacket navy formal +blazer, tshirt white, jeans black, sneakers red streetwear sporty")
         self.assertEqual(scores_of(blazer_tee, Context(occasion="casual"))["shoe-formality"], 0)
 
+    def test_a_logo_on_an_accessory_is_not_a_second_statement(self):
+        shades = Outfit.parse("tshirt navy +logo, jeans black, sneakers black, sunglasses black +logo")
+        self.assertGreater(scores_of(shades, Context(occasion="casual"))["statement-limit"], 0)
+        two = Outfit.parse("tshirt navy +logo, hoodie white +logo, jeans black, sneakers white")
+        self.assertLess(scores_of(two, Context(occasion="casual"))["statement-limit"], 0)
+        loud_cap = Outfit.parse("tshirt navy +logo, jeans black, sneakers white, cap black +statement")
+        self.assertLess(scores_of(loud_cap, Context(occasion="casual"))["statement-limit"], 0)
+
     def test_roomy_on_roomy_is_fine_under_30(self):
         o = Outfit.parse("tshirt black oversized, jeans black baggy, sneakers white")
         self.assertEqual(scores_of(o, Context(occasion="casual"))["proportions"], -1.0)
