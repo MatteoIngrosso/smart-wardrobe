@@ -1476,16 +1476,18 @@ const LEVEL_NEEDS = {
     ["Shoes", "dress shoes", (i) => i.category === "dress-shoes" || (i.category === "boots" && (i.look?.dressiness ?? 0) >= 4)]],
 };
 LEVEL_NEEDS[5] = [...LEVEL_NEEDS[4], ["Jackets", "a suit (jacket and trousers)", (i) => i.category === "jacket" && !!suitOf(i)]];
-// When none of today's ideas reach the occasion's lowest level: what's missing for it.
+// When none of today's ideas reach the occasion's lowest level: what's missing for it. A piece you own
+// that's only in the wash isn't missing: the card says it's in the wash instead.
 function levelGap(pool) {
   const range = Style.ready() && levelsFor(pool.occ);
   if (!range || !pool.cands.length) return null;
   const top = Math.max(...pool.cands.map((c) => c.level));
   if (top >= range[1]) return null;
   // Below the lowest level: nothing fits. Below the best (a suit for Elegant): a hint of what's missing.
-  const want = top < range[0] ? range[0] : range[1], own = suggestable();
+  const want = top < range[0] ? range[0] : range[1], own = owned(), clean = suggestable();
   const needs = (LEVEL_NEEDS[want] || []).filter(([, , has]) => !own.some(has));
-  return top < range[0] || needs.length ? { want, top, short: top >= range[0], needs } : null;
+  const washing = [...new Set((LEVEL_NEEDS[want] || []).filter(([, , has]) => !clean.some(has) && own.some(has)).map(([, , has]) => own.find(has)))];
+  return top < range[0] || needs.length || washing.length ? { want, top, short: top >= range[0], needs, washing } : null;
 }
 // Common sense the fashion bible doesn't check: linen out of season, heavy boots with linen, shorts or tailoring,
 // ripped jeans anywhere smart, and colours on the details (a yellow sole, a red logo) that clash with
@@ -2294,6 +2296,8 @@ const wearable = () => state.items.filter((i) => !i.wash);
 // Pieces you're giving away or selling (Wardrobe > Report) are left out of ideas and the audit.
 const leaving = (i) => ["donate", "sell"].includes(i.fate?.status);
 const suggestable = () => wearable().filter((i) => !i.disliked && !leaving(i));
+// What you own, the wash included: what the level card, Must-Buy and the audit count as yours.
+const owned = () => state.items.filter((i) => !i.disliked && !leaving(i));
 const inWash = () => state.items.filter((i) => i.wash);
 async function setWash(items, on) {
   const now = new Date().toISOString();
@@ -3200,6 +3204,7 @@ function renderToday() {
       ${levelChips()}
       ${anchorBar()}
       ${levelGapLine()}
+      ${boughtLine()}
       ${state.onlyNote && !state.anchor ? `<p class="muted small" style="margin:0">${esc(state.onlyNote)}</p>` : ""}
       <div class="outfits">${state.outfits.map((o, i) => outfitCard(o, i)).join("") || `<p class="muted">Add a few more tops to get outfit ideas.</p>`}</div>
       ${laundryLine()}
@@ -3233,6 +3238,20 @@ function dayCard() {
     ${body}
     ${errors.length ? `<p class="small" style="margin:0;color:var(--danger)">${esc(errors[0])}</p>` : ""}
   </section>`;
+}
+// Pieces marked Bought on Must-Buy that never made it into the wardrobe: no piece was added from them,
+// and no piece of the same type (and colour) was added since they went on Must-Buy. Asked about two days later; "Not yet"
+// asks again in three days. `all`: also the ones bought less than two days ago or put off.
+function pendingBuys(all = false) {
+  return state.wants.filter((w) => w.status === "bought" && w.kind !== "fragrance" && CAT[w.cat] && !w.boughtItemId &&
+    !state.items.some((i) => i.category === w.cat && (i.createdAt || "") >= (w.createdAt || w.decidedAt || "") && (!w.color || !COLORS[w.color] || (i.colors || []).includes(w.color))) &&
+    (all || (daysSince(w.decidedAt) >= 2 && !(w.askAfter && Date.now() < Date.parse(w.askAfter)))));
+}
+function boughtLine() {
+  const w = pendingBuys()[0];
+  if (!w) return "";
+  return `<div class="card stack" style="gap:8px"><span>Did the <b>${esc(w.title.toLowerCase())}</b> you bought arrive? Add ${/s$/.test(w.title) ? "them" : "it"} and your outfit ideas can use ${/s$/.test(w.title) ? "them" : "it"}.</span>
+    <div class="chips"><button class="chip" data-addbought="${w.id}">Add ${/s$/.test(w.title) ? "them" : "it"}</button><button class="chip" data-boughtlater="${w.id}">Not yet</button><button class="chip" data-boughtback="${w.id}">I sent ${/s$/.test(w.title) ? "them" : "it"} back</button></div></div>`;
 }
 function laundryLine() {
   const n = inWash().length;
@@ -3353,10 +3372,16 @@ function levelGapLine() {
   const occ = OCCASIONS.find((o) => o.id === state.occasion).label;
   const what = state.level ? `level ${g.want} (${LEVELS[g.want]})` : `${occ} (level ${g.want}, ${LEVELS[g.want]})`;
   const list = (sep) => g.needs.map(([, l]) => esc(l)).join(sep);
-  const line = g.short
+  const washing = g.washing || [];
+  const washLine = washing.length ? `Your ${washing.map((p) => esc(p.name)).join(" and ")} ${washing.length > 1 ? "are" : "is"} in the wash, so these ideas don't reach ${esc(LEVELS[g.want])}.` : "";
+  const line = washing.length ? `${washLine}${g.needs.length ? ` You'd also need ${list(" and ")}.` : ""}` : g.short
     ? `These ideas reach ${esc(LEVELS[g.top])}. For ${esc(occ)} at its best (${esc(LEVELS[g.want])}) you'd need ${list(" and ")}.`
     : `None of your clothes make ${esc(what)} yet, so these are the dressiest you have (${esc(LEVELS[g.top])}).`;
-  return `<div class="card stack" style="gap:8px"><span>${line}</span>${g.needs.length ? `${g.short ? "" : `<span class="muted small">Missing: ${list(", ")}.</span>`}<div class="chips">${g.needs.map(([chip, l]) => `<button class="chip" data-needgo="${esc(chip)}">Find ${esc(l)}</button>`).join("")}</div>` : ""}</div>`;
+  // A piece you bought on Must-Buy and haven't added yet fills the need: add it instead of finding one.
+  const bought = (has) => pendingBuys(true).find((w) => has({ category: w.cat, name: w.title, tags: [], styles: w.styles || [], formality: 3, colors: [w.color] }));
+  const chips = g.needs.map(([chip, l, has]) => { const w = bought(has); return w ? `<button class="chip" data-addbought="${w.id}">Add the ${esc(w.title.toLowerCase())} you bought</button>` : `<button class="chip" data-needgo="${esc(chip)}">Find ${esc(l)}</button>`; });
+  chips.push(...washing.map((p) => `<button class="chip" data-washback="${p.id}">${esc(cap(p.name))} is back from the wash</button>`));
+  return `<div class="card stack" style="gap:8px"><span>${line}</span>${g.needs.length && !g.short && !washing.length ? `<span class="muted small">Missing: ${list(", ")}.</span>` : ""}${chips.length ? `<div class="chips">${chips.join("")}</div>` : ""}</div>`;
 }
 const levelBadge = (o) => {
   if (!Style.ready() || !o.pieces) return "";
@@ -4653,9 +4678,11 @@ async function saveDraft(next = false) {
     aiChecked: existing?.aiChecked || d.photos.some((p) => p.aiChecked) || undefined,
   };
   if (d.look) applyLook(item, d.look);
+  // Added from Must-Buy's Bought, or the only piece you bought in this type that isn't in yet.
+  const sameType = !existing && !d.want ? pendingBuys(true).filter((w) => w.cat === item.category) : [];
   await store.put("items", item);
   if (existing) Object.assign(existing, item); else state.items.push(item);
-  const bought = d.want && state.wants.find((w) => w.id === d.want);
+  const bought = (d.want && state.wants.find((w) => w.id === d.want)) || (sameType.length === 1 ? sameType[0] : null);
   if (bought) { bought.boughtItemId = item.id; await store.put("wants", bought); state.buying = null; }
   lookupBrand(item.brand);
   state.outfits = [];
@@ -4931,7 +4958,7 @@ const goodOutfit = (o, occ, feels) => {
 // The pieces you own that can go in an everyday outfit (not disliked, not gym), by role.
 function ownedByRole(extra) {
   const by = { base: [], mid: [], outer: [], bottom: [], shoes: [] };
-  for (const i of state.items) if (!i.disliked && !leaving(i) && CORE.includes(roleOf(i)) && slotOf(i) !== "gym") by[roleOf(i)].push(i);
+  for (const i of owned()) if (CORE.includes(roleOf(i)) && slotOf(i) !== "gym") by[roleOf(i)].push(i);
   if (extra) by[roleOf(extra)] = [extra];
   return by;
 }
@@ -7486,6 +7513,22 @@ document.addEventListener("click", async (e) => {
     if (!it) return;
     await setWash([it], false);
     toast(`${it.name} is back`, { label: "Undo", run: async () => { await setWash([it], true); refreshViews(); } });
+    return render();
+  }
+  if (ds.addbought) {
+    const w = state.wants.find((x) => x.id === ds.addbought);
+    if (!w) return;
+    state.buying = w.id;
+    toast(`Take its photos: the type${w.color ? " and colour" : ""} ${w.color ? "are" : "is"} filled in.`);
+    return go("add");
+  }
+  if (ds.boughtlater || ds.boughtback) {
+    const w = state.wants.find((x) => x.id === (ds.boughtlater || ds.boughtback));
+    if (!w) return;
+    if (ds.boughtlater) w.askAfter = new Date(Date.now() + 3 * 864e5).toISOString();
+    else Object.assign(w, { status: "returned", decidedAt: new Date().toISOString() });
+    await store.put("wants", w);
+    if (ds.boughtback) toast(`Noted: you sent the ${w.title.toLowerCase()} back`);
     return render();
   }
   if (ds.washdays != null) { state.settings.washBack = +ds.washdays; await saveSettings(); return render(); }
