@@ -157,6 +157,18 @@ const BRAND_LIST = [
   ["Gap", "high street", "casual"], ["Hollister", "high street", "casual"],
 ];
 const normBrand = (s) => String(s || "").toLowerCase().normalize("NFD").replace(/[̀-ͯ]/g, "").replace(/[^a-z0-9&]/g, "");
+const brandKey = (s) => normBrand(s).replace(/^the(?=.{3})/, "");
+// Brands that may be one spelt two ways: one letter apart on a short name (H&M, Hi&M), or one name
+// inside the other (Armani, Armani Exchange). Report > Brands asks; Merge renames the pieces.
+function brandTwins(names) {
+  const lev = (a, b) => { const d = Array.from({ length: b.length + 1 }, (_, j) => j); for (let i = 1; i <= a.length; i++) { let p = d[0]; d[0] = i; for (let j = 1; j <= b.length; j++) { const t = d[j]; d[j] = Math.min(d[j] + 1, d[j - 1] + 1, p + (a[i - 1] === b[j - 1] ? 0 : 1)); p = t; } } return d[b.length]; };
+  const out = [];
+  for (let x = 0; x < names.length; x++) for (let y = x + 1; y < names.length; y++) {
+    const a = brandKey(names[x]), b = brandKey(names[y]);
+    if ((Math.max(a.length, b.length) <= 6 && lev(a, b) === 1) || (Math.min(a.length, b.length) >= 4 && (a.startsWith(b) || b.startsWith(a)))) out.push([names[x], names[y]]);
+  }
+  return out.filter(([a, b]) => !(state.settings.brandsApart || []).includes(`${brandKey(a)}|${brandKey(b)}`));
+}
 // "preppy smart casual" → ["preppy", "smart casual"]: longest style names are matched first.
 function parseStyles(str) {
   let rest = ` ${str} `;
@@ -309,6 +321,11 @@ async function loadAll() {
   state.items = (await store.all("items")) || [];
   state.log = (await store.all("log")) || [];
   state.wants = (await store.all("wants")) || [];
+  // Titles saved before mkIdea stopped doubling colours ("Black black leather loafers").
+  for (const w of state.wants) if (w.kind !== "fragrance" && w.title) {
+    if (w.color && w.noun && w.title.toLowerCase() === `${w.color} ${w.noun}`.toLowerCase()) w.title = mkIdea({ cat: w.cat, color: w.color, noun: w.noun }).title;
+    w.title = cap(dedupeWords(w.title));
+  }
   state.events = (await store.all("events")) || [];
   state.scents = (await store.all("scents")) || [];
   Object.assign(state.settings, (await store.get("kv", "settings")) || {});
@@ -1847,8 +1864,10 @@ const ownsDressShoes = () => state.items.some((i) => !i.disliked && !leaving(i) 
 // accessories are on (only shown when nothing better is left) says so on its card.
 function withWarn(idea, cond, occ) {
   const j = Style.ready() ? Style.judge([...Object.values(idea.pieces), ...(idea.extras || [])].filter(Boolean), styleCtx(cond, occ, taste())) : null;
+  // The warmth rule says the temperature the way the screen does (feels like, in your unit).
+  const line = (v) => (v.rule.id === "warmth" ? ruleLine(v).replace(/ for -?\d+°C$/, ` for today (feels like ${fmtTemp(cond.feels)})`) : ruleLine(v));
   const shoesOnly = (v) => v.rule.id === "shoe-formality" && /^Sneakers with tailoring/.test(ruleLine(v)) && idea.pieces.shoes && !casualPiece(idea.pieces.shoes) && !ownsDressShoes();
-  return { ...idea, warn: j ? j.violations.filter((v) => !shoesOnly(v)).map(ruleLine) : [], noDressShoes: !!j?.violations.some(shoesOnly) };
+  return { ...idea, warn: j ? j.violations.filter((v) => !shoesOnly(v)).map(line) : [], noDressShoes: !!j?.violations.some(shoesOnly) };
 }
 
 // `avoid`: outfits just shown, so "New ideas" always brings different ones.
@@ -2216,8 +2235,14 @@ function extrasFor(pieces, cond, occ, used) {
   const cols = Object.values(pieces).filter(Boolean).map((p) => p.colors?.[0]).filter(Boolean);
   const accent = cols.find((c) => !COLORS[c]?.neutral);
   const extras = [], why = [];
+  // An accessory that would break a rule the outfit doesn't break (a second statement piece, a clash)
+  // stays off: the card shouldn't warn about something the app added.
+  const ctx = Style.ready() && styleCtx(cond, occ, taste());
+  const clothes = Object.values(pieces).filter(Boolean);
+  const broken = ctx && new Set(Style.judge(clothes, ctx).violations.map((v) => v.rule.id));
+  const adds = (i) => ctx && Style.judge([...clothes, ...extras, i], ctx).violations.some((v) => !broken.has(v.rule.id));
   for (const [cats, reason] of needs) {
-    let options = suggestable().filter((i) => cats.includes(i.category));
+    let options = suggestable().filter((i) => cats.includes(i.category) && !adds(i));
     // A belt in the same colour family as the leather shoes (black with black, brown with brown).
     if (cats[0] === "belt" && pieces.shoes && Style.ready()) options = options.filter((i) => !((Style.ruleScore([pieces.shoes, i], "belt-shoes") ?? 0) <= -0.5));
     if (!options.length) continue;
@@ -2519,8 +2544,10 @@ function analyse() {
   for (const i of items) { const c = i.colors?.[0]; if (c) colorCount[c] = (colorCount[c] || 0) + 1; }
   const styleCount = {};
   for (const i of items) for (const st of i.styles || []) styleCount[st] = (styleCount[st] || 0) + 1;
-  const brandCount = {};
-  for (const i of items) if (i.brand) brandCount[i.brand] = (brandCount[i.brand] || 0) + 1;
+  // One brand however it's spelt ("The North Face" and "North Face"): the spelling used most.
+  const brandCount = {}, spell = {};
+  for (const i of items) if (i.brand) { const k = brandKey(i.brand); (spell[k] ||= {})[i.brand] = (spell[k][i.brand] || 0) + 1; }
+  for (const s of Object.values(spell)) { const all = Object.entries(s).sort((a, b) => b[1] - a[1]); brandCount[all[0][0]] = all.reduce((a, [, n]) => a + n, 0); }
   const share = (n) => (items.length ? n / items.length : 0);
   const darkShare = share(items.filter((i) => COLORS[i.colors?.[0]]?.tone === "dark").length);
   const graphicShare = share(items.filter((i) => (i.tags || []).some((t) => /graphic|statement/.test(t))).length);
@@ -2810,13 +2837,18 @@ const SHOP_QUESTION =
 // `refs` maps the #numbers to item ids as they were when the question was asked.
 function refName(refs, n) { return state.items.find((i) => i.id === refs[n - 1]); }
 function cleanRefs(text, refs) {
-  // "#4 Navy knit" → "Navy knit"; a bare "#4" → the piece's name.
-  return text.replace(/#(\d+)\s*/g, (m, n, at, s) => {
+  // "#4 Navy knit" → "Navy knit"; a bare "#4" → the piece's name; "the Zara jacket #3" → "the Black
+  // Zara jacket" (the words just before that are part of the name aren't written twice).
+  return text.replace(/((?:[\w&'-]+ +){0,4})#(\d+)\s*/g, (m, before, n, at, s) => {
     const it = refName(refs, +n);
-    if (!it) return "";
+    if (!it) return before;
     const rest = s.slice(at + m.length);
-    if (rest.toLowerCase().startsWith(it.name.toLowerCase())) return "";
-    return /^\w/.test(rest) ? `${it.name} ` : it.name;
+    if (rest.toLowerCase().startsWith(it.name.toLowerCase())) return before;
+    const name = it.name.toLowerCase().split(/\s+/), words = before.trim().split(/ +/).filter(Boolean);
+    let k = 0;
+    while (k < words.length && name.includes(words[words.length - 1 - k].toLowerCase())) k++;
+    const kept = k ? words.slice(0, words.length - k).join(" ") + (words.length > k ? " " : "") : before;
+    return kept + (/^\w/.test(rest) ? `${it.name} ` : it.name);
   });
 }
 const escRe = (s) => s.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
@@ -3400,7 +3432,7 @@ function outfitCard(o, i) {
     ${o.warn?.length ? `<p class="why warn">Heads up: ${o.warn.map(esc).join(" · ")}</p>` : ""}
     ${o.noDressShoes ? `<p class="why">Best with dress shoes: you don't have any yet.</p>` : ""}
     ${i === 0 && !o.planned ? finishingTouch(o) : ""}
-    ${todayScent(o)}
+    ${i > 0 && sharedScent() ? "" : todayScent(o)}
     ${o.asking
       ? `<div class="stack" style="gap:8px"><span class="muted small">What's off? The next ideas take it into account.</span><div class="chips">${SKIP_REASONS.map(([k, l]) => `<button class="chip" data-skipwhy="${i}:${k}">${l}</button>`).join("")}<button class="chip" data-skip="${i}" data-cancel="1">Cancel</button></div></div>`
       : `<div class="row outfit-actions">
@@ -4737,8 +4769,15 @@ function garmentArt(b) {
 const artTile = (b) => `<div class="art-tile"${prodAttr(b)}>${tileInner(b)}</div>`;
 
 // Something to buy: { cat, color, title, query }. Shop searches add who it's for (forWho).
+// "Grey grey wool crewneck sweater", "Grey silver chain necklace": the colour isn't added when the noun
+// already has a colour or metal, nor the brand when the noun starts with it, and no word comes twice in a row.
+const dedupeWords = (s) => String(s || "").replace(/\b([\w&'-]+)(\s+\1\b)+/gi, "$1");
+const METALS = ["silver", "gold", "rose gold", "gunmetal", "bronze", "copper"];
 function mkIdea({ cat, color = "", noun = "", brand = "", fit = "", title = "", why = "", styles }) {
-  const words = [brand, color, fit ? FITS[fit]?.label.toLowerCase() : "", noun || catLabel(cat).toLowerCase()].filter(Boolean).join(" ");
+  const n = ` ${(noun || "").toLowerCase()} `;
+  const says = (w) => w && n.includes(` ${String(w).toLowerCase()} `);
+  const colourInNoun = [...Object.keys(COLORS), ...Object.keys(EXTRA_COLOURS), ...METALS].some(says);
+  const words = dedupeWords([n.trim().startsWith(String(brand).toLowerCase()) && brand ? "" : brand, colourInNoun ? "" : color, fit ? FITS[fit]?.label.toLowerCase() : "", noun || catLabel(cat).toLowerCase()].filter(Boolean).join(" "));
   return { cat, color, brand, fit, styles, noun, title: title || cap(words), query: title ? [brand, title].filter(Boolean).join(" ") : words, why };
 }
 // The same idea as a wardrobe piece, so the outfit rules can try it with what you own.
@@ -5044,11 +5083,27 @@ function multiplierLine(b) {
   return `<div class="multi"><b>${m.n ? `+${m.n}` : "0"}</b><span>${m.n ? `new outfit${m.n > 1 ? "s" : ""} with what you own${m.estimate ? " (estimated)" : ""}${top.length ? `, mostly ${top.join(" and ")}` : ""}` : "new outfits: nothing you own goes with it by the fashion bible's rules"}</span></div>`;
 }
 
+// A piece you already own (the wash counts) like a suggestion: same type, a colour of the same family,
+// and the same kind (crewneck, loafer, bomber…) when the suggestion names one.
+const KIND_WORDS = ["crewneck", "v-neck", "turtleneck", "cardigan", "zip", "chino", "cargo", "loafer", "oxford", "derby", "chelsea", "polo", "overshirt", "bomber", "puffer", "parka", "trench", "overcoat", "blazer", "hoodie", "sweatshirt", "denim", "linen"];
+const COLOUR_FAMILY = { navy: "blue", "dark blue": "blue", indigo: "blue", charcoal: "grey", grey: "grey", "light grey": "grey", beige: "beige", cream: "beige", sand: "beige", stone: "beige", camel: "beige", ecru: "beige", white: "white", "off-white": "white", brown: "brown", tan: "brown", chocolate: "brown", olive: "green", khaki: "green", "forest green": "green" };
+const family = (c) => COLOUR_FAMILY[c] || c;
+function ownsLike(b) {
+  if (!b?.cat || b.kind === "fragrance") return null;
+  const kinds = KIND_WORDS.filter((w) => new RegExp(`\\b${w}`, "i").test(`${b.noun || ""} ${b.title || ""}`));
+  return owned().find((i) => i.category === b.cat && (!b.color || family(i.colors?.[0]) === family(b.color)) &&
+    (!kinds.length || kinds.some((w) => new RegExp(`\\b${w}`, "i").test(`${i.name} ${(i.tags || []).join(" ")}`)))) || null;
+}
 function mustRow(w) {
   if (w.kind === "fragrance") return scentWantRow(w);
   const b = { ...w, with: goesWith(w.title) };
   const ev = forEvent(w);
   const m = multiplier(w);
+  const have = ownsLike(w);
+  if (have) return buyRow(b, {
+    label: `You have one: ${esc(have.name)}`,
+    extra: `<button class="btn" data-item="${have.id}">See it</button><button class="btn ghost" data-unwant="${w.id}">Remove</button><button class="btn ghost" data-bought="${w.id}">Bought another</button>`,
+  });
   const from = { foryou: "From For you", try: "From Try a piece", look: "From a new look", trip: "From a shop trip", today: "From the stylist", touch: "From Today's outfit", event: "For an event", wishlist: "From your wishlist", scent: "From an outfit's scent" }[w.source?.type] || "";
   return buyRow(b, {
     label: ev ? `For ${esc(ev.title)} · ${fmtDay(ev.date)}` : m ? `+${m.n} outfit${m.n === 1 ? "" : "s"}` : from,
@@ -5687,7 +5742,7 @@ function forYouTab() {
   }
   const feed = auditFeed();
   const fresh = feed.filter((s) => !settled(s));
-  const blocks = fresh.map((s, k) => ({ s, k, options: variantsOf(s).filter(soldHere) })).filter((x) => x.options.length);
+  const blocks = fresh.map((s, k) => ({ s, k, options: variantsOf(s).filter(soldHere).filter((b) => !ownsLike(b)) })).filter((x) => x.options.length);
   const notHere = fresh.length - blocks.length;
   const answered = feed.length - fresh.length;
   const au = state.audit;
@@ -5874,6 +5929,7 @@ function renderReport() {
       <section class="card">
         <h2>Brands</h2>
         ${brands.length ? `<div class="chips">${brands.map(([b, n]) => { const t = brandInfo(b)?.tier; return `<button class="chip" data-brandgo="${esc(b)}">${esc(b)}${n > 1 ? ` <span class="muted">×${n}</span>` : ""}${t ? ` <span class="tier">${t}</span>` : ""}</button>`; }).join("")}</div>` : `<p class="muted">No brands recorded yet.</p>`}
+        ${brandTwins(brands.map(([b]) => b)).map(([a, b]) => `<div class="row" style="margin-top:10px;gap:8px"><span class="muted small" style="flex:1">Same brand? <b>${esc(a)}</b> and <b>${esc(b)}</b></span><button class="chip" data-brandmerge="${esc(b)}|${esc(a)}">Merge as ${esc(a)}</button><button class="chip" data-brandapart="${esc(a)}|${esc(b)}">Different</button></div>`).join("")}
         ${Object.keys(tiers).length ? `<p class="muted small" style="margin:14px 0 0">${Object.entries(tiers).map(([t, n]) => `${n} ${t}`).join(" · ")}</p>` : ""}
         ${palette.length ? `<h2 style="margin-top:22px">Palette</h2><div class="chips">${palette.map(([c, n]) => `<span class="chip"><span class="dot" style="background:${COLORS[c]?.hex}"></span>${cap(c)} ${Math.round((n / total) * 100)}%</span>`).join("")}</div>
           <p class="muted small" style="margin:12px 0 0">${Math.round((palette.filter(([c]) => COLORS[c]?.neutral).reduce((x, [, n]) => x + n, 0) / total) * 100)}% neutrals.</p>` : ""}
@@ -6740,7 +6796,7 @@ function renderCabinet() {
     .sort((a, b) => (starsOf(b) || 0) - (starsOf(a) || 0) || String(a.name).localeCompare(String(b.name)));
   main.innerHTML = `
     <div class="head">
-      <div><h1>Wardrobe</h1><p class="sub">${all.length} fragrance${all.length === 1 ? "" : "s"}${low.length ? ` · ${low.length} running low` : ""}</p></div>
+      <div><h1>Wardrobe</h1><p class="sub">${all.length} fragrance${all.length === 1 ? "" : "s"}${low.some((sc) => sc.fill === "low") ? ` · ${low.filter((sc) => sc.fill === "low").length} running low` : ""}${low.some((sc) => sc.fill === "empty") ? ` · ${low.filter((sc) => sc.fill === "empty").length} empty` : ""}</p></div>
       ${all.length ? `<div class="chips"><button class="chip" data-act="scent-start">${ICON_BOTTLE}Add a fragrance</button></div>` : ""}
     </div>
     ${sideSwitch()}
@@ -6937,6 +6993,12 @@ const todayKey = (o) => `t:${o.key}`;
 const todaySaved = (o) => (o.planned?.eventId ? state.events.find((e) => e.id === o.planned.eventId)?.outfit?.scentId : undefined);
 const todayPieces = allPieces;
 const todayScent = (o) => (scentOn() && state.occasion !== "gym" ? scentBlock(todayKey(o), scentContext(todayPieces(o)), todaySaved(o)) : "");
+// The same scent for every idea on Today: shown once, on the first card, and a change there applies to all.
+function sharedScent() {
+  if (!scentOn() || state.occasion === "gym" || state.outfits.length < 2) return false;
+  const ids = state.outfits.map((o) => outfitScent(o)?.id ?? "");
+  return ids.every((x) => x === ids[0]);
+}
 // The scent worn with an outfit from Today (logged with it), or null.
 function outfitScent(o) {
   if (!scentOn() || state.occasion === "gym") return null;
@@ -6944,7 +7006,9 @@ function outfitScent(o) {
 }
 async function pickScent(key, id) {
   const seen = scentShown.get(key);
+  const shared = key.startsWith("t:") && sharedScent();
   (state.scentUI[key] ||= {}).pick = id;
+  if (shared) for (const o of state.outfits) (state.scentUI[todayKey(o)] ||= {}).pick = id;
   // Picking another one teaches: more of it for this occasion and weather, a little less of the one suggested.
   if (id && seen) await addLog({ kind: "scent", scentId: id, ...(seen.auto && seen.auto.id !== id && { from: seen.auto.id }), occasion: seen.ctx.occasion, feels: Math.round(seen.ctx.feels), band: seen.ctx.band });
   const ev = key.startsWith("e:") && state.events.find((e) => e.id === key.slice(2));
@@ -7049,7 +7113,7 @@ function scentReport() {
       const fit = all.filter((sc) => (sc.seasons?.[k] ?? 1) >= 0.5).sort((a, b) => (b.seasons?.[k] ?? 1) - (a.seasons?.[k] ?? 1));
       return `<div><b>${label}</b>${fit.length ? `<span>${esc(fit.slice(0, 4).map((sc) => sc.name).join(", "))}${fit.length > 4 ? ` +${fit.length - 4}` : ""}</span>` : `<span class="muted">Nothing yet: a ${SEASON_GAP[k]} one would fill it.</span>`}</div>`;
     }).join("")}</div>
-    <p class="muted small" style="margin:0">${day} for the day, ${evening} for the evening${most ? ` · worn most: ${esc(most.name)} (${most.wearCount}×)` : ""}${state.scents.some(runningLow) ? ` · running low: ${esc(state.scents.filter(runningLow).map((sc) => sc.name).join(", "))}` : ""}.</p>
+    <p class="muted small" style="margin:0">${day} for the day, ${evening} for the evening${most ? ` · worn most: ${esc(most.name)} (${most.wearCount}×)` : ""}${state.scents.some((sc) => sc.fill === "low") ? ` · running low: ${esc(state.scents.filter((sc) => sc.fill === "low").map((sc) => sc.name).join(", "))}` : ""}${state.scents.some((sc) => sc.fill === "empty") ? ` · empty, replace or remove: ${esc(state.scents.filter((sc) => sc.fill === "empty").map((sc) => sc.name).join(", "))}` : ""}.</p>
   </section>`;
 }
 
@@ -7549,6 +7613,19 @@ document.addEventListener("click", async (e) => {
   if (ds.color) { state.filters.color = ds.color; return render(); }
   if (ds.style) { state.filters.style = ds.style; return render(); }
   if (ds.stylego) { Object.assign(state.filters, { style: ds.stylego, slot: "all", color: "all", q: "" }); return go("wardrobe"); }
+  if (ds.brandmerge) {
+    const [from, to] = ds.brandmerge.split("|");
+    const moved = state.items.filter((i) => i.brand && brandKey(i.brand) === brandKey(from));
+    for (const i of moved) { i.brand = to; await store.put("items", i); }
+    toast(`${moved.length} piece${moved.length === 1 ? "" : "s"} now say ${to}`);
+    return render();
+  }
+  if (ds.brandapart) {
+    const [a, b] = ds.brandapart.split("|");
+    state.settings.brandsApart = [...(state.settings.brandsApart || []), `${brandKey(a)}|${brandKey(b)}`];
+    await saveSettings();
+    return render();
+  }
   if (ds.brandgo) { Object.assign(state.filters, { q: ds.brandgo, style: "all", slot: "all", color: "all" }); return go("wardrobe"); }
   if (ds.sort) { state.filters.sort = ds.sort; return render(); }
   if (ds.cat && draft) {

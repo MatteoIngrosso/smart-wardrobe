@@ -6,7 +6,7 @@ of it), or None when the rule doesn't apply to this outfit. The rulebook
 it matters; training then adjusts those weights from example outfits.
 """
 from .outfit import Context, Outfit
-from .vocab import COLORS, MATERIAL_TAGS, OCCASIONS, PATTERN_TAGS, STATEMENT_TAGS, wanted_warmth
+from .vocab import COLORS, CORE, MATERIAL_TAGS, OCCASIONS, PATTERN_TAGS, STATEMENT_TAGS, wanted_warmth
 
 CHECKS = {}
 
@@ -211,8 +211,10 @@ def proportions(o, ctx):
 
 @check
 def statement_limit(o, ctx, limit=1):
-    """One loud piece (big graphic, logo, statement) per outfit; the rest supports it."""
-    loud = [p for p in o.pieces if p.tags & STATEMENT_TAGS]
+    """One loud piece (big graphic, logo, statement) per outfit; the rest supports it.
+    On an accessory (sunglasses, a watch, a cap) a logo or small graphic is a detail: only a loud or
+    statement accessory counts."""
+    loud = [p for p in o.pieces if p.tags & STATEMENT_TAGS and (p.slot in CORE or p.tags & {"loud", "statement"})]
     if not loud:
         return None, None
     if len(loud) <= limit:
