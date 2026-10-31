@@ -8,9 +8,9 @@
 // - An outfit is drawn on those four pictures, one angle at a time: the front first, then the
 //   other three (each also sees the dressed front, so the four agree with each other).
 // - Every picture is kept on the server under a hash of (body + pieces + angle), so a combination
-//   is never paid for, or waited for, twice, and every device shares them.
+//   is never drawn, or waited for, twice, and every device shares them.
 // - A small queue runs two pictures at a time, the one you're looking at first. Pictures nobody
-//   wants any more (after "New ideas") are dropped before they cost anything.
+//   wants any more (after "New ideas") are dropped before they use up a picture.
 //
 // The app passes in how to reach the server (see init); this file knows nothing of the
 // rest of the wardrobe.
