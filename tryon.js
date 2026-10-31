@@ -41,9 +41,11 @@ export function hash(s) {
   return (h2 >>> 0).toString(16).padStart(8, "0") + (h1 >>> 0).toString(16).padStart(8, "0");
 }
 const keyOf = (...parts) => `tryon-${hash([VERSION, ...parts].join("|"))}.jpg`;
+// The back's prompts changed (it used to copy the front): its pictures get new keys, the other sides keep theirs.
+const angleTag = (angle) => (angle === "back" ? "back-2" : angle);
 
 /* ---------- the body ---------- */
-export const BODY_DEFAULT = { height: 178, weight: 2, build: 2, skin: 1, hair: 0 };
+export const BODY_DEFAULT = { height: 178, weight: 2, build: 2, skin: 1, hairColor: 1, hairStyle: "short", beard: "clean", eyes: "brown", glasses: false };
 export const WEIGHTS = ["Slim", "Lean", "Average", "Solid", "Heavy"];
 export const BUILDS = ["Soft", "Average", "Fit", "Athletic", "Muscular"];
 export const SKINS = [
@@ -54,27 +56,83 @@ export const SKINS = [
   { hex: "#7b4b33", words: "brown skin" },
   { hex: "#4e3023", words: "deep dark brown skin" },
 ];
-export const HAIRS = [
-  { hex: "#17110d", words: "short black hair" },
-  { hex: "#3a2618", words: "short dark brown hair" },
-  { hex: "#6e4a2e", words: "short brown hair" },
-  { hex: "#b08a58", words: "short dark blonde hair" },
-  { hex: "#8b8682", words: "short grey hair" },
-  { hex: null, words: "a shaved head", label: "Shaved" },
+export const HAIR_COLORS = [
+  { hex: "#17110d", words: "black" },
+  { hex: "#3a2618", words: "dark brown" },
+  { hex: "#6e4a2e", words: "brown" },
+  { hex: "#b08a58", words: "dark blonde" },
+  { hex: "#dcbc84", words: "light blonde" },
+  { hex: "#8e3e1e", words: "auburn red" },
+  { hex: "#8b8682", words: "grey" },
+  { hex: "#dedad3", words: "white" },
+];
+// `{c}`: the hair colour.
+export const HAIR_STYLES = [
+  { id: "shaved", label: "Shaved", words: "a clean-shaved head" },
+  { id: "buzz", label: "Buzz cut", words: "a very short {c} buzz cut" },
+  { id: "short", label: "Short", words: "short, neatly cut {c} hair" },
+  { id: "fade", label: "Fade", words: "short {c} hair on top with a skin fade on the sides" },
+  { id: "sidepart", label: "Side part", words: "{c} hair combed in a classic side part" },
+  { id: "crop", label: "Crop", words: "a textured {c} French crop with a short fringe" },
+  { id: "slick", label: "Slicked back", words: "{c} hair slicked back" },
+  { id: "curly", label: "Curly", words: "short curly {c} hair, fuller on top" },
+  { id: "wavy", label: "Wavy", words: "medium-length wavy {c} hair" },
+  { id: "long", label: "Long", words: "long {c} hair to the shoulders" },
+];
+export const BEARDS = [
+  { id: "clean", label: "None", words: "clean-shaven" },
+  { id: "stubble", label: "Stubble", words: "light {c} stubble" },
+  { id: "short", label: "Short beard", words: "a short, trimmed {c} beard" },
+  { id: "full", label: "Full beard", words: "a full {c} beard" },
+  { id: "moustache", label: "Moustache", words: "a {c} moustache, no beard" },
+  { id: "goatee", label: "Goatee", words: "a {c} goatee" },
+];
+export const EYES = [
+  { id: "brown", hex: "#5a3a22", words: "brown eyes" },
+  { id: "hazel", hex: "#8a6a35", words: "hazel eyes" },
+  { id: "green", hex: "#5d7a4a", words: "green eyes" },
+  { id: "blue", hex: "#5d84b0", words: "blue eyes" },
+  { id: "grey", hex: "#8c959c", words: "grey eyes" },
 ];
 const WEIGHT_WORDS = ["slim, light frame", "lean", "average weight", "solid, a little heavier set", "heavy-set, broad and full-bodied"];
 const BUILD_WORDS = ["soft, untrained", "average, lightly toned", "fit and toned", "athletic, visibly muscular shoulders and arms", "very muscular, gym-built"];
+export const PHOTO_KEY = /^tryon-me-[0-9a-f]{16}\.jpg$/;
 
-export const cleanBody = (b = {}) => ({
-  height: Math.min(200, Math.max(160, Math.round(+b.height || BODY_DEFAULT.height))),
-  weight: Math.min(4, Math.max(0, Math.round(+(b.weight ?? BODY_DEFAULT.weight)))),
-  build: Math.min(4, Math.max(0, Math.round(+(b.build ?? BODY_DEFAULT.build)))),
-  skin: Math.min(SKINS.length - 1, Math.max(0, Math.round(+(b.skin ?? BODY_DEFAULT.skin)))),
-  hair: Math.min(HAIRS.length - 1, Math.max(0, Math.round(+(b.hair ?? BODY_DEFAULT.hair)))),
-  ...(b.age >= 16 && b.age <= 90 ? { age: Math.round(b.age) } : {}),
-});
-export const avatarId = (body) => hash(JSON.stringify(cleanBody(body))).slice(0, 12);
-export const bodyLine = (b) => `${b.height} cm · ${WEIGHTS[b.weight].toLowerCase()} · ${BUILDS[b.build].toLowerCase()}`;
+const int = (v, max, dflt) => Math.min(max, Math.max(0, Math.round(+(v ?? dflt)))) || 0;
+const pick = (list, id, dflt) => (list.some((x) => x.id === id) ? id : dflt);
+export function cleanBody(b = {}) {
+  // Bodies saved before there were hair styles: `hair` was a colour (0-4) or 5 for a shaved head.
+  if (b.hair != null && b.hairColor == null) {
+    b = { ...b, hairColor: b.hair === 5 ? BODY_DEFAULT.hairColor : [0, 1, 2, 3, 6][b.hair] ?? 1, hairStyle: b.hair === 5 ? "shaved" : "short" };
+  }
+  return {
+    height: Math.min(200, Math.max(160, Math.round(+b.height || BODY_DEFAULT.height))),
+    weight: int(b.weight, 4, BODY_DEFAULT.weight),
+    build: int(b.build, 4, BODY_DEFAULT.build),
+    skin: int(b.skin, SKINS.length - 1, BODY_DEFAULT.skin),
+    hairColor: int(b.hairColor, HAIR_COLORS.length - 1, BODY_DEFAULT.hairColor),
+    hairStyle: pick(HAIR_STYLES, b.hairStyle, BODY_DEFAULT.hairStyle),
+    beard: pick(BEARDS, b.beard, BODY_DEFAULT.beard),
+    eyes: pick(EYES, b.eyes, BODY_DEFAULT.eyes),
+    glasses: !!b.glasses,
+    ...(b.age >= 16 && b.age <= 90 ? { age: Math.round(b.age) } : {}),
+    ...(PHOTO_KEY.test(b.photo || "") ? { photo: b.photo } : {}),
+  };
+}
+// A body that could be said before hair styles, beards and photos keeps the id it had then, so
+// its pictures stay valid.
+export function avatarId(body) {
+  const b = cleanBody(body);
+  const old = !b.photo && !b.glasses && b.beard === "clean" && b.eyes === "brown"
+    && (b.hairStyle === "shaved" || (b.hairStyle === "short" && [0, 1, 2, 3, 6].includes(b.hairColor)));
+  const said = old ? {
+    height: b.height, weight: b.weight, build: b.build, skin: b.skin,
+    hair: b.hairStyle === "shaved" ? 5 : [0, 1, 2, 3, 6].indexOf(b.hairColor),
+    ...(b.age ? { age: b.age } : {}),
+  } : b;
+  return hash(JSON.stringify(said)).slice(0, 12);
+}
+export const bodyLine = (b) => `${b.height} cm · ${WEIGHTS[b.weight].toLowerCase()} · ${BUILDS[b.build].toLowerCase()}${b.photo ? " · from your photo" : ""}`;
 
 const FRAMING = `Full body from the top of the head to the shoes, with a little space above and below, centred, camera at chest height, 50 mm lens. Seamless dark studio backdrop and floor, flat colour ${STUDIO} (very dark warm charcoal), soft even front light, a faint rim light, a soft shadow at his feet. Photorealistic, natural skin. No text, no logos added, no watermark, no props.`;
 const VIEW = {
@@ -84,11 +142,25 @@ const VIEW = {
   left: "turned 90 degrees so he faces the left edge of the picture: a clean side profile showing his left side",
 };
 
+const words = (list, id, c) => list.find((x) => x.id === id).words.replace("{c}", c);
+// What he looks like, in words. `back`: only what shows from behind.
+function looks(body, back = false) {
+  const c = HAIR_COLORS[body.hairColor].words;
+  const shape = `about ${body.age || 28} years old, ${body.height} cm tall, ${WEIGHT_WORDS[body.weight]}, ${BUILD_WORDS[body.build]} build, ${SKINS[body.skin].words}, ${words(HAIR_STYLES, body.hairStyle, c)}`;
+  if (back) return shape;
+  return `${shape}, ${words(BEARDS, body.beard, c)}, ${words(EYES, body.eyes, c)}${body.glasses ? ", wearing thin-framed glasses" : ""}`;
+}
+const ATHLETIC = "plain fitted mid-grey athletic wear: a crew-neck T-shirt, shorts to just above the knee, plain white low socks and plain light grey trainers";
+const POSE = "He stands straight in a relaxed neutral pose, arms hanging naturally a little away from the body, feet hip-width apart";
+
 function basePrompt(body, angle) {
-  const who = `one man, about ${body.age || 28} years old, ${body.height} cm tall, ${WEIGHT_WORDS[body.weight]}, ${BUILD_WORDS[body.build]} build, ${SKINS[body.skin].words}, ${HAIRS[body.hair].words}, clean-shaven`;
-  if (angle === "front") {
-    return `Studio reference photo of ${who}. He stands straight in a relaxed neutral pose, arms hanging naturally a little away from the body, feet hip-width apart, ${VIEW.front}. He wears plain fitted mid-grey athletic wear: a crew-neck T-shirt, shorts to just above the knee, plain white low socks and plain light grey trainers. ${FRAMING}`;
+  if (angle === "front" && body.photo) {
+    return `Image 0 is a photo of a real man. Make a full-body studio reference photo of this same man: keep his face, facial features and likeness exactly, with a calm neutral expression. Details: ${looks(body)}. ${POSE}, ${VIEW.front}. He wears ${ATHLETIC}. ${FRAMING}`;
   }
+  if (angle === "front") return `Studio reference photo of one man, ${looks(body)}. ${POSE}, ${VIEW.front}. He wears ${ATHLETIC}. ${FRAMING}`;
+  // From behind there's no face to keep, and a front picture as a reference only pulls the face round
+  // to the camera: the back is drawn from the words alone, with the same seed.
+  if (angle === "back") return `Studio reference photo of one man seen from directly behind, rear view: his back, shoulder blades and the back of his head face the camera, his face is not visible at all. He is ${looks(body, true)}. ${POSE}, his back to the camera. He wears ${ATHLETIC}. ${FRAMING}`;
   return `Image 0 shows a man in a studio and image 1 a close-up of his head and shoulders. Show the same man ${VIEW[angle]}. Keep exactly the same person: face, hair, skin tone, body shape, height and proportions, the same plain grey athletic wear and trainers, the same relaxed pose with arms down, the same lighting, camera distance and scale in the frame. ${FRAMING}`;
 }
 
@@ -100,9 +172,9 @@ export const sortPieces = (pieces) => [...pieces].sort((a, b) => ORDER.indexOf(a
 export function comboKeys(avatar, pieces) {
   const list = sortPieces(pieces);
   const sig = list.map((p) => `${p.role}:${p.id}:${p.photo || ""}`).join(",");
-  return Object.fromEntries(ANGLES.map((a) => [a, list.length ? keyOf(avatar, sig, a) : baseKey(avatar, a)]));
+  return Object.fromEntries(ANGLES.map((a) => [a, list.length ? keyOf(avatar, sig, angleTag(a)) : baseKey(avatar, a)]));
 }
-export const baseKey = (avatar, angle) => keyOf(avatar, "base", angle);
+export const baseKey = (avatar, angle) => keyOf(avatar, "base", angleTag(angle));
 
 function wornAs(p, list) {
   const has = (r) => list.some((x) => x.role === r);
@@ -117,13 +189,15 @@ function wornAs(p, list) {
     default: return "";
   }
 }
-const outfitList = (list) => list.map((p, i) => `${i + 1}. ${p.name} (${p.kind}${p.colors?.length ? `, ${p.colors.join(" and ")}` : ""}): ${wornAs(p, list)}.`).join("\n");
+// `back`: pieces with no photo of their back say so, so the front's print isn't copied onto it.
+const outfitList = (list, back = false) => list.map((p, i) => `${i + 1}. ${p.name} (${p.kind}${p.colors?.length ? `, ${p.colors.join(" and ")}` : ""}): ${wornAs(p, list)}.${back && !p.back && p.role !== "shoes" ? " Only its front is shown: draw its plain back in the same colour and fabric, without the front's prints or logos." : ""}`).join("\n");
 
-function dressPrompt(list, angle, side) {
+function dressPrompt(list, angle) {
   const rules = `Reproduce every piece faithfully: the same colours, fabric, wash, prints, graphics, logos and details as in the clothing picture, at a believable size on his body, with natural folds for the fit. Replace the grey athletic wear and trainers completely${list.some((p) => p.role === "bottom") ? "" : " except the shorts"}${list.some((p) => p.role === "shoes") ? "" : " except the trainers"}. Keep the same man (face, hair, skin, body), the same pose, angle, framing, lighting and the dark ${STUDIO} background. ${FRAMING}`;
-  const pieces = `The numbered pieces:\n${outfitList(list)}`;
+  const pieces = `The numbered pieces:\n${outfitList(list, angle === "back")}`;
+  if (angle === "back") return `Image 0 is a man in a studio seen from directly behind, his back to the camera. Image 1 shows clothing pieces from the back, numbered. Dress the man of image 0 in exactly these pieces, still seen from directly behind: his back and the back of his head face the camera and his face is not visible.\n${pieces}\n${rules}`;
   if (angle === "front") return `Image 0 is a man in a studio, image 2 a close-up of his face. Image 1 shows clothing pieces, numbered. Dress the man of image 0 in exactly these pieces, ${VIEW.front}.\n${pieces}\n${rules}`;
-  return `Image 0 is a man in a studio, ${VIEW[angle]}. Image 1 is the same man from the front, already dressed in the outfit. Image 2 shows the pieces ${side === "back" ? "from the back" : "laid flat"}, numbered. Image 3 is a close-up of his face. Draw image 0's view (${VIEW[angle]}) with him wearing exactly the outfit of image 1, matching it piece by piece.\n${pieces}\n${rules}`;
+  return `Image 0 is a man in a studio, ${VIEW[angle]}. Image 1 is the same man from the front, already dressed in the outfit. Image 2 shows the pieces laid flat, numbered. Image 3 is a close-up of his face. Draw image 0's view (${VIEW[angle]}) with him wearing exactly the outfit of image 1, matching it piece by piece.\n${pieces}\n${rules}`;
 }
 
 // The pieces side by side on white, numbered, in one reference picture (at most 512 x 512).
@@ -166,27 +240,36 @@ const seedOf = (avatar) => parseInt(avatar.slice(0, 8), 16) % 2147483647; // the
 /* ---------- what to draw ---------- */
 // A spec says how to get one picture: its key, the pictures it's drawn from, and the request.
 export function baseSpec(avatar, body, angle) {
-  const front = angle === "front" ? null : baseSpec(avatar, body, "front");
+  body = cleanBody(body);
+  // The front comes from the words (and your photo, if there is one), the sides from the front, the back from the words.
+  const deps = angle === "front" ? (body.photo ? [photoSpec(body.photo)] : []) : angle === "back" ? [] : [baseSpec(avatar, body, "front")];
   return {
-    key: baseKey(avatar, angle), angle, what: "base",
-    deps: front ? [front] : [],
-    request: async ([f]) => ({ prompt: basePrompt(body, angle), images: f ? [await ref(f), await ref(f, true)] : [], seed: seedOf(avatar) }),
+    key: baseKey(avatar, angle), angle, what: "base", deps,
+    request: async ([f]) => ({
+      prompt: basePrompt(body, angle),
+      images: !f ? [] : angle === "front" ? [await ref(f)] : [await ref(f), await ref(f, true)],
+      seed: seedOf(avatar),
+    }),
   };
 }
+// Your own photo: already on the server (see addPhoto), never drawn.
+const photoSpec = (key) => ({ key, angle: null, what: "photo", deps: [], request: null });
 export function outfitSpec(avatar, body, pieces, angle) {
+  body = cleanBody(body);
   const list = sortPieces(pieces);
   if (!list.length) return baseSpec(avatar, body, angle);
   const keys = comboKeys(avatar, list);
-  const front = angle === "front" ? null : outfitSpec(avatar, body, list, "front");
-  const side = angle === "back" ? "back" : "front";
+  // The sides also see the dressed front (so the four agree) and his face. The back sees neither:
+  // both pull the face round to the camera.
+  const front = angle === "front" || angle === "back" ? null : outfitSpec(avatar, body, list, "front");
   return {
     key: keys[angle], angle, what: "outfit",
     deps: [baseSpec(avatar, body, angle), ...(front ? [front, baseSpec(avatar, body, "front")] : [])],
     request: async ([base, dressed, baseFront]) => ({
-      prompt: dressPrompt(list, angle, side),
-      images: dressed
-        ? [await ref(base), await ref(dressed), await collage(list, side), await ref(baseFront, true)]
-        : [await ref(base), await collage(list, side), await ref(base, true)],
+      prompt: dressPrompt(list, angle),
+      images: angle === "back" ? [await ref(base), await collage(list, "back")]
+        : dressed ? [await ref(base), await ref(dressed), await collage(list, "front"), await ref(baseFront, true)]
+        : [await ref(base), await collage(list, "front"), await ref(base, true)],
       seed: seedOf(avatar),
     }),
   };
@@ -281,6 +364,7 @@ export function want(spec, prio = 5, background = true) {
     try {
       const have = await fromServer(spec.key);
       if (have) return keep(spec.key, have);
+      if (!spec.request) throw new Error("Your photo isn't on the server. Pick it again.");
       job.state = "waiting"; changed(spec.key);
       const inputs = await Promise.all(spec.deps.map((d) => want(d, job.prio, job.background)));
       job.state = "queued"; changed(spec.key);
@@ -318,6 +402,28 @@ export function want(spec, prio = 5, background = true) {
   })();
   job.promise.catch(() => {});
   return job.promise;
+}
+// Your photo, for drawing you to look like it: kept on the server like the pictures. Returns its key.
+export async function addPhoto(blob) {
+  const bytes = new Uint8Array(await blob.arrayBuffer());
+  let str = "";
+  for (let i = 0; i < bytes.length; i += 7) str += String.fromCharCode(bytes[i]);
+  const key = `tryon-me-${hash(`${bytes.length}|${str}`)}.jpg`;
+  keep(key, blob);
+  await toServer(key, blob);
+  return key;
+}
+// The photo's picture for the body panel: null until it's back from the server (onChange says when).
+const photoTried = new Map(); // key → when it was last asked for (a missing photo is asked for again after a minute)
+export function photo(key) {
+  if (!PHOTO_KEY.test(key || "") || pics.has(key)) return url(key);
+  const job = jobs.get(key);
+  if (io.server() && (!job || (job.state === "error" && Date.now() - (photoTried.get(key) || 0) > 60000))) {
+    if (job) jobs.delete(key);
+    photoTried.set(key, Date.now());
+    want(photoSpec(key), 0, false).catch(() => {});
+  }
+  return null;
 }
 // Drop the pictures still waiting that nobody wants any more (the ideas changed).
 export function keepOnly(keys) {

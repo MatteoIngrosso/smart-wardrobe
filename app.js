@@ -3535,7 +3535,7 @@ async function loadTryOn() {
   if (!deviceId) { deviceId = uid(); await raw.put("kv", deviceId, "deviceId"); }
 }
 
-const bodyDraft = () => (mirror.draft ||= TryOn.cleanBody({ ...TryOn.BODY_DEFAULT, age: state.settings.age, ...(state.avatar?.body || {}) }));
+const bodyDraft = () => (mirror.draft ||= TryOn.cleanBody({ age: state.settings.age, ...TryOn.cleanBody(state.avatar?.body || {}) }));
 function wornList(o) {
   if (!o) return [];
   return [...(o.coat ? [{ role: "coat", item: o.coat }] : []), ...MIRROR_ROLES.filter((r) => o.pieces[r]).map((r) => ({ role: r, item: o.pieces[r] }))];
@@ -3613,27 +3613,101 @@ async function mirrorRefresh(user = false) {
 }
 
 const SILHOUETTE = `<svg class="tt-ghost" viewBox="0 0 120 300" aria-hidden="true"><circle cx="60" cy="30" r="17"/><path d="M60 52c-17 0-30 6-33 16l-8 70c-1 7 9 9 11 2l9-58v74l-4 128c0 8 13 8 14 0l9-112h4l9 112c1 8 14 8 14 0l-4-128V82l9 58c2 7 12 5 11-2l-8-70c-3-10-16-16-33-16z"/></svg>`;
+// The left panel: your photo, then Body (height, weight, build, skin) or Face & hair, and Save Body.
+function bodyPanelHTML() {
+  const b = bodyDraft(), tab = mirror.bodyTab || "body";
+  const range = (k, label, min, max, val, shown) => `<div class="field mb-field"><label for="mb-${k}">${label} <b id="mb-${k}-v">${esc(shown)}</b></label><input id="mb-${k}" type="range" min="${min}" max="${max}" step="1" value="${val}" data-input="mb-${k}"></div>`;
+  const swatches = (field, label, list, val) => `<div class="field mb-field"><label>${label}</label><div class="swatch-row">${list.map((x, i) => {
+    const v = x.id ?? i;
+    return `<button class="swatch" style="--sw:${x.hex}" data-mb="${field}" data-v="${v}" aria-pressed="${val === v}" aria-label="${esc(x.words)}"></button>`;
+  }).join("")}</div></div>`;
+  const chips = (field, label, list, val) => `<div class="field mb-field"><label>${label}</label><div class="mb-chips">${list.map((x) =>
+    `<button class="chip" data-mb="${field}" data-v="${x.id}" aria-pressed="${val === x.id}">${x.label}</button>`).join("")}</div></div>`;
+  const pic = b.photo && TryOn.photo(b.photo);
+  const photo = b.photo
+    ? `<div class="mb-photo"><span class="mb-face">${pic ? `<img src="${pic}" alt="Your photo">` : ""}</span><span class="mb-photo-text"><b>Your photo</b><span class="muted small">${mirror.reading ? "Reading it…" : "Sets your face"}</span></span><button class="chip" data-act="body-photo-off">Remove</button></div>`
+    : "";
+  return `<aside class="mirror-side mirror-body" aria-label="Your body">
+      <div class="mb-head"><h2>You</h2>${b.photo ? "" : `<button class="chip mb-photo-btn" data-act="body-photo"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 8h3l2-3h6l2 3h3v11H4z"/><circle cx="12" cy="13" r="3.5"/></svg>From a photo</button>`}</div>
+      ${photo}
+      <div class="seg mb-tabs" role="tablist">${[["body", "Body"], ["face", "Face & hair"]].map(([k, l]) => `<button role="tab" aria-selected="${tab === k}" data-mbtab="${k}">${l}</button>`).join("")}</div>
+      ${tab === "body" ? `${range("height", "Height", 160, 200, b.height, `${b.height} cm`)}
+      ${range("weight", "Weight", 0, 4, b.weight, TryOn.WEIGHTS[b.weight])}
+      ${range("build", "Build", 0, 4, b.build, TryOn.BUILDS[b.build])}
+      ${swatches("skin", "Skin tone", TryOn.SKINS, b.skin)}`
+      : `<div class="mb-face-tab">${swatches("hairColor", "Hair colour", TryOn.HAIR_COLORS, b.hairColor)}
+      ${chips("hairStyle", "Hair", TryOn.HAIR_STYLES, b.hairStyle)}
+      ${chips("beard", "Beard", TryOn.BEARDS, b.beard)}
+      ${swatches("eyes", "Eyes", TryOn.EYES, b.eyes)}
+      ${chips("glasses", "Glasses", [{ id: "no", label: "None" }, { id: "yes", label: "Glasses" }], b.glasses ? "yes" : "no")}</div>`}
+      <button class="btn primary" data-act="body-save" id="mb-save">Save body</button>
+      <p class="muted small" id="mb-hint" style="margin:0"></p>
+    </aside>`;
+}
+function remountBody() {
+  const el = $("#mirror .mirror-body");
+  if (!el) return;
+  el.outerHTML = bodyPanelHTML();
+  bodyUI();
+}
+// "From a photo": your photo sets the face, and the AI (if there is one) fills in skin, hair, beard and eyes from it.
+const bodyPhotoInput = Object.assign(document.createElement("input"), { type: "file", accept: "image/*", hidden: true });
+document.body.append(bodyPhotoInput);
+bodyPhotoInput.onchange = () => { const f = bodyPhotoInput.files[0]; bodyPhotoInput.value = ""; if (f) bodyPhoto(f).catch((e) => toast(e.message || "Couldn't use that photo")); };
+const FACE_SCHEMA = {
+  type: "object",
+  additionalProperties: false,
+  required: ["skin", "hairColor", "hairStyle", "beard", "eyes", "glasses"],
+  properties: {
+    skin: { type: "string", enum: TryOn.SKINS.map((x) => x.words) },
+    hairColor: { type: "string", enum: TryOn.HAIR_COLORS.map((x) => x.words) },
+    hairStyle: { type: "string", enum: TryOn.HAIR_STYLES.map((x) => x.id), description: TryOn.HAIR_STYLES.map((x) => `${x.id}: ${x.words.replace("{c} ", "")}`).join("; ") },
+    beard: { type: "string", enum: TryOn.BEARDS.map((x) => x.id) },
+    eyes: { type: "string", enum: TryOn.EYES.map((x) => x.id) },
+    glasses: { type: "boolean", description: "Wears glasses (not sunglasses) in the photo" },
+  },
+};
+async function bodyPhoto(file) {
+  if (!tryonKey()) throw new Error("The try-on needs the hosted app.");
+  const blob = await resizeImage(file, 1024);
+  const b = bodyDraft();
+  b.photo = await TryOn.addPhoto(blob);
+  mirror.bodyTab = "face";
+  mirror.reading = aiReady();
+  remountBody();
+  if (!mirror.reading) return toast("Your face will come from the photo. Set hair and beard under Face & hair, then tap Save body.");
+  try {
+    const text = await aiGenerate({
+      system: "You describe a person's appearance for an avatar maker. Reply with JSON only.",
+      text: "Describe the man in this photo: skin tone, hair colour, hairstyle, beard, eye colour and whether he wears glasses. Pick the closest option for each.",
+      image: await resizeImage(blob, 512),
+      schema: FACE_SCHEMA,
+      maxTokens: 120,
+    });
+    const r = JSON.parse(text.replace(/^```(json)?|```$/g, "").trim());
+    const at = (list, w) => list.findIndex((x) => x.words === w);
+    if (at(TryOn.SKINS, r.skin) >= 0) b.skin = at(TryOn.SKINS, r.skin);
+    if (at(TryOn.HAIR_COLORS, r.hairColor) >= 0) b.hairColor = at(TryOn.HAIR_COLORS, r.hairColor);
+    Object.assign(b, TryOn.cleanBody({ ...b, hairStyle: r.hairStyle, beard: r.beard, eyes: r.eyes, glasses: !!r.glasses }));
+    toast("Filled in from your photo. Check it, then tap Save body.");
+  } catch (e) {
+    toast(`Couldn't read the photo (${e.message || e}). Set hair and beard yourself.`);
+  } finally {
+    mirror.reading = false;
+    remountBody();
+  }
+}
 function mirrorHTML() {
-  const av = state.avatar, b = bodyDraft();
+  const av = state.avatar;
   const ideas = state.outfits.slice(0, 3);
   const o = ideas[Math.min(mirror.pick, Math.max(0, ideas.length - 1))];
   const pick = ideas.indexOf(o);
   const off = mirrorOff(o);
-  const range = (k, label, min, max, val, shown) => `<div class="field mb-field"><label for="mb-${k}">${label} <b id="mb-${k}-v">${esc(shown)}</b></label><input id="mb-${k}" type="range" min="${min}" max="${max}" step="1" value="${val}" data-input="mb-${k}"></div>`;
   const stageNote = !tryonKey()
     ? `<b>Try-on runs on your server</b><span>${sync.status === "connecting" ? "Connecting…" : "Pictures are drawn for free by Cloudflare, so open the app from its web address (not the PC copy) to use the try-on."}</span>`
     : !av ? `<b>Make your avatar</b><span>Set your body on the ${innerWidth > 760 ? "left" : "panel below"}, then tap Save Body. You're drawn once from the front, both sides and the back, for free.</span>` : "";
   return `<section class="mirror" id="mirror">
-    <aside class="mirror-side mirror-body" aria-label="Your body">
-      <h2>Your body</h2>
-      ${range("height", "Height", 160, 200, b.height, `${b.height} cm`)}
-      ${range("weight", "Weight", 0, 4, b.weight, TryOn.WEIGHTS[b.weight])}
-      ${range("build", "Build", 0, 4, b.build, TryOn.BUILDS[b.build])}
-      <div class="field mb-field"><label>Skin tone</label><div class="swatch-row">${TryOn.SKINS.map((s, i) => `<button class="swatch" style="--sw:${s.hex}" data-mskin="${i}" aria-pressed="${b.skin === i}" aria-label="Skin tone ${i + 1}"></button>`).join("")}</div></div>
-      <div class="field mb-field"><label>Hair</label><div class="swatch-row">${TryOn.HAIRS.map((h, i) => h.hex ? `<button class="swatch" style="--sw:${h.hex}" data-mhair="${i}" aria-pressed="${b.hair === i}" aria-label="${esc(h.words)}"></button>` : `<button class="chip swatch-chip" data-mhair="${i}" aria-pressed="${b.hair === i}">${h.label}</button>`).join("")}</div></div>
-      <button class="btn primary" data-act="body-save" id="mb-save">Save body</button>
-      <p class="muted small" id="mb-hint" style="margin:0"></p>
-    </aside>
+    ${bodyPanelHTML()}
     <div class="mirror-stage">
       <div class="tt${av && tryonKey() ? "" : " empty"}" tabindex="0" role="img" aria-label="You, dressed in the outfit picked on the right. Drag sideways to turn.">
         ${TryOn.ANGLES.map((a) => `<img class="tt-frame" data-angle="${a}" alt="" draggable="false">`).join("")}
@@ -3712,6 +3786,10 @@ function paintMirror() {
     if ((img.getAttribute("src") || "") !== src) { if (src) img.src = src; else img.removeAttribute("src"); }
   });
   setFrames(mirror.angle);
+  // Your photo in the body panel, once it's back from the server.
+  const face = root.querySelector(".mb-face");
+  const me = face && !face.firstChild && TryOn.photo(bodyDraft().photo);
+  if (me) face.innerHTML = `<img src="${me}" alt="Your photo">`;
   const a = TryOn.ANGLES[mirror.angle];
   root.querySelectorAll(".tt-dot").forEach((d, i) => d.setAttribute("aria-current", i === mirror.angle));
   const label = root.querySelector(".tt-angle");
@@ -3758,9 +3836,10 @@ function bodyUI() {
   const btn = $("#mb-save"), hint = $("#mb-hint");
   if (!btn) return;
   const id = TryOn.avatarId(bodyDraft()), saved = state.avatar?.id === id;
-  btn.disabled = saved || !tryonKey();
+  btn.disabled = saved || !tryonKey() || !!mirror.reading;
   btn.textContent = saved ? "Saved" : "Save body";
   hint.textContent = !tryonKey() ? "Needs the hosted app (its web address)."
+    : mirror.reading ? "Reading your photo…"
     : !state.avatar ? "You're drawn from four sides once: 4 free pictures."
     : saved ? `${TryOn.bodyLine(state.avatar.body)}. Every device shows this body.`
     : "Save to draw the new you (4 free pictures). Today's outfits are drawn again on the new body.";
@@ -7882,12 +7961,13 @@ document.addEventListener("click", async (e) => {
     mirror.off[o.key] = off.includes(ds.mpiece) ? off.filter((r) => r !== ds.mpiece) : [...off, ds.mpiece];
     return remountMirror();
   }
-  if (ds.mskin != null || ds.mhair != null) {
-    const k = ds.mskin != null ? "skin" : "hair";
-    bodyDraft()[k] = +(ds.mskin ?? ds.mhair);
-    document.querySelectorAll(`[data-m${k}]`).forEach((b) => b.setAttribute("aria-pressed", b === t));
+  if (ds.mb) {
+    const b = bodyDraft(), v = ds.v;
+    b[ds.mb] = ds.mb === "glasses" ? v === "yes" : /^\d+$/.test(v) ? +v : v;
+    document.querySelectorAll(`[data-mb="${ds.mb}"]`).forEach((x) => x.setAttribute("aria-pressed", x === t));
     return bodyUI();
   }
+  if (ds.mbtab) { mirror.bodyTab = ds.mbtab; return remountBody(); }
   if (ds.tta != null) { mirror.angle = +ds.tta; paintMirror(); return mirrorRefresh(true); }
   if (ds.tt) { mirror.angle = (mirror.angle + +ds.tt + 4) % 4; paintMirror(); return mirrorRefresh(true); }
   // Fragrances
@@ -8288,6 +8368,8 @@ document.addEventListener("click", async (e) => {
 
   switch (ds.act) {
     case "body-save": return saveBody();
+    case "body-photo": return bodyPhotoInput.click();
+    case "body-photo-off": delete bodyDraft().photo; return remountBody();
     case "tryon-retry": TryOn.resume(); return mirrorRefresh(true);
     case "seed": return loadSeed();
     case "shuffle": {
