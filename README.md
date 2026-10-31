@@ -182,6 +182,15 @@ The in-app camera needs https or localhost. Where it isn't available, the system
 - **Still no tier or style?** With an AI key, Gemini (or Claude) is asked once for that brand's tier and 1 to 3 styles. That's about 150 tokens per brand, saved on the device. The order is: built-in list, then Wikidata (free), then AI only for what's still missing.
 - **With AI.** Gemini or Claude reads the photo once, reading the logo or label when one is visible, and returns type, colours, brand, 1 to 3 styles, warmth and tags as structured JSON. **Recognise pieces without a brand** in Settings does the same for pieces you already have.
 
+### Try-on: you, wearing today's ideas (Gemini pictures)
+The top of Today is a mirror: your body on the left (height, weight, build, skin tone, hair), you in the middle, today's three ideas on the right with what you're wearing. Drag sideways (or tap the arrows or dots) to turn him: front, right side, back, left side. **Take off** / **Put on** on a piece makes a new combination.
+
+- **Save Body** asks Gemini for a reference sheet of you: the front from a description of the body, then both sides and the back drawn from that front, in plain grey athletic wear on the app's dark studio colour (`#141413`).
+- **Dressing** draws each angle from that angle's base picture plus one numbered picture of the pieces (front photos, or back photos for the back). The sides and back also see the dressed front, so the four agree. A combination you haven't seen starts on the front, which is drawn first, with a scanning line over the picture while it's drawn; the other three follow in the background.
+- **Never twice.** Each picture is kept on the server as a photo blob (`tryon-<hash>.jpg`), the hash of body, pieces (and their photos) and angle, so every device shows it at once and no combination is paid for or waited for again. Two devices asking for the same picture: the first leaves a ten-minute note (`/api/cache`, kind `tryon`) and the other waits for its picture.
+- **Today's ideas ready.** With **Get today's ideas ready** on (Settings > Try-on), all four sides of the three ideas are drawn in the background, so picking one and turning him is instant. Ideas that change before their pictures start ("New ideas") are dropped before they cost anything.
+- **Cost.** Model `gemini-nano-banana-2.1` (falling back to `gemini-3.1-flash-image`, then `gemini-2.5-flash-image`), about $0.04 a picture at 1K: 4 for the body, up to 12 for each new set of ideas. Settings > Try-on has a daily limit per device (40 by default; background pictures stop at three quarters of it) and counts the pictures. Google's free tier doesn't make pictures, so the key's project needs billing. Code: `tryon.js`.
+
 ### Optional AI: Gemini or Claude
 Choose the provider in Settings and paste a key; it stays on that device. Online, save the key in Cloudflare instead (see "Putting it online") and no device needs one.
 
@@ -205,6 +214,7 @@ Settings shows how many requests and tokens were used this month.
 
 ## Files
 - `index.html`, `styles.css`, `app.js`: the whole app
+- `tryon.js`: the try-on mirror on Today: Gemini prompts for the body and the outfits, the picture cache keyed by hash, the queue (two at a time, the one you're looking at first) and the drag-to-turn turntable
 - `calendar.js`: reads iCal calendar feeds (events, repeats, time zones) and guesses each event's occasion
 - `label.js`: adding a piece from its label: product references, Pull&Bear links, product page titles (Italian words included) and QR links
 - `vendor/jsqr.min.js`: jsQR 1.4.0 (Apache 2.0), reads QR codes where the browser can't

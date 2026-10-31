@@ -21,7 +21,7 @@ const RUNS = +opt("--runs", 5); // ideas are picked with some chance: the number
 
 // A copy of the app with every top-level function and constant of app.js on window.__t.
 const dir = mkdtempSync(join(tmpdir(), "wardrobe-sim-"));
-for (const f of ["index.html", "app.js", "stylist.js", "label.js", "calendar.js", "cutout-editor.js", "styles.css", "fashion-bible.json", "manifest.webmanifest", "icon.svg"])
+for (const f of ["index.html", "app.js", "stylist.js", "label.js", "calendar.js", "cutout-editor.js", "tryon.js", "styles.css", "fashion-bible.json", "manifest.webmanifest", "icon.svg"])
   if (existsSync(join(ROOT, f))) cpSync(join(ROOT, f), join(dir, f));
 for (const d of ["sample", "vendor"]) if (existsSync(join(ROOT, d))) cpSync(join(ROOT, d), join(dir, d), { recursive: true });
 const src = readFileSync(join(ROOT, "app.js"), "utf8");
