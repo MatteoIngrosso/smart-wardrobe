@@ -3247,7 +3247,7 @@ function renderToday() {
       <div><h1>${greet}</h1><p class="sub">${esc(dateStr)}</p></div>
       <button class="btn" data-act="shuffle"><svg viewBox="0 0 24 24"><path d="M16 3h5v5M4 20 21 3M21 16v5h-5M15 15l6 6M4 4l5 5"/></svg>New ideas</button>
     </div>
-    ${mirrorHTML()}
+    ${safeMirrorHTML()}
     <div class="stack">
       <div class="card row" style="justify-content:space-between">
         ${weatherHtml}
@@ -3498,6 +3498,8 @@ const mirror = {
   combos: [], // per idea: { list, pieces, keys } (see mirrorRefresh)
   now: null, // what he wears now: an idea, or one with pieces taken off ({ ..., custom })
   sig: "", // the last combination shown, to start a new one from the front
+  shown: {}, // per angle: the last dressed picture shown, kept on him while the next one is drawn
+  shownFor: null, // the avatar those pictures are of
   run: 0,
 };
 const MIRROR_ROLES = ["outer", "mid", "base", "bottom", "shoes"];
@@ -3528,7 +3530,9 @@ TryOn.init({
     why: () => `Today's limit of ${tryonCap()} try-on pictures is used up on this device. Change it in Settings > Try-on.`,
     spend: () => { const c = tryonSpent(); c.n++; c.m++; raw.put("kv", { ...c }, "tryonCount"); },
   },
-  onChange: () => { if (!mirror.frame) mirror.frame = requestAnimationFrame(() => { mirror.frame = 0; paintMirror(); }); },
+  onChange: () => {
+    if (!mirror.frame) mirror.frame = requestAnimationFrame(() => { mirror.frame = 0; try { paintMirror(); } catch (e) { console.error("Mirror:", e); } });
+  },
 });
 async function loadTryOn() {
   Object.assign(tryonCount, (await raw.get("kv", "tryonCount")) || {});
@@ -3664,14 +3668,20 @@ function mirrorHTML() {
     </aside>
   </section>`;
 }
+function safeMirrorHTML() {
+  try { return mirrorHTML(); } catch (e) { console.error("Mirror:", e); return ""; }
+}
 // Put the mirror on the page again (a new idea picked, a piece taken off) without redrawing the rest of Today.
 function remountMirror() {
   const el = $("#mirror");
   if (!el) return;
-  el.outerHTML = mirrorHTML();
+  el.outerHTML = safeMirrorHTML();
   mountMirror(true);
 }
 function mountMirror(user = false) {
+  try { mountTurntable(user); } catch (e) { console.error("Mirror:", e); } // never in the way of the rest of Today
+}
+function mountTurntable(user) {
   const tt = $("#mirror .tt");
   if (!tt) return;
   TryOn.turntable(tt, {
@@ -3681,7 +3691,7 @@ function mountMirror(user = false) {
   });
   bodyUI();
   paintMirror();
-  mirrorRefresh(user);
+  mirrorRefresh(user).catch((e) => console.error("Mirror:", e));
 }
 // The four pictures at a position between angles: each fades in as he turns to it.
 function setFrames(pos) {
@@ -3697,10 +3707,13 @@ function paintMirror() {
   if (!root) return;
   const av = state.avatar, keys = mirror.now?.keys;
   const base = av && Object.fromEntries(TryOn.ANGLES.map((a) => [a, TryOn.baseKey(av.id, a)]));
+  if (mirror.shownFor !== (av?.id || null)) { mirror.shown = {}; mirror.shownFor = av?.id || null; }
   root.querySelectorAll(".tt-frame").forEach((img) => {
     const a = img.dataset.angle;
+    // While a new combination is drawn, the last outfit stays on him under the scan (or the base picture).
     const dressed = keys && TryOn.url(keys[a]);
-    const src = dressed || (base && TryOn.url(base[a])) || "";
+    if (dressed) mirror.shown[a] = dressed;
+    const src = dressed || mirror.shown[a] || (base && TryOn.url(base[a])) || "";
     if ((img.getAttribute("src") || "") !== src) { if (src) img.src = src; else img.removeAttribute("src"); }
   });
   setFrames(mirror.angle);
