@@ -1,4 +1,7 @@
-// Try-on: the avatar on the home screen, drawn by Gemini from four sides.
+// Try-on: the avatar on the home screen, drawn from four sides for free by FLUX.2 [klein] 4B on
+// Cloudflare Workers AI (POST /api/ai/image on the Worker). The Workers Free plan includes 10,000
+// "neurons" a day, about 50 of these pictures; past that Cloudflare refuses until 00:00 UTC and
+// never charges.
 //
 // - Save Body draws a reference sheet of you once: front, right, back and left, in plain grey
 //   athletic wear on the dark studio background of the app.
@@ -9,18 +12,19 @@
 // - A small queue runs two pictures at a time, the one you're looking at first. Pictures nobody
 //   wants any more (after "New ideas") are dropped before they cost anything.
 //
-// The app passes in how to reach Gemini and the server (see init); this file knows nothing of the
+// The app passes in how to reach the server (see init); this file knows nothing of the
 // rest of the wardrobe.
 
 export const ANGLES = ["front", "right", "back", "left"]; // in turning order: drag right and he turns to face right
 export const ANGLE_LABEL = { front: "Front", right: "Right side", back: "Back", left: "Left side" };
-const VERSION = 1; // part of every key: raise it when the prompts change enough to draw everything again
-export const MODELS = ["gemini-nano-banana-2.1", "gemini-3.1-flash-image", "gemini-2.5-flash-image"];
-export const PRICE = 0.04; // dollars per picture, roughly (Nano Banana 2.1 at 1K, with its input)
+const VERSION = 2; // part of every key: raise it when the prompts change enough to draw everything again
+export const FREE_A_DAY = 50; // pictures Cloudflare's free daily neurons pay for, roughly (about 180 neurons each)
+const SIZE = { width: 768, height: 1152 }; // 2:3, six 512 px tiles
+const REF = 512; // reference pictures must fit in 512 x 512
 const MAX_AT_ONCE = 2;
 const STUDIO = "#141413";
 
-let io = null; // { post, server, me, budget, onChange }
+let io = null; // { post, server, me, budget, onChange }; post(form) sends a picture request to the Worker
 export function init(deps) { io = deps; }
 
 /* ---------- keys ---------- */
@@ -85,7 +89,7 @@ function basePrompt(body, angle) {
   if (angle === "front") {
     return `Studio reference photo of ${who}. He stands straight in a relaxed neutral pose, arms hanging naturally a little away from the body, feet hip-width apart, ${VIEW.front}. He wears plain fitted mid-grey athletic wear: a crew-neck T-shirt, shorts to just above the knee, plain white low socks and plain light grey trainers. ${FRAMING}`;
   }
-  return `The picture shows a man in a studio. Draw the same man, same moment, ${VIEW[angle]}. Keep exactly the same person: face, hair, skin tone, body shape, height and proportions, the same plain grey athletic wear and trainers, the same relaxed pose with arms down, the same lighting, camera distance and scale in the frame. ${FRAMING}`;
+  return `Image 0 shows a man in a studio and image 1 a close-up of his head and shoulders. Show the same man ${VIEW[angle]}. Keep exactly the same person: face, hair, skin tone, body shape, height and proportions, the same plain grey athletic wear and trainers, the same relaxed pose with arms down, the same lighting, camera distance and scale in the frame. ${FRAMING}`;
 }
 
 /* ---------- outfits ---------- */
@@ -118,13 +122,14 @@ const outfitList = (list) => list.map((p, i) => `${i + 1}. ${p.name} (${p.kind}$
 function dressPrompt(list, angle, side) {
   const rules = `Reproduce every piece faithfully: the same colours, fabric, wash, prints, graphics, logos and details as in the clothing picture, at a believable size on his body, with natural folds for the fit. Replace the grey athletic wear and trainers completely${list.some((p) => p.role === "bottom") ? "" : " except the shorts"}${list.some((p) => p.role === "shoes") ? "" : " except the trainers"}. Keep the same man (face, hair, skin, body), the same pose, angle, framing, lighting and the dark ${STUDIO} background. ${FRAMING}`;
   const pieces = `The numbered pieces:\n${outfitList(list)}`;
-  if (angle === "front") return `Picture 1 is a man in a studio. Picture 2 shows clothing pieces, numbered. Dress the man in picture 1 in exactly these pieces, ${VIEW.front}.\n${pieces}\n${rules}`;
-  return `Picture 1 is a man in a studio, ${VIEW[angle]}. Picture 2 is the same man from the front, already dressed in the outfit. Picture 3 shows the pieces ${side === "back" ? "from the back" : "laid flat"}, numbered. Draw picture 1's view (${VIEW[angle]}) with him wearing exactly the outfit of picture 2, matching it piece by piece.\n${pieces}\n${rules}`;
+  if (angle === "front") return `Image 0 is a man in a studio, image 2 a close-up of his face. Image 1 shows clothing pieces, numbered. Dress the man of image 0 in exactly these pieces, ${VIEW.front}.\n${pieces}\n${rules}`;
+  return `Image 0 is a man in a studio, ${VIEW[angle]}. Image 1 is the same man from the front, already dressed in the outfit. Image 2 shows the pieces ${side === "back" ? "from the back" : "laid flat"}, numbered. Image 3 is a close-up of his face. Draw image 0's view (${VIEW[angle]}) with him wearing exactly the outfit of image 1, matching it piece by piece.\n${pieces}\n${rules}`;
 }
 
-// The pieces side by side on white, numbered, in one picture: fewer images in, fewer tokens.
+// The pieces side by side on white, numbered, in one reference picture (at most 512 x 512).
 async function collage(list, side) {
-  const tw = 300, th = 360, cols = Math.min(3, list.length), rows = Math.ceil(list.length / cols);
+  const cols = Math.min(3, list.length), rows = Math.ceil(list.length / cols);
+  const tw = Math.floor(REF / cols), th = Math.min(Math.floor(tw * 1.2), Math.floor(REF / rows));
   const c = Object.assign(document.createElement("canvas"), { width: cols * tw, height: rows * th });
   const g = c.getContext("2d");
   g.fillStyle = "#fff";
@@ -139,12 +144,24 @@ async function collage(list, side) {
       bmp.close?.();
     }
     g.fillStyle = "#111";
-    g.beginPath(); g.arc(x + 22, y + 22, 15, 0, Math.PI * 2); g.fill();
-    g.fillStyle = "#fff"; g.font = "bold 18px sans-serif"; g.textAlign = "center"; g.textBaseline = "middle";
-    g.fillText(String(i + 1), x + 22, y + 23);
+    g.beginPath(); g.arc(x + 16, y + 16, 12, 0, Math.PI * 2); g.fill();
+    g.fillStyle = "#fff"; g.font = "bold 15px sans-serif"; g.textAlign = "center"; g.textBaseline = "middle";
+    g.fillText(String(i + 1), x + 16, y + 17);
   }
-  return new Promise((r) => c.toBlob(r, "image/jpeg", 0.85));
+  return new Promise((r) => c.toBlob(r, "image/jpeg", 0.88));
 }
+// A picture made to fit in 512 x 512 for the model; `head`: only his head and shoulders (the top
+// of a full-body picture), so his face keeps its detail at that size.
+async function ref(blob, head = false) {
+  const bmp = await createImageBitmap(blob);
+  const sx = head ? bmp.width * 0.18 : 0, sy = 0, sw = head ? bmp.width * 0.64 : bmp.width, sh = head ? bmp.height * 0.36 : bmp.height;
+  const s = Math.min(1, REF / sw, REF / sh);
+  const c = Object.assign(document.createElement("canvas"), { width: Math.round(sw * s), height: Math.round(sh * s) });
+  c.getContext("2d").drawImage(bmp, sx, sy, sw, sh, 0, 0, c.width, c.height);
+  bmp.close?.();
+  return new Promise((r) => c.toBlob(r, "image/jpeg", 0.9));
+}
+const seedOf = (avatar) => parseInt(avatar.slice(0, 8), 16) % 2147483647; // the same seed for all of one body's pictures
 
 /* ---------- what to draw ---------- */
 // A spec says how to get one picture: its key, the pictures it's drawn from, and the request.
@@ -153,7 +170,7 @@ export function baseSpec(avatar, body, angle) {
   return {
     key: baseKey(avatar, angle), angle, what: "base",
     deps: front ? [front] : [],
-    request: async ([ref]) => ({ prompt: basePrompt(body, angle), images: ref ? [ref] : [] }),
+    request: async ([f]) => ({ prompt: basePrompt(body, angle), images: f ? [await ref(f), await ref(f, true)] : [], seed: seedOf(avatar) }),
   };
 }
 export function outfitSpec(avatar, body, pieces, angle) {
@@ -164,8 +181,14 @@ export function outfitSpec(avatar, body, pieces, angle) {
   const side = angle === "back" ? "back" : "front";
   return {
     key: keys[angle], angle, what: "outfit",
-    deps: [baseSpec(avatar, body, angle), ...(front ? [front] : [])],
-    request: async ([base, dressed]) => ({ prompt: dressPrompt(list, angle, side), images: [base, ...(dressed ? [dressed] : []), await collage(list, side)] }),
+    deps: [baseSpec(avatar, body, angle), ...(front ? [front, baseSpec(avatar, body, "front")] : [])],
+    request: async ([base, dressed, baseFront]) => ({
+      prompt: dressPrompt(list, angle, side),
+      images: dressed
+        ? [await ref(base), await ref(dressed), await collage(list, side), await ref(baseFront, true)]
+        : [await ref(base), await collage(list, side), await ref(base, true)],
+      seed: seedOf(avatar),
+    }),
   };
 }
 
@@ -207,7 +230,7 @@ function lock(key) {
 const jobs = new Map(); // key → { key, prio, background, state: checking|waiting|queued|making|done|error, error, promise }
 const line = []; // jobs waiting for a turn: { job, go, stop }
 let busy = 0;
-export let halted = null; // an error that stops everything (no key, no billing) until resume()
+export let halted = null; // an error that stops everything (no image model, or the free pictures used up) until resume()
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
 const changed = (key) => io?.onChange?.(key);
 
@@ -217,8 +240,12 @@ export function state(key) {
 }
 export const errorOf = (key) => jobs.get(key)?.error || null;
 
+function stillHalted() {
+  if (halted?.until && Date.now() >= halted.until) halted = null; // a new day: Cloudflare's free pictures are back
+  return halted;
+}
 function turn(job) {
-  if (halted) return Promise.reject(halted);
+  if (stillHalted()) return Promise.reject(halted);
   return new Promise((go, stop) => { line.push({ job, go, stop }); pump(); });
 }
 function pump() {
@@ -233,13 +260,13 @@ function pump() {
 }
 const done = () => { busy--; pump(); };
 
-// Get one picture: from memory, the server, or Gemini. `prio`: lower goes first.
+// Get one picture: from memory, the server, or drawn. `prio`: lower goes first.
 // `background`: nobody is looking at it yet (it counts against the daily limit first).
 export function want(spec, prio = 5, background = true) {
   if (blobs.has(spec.key)) return Promise.resolve(blobs.get(spec.key));
   let job = jobs.get(spec.key);
   // A picture that failed isn't asked for again by itself (it would cost each time): Try again does that.
-  if (job?.state === "error" && !(job.error?.capped && io.budget.ok(background))) return job.promise;
+  if (job?.state === "error" && !(job.error?.capped && !stillHalted() && io.budget.ok(background))) return job.promise;
   if (job && job.state !== "error") {
     job.prio = Math.min(job.prio, prio);
     job.background &&= background;
@@ -306,15 +333,14 @@ export function resume() {
   changed(null);
 }
 
-/* ---------- Gemini ---------- */
-let model = null; // the first model of MODELS that answers
-const toB64 = (blob) => new Promise((r) => { const f = new FileReader(); f.onload = () => r(String(f.result).split(",")[1]); f.readAsDataURL(blob); });
-function b64Blob(b64, type) {
+/* ---------- drawing (Cloudflare Workers AI, free) ---------- */
+function b64Blob(b64) {
   const bin = atob(b64), bytes = new Uint8Array(bin.length);
   for (let i = 0; i < bin.length; i++) bytes[i] = bin.charCodeAt(i);
+  const type = b64.startsWith("iVBOR") ? "image/png" : b64.startsWith("UklGR") ? "image/webp" : "image/jpeg";
   return new Blob([bytes], { type });
 }
-// What Gemini sends back, as a JPEG of at most 1248 px high (it fits the server's photo store).
+// What comes back, as a JPEG of at most 1248 px high (it fits the server's photo store).
 async function asJpeg(blob) {
   const bmp = await createImageBitmap(blob);
   const s = Math.min(1, 1248 / bmp.height);
@@ -323,45 +349,40 @@ async function asJpeg(blob) {
   bmp.close?.();
   return new Promise((r) => c.toBlob(r, "image/jpeg", 0.86));
 }
-const stop = (msg) => { halted = Object.assign(new Error(msg), { fatal: true }); changed(null); return halted; };
+const stop = (msg, extra = {}) => { halted = Object.assign(new Error(msg), { fatal: true }, extra); changed(null); return halted; };
+// Cloudflare's free pictures come back at 00:00 UTC.
+function nextReset() {
+  const d = new Date();
+  return Date.UTC(d.getUTCFullYear(), d.getUTCMonth(), d.getUTCDate() + 1);
+}
+export const resetTime = () => new Date(nextReset()).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
 
-async function draw({ prompt, images }) {
-  const parts = [];
-  for (const img of images) parts.push({ inline_data: { mime_type: img.type || "image/jpeg", data: await toB64(img) } });
-  parts.push({ text: prompt });
-  const body = { contents: [{ role: "user", parts }], generationConfig: { responseModalities: ["IMAGE"], imageConfig: { aspectRatio: "2:3" } } };
-  const models = io.model?.() ? [io.model(), ...MODELS.filter((m) => m !== io.model())] : model ? [model, ...MODELS.filter((m) => m !== model)] : MODELS;
-  let tries = 0, last = "";
-  for (let i = 0; i < models.length;) {
-    const m = models[i];
+async function draw({ prompt, images, seed }) {
+  const form = new FormData();
+  form.append("prompt", prompt);
+  form.append("width", String(SIZE.width));
+  form.append("height", String(SIZE.height));
+  if (seed != null) form.append("seed", String(seed));
+  images.forEach((img, i) => form.append(`input_image_${i}`, img, `image${i}.jpg`));
+  for (let tries = 0; ; tries++) {
     let r, j;
     try {
-      r = await io.post(m, body);
+      r = await io.post(form);
       j = await r.json().catch(() => ({}));
     } catch {
-      if (++tries > 2) throw new Error("Couldn't reach Gemini. Check the internet connection.");
+      if (tries >= 2) throw new Error("Couldn't reach your server. Check the internet connection.");
       await sleep(4000);
       continue;
     }
-    if (typeof j.error === "string") throw stop(j.error); // the server itself: no key saved
-    const msg = j.error?.message || "";
-    if (r.ok) {
-      const ps = j.candidates?.[0]?.content?.parts || [];
-      const img = ps.filter((p) => (p.inlineData || p.inline_data) && !p.thought).pop();
-      const data = img && (img.inlineData || img.inline_data);
-      if (data?.data) { model = m; return asJpeg(b64Blob(data.data, data.mimeType || data.mime_type || "image/png")); }
-      last = j.candidates?.[0]?.finishReason || j.promptFeedback?.blockReason || "no picture";
-      if (++tries > 1) throw new Error(`Gemini didn't draw this one (${String(last).toLowerCase().replace(/_/g, " ")}).`);
-      continue; // once more, the same model
+    if (r.ok && j.image) return asJpeg(b64Blob(j.image));
+    if (j.limit) {
+      const at = nextReset();
+      throw stop(`Today's free pictures from Cloudflare are used up (about ${FREE_A_DAY} a day for all devices). More from ${resetTime()}, and nothing is ever charged.`, { capped: true, until: at });
     }
-    if (r.status === 404 || (r.status === 400 && /not found|not supported|unknown name|imageConfig|response_?modalit/i.test(msg))) { i++; tries = 0; last = msg; continue; }
-    if (r.status === 401 || r.status === 403) throw stop(`Gemini refused the key: ${msg || r.status}`);
-    if (r.status === 429 && /limit: 0|free_tier|free tier/i.test(msg)) throw stop("This Gemini key can't make pictures: image generation isn't in Google's free tier. Turn on billing for the key's project in Google AI Studio, then tap Try again.");
-    if (r.status === 400 && /billing|FAILED_PRECONDITION|location|region/i.test(msg)) throw stop(`Gemini can't make pictures with this key: ${msg}`);
-    if ((r.status === 429 || r.status >= 500) && ++tries <= 3) { await sleep(tries * 8000); continue; }
-    throw new Error(msg ? `Gemini: ${msg}` : `Gemini error ${r.status}`);
+    if (r.status === 404) throw stop(j.error || "The server can't draw pictures yet.");
+    if ((r.status >= 500 || r.status === 429) && tries < 2) { await sleep((tries + 1) * 5000); continue; }
+    throw new Error(j.error ? `Couldn't draw it: ${j.error}` : `Couldn't draw it (error ${r.status}).`);
   }
-  throw stop(`None of Gemini's image models answered (${last || "not found"}). Set one in Settings > Try-on.`);
 }
 
 /* ---------- the turntable ---------- */
