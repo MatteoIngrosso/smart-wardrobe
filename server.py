@@ -29,7 +29,7 @@ COLS = {"items", "log", "kv", "wants", "scents", "events"}
 BLOB_KEY = re.compile(r"^[0-9a-z-]{4,80}\.(jpg|webp|png|bin)$")
 BLOB_TYPE = {"jpg": "image/jpeg", "webp": "image/webp", "png": "image/png", "bin": "application/octet-stream"}
 MAX_BLOB = 25 * 1024 * 1024
-CACHE_DAYS = {"scent": None, "pair": 30}  # AI answers kept, by kind (None: for good)
+CACHE_DAYS = {"scent": None, "pair": 30, "tryon": 10 / 1440}  # AI answers kept, by kind (None: for good; tryon: a device drawing a try-on picture)
 MAX_CACHE = 20_000
 
 

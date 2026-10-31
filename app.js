@@ -7,6 +7,7 @@ import { parseICS, eventsBetween, guessOccasion, titleKey } from "./calendar.js"
 import * as Style from "./stylist.js";
 import * as Label from "./label.js";
 import { editCutout } from "./cutout-editor.js";
+import * as TryOn from "./tryon.js";
 
 /* ======================================================================
    Reference data
@@ -275,6 +276,9 @@ const state = {
     autoCutout: true, aiAuto: true, autoWash: true,
     washAfter: { hoodies: 3, knits: 4, trousers: 4, jeans: 6 }, // wears before these go in the wash (Settings > Laundry; 0 = never)
     washBack: 0, // days after which clothes come back from the wash by themselves (0: the app asks)
+    tryon: true, // Today's mirror draws all four sides of the three ideas in the background (Settings > Try-on)
+    tryonCap: 40, // try-on pictures a day on this device, at most
+    tryonModel: "", // Gemini image model; "" = the first of TryOn.MODELS that answers
   },
   usage: { month: "", requests: 0, input: 0, output: 0 },
   wishlist: [], // before Must-Buy: moved into `wants` once (see moveWishlist)
@@ -373,7 +377,7 @@ const sync = {
 };
 const SYNC_STATE = "sync";
 // Shared values kept under "kv", and what each is when there's nothing yet.
-const SHARED_KV = { wishlist: () => [], calendar: () => ({ links: [], occ: {} }), plan: () => null, audit: () => null };
+const SHARED_KV = { wishlist: () => [], calendar: () => ({ links: [], occ: {} }), plan: () => null, audit: () => null, avatar: () => null };
 function syncKey(s, k) {
   if (["items", "log", "wants", "events", "scents"].includes(s)) return `${s}/${k}`;
   return s === "kv" && Object.hasOwn(SHARED_KV, k) ? `kv/${k}` : null;
@@ -544,6 +548,7 @@ async function applyRecords(records) {
       if (rec.id === "calendar") state.cal.at = 0; // read the calendars again
       if (rec.id === "plan") state.outfits = [];
       if (rec.id === "audit") state.disc.feedMemo = null;
+      if (rec.id === "avatar") mirror.draft = null; // a body saved on another device
     } else continue;
     sync.meta[key] = rec.updatedAt;
     sync.dirty.delete(key);
@@ -1700,7 +1705,7 @@ function ideaPool(opts = {}) {
   // outfits around the others.
   const tries = (x) => (({ 5: 3, 4: 2, 2: 0.6, 1: 0.4 })[starsOf(x)] || 1) * (dressy && casualPiece(x) ? 0.35 : 1) * (atBudget(x) ? 0.4 : 1);
   const pick = (arr) => {
-    let r = Math.random() * arr.reduce((a, x) => a + tries(x), 0);
+    let r = rand() * arr.reduce((a, x) => a + tries(x), 0);
     for (const x of arr) if ((r -= tries(x)) < 0) return x;
     return arr.at(-1);
   };
@@ -1727,15 +1732,15 @@ function ideaPool(opts = {}) {
     // Cool days: mostly base + mid layer. Warm days: mostly a base layer alone, but mid
     // layers are still tried (the score decides), so a wardrobe with one or two T-shirts
     // still gets three different ideas.
-    const r = Math.random();
+    const r = rand();
     if (by.base.length && (!by.mid.length || r < (wantMid ? 0.85 : 0.7))) o.base = pick(by.base);
     // On a mild day a jacket is the layer: it comes instead of a sweater or hoodie, not on top of one.
-    const mildJacket = by.outer.length && !wantOuter && Math.random() < maybeOuter;
+    const mildJacket = by.outer.length && !wantOuter && rand() < maybeOuter;
     if (by.mid.length && (!o.base || (wantMid && !mildJacket) || (r < 0.15 && cond.feels < 22))) o.mid = pick(by.mid);
-    if (by.outer.length && (wantOuter || mildJacket)) o.outer = warmOuter.length && Math.random() < 0.8 ? pick(warmOuter) : pick(by.outer);
+    if (by.outer.length && (wantOuter || mildJacket)) o.outer = warmOuter.length && rand() < 0.8 ? pick(warmOuter) : pick(by.outer);
     if (by.bottom.length) o.bottom = pick(by.bottom);
-    if (useKit && Math.random() < 0.25) [o.outer, o.base, o.bottom] = [pick(kit.j), pick(kit.s), pick(kit.b)];
-    if (suits.length && Math.random() < 0.33) [o.outer, o.bottom] = pick(suits);
+    if (useKit && rand() < 0.25) [o.outer, o.base, o.bottom] = [pick(kit.j), pick(kit.s), pick(kit.b)];
+    if (suits.length && rand() < 0.33) [o.outer, o.bottom] = pick(suits);
     if (by.shoes.length) o.shoes = pick(by.shoes);
     if (anchor) o[roleOf(anchor)] = anchor;
     if (!o.base && !o.mid) continue;
@@ -1745,7 +1750,7 @@ function ideaPool(opts = {}) {
     seen.add(key);
     const scored = scoreOutfit(o, cond, occ, t);
     const level = Style.ready() ? dressLevel(Object.values(o).filter(Boolean)) : 0, range = level && levelsFor(occ);
-    cands.push({ key, pieces: o, ...scored, level, levelOff: !range ? 0 : level < range[0] ? range[0] - level : Math.max(0, level - range[2]), jitter: Math.random() * 0.6, blocked: t.blocked.has(key), isBroken: scored.broken.length > 0 });
+    cands.push({ key, pieces: o, ...scored, level, levelOff: !range ? 0 : level < range[0] ? range[0] - level : Math.max(0, level - range[2]), jitter: rand() * 0.6, blocked: t.blocked.has(key), isBroken: scored.broken.length > 0 });
   }
   cands.sort((a, b) => b.score + b.jitter - (a.score + a.jitter));
   const missing = ["bottom", "shoes"].filter((s) => !by[s].length && roleOf(anchor || {}) !== s);
@@ -1871,7 +1876,21 @@ function withWarn(idea, cond, occ) {
 }
 
 // `avoid`: outfits just shown, so "New ideas" always brings different ones.
+// Today's ideas come out the same each time the app opens on the same day, for the same occasion,
+// level, piece, event and temperature, so the try-on pictures drawn for them (see Mirror) stay
+// useful all day. "New ideas" moves the seed on; tomorrow starts afresh.
+let rand = Math.random;
+function seedIdeas(s) {
+  let a = parseInt(TryOn.hash(s).slice(0, 8), 16);
+  rand = () => { // mulberry32
+    a = (a + 0x6d2b79f5) | 0;
+    let t = Math.imul(a ^ (a >>> 15), 1 | a);
+    t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t;
+    return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
+  };
+}
 function generateOutfits(n = 3, avoid = []) {
+  seedIdeas([localDay(), state.occasion, state.level, state.anchor, Math.round(conditions().feels), state.event?.key, avoid.length].join("|"));
   tasteMemo = null; // pieces may have changed (colours, fit) since it was worked out
   const pool = ideaPool();
   const used = new Set();
@@ -2255,7 +2274,7 @@ function extrasFor(pieces, cond, occ, used) {
       if (d <= 1) s -= 1.5;
       if (isFavourite(i)) s += 0.4;
       if (used.has(i.id)) s -= 1;
-      return s + Math.random() * 0.3;
+      return s + rand() * 0.3;
     };
     const best = options.map((i) => [i, score(i)]).sort((a, b) => b[1] - a[1])[0][0];
     used.add(best.id);
@@ -3228,6 +3247,7 @@ function renderToday() {
       <div><h1>${greet}</h1><p class="sub">${esc(dateStr)}</p></div>
       <button class="btn" data-act="shuffle"><svg viewBox="0 0 24 24"><path d="M16 3h5v5M4 20 21 3M21 16v5h-5M15 15l6 6M4 4l5 5"/></svg>New ideas</button>
     </div>
+    ${safeMirrorHTML()}
     <div class="stack">
       <div class="card row" style="justify-content:space-between">
         ${weatherHtml}
@@ -3249,6 +3269,7 @@ function renderToday() {
       <p class="muted small" style="margin:0">${esc(tasteLine())}</p>
       ${aiCard()}
     </div>`;
+  mountMirror();
 }
 const ICON_CAL = `<svg viewBox="0 0 24 24"><rect x="3" y="5" width="18" height="16" rx="2"/><path d="M3 10h18M8 3v4M16 3v4"/></svg>`;
 // What's on today (and tomorrow, in the evening). Tap an event to dress for it; tap its
@@ -3461,6 +3482,325 @@ function aiCard() {
     </div>
     <div class="row"><input id="ask-input" class="input" style="flex:1;min-width:0" placeholder="Ask about your wardrobe…" data-input="ask"><button class="btn primary" data-act="ask">Ask</button></div>
     <div class="ai-answer" id="ai-answer">${answerHTML(state.aiAnswer)}</div>
+  </section>`;
+}
+
+/* ---------- Mirror: you, wearing today's ideas (see tryon.js) ---------- */
+// The top of Today: your body on the left, you in the middle (drag to turn), today's ideas on the
+// right with what you're wearing, each piece can come off. Gemini draws you once from four sides
+// (Save Body), then each outfit on those pictures; every picture is kept on the server under a
+// hash of body + pieces + angle, so no combination is drawn twice.
+const mirror = {
+  draft: null, // the body on the sliders; the saved one is state.avatar.body
+  pick: 0, // which of today's ideas he wears
+  angle: 0, // 0 front, 1 right, 2 back, 3 left
+  off: {}, // per idea key: the roles taken off ("outer", "shoes"…)
+  combos: [], // per idea: { list, pieces, keys } (see mirrorRefresh)
+  now: null, // what he wears now: an idea, or one with pieces taken off ({ ..., custom })
+  sig: "", // the last combination shown, to start a new one from the front
+  shown: {}, // per angle: the last dressed picture shown, kept on him while the next one is drawn
+  shownFor: null, // the avatar those pictures are of
+  run: 0,
+};
+const MIRROR_ROLES = ["outer", "mid", "base", "bottom", "shoes"];
+const ROLE_WORD = { coat: "Coat", outer: "Jacket", mid: "Layer", base: "Top", bottom: "Bottoms", shoes: "Shoes" };
+const tryonCount = { day: "", n: 0, month: "", m: 0 };
+let deviceId = "";
+
+const tryonKey = () => !!(state.serverKeys.gemini || state.settings.geminiKey);
+const tryonCap = () => Math.max(0, Math.round(state.settings.tryonCap ?? 40));
+function tryonSpent() {
+  const d = localDay(), m = d.slice(0, 7);
+  if (tryonCount.day !== d) Object.assign(tryonCount, { day: d, n: 0 });
+  if (tryonCount.month !== m) Object.assign(tryonCount, { month: m, m: 0 });
+  return tryonCount;
+}
+TryOn.init({
+  post: (model, body) => state.serverKeys.gemini
+    ? fetch(`api/ai/gemini/${encodeURIComponent(model)}`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(body) })
+    : fetch(`https://generativelanguage.googleapis.com/v1beta/models/${encodeURIComponent(model)}:generateContent`, {
+      method: "POST", headers: { "Content-Type": "application/json", "x-goog-api-key": state.settings.geminiKey }, body: JSON.stringify(body),
+    }),
+  server: () => sync.status === "on",
+  get me() { return deviceId; },
+  model: () => (state.settings.tryonModel || "").trim(),
+  budget: {
+    // Pictures nobody has asked to see yet stop at three quarters of the daily limit, so there's room for the ones you pick.
+    ok: (background) => tryonSpent().n < (background ? Math.floor(tryonCap() * 0.75) : tryonCap()),
+    why: () => `Today's limit of ${tryonCap()} try-on pictures is used up on this device. Change it in Settings > Try-on.`,
+    spend: () => { const c = tryonSpent(); c.n++; c.m++; raw.put("kv", { ...c }, "tryonCount"); },
+  },
+  onChange: () => {
+    if (!mirror.frame) mirror.frame = requestAnimationFrame(() => { mirror.frame = 0; try { paintMirror(); } catch (e) { console.error("Mirror:", e); } });
+  },
+});
+async function loadTryOn() {
+  Object.assign(tryonCount, (await raw.get("kv", "tryonCount")) || {});
+  deviceId = (await raw.get("kv", "deviceId")) || "";
+  if (!deviceId) { deviceId = uid(); await raw.put("kv", deviceId, "deviceId"); }
+}
+
+const bodyDraft = () => (mirror.draft ||= TryOn.cleanBody({ ...TryOn.BODY_DEFAULT, age: state.settings.age, ...(state.avatar?.body || {}) }));
+function wornList(o) {
+  if (!o) return [];
+  return [...(o.coat ? [{ role: "coat", item: o.coat }] : []), ...MIRROR_ROLES.filter((r) => o.pieces[r]).map((r) => ({ role: r, item: o.pieces[r] }))];
+}
+const mirrorOff = (o) => (o && mirror.off[o.key]) || [];
+// What you'd log with "Wear this today" from the mirror: the idea without the pieces taken off.
+function mirrorWorn(o) {
+  const offIds = new Set(wornList(o).filter((x) => mirrorOff(o).includes(x.role)).map((x) => x.item.id));
+  return allPieces(o).filter((p) => !offIds.has(p.id));
+}
+const asBlob = async (x) => (x instanceof Blob ? x : x ? fetch(x).then((r) => r.blob()).catch(() => null) : null);
+async function tryonPiece({ role, item }) {
+  const [front, back] = await Promise.all([asBlob(item.photos?.[0]), asBlob(item.photos?.[1])]);
+  return {
+    role, id: item.id, name: item.name, kind: catLabel(item.category).toLowerCase(), fit: FITS[item.fit]?.label, colors: item.colors || [], front, back,
+    photo: front ? (await blobKey(front)).split(".")[0] : "",
+  };
+}
+async function comboFor(list) {
+  const pieces = await Promise.all(list.map(tryonPiece));
+  return { list, pieces, keys: TryOn.comboKeys(state.avatar.id, pieces) };
+}
+const specKeys = (spec) => [spec.key, ...spec.deps.flatMap(specKeys)];
+
+// Work out what he wears and which pictures it needs, then ask for them, most wanted first:
+// the base sheet, the angle you're looking at, the rest of this outfit, then the other ideas.
+// `user`: you just picked, turned or took something off. New ideas that came by themselves (the
+// weather loading, the calendar) wait a moment first, in case they change again straight away.
+async function mirrorRefresh(user = false) {
+  const run = ++mirror.run;
+  const av = state.avatar;
+  if (!av || !tryonKey() || !["on", "off"].includes(sync.status)) { mirror.now = null; return paintMirror(); }
+  const ideas = state.outfits.slice(0, 3);
+  mirror.pick = Math.min(mirror.pick, Math.max(0, ideas.length - 1));
+  for (const k of Object.keys(mirror.off)) if (!ideas.some((o) => o.key === k)) delete mirror.off[k];
+  const o = ideas[mirror.pick], off = mirrorOff(o);
+  const combos = await Promise.all(ideas.map((x) => comboFor(wornList(x))));
+  const now = !o ? await comboFor([]) : off.length ? await comboFor(wornList(o).filter((x) => !off.includes(x.role))) : combos[mirror.pick];
+  if (run !== mirror.run || state.avatar !== av) return;
+  mirror.combos = combos;
+  mirror.now = { ...now, custom: off.length > 0 };
+  // A combination not drawn yet starts from the front, which is drawn first.
+  if (now.keys.front !== mirror.sig) { mirror.sig = now.keys.front; if (!TryOn.url(now.keys.front)) mirror.angle = 0; }
+  const wanted = [];
+  const ask = (pieces, angle, prio, background) => {
+    const spec = TryOn.outfitSpec(av.id, av.body, pieces, angle);
+    wanted.push(...specKeys(spec));
+    TryOn.want(spec, prio, background);
+  };
+  TryOn.ANGLES.forEach((a) => ask([], a, a === "front" ? 0 : 1, false)); // the base sheet from Save Body
+  const dress = () => {
+    if (run !== mirror.run) return;
+    const cur = TryOn.ANGLES[mirror.angle];
+    ask(now.pieces, cur, 2, false);
+    TryOn.ANGLES.forEach((a) => a !== cur && ask(now.pieces, a, 3, false));
+    if (state.settings.tryon !== false) {
+      combos.forEach((c, i) => {
+        if (i === mirror.pick && !off.length) return;
+        TryOn.ANGLES.forEach((a) => ask(c.pieces, a, a === "front" ? 4 + i * 0.1 : 5 + i * 0.1, true));
+      });
+    }
+    TryOn.keepOnly(wanted);
+    paintMirror();
+  };
+  const set = [now.keys.front, ...combos.map((c) => c.keys.front)].join();
+  clearTimeout(mirror.later);
+  if (set !== mirror.set && !user) {
+    mirror.set = set;
+    TryOn.keepOnly(wanted); // what was waiting for the old ideas is dropped now
+    mirror.later = setTimeout(dress, 2500);
+    return paintMirror();
+  }
+  mirror.set = set;
+  dress();
+}
+
+const SILHOUETTE = `<svg class="tt-ghost" viewBox="0 0 120 300" aria-hidden="true"><circle cx="60" cy="30" r="17"/><path d="M60 52c-17 0-30 6-33 16l-8 70c-1 7 9 9 11 2l9-58v74l-4 128c0 8 13 8 14 0l9-112h4l9 112c1 8 14 8 14 0l-4-128V82l9 58c2 7 12 5 11-2l-8-70c-3-10-16-16-33-16z"/></svg>`;
+function mirrorHTML() {
+  const av = state.avatar, b = bodyDraft();
+  const ideas = state.outfits.slice(0, 3);
+  const o = ideas[Math.min(mirror.pick, Math.max(0, ideas.length - 1))];
+  const pick = ideas.indexOf(o);
+  const off = mirrorOff(o);
+  const range = (k, label, min, max, val, shown) => `<div class="field mb-field"><label for="mb-${k}">${label} <b id="mb-${k}-v">${esc(shown)}</b></label><input id="mb-${k}" type="range" min="${min}" max="${max}" step="1" value="${val}" data-input="mb-${k}"></div>`;
+  const stageNote = !tryonKey()
+    ? `<b>Try-on needs Gemini</b><span>Image generation runs on Gemini. Add a Gemini key in Settings (on the server or on this device).</span>`
+    : !av ? `<b>Make your avatar</b><span>Set your body on the ${innerWidth > 760 ? "left" : "panel below"}, then tap Save Body. Gemini draws you once from the front, both sides and the back.</span>` : "";
+  return `<section class="mirror" id="mirror">
+    <aside class="mirror-side mirror-body" aria-label="Your body">
+      <h2>Your body</h2>
+      ${range("height", "Height", 160, 200, b.height, `${b.height} cm`)}
+      ${range("weight", "Weight", 0, 4, b.weight, TryOn.WEIGHTS[b.weight])}
+      ${range("build", "Build", 0, 4, b.build, TryOn.BUILDS[b.build])}
+      <div class="field mb-field"><label>Skin tone</label><div class="swatch-row">${TryOn.SKINS.map((s, i) => `<button class="swatch" style="--sw:${s.hex}" data-mskin="${i}" aria-pressed="${b.skin === i}" aria-label="Skin tone ${i + 1}"></button>`).join("")}</div></div>
+      <div class="field mb-field"><label>Hair</label><div class="swatch-row">${TryOn.HAIRS.map((h, i) => h.hex ? `<button class="swatch" style="--sw:${h.hex}" data-mhair="${i}" aria-pressed="${b.hair === i}" aria-label="${esc(h.words)}"></button>` : `<button class="chip swatch-chip" data-mhair="${i}" aria-pressed="${b.hair === i}">${h.label}</button>`).join("")}</div></div>
+      <button class="btn primary" data-act="body-save" id="mb-save">Save body</button>
+      <p class="muted small" id="mb-hint" style="margin:0"></p>
+    </aside>
+    <div class="mirror-stage">
+      <div class="tt${av && tryonKey() ? "" : " empty"}" tabindex="0" role="img" aria-label="You, dressed in the outfit picked on the right. Drag sideways to turn.">
+        ${TryOn.ANGLES.map((a) => `<img class="tt-frame" data-angle="${a}" alt="" draggable="false">`).join("")}
+        ${SILHOUETTE}
+        <div class="tt-scan" aria-hidden="true"></div>
+        <div class="tt-note" role="status">${stageNote}</div>
+      </div>
+      <div class="tt-bar">
+        <button class="btn icon-btn ghost" data-tt="-1" aria-label="Turn him to the left"><svg viewBox="0 0 24 24"><path d="M15 5l-7 7 7 7"/></svg></button>
+        <div class="tt-dots">${TryOn.ANGLES.map((a, i) => `<button class="tt-dot" data-tta="${i}" aria-label="${TryOn.ANGLE_LABEL[a]}"><i></i></button>`).join("")}</div>
+        <span class="tt-angle muted small"></span>
+        <button class="btn icon-btn ghost" data-tt="1" aria-label="Turn him to the right"><svg viewBox="0 0 24 24"><path d="M9 5l7 7-7 7"/></svg></button>
+      </div>
+    </div>
+    <aside class="mirror-side mirror-looks" aria-label="Today's ideas">
+      <h2>Today's ideas</h2>
+      <div class="m-looks">${ideas.map((x, i) => `<button class="m-look" data-mlook="${i}" aria-pressed="${i === pick}">
+        <span class="look-pics">${wornList(x).filter((w) => w.role !== "coat").map((w) => `<img src="${photoURL(w.item.photos?.[0])}" alt="">`).join("")}</span>
+        <span class="look-text"><b>${x.planned ? "Your plan" : ["Best match", "Option 2", "Option 3"][i]}</b><span class="muted small" data-lookstate="${i}"></span></span>
+      </button>`).join("") || `<p class="muted small">Add a few more tops to get outfit ideas.</p>`}</div>
+      ${o ? `<h2 class="wearing-head">Wearing</h2>
+      <div class="wearing">${wornList(o).map((w) => {
+        const on = !off.includes(w.role);
+        return `<div class="wear-row${on ? "" : " is-off"}"><img src="${photoURL(w.item.photos?.[0])}" alt=""><span class="wear-name"><b>${esc(w.item.name)}</b><span class="muted small">${ROLE_WORD[w.role]}</span></span><button class="chip" data-mpiece="${w.role}" aria-pressed="${!on}">${on ? "Take off" : "Put on"}</button></div>`;
+      }).join("")}</div>
+      ${state.event?.day === "tomorrow" ? `<button class="btn primary" data-plan="${pick}">Plan it for tomorrow</button>` : `<button class="btn primary" data-wear="${pick}" data-mirror="1">Wear this today</button>`}` : ""}
+    </aside>
+  </section>`;
+}
+function safeMirrorHTML() {
+  try { return mirrorHTML(); } catch (e) { console.error("Mirror:", e); return ""; }
+}
+// Put the mirror on the page again (a new idea picked, a piece taken off) without redrawing the rest of Today.
+function remountMirror() {
+  const el = $("#mirror");
+  if (!el) return;
+  el.outerHTML = safeMirrorHTML();
+  mountMirror(true);
+}
+function mountMirror(user = false) {
+  try { mountTurntable(user); } catch (e) { console.error("Mirror:", e); } // never in the way of the rest of Today
+}
+function mountTurntable(user) {
+  const tt = $("#mirror .tt");
+  if (!tt) return;
+  TryOn.turntable(tt, {
+    get: () => mirror.angle,
+    set: (n) => { mirror.angle = n; paintMirror(); mirrorRefresh(true); },
+    paint: setFrames,
+  });
+  bodyUI();
+  paintMirror();
+  mirrorRefresh(user).catch((e) => console.error("Mirror:", e));
+}
+// The four pictures at a position between angles: each fades in as he turns to it.
+function setFrames(pos) {
+  const w = TryOn.weights(pos);
+  document.querySelectorAll("#mirror .tt-frame").forEach((img, i) => {
+    let d = ((i - pos) % 4 + 6) % 4 - 2; // -2…2: how far this angle is from the one shown, and on which side
+    img.style.opacity = img.getAttribute("src") ? w[i] : 0;
+    img.style.transform = `translateX(${(-d * 7).toFixed(2)}%)`;
+  });
+}
+function paintMirror() {
+  const root = $("#mirror");
+  if (!root) return;
+  const av = state.avatar, keys = mirror.now?.keys;
+  const base = av && Object.fromEntries(TryOn.ANGLES.map((a) => [a, TryOn.baseKey(av.id, a)]));
+  if (mirror.shownFor !== (av?.id || null)) { mirror.shown = {}; mirror.shownFor = av?.id || null; }
+  root.querySelectorAll(".tt-frame").forEach((img) => {
+    const a = img.dataset.angle;
+    // While a new combination is drawn, the last outfit stays on him under the scan (or the base picture).
+    const dressed = keys && TryOn.url(keys[a]);
+    if (dressed) mirror.shown[a] = dressed;
+    const src = dressed || mirror.shown[a] || (base && TryOn.url(base[a])) || "";
+    if ((img.getAttribute("src") || "") !== src) { if (src) img.src = src; else img.removeAttribute("src"); }
+  });
+  setFrames(mirror.angle);
+  const a = TryOn.ANGLES[mirror.angle];
+  root.querySelectorAll(".tt-dot").forEach((d, i) => d.setAttribute("aria-current", i === mirror.angle));
+  const label = root.querySelector(".tt-angle");
+  if (label) label.textContent = TryOn.ANGLE_LABEL[a];
+  const tt = root.querySelector(".tt");
+  const note = root.querySelector(".tt-note");
+  if (!av || !tryonKey()) { tt.classList.remove("scanning"); return; }
+  // What's happening to the picture you're looking at.
+  const key = keys?.[a] || base[a];
+  const st = TryOn.state(key);
+  const err = TryOn.halted || (st === "error" && TryOn.errorOf(key));
+  const isBase = !keys || key === base[a];
+  const working = ["waiting", "queued", "making"].includes(st);
+  tt.classList.toggle("scanning", working && !err);
+  tt.classList.toggle("has-pic", !!root.querySelector(".tt-frame[src]"));
+  let html = "";
+  if (sync.status === "connecting") html = `<span>Connecting…</span>`;
+  else if (sync.status === "offline" && st !== "ready") html = `<b>Offline</b><span>New pictures are drawn when the app can reach your server again.</span>`;
+  else if (err) html = `<b>${err.capped ? "Daily limit reached" : "Couldn't draw this one"}</b><span>${esc(err.message)}</span>${err.capped ? `<button class="chip" data-go="settings">Settings</button>` : `<button class="chip" data-act="tryon-retry">Try again</button>`}`;
+  else if (working) {
+    // Waiting on another picture first: your base picture, or the dressed front the other sides copy.
+    const what = TryOn.state(base[a]) === "making" || TryOn.state(base.front) === "making" ? "Drawing you"
+      : st === "making" || (keys && TryOn.state(keys.front) === "making") ? "Dressing you" : "In line";
+    html = `<span class="tt-pill">${what} · ${TryOn.ANGLE_LABEL[a]}</span>`;
+  }
+  if (note.dataset.html !== html) { note.innerHTML = html; note.dataset.html = html; }
+  note.classList.toggle("is-error", !!err);
+  // How far along each idea is.
+  mirror.combos.forEach((c, i) => {
+    const el = root.querySelector(`[data-lookstate="${i}"]`);
+    if (!el) return;
+    const states = TryOn.ANGLES.map((x) => TryOn.state(c.keys[x]));
+    const ready = states.filter((s) => s === "ready").length;
+    el.textContent = ready === 4 ? "Ready from every side"
+      : states.includes("making") ? `Drawing ${Math.min(4, ready + 1)} of 4…`
+      : states.includes("error") ? (ready ? `${ready} of 4 ready` : "Not drawn")
+      : state.settings.tryon === false && i !== mirror.pick ? "Drawn when you pick it"
+      : ready ? `${ready} of 4 ready` : "Waiting to be drawn";
+  });
+}
+// The Save Body button and the line under it.
+function bodyUI() {
+  const btn = $("#mb-save"), hint = $("#mb-hint");
+  if (!btn) return;
+  const id = TryOn.avatarId(bodyDraft()), saved = state.avatar?.id === id;
+  btn.disabled = saved || !tryonKey();
+  btn.textContent = saved ? "Saved" : "Save body";
+  const cost = `4 pictures, about $${(4 * TryOn.PRICE).toFixed(2)}`;
+  hint.textContent = !tryonKey() ? "Needs a Gemini key (Settings)."
+    : !state.avatar ? `Gemini draws you from four sides once (${cost}).`
+    : saved ? `${TryOn.bodyLine(state.avatar.body)}. Every device shows this body.`
+    : `Save to draw the new you (${cost}). Today's outfits are drawn again on the new body.`;
+}
+function bodyInput(k, v) {
+  const b = bodyDraft();
+  b[k] = +v;
+  const shown = { height: `${b.height} cm`, weight: TryOn.WEIGHTS[b.weight], build: TryOn.BUILDS[b.build] }[k];
+  const out = $(`#mb-${k}-v`);
+  if (out) out.textContent = shown;
+  bodyUI();
+}
+async function saveBody() {
+  const body = TryOn.cleanBody(bodyDraft());
+  state.avatar = { body, id: TryOn.avatarId(body), at: new Date().toISOString() };
+  mirror.draft = { ...body };
+  mirror.angle = 0;
+  await store.put("kv", state.avatar, "avatar");
+  remountMirror();
+}
+
+// Settings > Try-on: the avatar on Today, what it costs, and the limits.
+function tryonCard() {
+  const s = state.settings, c = tryonSpent();
+  const toggle = `<button class="toggle" role="switch" aria-checked="${s.tryon !== false}" data-toggle="tryon"><span class="knob"></span><span class="toggle-text"><b>Get today's ideas ready</b><span class="muted small">Draws all four sides of the three ideas in the background, so picking one and turning him is instant. Up to 12 pictures (about $${(12 * TryOn.PRICE).toFixed(2)}) each time the ideas change; ideas already drawn cost nothing.</span></span></button>`;
+  return `<section class="card stack">
+    <h2 style="margin:0">Try-on</h2>
+    <p class="muted small" style="margin:0">The avatar on Today. Gemini draws you once from four sides (Save Body on Today), then each outfit on those pictures. Every picture is kept on your server under a hash of body, pieces and angle, so a combination is never drawn twice, on any device. About $${TryOn.PRICE.toFixed(2)} a picture. Google's free tier doesn't make pictures: the Gemini key's project needs billing turned on (Google AI Studio > Billing).</p>
+    ${!tryonKey() ? `<p class="small" style="margin:0;color:var(--warn)">Needs a Gemini key: on your server (GEMINI_KEY) or above.</p>` : ""}
+    ${toggle}
+    <div class="field"><label for="tryon-cap">Daily limit</label><div class="row"><input id="tryon-cap" class="input" style="max-width:7rem" type="number" inputmode="numeric" min="0" max="500" data-input="tryoncap" value="${tryonCap()}"><span class="muted small">pictures a day on this device (ideas in the background stop at three quarters of it)</span></div></div>
+    <div class="field"><label for="tryon-model">Image model</label><input id="tryon-model" class="input" data-input="tryonmodel" value="${esc(s.tryonModel || "")}" placeholder="${TryOn.MODELS[0]} (automatic)" list="tryon-models" autocomplete="off">
+      <datalist id="tryon-models">${TryOn.MODELS.map((m) => `<option value="${m}"></option>`).join("")}<option value="gemini-3-pro-image"></option></datalist>
+      <span class="muted small">Empty: Nano Banana 2.1, falling back to older models if it isn't available. gemini-3-pro-image draws finer detail at about three times the price.</span></div>
+    <p class="muted small" style="margin:0">Today: ${c.n} of ${tryonCap()} pictures · this month: ${c.m} (about $${(c.m * TryOn.PRICE).toFixed(2)})${state.avatar ? ` · body: ${esc(TryOn.bodyLine(state.avatar.body))}` : ""}</p>
   </section>`;
 }
 
@@ -7212,6 +7552,7 @@ function renderSettings() {
         ${aiReady() && noFit ? `<div class="row"><button class="btn" data-act="fit-all">Find the fit of ${noFit} piece${noFit > 1 ? "s" : ""}</button><span class="muted small">About 300 tokens per piece. You can also tap the fit on any piece.</span></div>` : ""}
         <p class="muted small" style="margin:0">This month: ${u.requests} AI request${u.requests === 1 ? "" : "s"} · ${(u.input + u.output).toLocaleString()} tokens (${u.input.toLocaleString()} in, ${u.output.toLocaleString()} out)</p>
       </section>
+      ${tryonCard()}
       <section class="card stack">
         <h2 style="margin:0">Fashion bible</h2>
         ${(() => {
@@ -7540,6 +7881,23 @@ document.addEventListener("click", async (e) => {
   if (ds.view) return go(ds.view);
   if (ds.go) { closeSheet(); return go(ds.go); }
   if (ds.item) return openItem(ds.item);
+  // Mirror (Today)
+  if (ds.mlook != null) { mirror.pick = +ds.mlook; return remountMirror(); }
+  if (ds.mpiece) {
+    const o = state.outfits[mirror.pick];
+    if (!o) return;
+    const off = mirrorOff(o);
+    mirror.off[o.key] = off.includes(ds.mpiece) ? off.filter((r) => r !== ds.mpiece) : [...off, ds.mpiece];
+    return remountMirror();
+  }
+  if (ds.mskin != null || ds.mhair != null) {
+    const k = ds.mskin != null ? "skin" : "hair";
+    bodyDraft()[k] = +(ds.mskin ?? ds.mhair);
+    document.querySelectorAll(`[data-m${k}]`).forEach((b) => b.setAttribute("aria-pressed", b === t));
+    return bodyUI();
+  }
+  if (ds.tta != null) { mirror.angle = +ds.tta; paintMirror(); return mirrorRefresh(true); }
+  if (ds.tt) { mirror.angle = (mirror.angle + +ds.tt + 4) % 4; paintMirror(); return mirrorRefresh(true); }
   // Fragrances
   if (ds.side) { state.wardSide = ds.side; render(); main.scrollTop = 0; return; }
   if (ds.scf) { state.scentFilter = ds.scf; return render(); }
@@ -7725,7 +8083,7 @@ document.addEventListener("click", async (e) => {
   if (ds.wear != null) {
     const o = state.outfits[+ds.wear];
     const sc = outfitScent(o);
-    const washed = await wearOutfit(allPieces(o), { source: o.planned ? "plan" : "idea", ...(sc && { scentIds: [sc.id] }) });
+    const washed = await wearOutfit(ds.mirror ? mirrorWorn(o) : allPieces(o), { source: o.planned ? "plan" : "idea", ...(sc && { scentIds: [sc.id] }) });
     if (sc) await countScentWear(sc);
     if (o.planned) { state.plan = null; await savePlan(); }
     state.anchor = null;
@@ -7937,6 +8295,8 @@ document.addEventListener("click", async (e) => {
   }
 
   switch (ds.act) {
+    case "body-save": return saveBody();
+    case "tryon-retry": TryOn.resume(); return mirrorRefresh(true);
     case "seed": return loadSeed();
     case "shuffle": {
       // Every outfit shown since the morning (for this occasion, level and temperature) stays out, so
@@ -8097,6 +8457,16 @@ document.addEventListener("input", (e) => {
     else render();
     return;
   }
+  if (k.startsWith("mb-")) return bodyInput(k.slice(3), v);
+  if (k === "tryoncap") {
+    const n = Math.round(+v);
+    if (v === "" || !(n >= 0 && n <= 500)) return;
+    state.settings.tryonCap = n;
+    clearTimeout(e.target._t);
+    e.target._t = setTimeout(saveSettings, 400);
+    return;
+  }
+  if (k === "tryonmodel") { state.settings.tryonModel = v.trim(); clearTimeout(e.target._t); e.target._t = setTimeout(saveSettings, 400); return; }
   if (k === "trytext" || k === "trybrand") { state.disc.try[k === "trytext" ? "text" : "brand"] = v; return; }
   if (k === "tripq") { state.disc.tripq = v; return; }
   if (scentDraft && k.startsWith("sc-")) return scentTyped(scentDraft, k.slice(3), v);
@@ -8147,6 +8517,7 @@ document.addEventListener("keydown", (e) => {
    Boot
    ====================================================================== */
 await loadAll();
+await loadTryOn();
 await washBack();
 await moveWishlist();
 applyTheme();
