@@ -278,7 +278,6 @@ const state = {
     washBack: 0, // days after which clothes come back from the wash by themselves (0: the app asks)
     tryon: true, // Today's mirror draws all four sides of the three ideas in the background (Settings > Try-on)
     tryonCap: 40, // try-on pictures a day on this device, at most
-    tryonModel: "", // Gemini image model; "" = the first of TryOn.MODELS that answers
   },
   usage: { month: "", requests: 0, input: 0, output: 0 },
   wishlist: [], // before Must-Buy: moved into `wants` once (see moveWishlist)
@@ -3487,7 +3486,7 @@ function aiCard() {
 
 /* ---------- Mirror: you, wearing today's ideas (see tryon.js) ---------- */
 // The top of Today: your body on the left, you in the middle (drag to turn), today's ideas on the
-// right with what you're wearing, each piece can come off. Gemini draws you once from four sides
+// right with what you're wearing, each piece can come off. the image model draws you once from four sides
 // (Save Body), then each outfit on those pictures; every picture is kept on the server under a
 // hash of body + pieces + angle, so no combination is drawn twice.
 const mirror = {
@@ -3507,7 +3506,8 @@ const ROLE_WORD = { coat: "Coat", outer: "Jacket", mid: "Layer", base: "Top", bo
 const tryonCount = { day: "", n: 0, month: "", m: 0 };
 let deviceId = "";
 
-const tryonKey = () => !!(state.serverKeys.gemini || state.settings.geminiKey);
+// Pictures are drawn by Cloudflare Workers AI on your server (free daily allocation), so only the hosted app can make them.
+const tryonKey = () => !!state.serverKeys.image;
 const tryonCap = () => Math.max(0, Math.round(state.settings.tryonCap ?? 40));
 function tryonSpent() {
   const d = localDay(), m = d.slice(0, 7);
@@ -3516,14 +3516,9 @@ function tryonSpent() {
   return tryonCount;
 }
 TryOn.init({
-  post: (model, body) => state.serverKeys.gemini
-    ? fetch(`api/ai/gemini/${encodeURIComponent(model)}`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(body) })
-    : fetch(`https://generativelanguage.googleapis.com/v1beta/models/${encodeURIComponent(model)}:generateContent`, {
-      method: "POST", headers: { "Content-Type": "application/json", "x-goog-api-key": state.settings.geminiKey }, body: JSON.stringify(body),
-    }),
+  post: (form) => fetch("api/ai/image", { method: "POST", body: form }),
   server: () => sync.status === "on",
   get me() { return deviceId; },
-  model: () => (state.settings.tryonModel || "").trim(),
   budget: {
     // Pictures nobody has asked to see yet stop at three quarters of the daily limit, so there's room for the ones you pick.
     ok: (background) => tryonSpent().n < (background ? Math.floor(tryonCap() * 0.75) : tryonCap()),
@@ -3626,8 +3621,8 @@ function mirrorHTML() {
   const off = mirrorOff(o);
   const range = (k, label, min, max, val, shown) => `<div class="field mb-field"><label for="mb-${k}">${label} <b id="mb-${k}-v">${esc(shown)}</b></label><input id="mb-${k}" type="range" min="${min}" max="${max}" step="1" value="${val}" data-input="mb-${k}"></div>`;
   const stageNote = !tryonKey()
-    ? `<b>Try-on needs Gemini</b><span>Image generation runs on Gemini. Add a Gemini key in Settings (on the server or on this device).</span>`
-    : !av ? `<b>Make your avatar</b><span>Set your body on the ${innerWidth > 760 ? "left" : "panel below"}, then tap Save Body. Gemini draws you once from the front, both sides and the back.</span>` : "";
+    ? `<b>Try-on runs on your server</b><span>${sync.status === "connecting" ? "Connecting…" : "Pictures are drawn for free by Cloudflare, so open the app from its web address (not the PC copy) to use the try-on."}</span>`
+    : !av ? `<b>Make your avatar</b><span>Set your body on the ${innerWidth > 760 ? "left" : "panel below"}, then tap Save Body. You're drawn once from the front, both sides and the back, for free.</span>` : "";
   return `<section class="mirror" id="mirror">
     <aside class="mirror-side mirror-body" aria-label="Your body">
       <h2>Your body</h2>
@@ -3735,7 +3730,8 @@ function paintMirror() {
   let html = "";
   if (sync.status === "connecting") html = `<span>Connecting…</span>`;
   else if (sync.status === "offline" && st !== "ready") html = `<b>Offline</b><span>New pictures are drawn when the app can reach your server again.</span>`;
-  else if (err) html = `<b>${err.capped ? "Daily limit reached" : "Couldn't draw this one"}</b><span>${esc(err.message)}</span>${err.capped ? `<button class="chip" data-go="settings">Settings</button>` : `<button class="chip" data-act="tryon-retry">Try again</button>`}`;
+  else if (err) html = err.until ? `<b>Free pictures used up for today</b><span>${esc(err.message)}</span>`
+    : `<b>${err.capped ? "Daily limit reached" : "Couldn't draw this one"}</b><span>${esc(err.message)}</span>${err.capped ? `<button class="chip" data-go="settings">Settings</button>` : `<button class="chip" data-act="tryon-retry">Try again</button>`}`;
   else if (working) {
     // Waiting on another picture first: your base picture, or the dressed front the other sides copy.
     const what = TryOn.state(base[a]) === "making" || TryOn.state(base.front) === "making" ? "Drawing you"
@@ -3764,11 +3760,10 @@ function bodyUI() {
   const id = TryOn.avatarId(bodyDraft()), saved = state.avatar?.id === id;
   btn.disabled = saved || !tryonKey();
   btn.textContent = saved ? "Saved" : "Save body";
-  const cost = `4 pictures, about $${(4 * TryOn.PRICE).toFixed(2)}`;
-  hint.textContent = !tryonKey() ? "Needs a Gemini key (Settings)."
-    : !state.avatar ? `Gemini draws you from four sides once (${cost}).`
+  hint.textContent = !tryonKey() ? "Needs the hosted app (its web address)."
+    : !state.avatar ? "You're drawn from four sides once: 4 free pictures."
     : saved ? `${TryOn.bodyLine(state.avatar.body)}. Every device shows this body.`
-    : `Save to draw the new you (${cost}). Today's outfits are drawn again on the new body.`;
+    : "Save to draw the new you (4 free pictures). Today's outfits are drawn again on the new body.";
 }
 function bodyInput(k, v) {
   const b = bodyDraft();
@@ -3787,20 +3782,17 @@ async function saveBody() {
   remountMirror();
 }
 
-// Settings > Try-on: the avatar on Today, what it costs, and the limits.
+// Settings > Try-on: the avatar on Today, the free daily pictures, and the limits.
 function tryonCard() {
   const s = state.settings, c = tryonSpent();
-  const toggle = `<button class="toggle" role="switch" aria-checked="${s.tryon !== false}" data-toggle="tryon"><span class="knob"></span><span class="toggle-text"><b>Get today's ideas ready</b><span class="muted small">Draws all four sides of the three ideas in the background, so picking one and turning him is instant. Up to 12 pictures (about $${(12 * TryOn.PRICE).toFixed(2)}) each time the ideas change; ideas already drawn cost nothing.</span></span></button>`;
+  const toggle = `<button class="toggle" role="switch" aria-checked="${s.tryon !== false}" data-toggle="tryon"><span class="knob"></span><span class="toggle-text"><b>Get today's ideas ready</b><span class="muted small">Draws all four sides of the three ideas in the background, so picking one and turning him is instant. Up to 12 pictures each time the ideas change; ideas already drawn aren't drawn again.</span></span></button>`;
   return `<section class="card stack">
     <h2 style="margin:0">Try-on</h2>
-    <p class="muted small" style="margin:0">The avatar on Today. Gemini draws you once from four sides (Save Body on Today), then each outfit on those pictures. Every picture is kept on your server under a hash of body, pieces and angle, so a combination is never drawn twice, on any device. About $${TryOn.PRICE.toFixed(2)} a picture. Google's free tier doesn't make pictures: the Gemini key's project needs billing turned on (Google AI Studio > Billing).</p>
-    ${!tryonKey() ? `<p class="small" style="margin:0;color:var(--warn)">Needs a Gemini key: on your server (GEMINI_KEY) or above.</p>` : ""}
+    <p class="muted small" style="margin:0">The avatar on Today. Cloudflare Workers AI (FLUX.2) draws you once from four sides (Save Body on Today), then each outfit on those pictures. It's free: Cloudflare's free plan pays for about ${TryOn.FREE_A_DAY} pictures a day across all your devices, then stops until ${TryOn.resetTime()} instead of charging. Every picture is kept on your server under a hash of body, pieces and angle, so a combination is never drawn twice, on any device.</p>
+    ${!tryonKey() ? `<p class="small" style="margin:0;color:var(--warn)">Only works in the hosted app: open it from its web address.</p>` : ""}
     ${toggle}
     <div class="field"><label for="tryon-cap">Daily limit</label><div class="row"><input id="tryon-cap" class="input" style="max-width:7rem" type="number" inputmode="numeric" min="0" max="500" data-input="tryoncap" value="${tryonCap()}"><span class="muted small">pictures a day on this device (ideas in the background stop at three quarters of it)</span></div></div>
-    <div class="field"><label for="tryon-model">Image model</label><input id="tryon-model" class="input" data-input="tryonmodel" value="${esc(s.tryonModel || "")}" placeholder="${TryOn.MODELS[0]} (automatic)" list="tryon-models" autocomplete="off">
-      <datalist id="tryon-models">${TryOn.MODELS.map((m) => `<option value="${m}"></option>`).join("")}<option value="gemini-3-pro-image"></option></datalist>
-      <span class="muted small">Empty: Nano Banana 2.1, falling back to older models if it isn't available. gemini-3-pro-image draws finer detail at about three times the price.</span></div>
-    <p class="muted small" style="margin:0">Today: ${c.n} of ${tryonCap()} pictures · this month: ${c.m} (about $${(c.m * TryOn.PRICE).toFixed(2)})${state.avatar ? ` · body: ${esc(TryOn.bodyLine(state.avatar.body))}` : ""}</p>
+    <p class="muted small" style="margin:0">Today: ${c.n} of ${tryonCap()} pictures · this month: ${c.m} · nothing charged${state.avatar ? ` · body: ${esc(TryOn.bodyLine(state.avatar.body))}` : ""}</p>
   </section>`;
 }
 
@@ -8466,7 +8458,6 @@ document.addEventListener("input", (e) => {
     e.target._t = setTimeout(saveSettings, 400);
     return;
   }
-  if (k === "tryonmodel") { state.settings.tryonModel = v.trim(); clearTimeout(e.target._t); e.target._t = setTimeout(saveSettings, 400); return; }
   if (k === "trytext" || k === "trybrand") { state.disc.try[k === "trytext" ? "text" : "brand"] = v; return; }
   if (k === "tripq") { state.disc.tripq = v; return; }
   if (scentDraft && k.startsWith("sc-")) return scentTyped(scentDraft, k.slice(3), v);
