@@ -11,9 +11,6 @@
 //     HEAD/GET/PUT /api/blob/<key>        photos, stored once by content hash
 //     POST /api/ai/gemini/<model>         Gemini generateContent with the GEMINI_KEY secret
 //     POST /api/ai/claude/v1/messages     Claude Messages API with the CLAUDE_KEY secret
-//     POST /api/ai/image                  a try-on picture, free: FLUX.2 [klein] 4B on Workers AI (form: prompt,
-//                                         width, height, seed, input_image_0…3), {image} as base64; 429 {limit}
-//                                         when the day's free neurons are used up
 //     GET  /api/page?url=…&code=…         a shop's product page: {url, title, image, images, description, price, site, text, tried}
 //     GET  /api/image?url=…               a product photo from a shop (to keep as a piece's picture)
 //     GET  /api/products?q=…&gl=it&hl=it  real products with photos (Google Shopping via SerpApi)
@@ -27,8 +24,6 @@
 //
 // Settings (see README, "Putting it online"):
 //     DB            D1 database binding, created on the first deploy (wrangler.jsonc)
-//     AI            Workers AI binding (wrangler.jsonc): free try-on pictures, 10,000 neurons a day on the
-//                   Workers Free plan. Past that Cloudflare refuses until 00:00 UTC; the free plan is never charged.
 //     APP_PASSWORD  secret: the password for the sign-in page. Without it nothing is served.
 //     GEMINI_KEY    optional secret
 //     CLAUDE_KEY    optional secret
@@ -42,7 +37,7 @@ const MAX_BLOB = 1_900_000; // a D1 row holds up to 2 MB; photos are resized to 
 const MAX_BODY = 25 * 1024 * 1024;
 const PUBLIC = new Set(["/manifest.webmanifest", "/icon.svg", "/apple-touch-icon.png"]); // browsers fetch these without cookies
 const SESSION_DAYS = 365;
-const CACHE_DAYS = { scent: Infinity, pair: 30, tryon: 10 / 1440 }; // AI answers kept in ai_cache, by kind (tryon: a device drawing a try-on picture, for ten minutes)
+const CACHE_DAYS = { scent: Infinity, pair: 30 }; // AI answers kept in ai_cache, by kind
 const MAX_CACHE = 20_000; // characters of JSON per answer
 const MAX_TRIES = 10; // wrong passwords per address before a 15-minute pause
 const PAUSE_MS = 15 * 60_000;
@@ -77,7 +72,7 @@ export async function handleApi(request, env) {
     if (path === "photos" && method === "GET") return await photoSearch(env, new URL(request.url).searchParams);
     if (path === "calendar" && method === "POST") return await calendar(request);
     if (path === "ping" && method === "GET") {
-      const keys = { gemini: !!env.GEMINI_KEY, claude: !!env.CLAUDE_KEY, products: !!env.SERPAPI_KEY, image: !!env.AI };
+      const keys = { gemini: !!env.GEMINI_KEY, claude: !!env.CLAUDE_KEY, products: !!env.SERPAPI_KEY };
       if (!env.DB) return json({ ok: true, sync: false, rev: 0, keys });
       return json({ ok: true, sync: true, rev: await currentRev(env.DB), keys });
     }
@@ -330,29 +325,8 @@ async function calendar(request) {
 
 /* ---------- AI pass-through ---------- */
 
-// A try-on picture on Cloudflare's own GPUs, paid by the free daily neurons of Workers AI.
-async function image(request, env) {
-  if (!env.AI) return fail(404, "Workers AI isn't connected to this deployment.");
-  const type = request.headers.get("Content-Type") || "";
-  if (!type.startsWith("multipart/form-data")) return fail(400, "Expected a form");
-  const body = await request.arrayBuffer();
-  if (body.byteLength > MAX_IMAGE_FORM) return fail(413, "Too large");
-  try {
-    const out = await env.AI.run(IMAGE_MODEL, { multipart: { body: new Blob([body]).stream(), contentType: type } });
-    return out?.image ? json({ image: out.image }) : fail(502, "No picture came back.");
-  } catch (e) {
-    const msg = String(e?.message || e);
-    if (/4006|daily free allocation|neurons/i.test(msg)) return json({ error: "Today's free pictures are used up.", limit: true }, 429);
-    return fail(502, msg.slice(0, 300));
-  }
-}
-
-const IMAGE_MODEL = "@cf/black-forest-labs/flux-2-klein-4b"; // edits with up to 4 reference pictures (each within 512 x 512)
-const MAX_IMAGE_FORM = 4_000_000;
-
 async function ai(request, env, rest) {
   if (request.method !== "POST") return fail(405, "Method not allowed");
-  if (rest === "image") return image(request, env);
   const gemini = rest.match(/^gemini\/([a-z0-9.-]{1,60})$/);
   if (gemini) {
     if (!env.GEMINI_KEY) return fail(404, "No Gemini key is saved on the server.");
