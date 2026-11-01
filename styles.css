@@ -565,42 +565,21 @@ details summary { cursor: pointer; }
 .mb-photo .chip { min-height: 38px; padding: 0 12px; font-size: 14px; }
 
 .mirror-stage { display: grid; gap: 8px; justify-items: center; min-width: 0; }
-.tt { position: relative; width: 100%; height: min(72vh, 760px); border-radius: 22px; overflow: hidden; outline: none;
-      background: radial-gradient(120% 80% at 50% 38%, #1d1c1a 0%, var(--studio) 62%);
-      box-shadow: inset 0 0 0 1px #2c2a27, inset 0 0 0 7px #191816, inset 0 0 0 8px #2c2a27, inset 0 0 70px rgba(0, 0, 0, .55);
-      touch-action: pan-y; cursor: grab; color: #f2f2f2; }
-.tt:focus-visible { box-shadow: inset 0 0 0 2px #f2f2f2, inset 0 0 70px rgba(0, 0, 0, .55); }
-.tt.turning { cursor: grabbing; }
-.tt-frame { position: absolute; inset: 8px; width: calc(100% - 16px); height: calc(100% - 16px); object-fit: contain; opacity: 0; pointer-events: none;
-            transition: opacity .35s ease, transform .35s ease, filter .4s;
-            -webkit-mask-image: radial-gradient(ellipse 60% 54% at 50% 50%, #000 80%, transparent 100%);
-            mask-image: radial-gradient(ellipse 60% 54% at 50% 50%, #000 80%, transparent 100%); }
-.tt.turning .tt-frame { transition: filter .4s; }
-.tt-ghost { position: absolute; left: 50%; top: 50%; width: auto; height: 78%; transform: translate(-50%, -50%); fill: #24231f; stroke: #34322d; stroke-width: 1; pointer-events: none; }
-.tt.has-pic .tt-ghost { display: none; }
-.tt.scanning .tt-frame { filter: grayscale(.55) brightness(.72); }
-.tt-scan { position: absolute; inset: 0; pointer-events: none; opacity: 0; transition: opacity .3s; }
-.tt.scanning .tt-scan { opacity: 1; }
-.tt-scan::before { content: ""; position: absolute; left: 10%; right: 10%; top: 6%; height: 90px; margin-top: -88px;
-                   background: linear-gradient(to bottom, transparent, rgba(242, 242, 242, .10) 70%, rgba(242, 242, 242, .85) 99%, transparent);
-                   border-bottom: 1px solid rgba(255, 255, 255, .9); filter: drop-shadow(0 4px 10px rgba(255, 255, 255, .35));
-                   animation: tt-scan 2.8s cubic-bezier(.45, 0, .55, 1) infinite; }
-.tt-scan::after { content: ""; position: absolute; inset: 0; background: repeating-linear-gradient(0deg, rgba(255, 255, 255, .04) 0 1px, transparent 1px 6px); }
-@keyframes tt-scan { 0% { top: 8%; opacity: 0; } 12% { opacity: 1; } 88% { opacity: 1; } 100% { top: 96%; opacity: 0; } }
-@media (prefers-reduced-motion: reduce) { .tt-scan::before { animation: none; top: 50%; } }
-.tt-note { position: absolute; left: 50%; bottom: 22px; transform: translateX(-50%); width: min(86%, 380px); display: grid; gap: 6px; justify-items: center; text-align: center; font-size: 15px; pointer-events: none; }
-.tt-note:empty { display: none; }
-.tt-note button { pointer-events: auto; }
-.tt-note > span:not(.tt-pill) { color: #b9b6ae; font-size: 14px; }
-.tt.empty .tt-note, .tt-note.is-error { bottom: auto; top: 50%; transform: translate(-50%, -50%); background: rgba(20, 20, 19, .82); border: 1px solid #2c2a27; border-radius: 16px; padding: 16px 18px; }
-.tt-note .chip { background: #f2f2f2; color: #141413; border-color: #f2f2f2; }
-.tt-pill { padding: 8px 16px; border-radius: 999px; background: rgba(20, 20, 19, .78); border: 1px solid #3a3833; font-size: 14px; letter-spacing: .02em; }
-.tt-bar { display: flex; align-items: center; gap: 6px; }
-.tt-dots { display: flex; gap: 2px; }
-.tt-dot { width: 34px; height: 44px; border: 0; background: none; padding: 0; display: grid; place-items: center; }
-.tt-dot i { width: 9px; height: 9px; border-radius: 50%; border: 1.5px solid var(--muted); }
-.tt-dot[aria-current="true"] i { background: var(--text); border-color: var(--text); }
-.tt-angle { min-width: 80px; text-align: center; }
+/* The 3D mirror (avatar-stage.js draws into .stage3d-host; drag sideways turns him). */
+.stage3d { position: relative; width: 100%; height: min(72vh, 760px); border-radius: 22px; overflow: hidden; outline: none;
+           background: var(--studio); box-shadow: inset 0 0 0 1px #2c2a27; color: #f2f2f2;
+           touch-action: pan-y; cursor: grab; user-select: none; -webkit-user-select: none; -webkit-touch-callout: none; -webkit-tap-highlight-color: transparent; }
+.stage3d:active { cursor: grabbing; }
+.stage3d:focus-visible { box-shadow: inset 0 0 0 2px #f2f2f2; }
+.stage3d-host { position: absolute; inset: 0; }
+.stage3d-host canvas { display: block; width: 100% !important; height: 100% !important; }
+.stage-note { position: absolute; left: 50%; bottom: 22px; transform: translateX(-50%); width: min(86%, 380px); display: grid; gap: 6px; justify-items: center; text-align: center; font-size: 15px; pointer-events: none; }
+.stage-note:empty { display: none; }
+.stage-note > span:not(.stage-pill) { color: #b9b6ae; font-size: 14px; }
+.stage-note.is-error { bottom: auto; top: 50%; transform: translate(-50%, -50%); background: rgba(20, 20, 19, .82); border: 1px solid #2c2a27; border-radius: 16px; padding: 16px 18px; }
+.stage-pill { padding: 8px 16px; border-radius: 999px; background: rgba(20, 20, 19, .78); border: 1px solid #3a3833; font-size: 14px; letter-spacing: .02em; }
+.angle-pills { display: flex; flex-wrap: wrap; justify-content: center; gap: 6px; }
+.angle-pills .chip { min-height: 44px; padding: 0 16px; font-size: 14px; }
 
 .m-looks { display: grid; gap: 8px; }
 .m-look { display: grid; gap: 8px; text-align: left; padding: 10px 12px; border-radius: 14px; border: 1px solid var(--line); background: var(--surface); }
@@ -628,5 +607,5 @@ details summary { cursor: pointer; }
 @media (max-width: 860px) {
   .mirror { grid-template-columns: minmax(0, 1fr); }
   .mirror-stage { order: -1; }
-  .tt { height: min(68vh, 600px); }
+  .stage3d { height: min(68vh, 600px); }
 }

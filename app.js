@@ -7,7 +7,7 @@ import { parseICS, eventsBetween, guessOccasion, titleKey } from "./calendar.js"
 import * as Style from "./stylist.js";
 import * as Label from "./label.js";
 import { editCutout } from "./cutout-editor.js";
-import * as TryOn from "./tryon.js";
+import * as Avatar from "./avatar-config.js";
 
 /* ======================================================================
    Reference data
@@ -276,8 +276,6 @@ const state = {
     autoCutout: true, aiAuto: true, autoWash: true,
     washAfter: { hoodies: 3, knits: 4, trousers: 4, jeans: 6 }, // wears before these go in the wash (Settings > Laundry; 0 = never)
     washBack: 0, // days after which clothes come back from the wash by themselves (0: the app asks)
-    tryon: true, // Today's mirror draws all four sides of the three ideas in the background (Settings > Try-on)
-    tryonCap: 40, // try-on pictures a day on this device, at most
   },
   usage: { month: "", requests: 0, input: 0, output: 0 },
   wishlist: [], // before Must-Buy: moved into `wants` once (see moveWishlist)
@@ -1876,11 +1874,12 @@ function withWarn(idea, cond, occ) {
 
 // `avoid`: outfits just shown, so "New ideas" always brings different ones.
 // Today's ideas come out the same each time the app opens on the same day, for the same occasion,
-// level, piece, event and temperature, so the try-on pictures drawn for them (see Mirror) stay
-// useful all day. "New ideas" moves the seed on; tomorrow starts afresh.
+// level, piece, event and temperature, so the outfit on the mirror doesn't change each time the
+// app opens. "New ideas" moves the seed on; tomorrow starts afresh.
 let rand = Math.random;
 function seedIdeas(s) {
-  let a = parseInt(TryOn.hash(s).slice(0, 8), 16);
+  let a = 0x811c9dc5; // FNV-1a of the seed text
+  for (let i = 0; i < s.length; i++) a = Math.imul(a ^ s.charCodeAt(i), 16777619);
   rand = () => { // mulberry32
     a = (a + 0x6d2b79f5) | 0;
     let t = Math.imul(a ^ (a >>> 15), 1 | a);
@@ -3484,58 +3483,35 @@ function aiCard() {
   </section>`;
 }
 
-/* ---------- Mirror: you, wearing today's ideas (see tryon.js) ---------- */
-// The top of Today: your body on the left, you in the middle (drag to turn), today's ideas on the
-// right with what you're wearing, each piece can come off. the image model draws you once from four sides
-// (Save Body), then each outfit on those pictures; every picture is kept on the server under a
-// hash of body + pieces + angle, so no combination is drawn twice.
+/* ---------- Mirror: you in 3D, wearing today's ideas ---------- */
+// The top of Today: your body on the left, you in 3D in the middle (drag sideways to turn him, or
+// tap an angle), today's ideas on the right with what you're wearing, and each piece can come off.
+// It all runs on this device: each piece's front and back photos are baked into textures once
+// (garment-baker.js, kept in IndexedDB) and the 3D scene (avatar-stage.js, three.js) puts them on
+// garment layers over a body shaped by the left panel. No server and no AI are involved, so
+// switching ideas, taking pieces off and turning him are instant and free.
 const mirror = {
-  draft: null, // the body on the sliders; the saved one is state.avatar.body
+  draft: null, // the body on the left panel (AvatarBodyConfig); the saved one is state.avatar.body
+  bodyTab: "body",
+  reading: false, // "From a photo" is reading a photo
   pick: 0, // which of today's ideas he wears
-  angle: 0, // 0 front, 1 right, 2 back, 3 left
   off: {}, // per idea key: the roles taken off ("outer", "shoes"…)
-  combos: [], // per idea: { list, pieces, keys } (see mirrorRefresh)
-  now: null, // what he wears now: an idea, or one with pieces taken off ({ ..., custom })
-  sig: "", // the last combination shown, to start a new one from the front
-  shown: {}, // per angle: the last dressed picture shown, kept on him while the next one is drawn
-  shownFor: null, // the avatar those pictures are of
-  run: 0,
+  angle: 0, // degrees he's turned: 0 front, 90 right side, 180 back, 270 left side
+  stage: null, // the 3D stage, made once and moved into each new mirror
+  host: null, // the element its canvas lives in
+  loading: null,
+  failed: null, // why the 3D stage couldn't start
+  baker: null, // garment-baker.js, once loaded
+  assets: new Map(), // item id → { photo, asset }: baked and prepared on the stage
+  pending: new Map(), // item id → Promise while it's baked
+  noBake: new Set(), // item ids that couldn't be baked this time (not asked again until the app reopens)
+  worn: {}, // slot → { id, on }: what the stage shows now
 };
 const MIRROR_ROLES = ["outer", "mid", "base", "bottom", "shoes"];
 const ROLE_WORD = { coat: "Coat", outer: "Jacket", mid: "Layer", base: "Top", bottom: "Bottoms", shoes: "Shoes" };
-const tryonCount = { day: "", n: 0, month: "", m: 0 };
-let deviceId = "";
+const MIRROR_ANGLES = [[0, "Front"], [90, "Right side"], [180, "Back"], [270, "Left side"]];
 
-// Pictures are drawn by Cloudflare Workers AI on your server (free daily allocation), so only the hosted app can make them.
-const tryonKey = () => !!state.serverKeys.image;
-const tryonCap = () => Math.max(0, Math.round(state.settings.tryonCap ?? 40));
-function tryonSpent() {
-  const d = localDay(), m = d.slice(0, 7);
-  if (tryonCount.day !== d) Object.assign(tryonCount, { day: d, n: 0 });
-  if (tryonCount.month !== m) Object.assign(tryonCount, { month: m, m: 0 });
-  return tryonCount;
-}
-TryOn.init({
-  post: (form) => fetch("api/ai/image", { method: "POST", body: form }),
-  server: () => sync.status === "on",
-  get me() { return deviceId; },
-  budget: {
-    // Pictures nobody has asked to see yet stop at three quarters of the daily limit, so there's room for the ones you pick.
-    ok: (background) => tryonSpent().n < (background ? Math.floor(tryonCap() * 0.75) : tryonCap()),
-    why: () => `Today's limit of ${tryonCap()} try-on pictures is used up on this device. Change it in Settings > Try-on.`,
-    spend: () => { const c = tryonSpent(); c.n++; c.m++; raw.put("kv", { ...c }, "tryonCount"); },
-  },
-  onChange: () => {
-    if (!mirror.frame) mirror.frame = requestAnimationFrame(() => { mirror.frame = 0; try { paintMirror(); } catch (e) { console.error("Mirror:", e); } });
-  },
-});
-async function loadTryOn() {
-  Object.assign(tryonCount, (await raw.get("kv", "tryonCount")) || {});
-  deviceId = (await raw.get("kv", "deviceId")) || "";
-  if (!deviceId) { deviceId = uid(); await raw.put("kv", deviceId, "deviceId"); }
-}
-
-const bodyDraft = () => (mirror.draft ||= TryOn.cleanBody({ age: state.settings.age, ...TryOn.cleanBody(state.avatar?.body || {}) }));
+const bodyDraft = () => (mirror.draft ||= Avatar.cleanBody(state.avatar?.body || {}));
 function wornList(o) {
   if (!o) return [];
   return [...(o.coat ? [{ role: "coat", item: o.coat }] : []), ...MIRROR_ROLES.filter((r) => o.pieces[r]).map((r) => ({ role: r, item: o.pieces[r] }))];
@@ -3547,99 +3523,165 @@ function mirrorWorn(o) {
   return allPieces(o).filter((p) => !offIds.has(p.id));
 }
 const asBlob = async (x) => (x instanceof Blob ? x : x ? fetch(x).then((r) => r.blob()).catch(() => null) : null);
-async function tryonPiece({ role, item }) {
-  const [front, back] = await Promise.all([asBlob(item.photos?.[0]), asBlob(item.photos?.[1])]);
-  return {
-    role, id: item.id, name: item.name, kind: catLabel(item.category).toLowerCase(), fit: FITS[item.fit]?.label, colors: item.colors || [], front, back,
-    photo: front ? (await blobKey(front)).split(".")[0] : "",
-  };
-}
-async function comboFor(list) {
-  const pieces = await Promise.all(list.map(tryonPiece));
-  return { list, pieces, keys: TryOn.comboKeys(state.avatar.id, pieces) };
-}
-const specKeys = (spec) => [spec.key, ...spec.deps.flatMap(specKeys)];
+// The idea he wears: the one picked on the right (the last one if there are fewer ideas now).
+const mirrorIdea = () => { const ideas = state.outfits.slice(0, 3); return ideas[Math.min(mirror.pick, ideas.length - 1)]; };
 
-// Work out what he wears and which pictures it needs, then ask for them, most wanted first:
-// the base sheet, the angle you're looking at, the rest of this outfit, then the other ideas.
-// `user`: you just picked, turned or took something off. New ideas that came by themselves (the
-// weather loading, the calendar) wait a moment first, in case they change again straight away.
-async function mirrorRefresh(user = false) {
-  const run = ++mirror.run;
-  const av = state.avatar;
-  if (!av || !tryonKey() || !["on", "off"].includes(sync.status)) { mirror.now = null; return paintMirror(); }
-  const ideas = state.outfits.slice(0, 3);
-  mirror.pick = Math.min(mirror.pick, Math.max(0, ideas.length - 1));
-  for (const k of Object.keys(mirror.off)) if (!ideas.some((o) => o.key === k)) delete mirror.off[k];
-  const o = ideas[mirror.pick], off = mirrorOff(o);
-  const combos = await Promise.all(ideas.map((x) => comboFor(wornList(x))));
-  const now = !o ? await comboFor([]) : off.length ? await comboFor(wornList(o).filter((x) => !off.includes(x.role))) : combos[mirror.pick];
-  if (run !== mirror.run || state.avatar !== av) return;
-  mirror.combos = combos;
-  mirror.now = { ...now, custom: off.length > 0 };
-  // A combination not drawn yet starts from the front, which is drawn first.
-  if (now.keys.front !== mirror.sig) { mirror.sig = now.keys.front; if (!TryOn.url(now.keys.front)) mirror.angle = 0; }
-  const wanted = [];
-  const ask = (pieces, angle, prio, background) => {
-    const spec = TryOn.outfitSpec(av.id, av.body, pieces, angle);
-    wanted.push(...specKeys(spec));
-    TryOn.want(spec, prio, background);
-  };
-  TryOn.ANGLES.forEach((a) => ask([], a, a === "front" ? 0 : 1, false)); // the base sheet from Save Body
-  const dress = () => {
-    if (run !== mirror.run) return;
-    const cur = TryOn.ANGLES[mirror.angle];
-    ask(now.pieces, cur, 2, false);
-    TryOn.ANGLES.forEach((a) => a !== cur && ask(now.pieces, a, 3, false));
-    if (state.settings.tryon !== false) {
-      combos.forEach((c, i) => {
-        if (i === mirror.pick && !off.length) return;
-        TryOn.ANGLES.forEach((a) => ask(c.pieces, a, a === "front" ? 4 + i * 0.1 : 5 + i * 0.1, true));
-      });
-    }
-    TryOn.keepOnly(wanted);
-    paintMirror();
-  };
-  const set = [now.keys.front, ...combos.map((c) => c.keys.front)].join();
-  clearTimeout(mirror.later);
-  if (set !== mirror.set && !user) {
-    mirror.set = set;
-    TryOn.keepOnly(wanted); // what was waiting for the old ideas is dropped now
-    mirror.later = setTimeout(dress, 2500);
-    return paintMirror();
+// The piece each garment layer shows for an idea. A coat goes in the jacket layer, over the jacket:
+// take the coat off and the jacket under it shows.
+function slotsFor(o) {
+  const off = mirrorOff(o), out = {};
+  for (const w of wornList(o)) {
+    const slot = w.role === "coat" ? "jacket" : Avatar.ROLE_TO_SLOT[w.role];
+    if (!slot || !Avatar.subTypeOf(w.item)) continue;
+    const on = !off.includes(w.role);
+    if (!out[slot] || (!out[slot].on && on)) out[slot] = { ...w, on };
   }
-  mirror.set = set;
-  dress();
+  return out;
+}
+const bakedAsset = (item) => {
+  const a = mirror.assets.get(item.id);
+  return a && a.photo === item.photos?.[0] ? a.asset : null; // a new photo bakes the piece again
+};
+// Bake a piece (the first time only; then it comes from IndexedDB) and get it ready on the stage.
+function bakePiece(item) {
+  if (bakedAsset(item)) return Promise.resolve(bakedAsset(item));
+  let p = mirror.pending.get(item.id);
+  if (p) return p;
+  const photo = item.photos?.[0];
+  p = (async () => {
+    const [front, back] = await Promise.all([asBlob(photo), asBlob(item.photos?.[1])]);
+    const asset = front && await mirror.baker.getBaked(item, { front, back });
+    if (!asset) throw new Error("Nothing to bake");
+    await mirror.stage.prepare(asset);
+    mirror.assets.set(item.id, { photo, asset });
+    return asset;
+  })().catch((e) => { console.warn("Mirror: couldn't bake", item.name, e); mirror.noBake.add(item.id); return null; })
+    .finally(() => { mirror.pending.delete(item.id); dressStage(); });
+  mirror.pending.set(item.id, p);
+  return p;
+}
+// Every piece of today's three ideas, the one he wears first, so switching is instant.
+function prebake() {
+  if (!mirror.stage || !mirror.baker) return;
+  const ideas = state.outfits.slice(0, 3);
+  const order = [mirrorIdea(), ...ideas].filter(Boolean);
+  for (const o of order) for (const w of Object.values(slotsFor({ ...o, key: "" }))) if (!mirror.noBake.has(w.item.id)) bakePiece(w.item);
+}
+// Put the picked idea on the 3D stage: baked pieces go on in this same frame (a piece taken off
+// fades out, the others stay); a piece baked for the first time follows when it's ready.
+function dressStage() {
+  const st = mirror.stage;
+  if (!st) return;
+  const want = slotsFor(mirrorIdea());
+  for (const slot of Avatar.SLOTS) {
+    const w = want[slot], asset = w && bakedAsset(w.item);
+    const now = mirror.worn[slot], id = asset ? w.item.id : null, on = !!w?.on;
+    if ((now?.id ?? null) === id) {
+      if (id && now.on !== on) { st.setVisible(slot, on); now.on = on; }
+    } else {
+      st.setGarment(slot, asset || null, { visible: on });
+      mirror.worn[slot] = id ? { id, on } : null;
+    }
+    if (w && !asset && !mirror.noBake.has(w.item.id) && !mirror.pending.has(w.item.id)) bakePiece(w.item);
+  }
+  paintLooks();
 }
 
-const SILHOUETTE = `<svg class="tt-ghost" viewBox="0 0 120 300" aria-hidden="true"><circle cx="60" cy="30" r="17"/><path d="M60 52c-17 0-30 6-33 16l-8 70c-1 7 9 9 11 2l9-58v74l-4 128c0 8 13 8 14 0l9-112h4l9 112c1 8 14 8 14 0l-4-128V82l9 58c2 7 12 5 11-2l-8-70c-3-10-16-16-33-16z"/></svg>`;
-// The left panel: your photo, then Body (height, weight, build, skin) or Face & hair, and Save Body.
+// The 3D stage is made once (three.js loads only now, not with the rest of the app) and its canvas
+// moves into each new mirror, so Today can be drawn again without starting 3D again.
+function startStage() {
+  mirror.loading = (async () => {
+    try {
+      const [{ createStage }, baker] = await Promise.all([import("./avatar-stage.js"), import("./garment-baker.js")]);
+      mirror.baker = baker;
+      mirror.stage = await createStage(mirror.host, { onAngle: (deg) => { mirror.angle = deg; paintAngles(); } });
+      mirror.stage.setBody(bodyDraft());
+      dressStage();
+      prebake();
+    } catch (e) {
+      mirror.failed = e;
+      console.error("3D mirror:", e);
+    } finally {
+      mirror.loading = null;
+      paintStageNote();
+    }
+  })();
+}
+function mountMirror() {
+  try {
+    const slot = $("#stage3d");
+    if (!slot) return;
+    mirror.host ||= Object.assign(document.createElement("div"), { className: "stage3d-host" });
+    slot.prepend(mirror.host);
+    bodyUI();
+    paintAngles();
+    if (mirror.stage) {
+      mirror.stage.resize();
+      mirror.stage.setBody(bodyDraft());
+      dressStage();
+      prebake();
+    } else if (!mirror.loading && !mirror.failed) startStage();
+    paintLooks();
+  } catch (e) { console.error("Mirror:", e); } // never in the way of the rest of Today
+}
+// The line over the stage: starting, can't start, or a piece being prepared for the first time.
+function paintStageNote() {
+  const note = $("#stage3d .stage-note");
+  if (!note) return;
+  const busy = mirror.stage && Object.values(slotsFor(mirrorIdea())).find((w) => mirror.pending.has(w.item.id));
+  const html = mirror.failed ? `<b>The 3D mirror can't start here</b><span>${esc(mirror.failed.message || String(mirror.failed))}</span>`
+    : !mirror.stage ? `<span class="stage-pill">Getting the 3D mirror ready…</span>`
+    : busy ? `<span class="stage-pill">Preparing ${esc(busy.item.name)}…</span>` : "";
+  if (note.dataset.html !== html) { note.innerHTML = html; note.dataset.html = html; }
+  note.classList.toggle("is-error", !!mirror.failed);
+}
+function paintAngles() {
+  const near = (Math.round((((mirror.angle % 360) + 360) % 360) / 90) % 4) * 90;
+  document.querySelectorAll("#mirror [data-mangle]").forEach((b) => b.setAttribute("aria-pressed", +b.dataset.mangle === near));
+}
+// How ready each idea is: its pieces are baked once, the first time they're needed.
+function paintLooks() {
+  state.outfits.slice(0, 3).forEach((o, i) => {
+    const el = $(`#mirror [data-lookstate="${i}"]`);
+    if (!el) return;
+    const pieces = Object.values(slotsFor({ ...o, key: "" }));
+    const ready = pieces.filter((w) => bakedAsset(w.item)).length, missing = pieces.filter((w) => mirror.noBake.has(w.item.id)).length;
+    el.textContent = mirror.failed ? "" : !mirror.stage ? "…"
+      : ready + missing < pieces.length ? `Preparing ${ready + missing + 1} of ${pieces.length}…`
+      : missing ? `Ready · ${missing} not shown` : "Ready";
+  });
+  paintStageNote();
+}
+
+// The left panel: your face from a photo, then Body or Face & hair, and Save body. Every change
+// shows on the avatar straight away; Save keeps it, on every device.
 function bodyPanelHTML() {
-  const b = bodyDraft(), tab = mirror.bodyTab || "body";
+  const b = bodyDraft(), tab = mirror.bodyTab;
   const range = (k, label, min, max, val, shown) => `<div class="field mb-field"><label for="mb-${k}">${label} <b id="mb-${k}-v">${esc(shown)}</b></label><input id="mb-${k}" type="range" min="${min}" max="${max}" step="1" value="${val}" data-input="mb-${k}"></div>`;
-  const swatches = (field, label, list, val) => `<div class="field mb-field"><label>${label}</label><div class="swatch-row">${list.map((x, i) => {
-    const v = x.id ?? i;
-    return `<button class="swatch" style="--sw:${x.hex}" data-mb="${field}" data-v="${v}" aria-pressed="${val === v}" aria-label="${esc(x.words)}"></button>`;
-  }).join("")}</div></div>`;
+  const swatches = (field, label, list, val) => {
+    const all = list.some((x) => x.hex === val) ? list : [...list, { hex: val, label: "From your photo" }];
+    return `<div class="field mb-field"><label>${label}</label><div class="swatch-row">${all.map((x) =>
+      `<button class="swatch" style="--sw:${x.hex}" data-mb="${field}" data-v="${x.hex}" aria-pressed="${val === x.hex}" aria-label="${esc(x.label)}" title="${esc(x.label)}"></button>`).join("")}</div></div>`;
+  };
   const chips = (field, label, list, val) => `<div class="field mb-field"><label>${label}</label><div class="mb-chips">${list.map((x) =>
     `<button class="chip" data-mb="${field}" data-v="${x.id}" aria-pressed="${val === x.id}">${x.label}</button>`).join("")}</div></div>`;
-  const pic = b.photo && TryOn.photo(b.photo);
-  const photo = b.photo
-    ? `<div class="mb-photo"><span class="mb-face">${pic ? `<img src="${pic}" alt="Your photo">` : ""}</span><span class="mb-photo-text"><b>Your photo</b><span class="muted small">${mirror.reading ? "Reading it…" : "Sets your face"}</span></span><button class="chip" data-act="body-photo-off">Remove</button></div>`
+  const build = Math.max(0, Avatar.BUILDS.findIndex((x) => x.id === b.build));
+  const face = b.facePhotoDataUrl
+    ? `<div class="mb-photo"><span class="mb-face"><img src="${b.facePhotoDataUrl}" alt="Your face"></span><span class="mb-photo-text"><b>Your face</b><span class="muted small">On the avatar</span></span><button class="chip" data-act="body-photo-off">Remove</button></div>`
     : "";
   return `<aside class="mirror-side mirror-body" aria-label="Your body">
-      <div class="mb-head"><h2>You</h2>${b.photo ? "" : `<button class="chip mb-photo-btn" data-act="body-photo"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 8h3l2-3h6l2 3h3v11H4z"/><circle cx="12" cy="13" r="3.5"/></svg>From a photo</button>`}</div>
-      ${photo}
+      <div class="mb-head"><h2>You</h2>${b.facePhotoDataUrl ? "" : `<button class="chip mb-photo-btn" data-act="body-photo"${mirror.reading ? " disabled" : ""}><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 8h3l2-3h6l2 3h3v11H4z"/><circle cx="12" cy="13" r="3.5"/></svg>${mirror.reading ? "Reading…" : "From a photo"}</button>`}</div>
+      ${face}
       <div class="seg mb-tabs" role="tablist">${[["body", "Body"], ["face", "Face & hair"]].map(([k, l]) => `<button role="tab" aria-selected="${tab === k}" data-mbtab="${k}">${l}</button>`).join("")}</div>
-      ${tab === "body" ? `${range("height", "Height", 160, 200, b.height, `${b.height} cm`)}
-      ${range("weight", "Weight", 0, 4, b.weight, TryOn.WEIGHTS[b.weight])}
-      ${range("build", "Build", 0, 4, b.build, TryOn.BUILDS[b.build])}
-      ${swatches("skin", "Skin tone", TryOn.SKINS, b.skin)}`
-      : `<div class="mb-face-tab">${swatches("hairColor", "Hair colour", TryOn.HAIR_COLORS, b.hairColor)}
-      ${chips("hairStyle", "Hair", TryOn.HAIR_STYLES, b.hairStyle)}
-      ${chips("beard", "Beard", TryOn.BEARDS, b.beard)}
-      ${swatches("eyes", "Eyes", TryOn.EYES, b.eyes)}
-      ${chips("glasses", "Glasses", [{ id: "no", label: "None" }, { id: "yes", label: "Glasses" }], b.glasses ? "yes" : "no")}</div>`}
+      ${tab === "body" ? `${range("height", "Height", 160, 200, b.heightCm, `${b.heightCm} cm`)}
+      ${range("weight", "Weight", 50, 120, b.weightKg, `${b.weightKg} kg`)}
+      ${range("build", "Build", 0, Avatar.BUILDS.length - 1, build, Avatar.BUILDS[build].label)}
+      ${swatches("skinTone", "Skin tone", Avatar.SKINS, b.skinTone)}`
+      : `<div class="mb-face-tab">${swatches("hairColor", "Hair colour", Avatar.HAIR_COLORS, b.hairColor)}
+      ${chips("hairStyle", "Hair", Avatar.HAIR_STYLES, b.hairStyle)}
+      ${chips("beard", "Beard", Avatar.BEARDS, b.beard)}
+      ${swatches("eyeColor", "Eyes", Avatar.EYES, b.eyeColor)}
+      ${chips("glasses", "Glasses", Avatar.GLASSES, b.glasses)}</div>`}
       <button class="btn primary" data-act="body-save" id="mb-save">Save body</button>
       <p class="muted small" id="mb-hint" style="margin:0"></p>
     </aside>`;
@@ -3650,77 +3692,43 @@ function remountBody() {
   el.outerHTML = bodyPanelHTML();
   bodyUI();
 }
-// "From a photo": your photo sets the face, and the AI (if there is one) fills in skin, hair, beard and eyes from it.
+// "From a photo": face-photo.js finds your face on this device, crops it for the avatar and reads
+// your skin tone, hair colour and beard from it. Nothing is sent anywhere.
 const bodyPhotoInput = Object.assign(document.createElement("input"), { type: "file", accept: "image/*", hidden: true });
 document.body.append(bodyPhotoInput);
-bodyPhotoInput.onchange = () => { const f = bodyPhotoInput.files[0]; bodyPhotoInput.value = ""; if (f) bodyPhoto(f).catch((e) => toast(e.message || "Couldn't use that photo")); };
-const FACE_SCHEMA = {
-  type: "object",
-  additionalProperties: false,
-  required: ["skin", "hairColor", "hairStyle", "beard", "eyes", "glasses"],
-  properties: {
-    skin: { type: "string", enum: TryOn.SKINS.map((x) => x.words) },
-    hairColor: { type: "string", enum: TryOn.HAIR_COLORS.map((x) => x.words) },
-    hairStyle: { type: "string", enum: TryOn.HAIR_STYLES.map((x) => x.id), description: TryOn.HAIR_STYLES.map((x) => `${x.id}: ${x.words.replace("{c} ", "")}`).join("; ") },
-    beard: { type: "string", enum: TryOn.BEARDS.map((x) => x.id) },
-    eyes: { type: "string", enum: TryOn.EYES.map((x) => x.id) },
-    glasses: { type: "boolean", description: "Wears glasses (not sunglasses) in the photo" },
-  },
-};
+bodyPhotoInput.onchange = () => { const f = bodyPhotoInput.files[0]; bodyPhotoInput.value = ""; if (f) bodyPhoto(f); };
 async function bodyPhoto(file) {
-  if (!tryonKey()) throw new Error("The try-on needs the hosted app.");
-  const blob = await resizeImage(file, 1024);
-  const b = bodyDraft();
-  b.photo = await TryOn.addPhoto(blob);
-  mirror.bodyTab = "face";
-  mirror.reading = aiReady();
+  mirror.reading = true;
   remountBody();
-  if (!mirror.reading) return toast("Your face will come from the photo. Set hair and beard under Face & hair, then tap Save body.");
   try {
-    const text = await aiGenerate({
-      system: "You describe a person's appearance for an avatar maker. Reply with JSON only.",
-      text: "Describe the man in this photo: skin tone, hair colour, hairstyle, beard, eye colour and whether he wears glasses. Pick the closest option for each.",
-      image: await resizeImage(blob, 512),
-      schema: FACE_SCHEMA,
-      maxTokens: 120,
-    });
-    const r = JSON.parse(text.replace(/^```(json)?|```$/g, "").trim());
-    const at = (list, w) => list.findIndex((x) => x.words === w);
-    if (at(TryOn.SKINS, r.skin) >= 0) b.skin = at(TryOn.SKINS, r.skin);
-    if (at(TryOn.HAIR_COLORS, r.hairColor) >= 0) b.hairColor = at(TryOn.HAIR_COLORS, r.hairColor);
-    Object.assign(b, TryOn.cleanBody({ ...b, hairStyle: r.hairStyle, beard: r.beard, eyes: r.eyes, glasses: !!r.glasses }));
-    toast("Filled in from your photo. Check it, then tap Save body.");
+    const { readFacePhoto } = await import("./face-photo.js");
+    const r = await readFacePhoto(file);
+    if (!r.found) return toast("Couldn't find a face in that photo. Try a close, front-facing photo in daylight.");
+    const b = bodyDraft();
+    b.facePhotoDataUrl = r.faceDataUrl;
+    if (r.skinTone) b.skinTone = r.skinTone;
+    if (r.hairColor) b.hairColor = r.hairColor;
+    if (r.beard) b.beard = r.beard;
+    mirror.bodyTab = "face";
+    mirror.stage?.setBody(b);
+    toast("Took your face, skin tone and hair colour from the photo. Check them, then tap Save body.");
   } catch (e) {
-    toast(`Couldn't read the photo (${e.message || e}). Set hair and beard yourself.`);
+    toast(`Couldn't read that photo (${e.message || e}).`);
   } finally {
     mirror.reading = false;
     remountBody();
   }
 }
 function mirrorHTML() {
-  const av = state.avatar;
-  const ideas = state.outfits.slice(0, 3);
-  const o = ideas[Math.min(mirror.pick, Math.max(0, ideas.length - 1))];
-  const pick = ideas.indexOf(o);
+  const ideas = state.outfits.slice(0, 3), o = mirrorIdea(), pick = ideas.indexOf(o);
   const off = mirrorOff(o);
-  const stageNote = !tryonKey()
-    ? `<b>Try-on runs on your server</b><span>${sync.status === "connecting" ? "Connecting…" : "Pictures are drawn for free by Cloudflare, so open the app from its web address (not the PC copy) to use the try-on."}</span>`
-    : !av ? `<b>Make your avatar</b><span>Set your body on the ${innerWidth > 760 ? "left" : "panel below"}, then tap Save Body. You're drawn once from the front, both sides and the back, for free.</span>` : "";
   return `<section class="mirror" id="mirror">
     ${bodyPanelHTML()}
     <div class="mirror-stage">
-      <div class="tt${av && tryonKey() ? "" : " empty"}" tabindex="0" role="img" aria-label="You, dressed in the outfit picked on the right. Drag sideways to turn.">
-        ${TryOn.ANGLES.map((a) => `<img class="tt-frame" data-angle="${a}" alt="" draggable="false">`).join("")}
-        ${SILHOUETTE}
-        <div class="tt-scan" aria-hidden="true"></div>
-        <div class="tt-note" role="status">${stageNote}</div>
+      <div class="stage3d" id="stage3d" tabindex="0" role="img" aria-label="You in 3D, wearing the outfit picked on the right. Drag sideways to turn him, or use the angle buttons.">
+        <div class="stage-note" role="status"></div>
       </div>
-      <div class="tt-bar">
-        <button class="btn icon-btn ghost" data-tt="-1" aria-label="Turn him to the left"><svg viewBox="0 0 24 24"><path d="M15 5l-7 7 7 7"/></svg></button>
-        <div class="tt-dots">${TryOn.ANGLES.map((a, i) => `<button class="tt-dot" data-tta="${i}" aria-label="${TryOn.ANGLE_LABEL[a]}"><i></i></button>`).join("")}</div>
-        <span class="tt-angle muted small"></span>
-        <button class="btn icon-btn ghost" data-tt="1" aria-label="Turn him to the right"><svg viewBox="0 0 24 24"><path d="M9 5l7 7-7 7"/></svg></button>
-      </div>
+      <div class="angle-pills" role="group" aria-label="Turn him">${MIRROR_ANGLES.map(([deg, label]) => `<button class="chip" data-mangle="${deg}" aria-pressed="false">${label}</button>`).join("")}</div>
     </div>
     <aside class="mirror-side mirror-looks" aria-label="Today's ideas">
       <h2>Today's ideas</h2>
@@ -3740,139 +3748,70 @@ function mirrorHTML() {
 function safeMirrorHTML() {
   try { return mirrorHTML(); } catch (e) { console.error("Mirror:", e); return ""; }
 }
-// Put the mirror on the page again (a new idea picked, a piece taken off) without redrawing the rest of Today.
+// Draw the mirror again (a new idea picked, a piece taken off) without redrawing the rest of Today.
+// The stage has already changed by then: dressStage() runs first, in the tap itself.
 function remountMirror() {
   const el = $("#mirror");
   if (!el) return;
   el.outerHTML = safeMirrorHTML();
-  mountMirror(true);
+  mountMirror();
 }
-function mountMirror(user = false) {
-  try { mountTurntable(user); } catch (e) { console.error("Mirror:", e); } // never in the way of the rest of Today
-}
-function mountTurntable(user) {
-  const tt = $("#mirror .tt");
-  if (!tt) return;
-  TryOn.turntable(tt, {
-    get: () => mirror.angle,
-    set: (n) => { mirror.angle = n; paintMirror(); mirrorRefresh(true); },
-    paint: setFrames,
-  });
-  bodyUI();
-  paintMirror();
-  mirrorRefresh(user).catch((e) => console.error("Mirror:", e));
-}
-// The four pictures at a position between angles: each fades in as he turns to it.
-function setFrames(pos) {
-  const w = TryOn.weights(pos);
-  document.querySelectorAll("#mirror .tt-frame").forEach((img, i) => {
-    let d = ((i - pos) % 4 + 6) % 4 - 2; // -2…2: how far this angle is from the one shown, and on which side
-    img.style.opacity = img.getAttribute("src") ? w[i] : 0;
-    img.style.transform = `translateX(${(-d * 7).toFixed(2)}%)`;
-  });
-}
-function paintMirror() {
-  const root = $("#mirror");
-  if (!root) return;
-  const av = state.avatar, keys = mirror.now?.keys;
-  const base = av && Object.fromEntries(TryOn.ANGLES.map((a) => [a, TryOn.baseKey(av.id, a)]));
-  if (mirror.shownFor !== (av?.id || null)) { mirror.shown = {}; mirror.shownFor = av?.id || null; }
-  root.querySelectorAll(".tt-frame").forEach((img) => {
-    const a = img.dataset.angle;
-    // While a new combination is drawn, the last outfit stays on him under the scan (or the base picture).
-    const dressed = keys && TryOn.url(keys[a]);
-    if (dressed) mirror.shown[a] = dressed;
-    const src = dressed || mirror.shown[a] || (base && TryOn.url(base[a])) || "";
-    if ((img.getAttribute("src") || "") !== src) { if (src) img.src = src; else img.removeAttribute("src"); }
-  });
-  setFrames(mirror.angle);
-  // Your photo in the body panel, once it's back from the server.
-  const face = root.querySelector(".mb-face");
-  const me = face && !face.firstChild && TryOn.photo(bodyDraft().photo);
-  if (me) face.innerHTML = `<img src="${me}" alt="Your photo">`;
-  const a = TryOn.ANGLES[mirror.angle];
-  root.querySelectorAll(".tt-dot").forEach((d, i) => d.setAttribute("aria-current", i === mirror.angle));
-  const label = root.querySelector(".tt-angle");
-  if (label) label.textContent = TryOn.ANGLE_LABEL[a];
-  const tt = root.querySelector(".tt");
-  const note = root.querySelector(".tt-note");
-  if (!av || !tryonKey()) { tt.classList.remove("scanning"); return; }
-  // What's happening to the picture you're looking at.
-  const key = keys?.[a] || base[a];
-  const st = TryOn.state(key);
-  const err = TryOn.halted || (st === "error" && TryOn.errorOf(key));
-  const isBase = !keys || key === base[a];
-  const working = ["waiting", "queued", "making"].includes(st);
-  tt.classList.toggle("scanning", working && !err);
-  tt.classList.toggle("has-pic", !!root.querySelector(".tt-frame[src]"));
-  let html = "";
-  if (sync.status === "connecting") html = `<span>Connecting…</span>`;
-  else if (sync.status === "offline" && st !== "ready") html = `<b>Offline</b><span>New pictures are drawn when the app can reach your server again.</span>`;
-  else if (err) html = err.until ? `<b>Free pictures used up for today</b><span>${esc(err.message)}</span>`
-    : `<b>${err.capped ? "Daily limit reached" : "Couldn't draw this one"}</b><span>${esc(err.message)}</span>${err.capped ? `<button class="chip" data-go="settings">Settings</button>` : `<button class="chip" data-act="tryon-retry">Try again</button>`}`;
-  else if (working) {
-    // Waiting on another picture first: your base picture, or the dressed front the other sides copy.
-    const what = TryOn.state(base[a]) === "making" || TryOn.state(base.front) === "making" ? "Drawing you"
-      : st === "making" || (keys && TryOn.state(keys.front) === "making") ? "Dressing you" : "In line";
-    html = `<span class="tt-pill">${what} · ${TryOn.ANGLE_LABEL[a]}</span>`;
-  }
-  if (note.dataset.html !== html) { note.innerHTML = html; note.dataset.html = html; }
-  note.classList.toggle("is-error", !!err);
-  // How far along each idea is.
-  mirror.combos.forEach((c, i) => {
-    const el = root.querySelector(`[data-lookstate="${i}"]`);
-    if (!el) return;
-    const states = TryOn.ANGLES.map((x) => TryOn.state(c.keys[x]));
-    const ready = states.filter((s) => s === "ready").length;
-    el.textContent = ready === 4 ? "Ready from every side"
-      : states.includes("making") ? `Drawing ${Math.min(4, ready + 1)} of 4…`
-      : states.includes("error") ? (ready ? `${ready} of 4 ready` : "Not drawn")
-      : state.settings.tryon === false && i !== mirror.pick ? "Drawn when you pick it"
-      : ready ? `${ready} of 4 ready` : "Waiting to be drawn";
-  });
-}
-// The Save Body button and the line under it.
+// The Save body button and the line under it.
 function bodyUI() {
   const btn = $("#mb-save"), hint = $("#mb-hint");
   if (!btn) return;
-  const id = TryOn.avatarId(bodyDraft()), saved = state.avatar?.id === id;
-  btn.disabled = saved || !tryonKey() || !!mirror.reading;
+  const saved = !!state.avatar && Avatar.sameBody(state.avatar.body, bodyDraft());
+  btn.disabled = saved || mirror.reading;
   btn.textContent = saved ? "Saved" : "Save body";
-  hint.textContent = !tryonKey() ? "Needs the hosted app (its web address)."
-    : mirror.reading ? "Reading your photo…"
-    : !state.avatar ? "You're drawn from four sides once: 4 free pictures."
-    : saved ? `${TryOn.bodyLine(state.avatar.body)}. Every device shows this body.`
-    : "Save to draw the new you (4 free pictures). Today's outfits are drawn again on the new body.";
+  hint.textContent = mirror.reading ? "Reading your photo…"
+    : saved ? `${Avatar.bodyLine(Avatar.cleanBody(state.avatar.body))}. Every device shows this body.`
+    : state.avatar ? "The avatar already shows your changes. Save to keep them on every device."
+    : "Shape him like you: changes show straight away. Save to keep them on every device.";
+}
+function bodyChanged() {
+  mirror.stage?.setBody(bodyDraft());
+  bodyUI();
 }
 function bodyInput(k, v) {
   const b = bodyDraft();
-  b[k] = +v;
-  const shown = { height: `${b.height} cm`, weight: TryOn.WEIGHTS[b.weight], build: TryOn.BUILDS[b.build] }[k];
+  if (k === "height") b.heightCm = +v;
+  else if (k === "weight") b.weightKg = +v;
+  else if (k === "build") b.build = Avatar.BUILDS[+v]?.id || b.build;
   const out = $(`#mb-${k}-v`);
-  if (out) out.textContent = shown;
-  bodyUI();
+  if (out) out.textContent = { height: `${b.heightCm} cm`, weight: `${b.weightKg} kg`, build: Avatar.BUILDS.find((x) => x.id === b.build)?.label }[k];
+  bodyChanged();
 }
 async function saveBody() {
-  const body = TryOn.cleanBody(bodyDraft());
-  state.avatar = { body, id: TryOn.avatarId(body), at: new Date().toISOString() };
+  const body = Avatar.cleanBody(bodyDraft());
+  state.avatar = { body, at: new Date().toISOString() };
   mirror.draft = { ...body };
-  mirror.angle = 0;
   await store.put("kv", state.avatar, "avatar");
-  remountMirror();
+  bodyUI();
 }
 
-// Settings > Try-on: the avatar on Today, the free daily pictures, and the limits.
-function tryonCard() {
-  const s = state.settings, c = tryonSpent();
-  const toggle = `<button class="toggle" role="switch" aria-checked="${s.tryon !== false}" data-toggle="tryon"><span class="knob"></span><span class="toggle-text"><b>Get today's ideas ready</b><span class="muted small">Draws all four sides of the three ideas in the background, so picking one and turning him is instant. Up to 12 pictures each time the ideas change; ideas already drawn aren't drawn again.</span></span></button>`;
+// Settings > 3D mirror: what's kept on this device, and baking the pieces again.
+function mirrorCard() {
+  setTimeout(async () => {
+    const el = $("#baked-count");
+    if (!el) return;
+    try {
+      const n = await (mirror.baker || await import("./garment-baker.js")).countBaked();
+      el.textContent = `${n} piece${n === 1 ? "" : "s"} baked on this device.`;
+    } catch { el.textContent = ""; }
+  });
   return `<section class="card stack">
-    <h2 style="margin:0">Try-on</h2>
-    <p class="muted small" style="margin:0">The avatar on Today. Cloudflare Workers AI (FLUX.2) draws you once from four sides (Save Body on Today), then each outfit on those pictures. It's free: Cloudflare's free plan pays for about ${TryOn.FREE_A_DAY} pictures a day across all your devices, then stops until ${TryOn.resetTime()} instead of charging. Every picture is kept on your server under a hash of body, pieces and angle, so a combination is never drawn twice, on any device.</p>
-    ${!tryonKey() ? `<p class="small" style="margin:0;color:var(--warn)">Only works in the hosted app: open it from its web address.</p>` : ""}
-    ${toggle}
-    <div class="field"><label for="tryon-cap">Daily limit</label><div class="row"><input id="tryon-cap" class="input" style="max-width:7rem" type="number" inputmode="numeric" min="0" max="500" data-input="tryoncap" value="${tryonCap()}"><span class="muted small">pictures a day on this device (ideas in the background stop at three quarters of it)</span></div></div>
-    <p class="muted small" style="margin:0">Today: ${c.n} of ${tryonCap()} pictures · this month: ${c.m} · nothing charged${state.avatar ? ` · body: ${esc(TryOn.bodyLine(state.avatar.body))}` : ""}</p>
+    <h2 style="margin:0">3D mirror</h2>
+    <p class="muted small" style="margin:0">The avatar on Today runs on this device. Your body, hair and face come from the panel on its left. Each piece's front and back photos are baked into 3D textures the first time it's shown and kept on this device, so changing outfits, taking pieces off and turning him need no internet, no server and no AI.</p>
+    <div class="row" style="justify-content:space-between"><span class="muted small" id="baked-count"></span><button class="btn" data-act="rebake">Bake the pieces again</button></div>
   </section>`;
+}
+async function rebakePieces() {
+  const baker = mirror.baker || await import("./garment-baker.js");
+  await baker.clearBaked();
+  mirror.assets.clear();
+  mirror.noBake.clear();
+  toast("The pieces are baked again the next time they're shown.");
+  render();
 }
 
 /* ---------- Wardrobe ---------- */
@@ -7623,7 +7562,7 @@ function renderSettings() {
         ${aiReady() && noFit ? `<div class="row"><button class="btn" data-act="fit-all">Find the fit of ${noFit} piece${noFit > 1 ? "s" : ""}</button><span class="muted small">About 300 tokens per piece. You can also tap the fit on any piece.</span></div>` : ""}
         <p class="muted small" style="margin:0">This month: ${u.requests} AI request${u.requests === 1 ? "" : "s"} · ${(u.input + u.output).toLocaleString()} tokens (${u.input.toLocaleString()} in, ${u.output.toLocaleString()} out)</p>
       </section>
-      ${tryonCard()}
+      ${mirrorCard()}
       <section class="card stack">
         <h2 style="margin:0">Fashion bible</h2>
         ${(() => {
@@ -7953,23 +7892,23 @@ document.addEventListener("click", async (e) => {
   if (ds.go) { closeSheet(); return go(ds.go); }
   if (ds.item) return openItem(ds.item);
   // Mirror (Today)
-  if (ds.mlook != null) { mirror.pick = +ds.mlook; return remountMirror(); }
+  // The stage changes first, in this same frame; then the panel is drawn again.
+  if (ds.mlook != null) { mirror.pick = +ds.mlook; dressStage(); return remountMirror(); }
   if (ds.mpiece) {
-    const o = state.outfits[mirror.pick];
+    const o = mirrorIdea();
     if (!o) return;
     const off = mirrorOff(o);
     mirror.off[o.key] = off.includes(ds.mpiece) ? off.filter((r) => r !== ds.mpiece) : [...off, ds.mpiece];
+    dressStage();
     return remountMirror();
   }
   if (ds.mb) {
-    const b = bodyDraft(), v = ds.v;
-    b[ds.mb] = ds.mb === "glasses" ? v === "yes" : /^\d+$/.test(v) ? +v : v;
+    bodyDraft()[ds.mb] = ds.v;
     document.querySelectorAll(`[data-mb="${ds.mb}"]`).forEach((x) => x.setAttribute("aria-pressed", x === t));
-    return bodyUI();
+    return bodyChanged();
   }
   if (ds.mbtab) { mirror.bodyTab = ds.mbtab; return remountBody(); }
-  if (ds.tta != null) { mirror.angle = +ds.tta; paintMirror(); return mirrorRefresh(true); }
-  if (ds.tt) { mirror.angle = (mirror.angle + +ds.tt + 4) % 4; paintMirror(); return mirrorRefresh(true); }
+  if (ds.mangle != null) { mirror.angle = +ds.mangle; mirror.stage?.snapTo(mirror.angle); return paintAngles(); }
   // Fragrances
   if (ds.side) { state.wardSide = ds.side; render(); main.scrollTop = 0; return; }
   if (ds.scf) { state.scentFilter = ds.scf; return render(); }
@@ -8369,8 +8308,8 @@ document.addEventListener("click", async (e) => {
   switch (ds.act) {
     case "body-save": return saveBody();
     case "body-photo": return bodyPhotoInput.click();
-    case "body-photo-off": delete bodyDraft().photo; return remountBody();
-    case "tryon-retry": TryOn.resume(); return mirrorRefresh(true);
+    case "body-photo-off": delete bodyDraft().facePhotoDataUrl; bodyChanged(); return remountBody();
+    case "rebake": return rebakePieces();
     case "seed": return loadSeed();
     case "shuffle": {
       // Every outfit shown since the morning (for this occasion, level and temperature) stays out, so
@@ -8517,6 +8456,13 @@ document.addEventListener("click", async (e) => {
 });
 
 document.addEventListener("keydown", (e) => {
+  // The 3D mirror: the arrow keys turn him a quarter at a time.
+  if (e.target.id === "stage3d" && ["ArrowLeft", "ArrowRight"].includes(e.key) && mirror.stage) {
+    e.preventDefault();
+    mirror.angle = (Math.round(mirror.angle / 90) * 90 + (e.key === "ArrowRight" ? 90 : 270)) % 360;
+    mirror.stage.snapTo(mirror.angle);
+    return paintAngles();
+  }
   if (e.key === "Enter" && e.target.dataset?.input === "need") askNeed(e.target.value);
   if (e.key === "Enter" && ["evtext", "evplace"].includes(e.target.dataset?.input)) addEventFromForm();
 });
@@ -8532,14 +8478,6 @@ document.addEventListener("input", (e) => {
     return;
   }
   if (k.startsWith("mb-")) return bodyInput(k.slice(3), v);
-  if (k === "tryoncap") {
-    const n = Math.round(+v);
-    if (v === "" || !(n >= 0 && n <= 500)) return;
-    state.settings.tryonCap = n;
-    clearTimeout(e.target._t);
-    e.target._t = setTimeout(saveSettings, 400);
-    return;
-  }
   if (k === "trytext" || k === "trybrand") { state.disc.try[k === "trytext" ? "text" : "brand"] = v; return; }
   if (k === "tripq") { state.disc.tripq = v; return; }
   if (scentDraft && k.startsWith("sc-")) return scentTyped(scentDraft, k.slice(3), v);
@@ -8590,7 +8528,6 @@ document.addEventListener("keydown", (e) => {
    Boot
    ====================================================================== */
 await loadAll();
-await loadTryOn();
 await washBack();
 await moveWishlist();
 applyTheme();

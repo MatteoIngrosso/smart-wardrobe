@@ -21,9 +21,9 @@ const RUNS = +opt("--runs", 5); // ideas are picked with some chance: the number
 
 // A copy of the app with every top-level function and constant of app.js on window.__t.
 const dir = mkdtempSync(join(tmpdir(), "wardrobe-sim-"));
-for (const f of ["index.html", "app.js", "stylist.js", "label.js", "calendar.js", "cutout-editor.js", "tryon.js", "styles.css", "fashion-bible.json", "manifest.webmanifest", "icon.svg"])
+for (const f of ["index.html", "app.js", "stylist.js", "label.js", "calendar.js", "cutout-editor.js", "avatar-config.js", "avatar-stage.js", "garment-baker.js", "face-photo.js", "styles.css", "fashion-bible.json", "manifest.webmanifest", "icon.svg"])
   if (existsSync(join(ROOT, f))) cpSync(join(ROOT, f), join(dir, f));
-for (const d of ["sample", "vendor"]) if (existsSync(join(ROOT, d))) cpSync(join(ROOT, d), join(dir, d), { recursive: true });
+for (const d of ["sample", "vendor", "avatar"]) if (existsSync(join(ROOT, d))) cpSync(join(ROOT, d), join(dir, d), { recursive: true });
 const src = readFileSync(join(ROOT, "app.js"), "utf8");
 const DECL = /^(?:async\s+)?function\s+([\w$]+)|^(?:const|let)\s+([\w$]+)\s*=|^import \* as ([\w$]+)/gm;
 const names = [...new Set(Array.from(src.matchAll(DECL), (m) => m[1] || m[2] || m[3]))];
@@ -34,7 +34,7 @@ for (const i of backup.items || []) { i.photos = []; delete i.originals; }
 for (const s of backup.scents || []) s.photos = [];
 writeFileSync(join(dir, "backup.json"), JSON.stringify(backup));
 
-const TYPES = { ".html": "text/html", ".js": "text/javascript", ".mjs": "text/javascript", ".css": "text/css", ".json": "application/json", ".svg": "image/svg+xml", ".webmanifest": "application/manifest+json" };
+const TYPES = { ".html": "text/html", ".js": "text/javascript", ".mjs": "text/javascript", ".css": "text/css", ".json": "application/json", ".svg": "image/svg+xml", ".png": "image/png", ".jpg": "image/jpeg", ".webp": "image/webp", ".webmanifest": "application/manifest+json" };
 const server = createServer((req, res) => {
   const p = join(dir, decodeURIComponent(new URL(req.url, "http://x").pathname).replace(/^\/$/, "/index.html"));
   if (!p.startsWith(dir) || !existsSync(p)) { res.writeHead(404); return res.end(); }
