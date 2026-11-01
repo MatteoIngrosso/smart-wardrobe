@@ -45,7 +45,7 @@
 
 // Inner to outer. The stage draws them in this order and offsets each further from the skin.
 export const SLOTS = /** @type {GarmentLayerSlot[]} */ (["top", "layer", "jacket", "bottoms", "shoes"]);
-// The outfit roles of app.js (wornList) to slots. A coat isn't shown on the mirror (it never was).
+// The outfit roles of app.js (wornList) to slots. A coat, when worn, takes the jacket slot (app.js slotsFor).
 export const ROLE_TO_SLOT = { base: "top", mid: "layer", outer: "jacket", bottom: "bottoms", shoes: "shoes" };
 export const SLOT_OFFSET_MM = { top: 4, layer: 11, jacket: 20, bottoms: 6, shoes: 8 };
 
