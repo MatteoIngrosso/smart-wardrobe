@@ -7,15 +7,18 @@
 //      border for photos on white), small specks dropped, 2 px eroded, tight box.
 //   2. Torso core: for tops the torso without sleeves or hood; bottoms whole; shoes levelled, cropped
 //      and turned so the toe points right.
-//   3. Fabric: the dominant colour of the core (prints skipped), the trim (ribbing, sole), and a
-//      seamless 256 px tile of the fabric's own grain.
+//   3. Fabric: the room's light taken off the panels (retinex: the fabric's own colour, blurred, is
+//      the light; prints are left out of it and keep their contrast), then the dominant colour of the
+//      core, the trim (ribbing, sole), and a seamless 256 px tile of the fabric's own grain.
 //   4. Panels: the core, sharp and never mirrored, with every background pixel or hole inpainted with
 //      the fabric (pull-push fill plus grain) and the edge feathered: fully opaque, no cut-out edge.
+//      The last 24 px all round fade into the plain fabric (cosine), so no rectangle can show where
+//      the panel meets the stage's fabric.
 //   5. Normal map (Sobel of the panel's luminance, subtle) and roughness map, front and back side by side.
 import { subTypeOf, lengthOf, PANEL_SIZE } from "./avatar-config.js";
 
 /** Raise it when the bake changes, so every piece is baked again. */
-export const BAKER_VERSION = 1;
+export const BAKER_VERSION = 2;
 
 const DB_NAME = "wardrobe-garments", STORE = "baked";
 const SLOT_OF = { tee: "top", hoodie: "layer", sweater: "layer", bomber: "jacket", jacket_open: "jacket", jeans: "bottoms", cargo: "bottoms", sneakers: "shoes", boots: "shoes" };
@@ -24,6 +27,7 @@ const WORK_MAX = 1400; // photos are decoded at most this big
 const TILE = 256; // the seamless fabric tile
 // How wide the front panel is on the body, roughly: for the fabric tile's real size.
 const PANEL_CM = { top: 54, bottoms: 60, shoes: 30 };
+const FEATHER = 24; // px of the panel's border that fade into the plain fabric
 
 /* ======================================================================
    Public API
@@ -61,18 +65,36 @@ export async function bakeGarment(item, { front, back } = {}, opts = {}) {
   mark("crop");
   await yieldNow();
 
-  // 3. Fabric colours from both sides' cores, then the grain tile from a plain patch.
-  const fabric = fabricColours([fp, bp].filter(Boolean), kind);
+  // 3. The room's light off the panels (not shoes: their shading is their shape), then the fabric
+  // colours from both sides' cores and the grain tile from a plain patch, all from the even panels.
+  const panels = [fp, bp].filter(Boolean);
+  // Shoes with white parts: the photo's exposure, from those whites (white leather in the room's light
+  // reads light grey); the panels and the sole are brightened alike.
+  let expo = 1;
+  if (kind === "shoes") {
+    const refs = [fa, ba].filter((a) => a && a.white && a.white.frac >= 0.08).map((a) => a.white.L);
+    if (refs.length) expo = Math.max(1, Math.min(1.6, yOfL(94) / yOfL(median(refs))));
+    if (expo > 1) for (const p of panels) brighten(p.rgb, expo);
+  }
+  let fabric = fabricColours(panels, kind);
+  let light = null;
+  if (kind !== "shoes") {
+    await yieldNow();
+    light = await delight(panels, fabric, kind);
+    await yieldNow();
+    fabric = fabricColours(panels, kind);
+  }
   await yieldNow();
-  const tile = fabricTile([fp, bp].filter(Boolean), fabric, kind);
+  const tile = fabricTile(panels, fabric, kind);
   mark("fabric");
   await yieldNow();
 
   // 4. Fill, feather, grain: opaque panels.
-  const frontRGB = await finishPanel(fp, fabric, tile);
+  const edge = (rgb) => (kind === "shoes" ? rgb : featherEdge(rgb, PW, PH, fabric, tile)); // shoes: the sole runs along the edge
+  const frontRGB = edge(await finishPanel(fp, fabric, tile));
   await yieldNow();
   let backRGB;
-  if (bp) backRGB = await finishPanel(bp, fabric, tile);
+  if (bp) backRGB = edge(await finishPanel(bp, fabric, tile));
   else if (kind === "top") backRGB = plainPanel(PW, PH, fabric, tile);
   else backRGB = kind === "bottoms" ? mirrored(frontRGB, PW, PH) : frontRGB.slice(); // shoes: the same side again
   mark("panels");
@@ -108,7 +130,12 @@ export async function bakeGarment(item, { front, back } = {}, opts = {}) {
   };
   if (fabric.trim) asset.trimColor = hexOf(fabric.trim);
   if (fabric.second) asset.secondaryColor = hexOf(fabric.second);
-  if (kind === "shoes") asset.toeLeft = !!fa.toeLeft;
+  if (kind === "shoes") {
+    asset.toeLeft = !!fa.toeLeft;
+    const sole = dominantRGB([...(fa.sole || []), ...((ba && ba.sole) || [])]);
+    if (sole) { if (expo > 1) brighten(sole, expo); asset.soleColor = hexOf(sole); }
+    asset.shoeStyle = shoeStyleOf(item);
+  }
   for (const k of Object.keys(asset)) if (asset[k] === undefined) delete asset[k];
   mark("encode");
   if (debug) {
@@ -117,6 +144,8 @@ export async function bakeGarment(item, { front, back } = {}, opts = {}) {
     const seen = (a) => ({ w: a.w, h: a.h, box: a.box, core: a.core, how: a.how, angle: a.angle, toeLeft: a.toeLeft, fromAlpha: a.fromAlpha, stats: a.stats, peeled: a.peeled, peelInfo: a.peelInfo, data: a.data, mask: a.mask });
     debug.front = seen(fa);
     if (ba) debug.back = seen(ba);
+    if (light) debug.light = light;
+    if (kind === "shoes") debug.shoe = { expo: +expo.toFixed(3), white: [fa.white, ba && ba.white] };
     debug.fabric = { base: hexOf(fabric.rgb), trim: fabric.trim && hexOf(fabric.trim), second: fabric.second && hexOf(fabric.second), tile: tile.size, tileFrom: tile.from };
     asset.debug = debug;
   }
@@ -357,7 +386,28 @@ async function analysePhoto(blob, kind) {
   if (kind === "top") ({ core, how, stats } = topCore(mask, w, h, box, luminance(data, w * h), far));
   else if (kind === "bottoms") ({ core, how } = bottomsCore(mask, w, h, box));
   else { core = { x0: box.x0, y0: box.y0, x1: box.x1, y1: box.y1 }; how = "shoe"; }
-  return { w, h, data, mask, eroded, box, core, how, stats, peeled, peelInfo, fromAlpha, angle, toeLeft };
+  // Shoes: the sole's colour, from the bottom 18% of the levelled shoe (its own pixels only).
+  // And how bright its whites are (light, neutral parts: leather, laces, midsole), for the exposure.
+  let sole = null, white = null;
+  if (kind === "shoes") {
+    sole = [];
+    const bh = box.y1 - box.y0 + 1, step = Math.max(1, Math.round((box.x1 - box.x0 + 1) / 260));
+    for (let y = box.y1; y > box.y1 - bh * 0.18; y -= step) for (let x = box.x0; x <= box.x1; x += step) {
+      const i = y * w + x;
+      if (eroded[i]) sole.push([data[i * 4], data[i * 4 + 1], data[i * 4 + 2]]);
+    }
+    const t = labLUT(), Ls = [];
+    let all = 0;
+    for (let y = box.y0; y <= box.y1; y += step) for (let x = box.x0; x <= box.x1; x += step) {
+      const i = y * w + x;
+      if (!eroded[i]) continue;
+      all++;
+      const o = lutIndex(data[i * 4], data[i * 4 + 1], data[i * 4 + 2]) * 3;
+      if (t[o] > 55 && Math.hypot(t[o + 1], t[o + 2]) < 12) Ls.push(t[o]);
+    }
+    white = { frac: all ? Ls.length / all : 0, L: Ls.length ? percentile(Ls, 0.95) : 0 };
+  }
+  return { w, h, data, mask, eroded, box, core, how, stats, peeled, peelInfo, fromAlpha, angle, toeLeft, sole, white };
 }
 
 function hasAlpha(d) {
@@ -1151,9 +1201,169 @@ function boxBlur1(src, w, h, r) {
   return out;
 }
 
+/* ---------- the room's light off the panels (retinex) ---------- */
+// sRGB 0-255 <-> linear 0-1, by table: in steps of 1/16, out by the square root of the linear value
+// (fine steps in the shadows).
+let TO_LIN = null, FROM_LIN = null;
+function linTables() {
+  if (TO_LIN) return;
+  TO_LIN = new Float32Array(4097);
+  for (let i = 0; i <= 4096; i++) { const c = Math.min(1, i / 16 / 255); TO_LIN[i] = c <= 0.04045 ? c / 12.92 : ((c + 0.055) / 1.055) ** 2.4; }
+  FROM_LIN = new Float32Array(4097);
+  for (let i = 0; i <= 4096; i++) { const l = (i / 4096) ** 2; FROM_LIN[i] = 255 * (l <= 0.0031308 ? l * 12.92 : 1.055 * l ** (1 / 2.4) - 0.055); }
+}
+// Linear light scaled by k (rgb 0-255, in place).
+function brighten(rgb, k) {
+  linTables();
+  for (let i = 0; i < rgb.length; i++) rgb[i] = fromLin(toLin(rgb[i]) * k);
+  return rgb;
+}
+const yOfL = (L) => (L > 8 ? ((L + 16) / 116) ** 3 : L / 903.3);
+const toLin = (v) => TO_LIN[v <= 0 ? 0 : v >= 256 ? 4096 : (v * 16 + 0.5) | 0];
+const fromLin = (l) => FROM_LIN[l <= 0 ? 0 : l >= 1 ? 4096 : (Math.sqrt(l) * 4096 + 0.5) | 0];
+
+// Flat-lay photos are lit unevenly (brighter at the chest, darker to the hem, shadows in the folds).
+// The light is the fabric's own colour, blurred wide (prints, logos and zips left out and filled in
+// from the fabric around them); every pixel, prints included, is divided by it and multiplied by the
+// fabric's colour, so the fabric comes out even and prints keep their own contrast and colour.
+// Tops: the light followed closely (folds and shadows go); bottoms: only a plane (a gradient across
+// the panel), so the wash and fading of denim stay. Changes the panels' rgb in place.
+async function delight(panels, fabric, kind) {
+  linTables();
+  const eps = 0.004, f0 = fabric.rgb.map(toLin);
+  const Y0 = 0.2126 * f0[0] + 0.7152 * f0[1] + 0.0722 * f0[2];
+  // pass 1 bounds: the fabric's chromaticity (r/g, b/g) within ±25%, its brightness 0.25-3x
+  const k1 = Math.exp(0.25), ur = (f0[0] + eps) / (f0[1] + eps), vr = (f0[2] + eps) / (f0[1] + eps);
+  const uLo = ur / k1, uHi = ur * k1, vLo = vr / k1, vHi = vr * k1, yLo = (Y0 + eps) * 0.25 - eps, yHi = (Y0 + eps) * 3 - eps;
+  // The light is worked out at half size (cells of 2 x 2 there, 4 x 4 px of the panel), applied at full size.
+  const R = kind === "top" ? 3 : 8;
+  const fields = [];
+  for (const p of panels) {
+    const { w, h, rgb, valid } = p, w2 = w >> 1, h2 = h >> 1, n = w2 * h2;
+    const lin = new Float32Array(n * 3), Y = new Float32Array(n);
+    const fab = new Uint8Array(n), notFab = new Uint8Array(n);
+    for (let y = 0; y < h2; y++) for (let x = 0; x < w2; x++) {
+      const i = y * w2 + x, a = (y * 2) * w + x * 2, q = [a, a + 1, a + w, a + w + 1];
+      let r = 0, g = 0, b = 0, ok = 1;
+      for (const j of q) { r += toLin(rgb[j * 3]); g += toLin(rgb[j * 3 + 1]); b += toLin(rgb[j * 3 + 2]); ok &= valid[j]; }
+      r /= 4; g /= 4; b /= 4;
+      lin[i * 3] = r; lin[i * 3 + 1] = g; lin[i * 3 + 2] = b;
+      const yy = (Y[i] = 0.2126 * r + 0.7152 * g + 0.0722 * b);
+      if (!ok) continue;
+      const u = (r + eps) / (g + eps), v = (b + eps) / (g + eps);
+      if (yy > yLo && yy < yHi && u > uLo && u < uHi && v > vLo && v < vHi) fab[i] = 1; else notFab[i] = 1;
+    }
+    // the soft edges of prints aren't fabric either
+    const near = dilate(notFab, w2, h2, 1);
+    for (let i = 0; i < n; i++) if (near[i]) fab[i] = 0;
+    const check = fab.slice(); // what the checks call fabric
+    let E = lightField(lin, fab, w2, h2, 2, R, f0, false);
+    // pass 2: prints in the fabric's own colours stand out from the light around them (by more than
+    // 0.64-1.57x in brightness or ±12% in chromaticity)
+    const gw = Math.ceil(w2 / 2), gh = Math.ceil(h2 / 2), print = new Uint8Array(n);
+    const kY = Math.exp(0.45), kC = Math.exp(0.12);
+    for (let y = 0; y < h2; y++) {
+      const crow = Math.min(gh - 1, y >> 1) * gw;
+      for (let x = 0; x < w2; x++) {
+        const i = y * w2 + x;
+        if (!fab[i]) continue;
+        const o = (crow + Math.min(gw - 1, x >> 1)) * 3, er = E[o], eg = E[o + 1], eb = E[o + 2];
+        const qy = (Y[i] + eps) / (0.2126 * er + 0.7152 * eg + 0.0722 * eb + eps);
+        const qu = ((lin[i * 3] + eps) / (lin[i * 3 + 1] + eps)) * ((eg + eps) / (er + eps));
+        const qv = ((lin[i * 3 + 2] + eps) / (lin[i * 3 + 1] + eps)) * ((eg + eps) / (eb + eps));
+        if (qy > kY || qy * kY < 1 || qu > kC || qu * kC < 1 || qv > kC || qv * kC < 1) print[i] = 1;
+      }
+    }
+    const drop = dilate(print, w2, h2, 1);
+    for (let i = 0; i < n; i++) if (drop[i]) fab[i] = 0;
+    E = lightField(lin, fab, w2, h2, 2, R, f0, kind !== "top");
+    fields.push({ p, fab, check, E, gw, gh, w2, h2 });
+    await yieldNow();
+  }
+  // The fabric's colour under even light: where the garment is best lit (the light's 75th percentile
+  // in brightness, the median's colour), as shadows and fall-off only ever darken it.
+  const pick = (fn) => { const out = []; for (const f of fields) for (let i = 0; i < f.gw * f.gh; i += 3) out.push(fn(f.E, i * 3)); return out; };
+  const med = [0, 1, 2].map((c) => median(pick((E, o) => E[o + c])));
+  const lift = percentile(pick((E, o) => 0.2126 * E[o] + 0.7152 * E[o + 1] + 0.0722 * E[o + 2]), 0.75) / Math.max(1e-4, 0.2126 * med[0] + 0.7152 * med[1] + 0.0722 * med[2]);
+  const target = med.map((v) => Math.min(1, v * lift));
+  for (const f of fields) {
+    const { p, E, gw, gh } = f, { w, h, rgb } = p;
+    const gain = new Float32Array(gw * gh * 3);
+    for (let i = 0; i < gw * gh; i++) for (let c = 0; c < 3; c++) gain[i * 3 + c] = Math.max(0.4, Math.min(2.5, target[c] / Math.max(1e-4, E[i * 3 + c])));
+    // the gain read back bilinearly (cell k's centre at (k + 0.5) * 4 px)
+    const X0 = new Int32Array(w), X1 = new Int32Array(w), TX = new Float32Array(w);
+    for (let x = 0; x < w; x++) { const fx = Math.max(0, Math.min(gw - 1, (x + 0.5) / 4 - 0.5)); X0[x] = fx | 0; X1[x] = Math.min(gw - 1, X0[x] + 1); TX[x] = fx - X0[x]; }
+    for (let y = 0; y < h; y++) {
+      const fy = Math.max(0, Math.min(gh - 1, (y + 0.5) / 4 - 0.5)), y0 = fy | 0, y1 = Math.min(gh - 1, y0 + 1), ty = fy - y0;
+      const ra = y0 * gw, rb = y1 * gw;
+      for (let x = 0; x < w; x++) {
+        const i = (y * w + x) * 3, a = (ra + X0[x]) * 3, b = (ra + X1[x]) * 3, c = (rb + X0[x]) * 3, d = (rb + X1[x]) * 3, tx = TX[x];
+        for (let k = 0; k < 3; k++) {
+          const g = (gain[a + k] + (gain[b + k] - gain[a + k]) * tx) * (1 - ty) + (gain[c + k] + (gain[d + k] - gain[c + k]) * tx) * ty;
+          rgb[i + k] = fromLin(toLin(rgb[i + k]) * g);
+        }
+      }
+    }
+    await yieldNow();
+  }
+  return { target: hexOf(target.map(fromLin)), masks: fields.map((f) => ({ w: f.w2, h: f.h2, fabric: f.check, used: f.fab })) };
+}
+// The light over a panel, on cells of F px: the mean linear colour of the fabric in each cell, cells
+// without fabric filled in from around them (pull-push), blurred (box blur x3 of radius R cells, about
+// a Gaussian); or (`plane`) a plane fitted to the log of the light, a gradient across the panel.
+function lightField(lin, fab, w, h, F, R, fallback, plane) {
+  const gw = Math.ceil(w / F), gh = Math.ceil(h / F), C = new Float32Array(gw * gh * 3), Wt = new Float32Array(gw * gh);
+  for (let y = 0; y < h; y++) for (let x = 0; x < w; x++) {
+    const i = y * w + x;
+    if (!fab[i]) continue;
+    const o = ((y / F) | 0) * gw + ((x / F) | 0);
+    Wt[o]++; C[o * 3] += lin[i * 3]; C[o * 3 + 1] += lin[i * 3 + 1]; C[o * 3 + 2] += lin[i * 3 + 2];
+  }
+  for (let o = 0; o < gw * gh; o++) if (Wt[o]) { for (let c = 0; c < 3; c++) C[o * 3 + c] /= Wt[o]; Wt[o] /= F * F; }
+  if (plane) {
+    // weighted least squares of log(light) = a + b x + c y, per channel
+    const out = new Float32Array(gw * gh * 3);
+    for (let c = 0; c < 3; c++) {
+      let s = 0, sx = 0, sy = 0, sxx = 0, syy = 0, sxy = 0, t = 0, tx = 0, ty = 0;
+      for (let y = 0; y < gh; y++) for (let x = 0; x < gw; x++) {
+        const o = y * gw + x, wt = Wt[o];
+        if (wt < 0.25) continue;
+        const X = x / gw - 0.5, Yc = y / gh - 0.5, v = Math.log(Math.max(1e-4, C[o * 3 + c]));
+        s += wt; sx += wt * X; sy += wt * Yc; sxx += wt * X * X; syy += wt * Yc * Yc; sxy += wt * X * Yc;
+        t += wt * v; tx += wt * v * X; ty += wt * v * Yc;
+      }
+      const sol = solve3([[s, sx, sy], [sx, sxx, sxy], [sy, sxy, syy]], [t, tx, ty]) || [Math.log(Math.max(1e-4, fallback[c])), 0, 0];
+      for (let y = 0; y < gh; y++) for (let x = 0; x < gw; x++) out[(y * gw + x) * 3 + c] = Math.exp(sol[0] + sol[1] * (x / gw - 0.5) + sol[2] * (y / gh - 0.5));
+    }
+    return out;
+  }
+  return boxBlur3(pullPush(C, Wt, gw, gh, fallback), gw, gh, R, 3);
+}
+function solve3(A, b) {
+  const det = (m) => m[0][0] * (m[1][1] * m[2][2] - m[1][2] * m[2][1]) - m[0][1] * (m[1][0] * m[2][2] - m[1][2] * m[2][0]) + m[0][2] * (m[1][0] * m[2][1] - m[1][1] * m[2][0]);
+  const D = det(A);
+  if (!(Math.abs(D) > 1e-12)) return null;
+  return [0, 1, 2].map((k) => det(A.map((row, r) => row.map((v, c) => (c === k ? b[r] : v)))) / D);
+}
+
 /* ======================================================================
    4. Opaque panels
    ====================================================================== */
+// The panel's border fades into the plain fabric (its colour and grain) over FEATHER px, cosine-shaped:
+// wherever the stage's projection ends, no edge or rectangle shows. Still fully opaque.
+function featherEdge(rgb, w, h, fabric, tile) {
+  const hf = tile.hf, F = fabric.rgb;
+  for (let y = 0; y < h; y++) {
+    const dy = Math.min(y, h - 1 - y), trow = (y & 255) << 8;
+    for (let x = 0; x < w; x++) {
+      const d = Math.min(dy, x, w - 1 - x);
+      if (d >= FEATHER) { x = w - FEATHER - 1; continue; } // on to the right-hand border
+      const f = 0.5 * (1 + Math.cos((Math.PI * (d + 0.5)) / FEATHER)), o = (y * w + x) * 3, t = (trow | (x & 255)) * 3;
+      for (let c = 0; c < 3; c++) rgb[o + c] = clamp255(rgb[o + c] * (1 - f) + (F[c] + hf[t + c]) * f);
+    }
+  }
+  return rgb;
+}
 // Holes and background filled from the garment around them (pull-push), the edge cross-faded over a
 // few pixels, and the filled part given the fabric's grain, so nothing looks cut out.
 async function finishPanel(p, fabric, tile) {
@@ -1302,6 +1512,25 @@ function roughnessOfPanel(rgb, w, h, fabric, base) {
     out[i * 4] = out[i * 4 + 1] = out[i * 4 + 2] = r; out[i * 4 + 3] = 255;
   }
   return out;
+}
+// The sole's colour: the biggest group of the samples' colours (k-means in Lab), its median.
+function dominantRGB(samples) {
+  if (samples.length < 30) return null;
+  const labs = samples.map((s) => labOf(s[0], s[1], s[2]));
+  const { centers, assign, counts } = kmeans(labs, 3, 8);
+  const top = counts.indexOf(Math.max(...counts));
+  const group = new Set([top]);
+  centers.forEach((c, k) => { if (k !== top && dE(c, centers[top]) < 14) group.add(k); });
+  const ms = [];
+  labs.forEach((_, i) => { if (group.has(assign[i])) ms.push(samples[i]); });
+  return [0, 1, 2].map((c) => median(ms.map((s) => s[c])));
+}
+// Which 3D shoe the stage draws.
+function shoeStyleOf(item) {
+  const name = (item.name || "").toLowerCase();
+  if (item.category === "boots" || /\bboots?\b/.test(name)) return "boot";
+  if (/\bjordan\s*(1|4)\b|\bhigh\b|\bhi-?top\b|\bmid\b/.test(name)) return "high_top_sneaker";
+  return "low_sneaker";
 }
 function roughnessOf(item, sub) {
   const c = item.category, name = (item.name || "").toLowerCase();

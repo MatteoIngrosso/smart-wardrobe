@@ -3579,7 +3579,7 @@ function dressStage() {
     if ((now?.id ?? null) === id) {
       if (id && now.on !== on) { st.setVisible(slot, on); now.on = on; }
     } else {
-      st.setGarment(slot, asset || null, { visible: on });
+      st.setGarment(slot, asset || null, { visible: on, name: w?.item.name || "" }); // the name says the fit ("straight", "baggy"…)
       mirror.worn[slot] = id ? { id, on } : null;
     }
     if (w && !asset && !mirror.noBake.has(w.item.id) && !mirror.pending.has(w.item.id)) bakePiece(w.item);
