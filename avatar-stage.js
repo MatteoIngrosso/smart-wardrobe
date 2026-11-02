@@ -272,13 +272,18 @@ function morphWeights(cfg) {
   }
   // the average-muscle weight targets are faint: heavy bodies take some of the soft (low-muscle) one,
   // thin ones some of its lean counterpart, so 120 kg reads heavier than 50 kg at any height
-  out['u-minmuscle-maxweight'] = (out['u-minmuscle-maxweight'] || 0) + W.max * 0.6 * (1 - 0.5 * b.muscle);
+  out['u-minmuscle-maxweight'] = (out['u-minmuscle-maxweight'] || 0) + W.max * 0.45 * (1 - 0.5 * b.muscle);
   out['u-minmuscle-minweight'] = (out['u-minmuscle-minweight'] || 0) + W.min * 0.4;
   // height targets change proportions (and the frame is scaled to the exact height anyway): keep them mild
   out.minheight = 0.6 * Math.max(0, 1 - 2 * height);
   out.maxheight = 0.6 * Math.max(0, 2 * height - 1);
   Object.assign(out, b.extra);
   out['stomach-pregnant-incr'] = clamp((bmi - 27) / 16, 0, 0.45);
+  // a heavier man carries it in the belly and waist, not in breasts: the soft targets round the chest,
+  // so flatten it back as the weight goes up (the base mesh is already flat-chested)
+  out['breast-point-decr'] = W.max * 1.2;
+  out['measure-bust-circ-decr'] = W.max * 0.5;
+  out['buttocks-volume-decr'] = W.max * 0.5;
   return out;
 }
 

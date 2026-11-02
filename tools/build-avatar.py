@@ -10,7 +10,8 @@
 #
 # What goes in (all in MakeHuman units, decimetres; the stage scales to metres):
 #   base      every vertex of the base mesh (helpers too: the joints are averages of helper vertices),
-#             baked as a young man of mixed ethnicity with average proportions
+#             baked as a young man of mixed ethnicity with average proportions and a masculine
+#             finish (MASCULINE below: no breasts, narrower hips)
 #   index     the body's triangles (helpers left out)
 #   m:<name>  sparse morph targets: universal muscle x weight grid, height, and a few torso/shoulder
 #             shapes for the build (slim, regular, athletic, broad)
@@ -52,6 +53,21 @@ base = V.copy()
 for r in ['caucasian', 'african', 'asian']:
     base += target(f'macrodetails/{r}-male-young') / 3
 base += 0.5 * target('macrodetails/proportions/male-young-averagemuscle-averageweight-idealproportions')
+# MakeHuman's average young man still has soft, rounded breasts, wide hips and a full bottom (it
+# blends towards the genderless base mesh). A masculine finish: flat pectorals instead of breasts,
+# narrower hips, a flatter bottom, a slightly wider V from the shoulders to the waist.
+MASCULINE = [
+    ('breast/breast-point-decr', 1.0), ('breast/breast-volume-vert-up', 0.5),
+    ('measure/measure-bust-circ-decr', 0.35), ('torso/torso-muscle-pectoral-incr', 0.3),
+    ('hip/hip-scale-horiz-decr', 0.55), ('measure/measure-hips-circ-decr', 0.6),
+    ('buttocks/buttocks-volume-decr', 0.7), ('measure/measure-waist-circ-decr', 0.25),
+    ('torso/torso-vshape-incr', 0.35), ('measure/measure-shoulder-dist-incr', 0.35),
+    # and a man's face and neck: a squarer, wider jaw, a firmer chin, a thicker neck
+    ('head/head-square', 0.35), ('chin/chin-width-incr', 0.4), ('chin/chin-bones-incr', 0.35),
+    ('chin/chin-prominent-incr', 0.2), ('neck/neck-scale-horiz-incr', 0.3), ('measure/measure-neck-circ-incr', 0.3),
+]
+for name, w in MASCULINE:
+    base += w * target(name)
 
 morphs = {}
 for m in ['min', 'average', 'max']:
@@ -64,7 +80,8 @@ for h in ['min', 'max']:
 for name in ['torso/torso-vshape-incr', 'torso/torso-scale-horiz-incr', 'torso/torso-scale-horiz-decr',
              'measure/measure-shoulder-dist-incr', 'measure/measure-shoulder-dist-decr',
              'measure/measure-neck-circ-incr', 'measure/measure-upperarm-circ-incr',
-             'stomach/stomach-pregnant-incr']:
+             'stomach/stomach-pregnant-incr', 'breast/breast-point-decr', 'measure/measure-bust-circ-decr',
+             'buttocks/buttocks-volume-decr']:
     morphs[name.split('/')[1]] = target(name)
 
 tris = []
