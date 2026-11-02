@@ -62,7 +62,7 @@ MASCULINE = [
     ('measure/measure-bust-circ-decr', 0.35), ('torso/torso-muscle-pectoral-incr', 0.3),
     ('hip/hip-scale-horiz-decr', 0.55), ('measure/measure-hips-circ-decr', 0.6),
     ('buttocks/buttocks-volume-decr', 0.7), ('measure/measure-waist-circ-decr', 0.25),
-    ('torso/torso-vshape-incr', 0.35), ('measure/measure-shoulder-dist-incr', 0.35),
+    ('torso/torso-vshape-incr', 0.25), ('measure/measure-shoulder-dist-incr', 0.12),
     # and a man's face and neck: a squarer, wider jaw, a firmer chin, a thicker neck
     ('head/head-square', 0.35), ('chin/chin-width-incr', 0.4), ('chin/chin-bones-incr', 0.35),
     ('chin/chin-prominent-incr', 0.2), ('neck/neck-scale-horiz-incr', 0.3), ('measure/measure-neck-circ-incr', 0.3),

@@ -41,6 +41,11 @@
  * @property {string} [fit]         the item's fit: slim, regular, relaxed, oversized, baggy, straight, wide, cropped
  * @property {'full'|'short'|'long'|'cropped'} [length] shorts are short, coats long, cropped tops cropped
  * @property {boolean} [toeLeft]    shoes: the toe points left in the photos as they were taken
+ * @property {boolean} [backToeLeft] shoes: the same for the second photo
+ * @property {{top:number[], bot:number[], aspect:number}} [shoeProfile] shoes: the levelled outline of
+ *   the front photo (toe right), its top and bottom edge per column heel to toe, 0-1 up from the bottom
+ *   of its box, and the box's height over its length (the stage builds the shoe from it)
+ * @property {{top:number[], bot:number[], aspect:number}} [shoeProfileBack] shoes: the same for the second photo
  */
 
 // Inner to outer. The stage draws them in this order and offsets each further from the skin.
