@@ -18,7 +18,7 @@
 import { subTypeOf, lengthOf, PANEL_SIZE } from "./avatar-config.js";
 
 /** Raise it when the bake changes, so every piece is baked again. */
-export const BAKER_VERSION = 2;
+export const BAKER_VERSION = 3;
 
 const DB_NAME = "wardrobe-garments", STORE = "baked";
 const SLOT_OF = { tee: "top", hoodie: "layer", sweater: "layer", bomber: "jacket", jacket_open: "jacket", jeans: "bottoms", cargo: "bottoms", sneakers: "shoes", boots: "shoes" };
@@ -53,7 +53,10 @@ export async function bakeGarment(item, { front, back } = {}, opts = {}) {
   const fa = await analysePhoto(front, kind);
   mark("front");
   await yieldNow();
-  const ba = back ? await analysePhoto(back, kind).catch(() => null) : null;
+  let ba = back ? await analysePhoto(back, kind).catch(() => null) : null;
+  // a second shoe photo that is no side view even levelled (a boot shot from above, on its toe: taller
+  // than long) would draw a tilted shoe: the front photo does both sides then
+  if (ba && kind === "shoes" && ba.box.y1 - ba.box.y0 > (ba.box.x1 - ba.box.x0) * 1.1) ba = null;
   mark("back");
   await yieldNow();
 
@@ -128,10 +131,14 @@ export async function bakeGarment(item, { front, back } = {}, opts = {}) {
     length: lengthOf(item),
     hasBack: !!bp,
   };
+  if (kind === "bottoms") { const c = crotchOf(fp); if (c) asset.crotchV = c; }
   if (fabric.trim) asset.trimColor = hexOf(fabric.trim);
   if (fabric.second) asset.secondaryColor = hexOf(fabric.second);
   if (kind === "shoes") {
     asset.toeLeft = !!fa.toeLeft;
+    // the outline of each levelled photo (heel to toe): the stage builds the 3D shoe from it
+    asset.shoeProfile = shoeProfileOf(fa);
+    if (ba) { asset.backToeLeft = !!ba.toeLeft; asset.shoeProfileBack = shoeProfileOf(ba); }
     const sole = dominantRGB([...(fa.sole || []), ...((ba && ba.sole) || [])]);
     if (sole) { if (expo > 1) brighten(sole, expo); asset.soleColor = hexOf(sole); }
     asset.shoeStyle = shoeStyleOf(item);
@@ -824,6 +831,16 @@ function seamsOf(m, w, L, box, rows, cx) {
   return { l: null, r: null };
 }
 // Bottoms: the whole garment, from the waistband (not a label sticking up) to the hems.
+// Where the legs part in the photo: the top of the gap between them, as a v (1 = the waistband, 0 =
+// the hems), so the stage can put the photo's crotch on the 3D crotch seam.
+function crotchOf(p) {
+  const { w, h, valid } = p, tops = [];
+  for (let x = Math.round(w * 0.46); x <= Math.round(w * 0.54); x++) {
+    for (let y = Math.round(h * 0.12); y < Math.round(h * 0.7); y++) if (!valid[y * w + x]) { tops.push(y); break; }
+  }
+  if (tops.length < 3) return null;
+  return Math.round((1 - median(tops) / h) * 1000) / 1000;
+}
 function bottomsCore(m, w, h, box) {
   const bw = box.x1 - box.x0 + 1, tops = [];
   for (let x = Math.round(box.x0 + bw * 0.25); x <= box.x1 - bw * 0.25; x++) {
@@ -855,9 +872,20 @@ function soleAngle(m, w, h) {
     const dx = hull[i][0] - hull[i - 1][0], dy = -(hull[i][1] - hull[i - 1][1]);
     if (!best || dx > best.dx) best = { dx, dy };
   }
-  if (!best || best.dx < (box.x1 - box.x0) * 0.25) return 0;
-  const a = Math.atan2(best.dy, best.dx);
-  return Math.abs(a) > (32 * Math.PI) / 180 ? 0 : a;
+  const a = best && best.dx >= (box.x1 - box.x0) * 0.25 ? Math.atan2(best.dy, best.dx) : null;
+  if (a != null && Math.abs(a) <= (32 * Math.PI) / 180) return a;
+  // (a boot shot from above, taller than long: its sole may be steeper)
+  if (a != null && box.y1 - box.y0 > (box.x1 - box.x0) * 1.15 && Math.abs(a) <= (60 * Math.PI) / 180) return a;
+  // No long flat edge (a boot shot from above and the side stands at up to ~45°): level the lowest
+  // points of its two ends, where it would rest on the floor.
+  const bw = box.x1 - box.x0 + 1, low = (x0, x1) => {
+    let bx = 0, by = -1;
+    for (let x = x0; x <= x1; x++) for (let y = box.y1; y >= box.y0; y--) if (m[y * w + x]) { if (y > by) { by = y; bx = x; } break; }
+    return [bx, by];
+  };
+  const [lx, ly] = low(box.x0, box.x0 + Math.round(bw * 0.3)), [rx, ry] = low(box.x1 - Math.round(bw * 0.3), box.x1);
+  const b = Math.atan2(ry - ly, rx - lx);
+  return rx > lx && Math.abs(b) <= (50 * Math.PI) / 180 ? b : 0;
 }
 function rotateMask(m, w, h, box, angle) {
   if (!angle) return { m, w, h };
@@ -908,6 +936,36 @@ function toeIsLeft({ m, w, h }) {
   for (let x = 0; x < bw * 0.28; x++) { left += heights[x]; nl++; }
   for (let x = Math.round(bw * 0.72); x < bw; x++) { right += heights[x]; nr++; }
   return left / nl < right / nr; // the toe is the lower end
+}
+// The outline of a levelled shoe (toe to the right) as its top and bottom edge in N columns from
+// heel to toe, 0-1 up from the bottom of its box, and the box's height over its length.
+function shoeProfileOf(a, N = 48) {
+  const { mask: m, w, box } = a;
+  const bw = box.x1 - box.x0 + 1, bh = box.y1 - box.y0 + 1;
+  const top = new Array(N).fill(null), bot = new Array(N).fill(null);
+  for (let i = 0; i < N; i++) {
+    const xa = box.x0 + Math.floor((i * bw) / N), xb = Math.max(xa, box.x0 + Math.floor(((i + 1) * bw) / N) - 1);
+    // the column's solid part: its runs of shoe (small gaps closed), the biggest one (a three-quarter
+    // photo can show a strip of the far collar above a gap, which no side outline has)
+    const on = new Uint8Array(bh);
+    for (let x = xa; x <= xb; x++) for (let y = box.y0; y <= box.y1; y++) if (m[y * w + x]) on[y - box.y0] = 1;
+    const gap = Math.max(2, Math.round(bh * 0.05));
+    let best = null, cur = null, last = -1e9;
+    for (let y = 0; y < bh; y++) {
+      if (!on[y]) continue;
+      if (cur && y - last <= gap) { cur.b = y; cur.n++; } else { cur = { t: y, b: y, n: 1 }; }
+      last = y;
+      if (!best || cur.n > best.n) best = cur;
+    }
+    if (best) { top[i] = 1 - best.t / bh; bot[i] = 1 - (best.b + 1) / bh; }
+  }
+  // empty columns (a gap in the mask): the neighbours' values
+  for (const arr of [top, bot]) for (let i = 0; i < N; i++) if (arr[i] == null) {
+    let l = i - 1, r = i + 1; while (l >= 0 && arr[l] == null) l--; while (r < N && arr[r] == null) r++;
+    arr[i] = l >= 0 && r < N ? (arr[l] + arr[r]) / 2 : l >= 0 ? arr[l] : r < N ? arr[r] : 0.5;
+  }
+  const r3 = (v) => Math.round(Math.max(0, Math.min(1, v)) * 1000) / 1000;
+  return { top: top.map(r3), bot: bot.map(r3), aspect: Math.round((bh / bw) * 1000) / 1000 };
 }
 function redraw(data, mask, w, h, box, angle, flip) {
   if (!angle && !flip) return { w, h, data, mask };
