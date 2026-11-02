@@ -68,8 +68,10 @@ async function loadAvatarData() {
   for (let k = 0; k < index.length; k++) index[k] = toC[indexFull[k]];
   const reg = arr('region'), aL = arr('armL'), aR = arr('armR'), lL = arr('legL'), lR = arr('legR');
   const rest = new Float32Array(m * 3), region = new Uint8Array(m), armW = new Float32Array(m), legW = new Float32Array(m);
+  const aoAll = hdr.ao ? arr('ao') : null, ao = new Float32Array(m).fill(1);
   for (let c = 0; c < m; c++) {
     const i = ids[c];
+    if (aoAll) ao[c] = aoAll[i] / 255;
     rest[c * 3] = full[i * 3]; rest[c * 3 + 1] = full[i * 3 + 1]; rest[c * 3 + 2] = full[i * 3 + 2];
     region[c] = reg[i];
     armW[c] = Math.max(aL[i], aR[i]) / 255;
@@ -78,7 +80,7 @@ async function loadAvatarData() {
   const morphs = {};
   for (const name of hdr.morphs) morphs[name] = { i: arr(`m:${name}:i`), d: arr(`m:${name}:d`) };
   return {
-    N, full, ids, m, index, rest, region, armW, legW, morphs, joints: hdr.joints,
+    N, full, ids, m, index, rest, region, armW, legW, ao, morphs, joints: hdr.joints,
     eyeRel: arr('eyeRel'), eyeUV: arr('eyeUV'), eyeSide: arr('eyeSide'), irises: hdr.irises || [],
   };
 }
@@ -790,8 +792,13 @@ function skinMaterial(U) {
   // physical skin: matte (roughness 0.68) with the faintest clearcoat, no greasy shine
   const mat = new THREE.MeshPhysicalMaterial({ color: 0xffffff, roughness: 0.68, metalness: 0, clearcoat: 0.05, clearcoatRoughness: 0.55, specularIntensity: 0.6 });
   mat.onBeforeCompile = (shader) => {
+    // baked ambient occlusion (tools/build-avatar.py): eye sockets, nostrils, ears, under the jaw
+    shader.vertexShader = shader.vertexShader
+      .replace('#include <common>', '#include <common>\nattribute float aAO; varying float vAO;')
+      .replace('#include <begin_vertex>', '#include <begin_vertex>\nvAO = aAO;');
     shader.fragmentShader = shader.fragmentShader
       .replace('#include <common>', `#include <common>
+varying float vAO;
 uniform vec3 uSkin, uHair, uLip;
 uniform vec4 uEyes[2];    // rest-space eye centres, radius
 // the upper lid: a soft shadow in the crease and a dark lash line along the lid's edge
@@ -817,8 +824,9 @@ float lipMask(vec3 p) {
 }
 float browMask(vec3 p) {
   float ax = abs(p.x), t = (ax - 0.075) / 0.5;
-  float yc = 8.205 + 0.055 * sin(clamp(t, 0.0, 1.0) * 2.6) - 0.02 * t;
-  float th = mix(0.05, 0.02, clamp(t, 0.0, 1.0));
+  // a man's brows: thick, low and nearly straight (a slight lift, then tapering towards the temple)
+  float yc = 8.195 + 0.028 * sin(clamp(t, 0.0, 1.0) * 2.6) - 0.018 * t;
+  float th = mix(0.062, 0.034, clamp(t, 0.0, 1.0));
   float m = 1.0 - smoothstep(th * 0.55, th, abs(p.y - yc));
   m *= smoothstep(-0.06, 0.06, t) * (1.0 - smoothstep(0.92, 1.06, t));
   m *= smoothstep(1.12, 1.3, p.z);
@@ -861,7 +869,7 @@ float scalpArea(vec3 p) {
   skin = mix(skin, lip, lm);
   // brows and lashes: darker than the hair (towards a deep brown-black)
   vec3 browCol = mix(uHair, vec3(0.0101, 0.0060, 0.0037), 0.6);
-  skin = mix(skin, browCol, browMask(p) * 0.85);
+  skin = mix(skin, browCol, browMask(p) * 0.88);
   vec2 lid = lidMask(p);
   skin *= 1.0 - 0.28 * lid.y;
   skin = mix(skin, browCol * 0.8, clamp(lid.x, 0.0, 1.0) * 0.9);
@@ -879,10 +887,14 @@ float scalpArea(vec3 p) {
     vec3 detail = clamp(photo / max(uFaceMean, vec3(0.02)), 0.0, 2.0);
     skin = mix(skin, skin * detail, fm * uFaceOn * 0.85);
   }
+  // occluded skin is darker and a little warmer (light bounced inside the skin)
+  float occ = 1.0 - smoothstep(0.0, 1.0, vAO);
+  skin *= mix(vec3(1.0), vec3(0.42, 0.34, 0.31), occ);
   diffuseColor.rgb = skin;
 }`)
       .replace('#include <roughnessmap_fragment>', `#include <roughnessmap_fragment>
 roughnessFactor = mix(roughnessFactor, 0.5, lipMask(vRest));
+roughnessFactor = mix(roughnessFactor, 1.0, 1.0 - vAO); // no shine deep in creases
 roughnessFactor *= 0.9 + 0.2 * vnoise(vRest * 60.0);`)
       .replace('#include <normal_fragment_maps>', `#include <normal_fragment_maps>
 #ifdef PANEL_EDGE
@@ -1428,7 +1440,7 @@ function topTargets(D, S, B, g, worn) {
   const P = B.P, s = B.s, m = D.m, spec = g.spec, fk = g.fitKey;
   const over = fk === 'oversized' ? 1 : fk === 'relaxed' ? 0.5 : 0, slim = fk === 'slim' ? 1 : 0;
   const ease = (SLOT_OFFSET_MM[spec.slot] * MM + spec.loose * (0.55 + 0.6 * over) + 0.03 * over) * s * (1 - 0.5 * slim);
-  const taper = slim ? 0.4 : over ? 0 : 0.1; // radius lost per unit of height, going down (boxy: none)
+  const taper = slim ? 0.25 : 0; // radius lost per unit of height, going down (only slim fits narrow)
   const yOf = (ry) => (ry - B.lo) * s;
   const yArm = yOf(4.62), yTop = yArm + 0.55 * s, dy = 0.1 * s;
   let yLo = Infinity;
@@ -1451,13 +1463,16 @@ function topTargets(D, S, B, g, worn) {
   for (let r = 0; r < NR; r++) { let z0 = Infinity, z1 = -Infinity; for (const [, z] of rows[r]) { if (z < z0) z0 = z; if (z > z1) z1 = z; } zc[r] = Number.isFinite(z0) ? (z0 + z1) / 2 : NaN; }
   for (let r = 0; r < NR; r++) if (isNaN(zc[r])) zc[r] = r ? zc[r - 1] : 0;
   for (let it = 0; it < 4; it++) { const b = zc.slice(); for (let r = 1; r < NR - 1; r++) zc[r] = (b[r - 1] + 2 * b[r] + b[r + 1]) / 4; }
+  // below the armpits the cloth hangs plumb: one centre for all those rows, so the front falls
+  // straight from the chest instead of following the body back in under it (which reads as a bust)
+  const rArm = clamp(Math.round((yArm - yLo) / dy), 0, NR - 1);
+  for (let r = 0; r < rArm; r++) zc[r] = zc[rArm];
   const ring = new Array(NR).fill(null);
   for (let r = 0; r < NR; r++) { const Rb = radialBins(rows[r], 0, zc[r]); ring[r] = Rb ? Rb.map((v) => v + ease) : null; }
   for (let r = 1; r < NR; r++) if (!ring[r]) ring[r] = ring[r - 1];
   for (let r = NR - 2; r >= 0; r--) if (!ring[r]) ring[r] = ring[r + 1];
   if (!ring[0]) return null;
   // hang from the chest: from the widest row under the armpits down to the hem
-  const rArm = clamp(Math.round((yArm - yLo) / dy), 0, NR - 1);
   for (let r = rArm - 1; r >= 0; r--) for (let b = 0; b < PB; b++) ring[r][b] = Math.max(ring[r][b], ring[r + 1][b] - taper * dy);
   // oversized: boxy, the chest's width carried down
   for (let pass = 0; pass < 3; pass++) {
@@ -1987,7 +2002,12 @@ export async function createStage(container, { onAngle, onReady } = {}) {
   container.appendChild(canvas);
 
   const scene = new THREE.Scene();
-  scene.background = new THREE.Color(BACKDROP);
+  // a studio backdrop: a soft pool of light behind the man, falling off to the corners
+  scene.background = canvasTexture(512, 512, (g, w, h) => {
+    const grd = g.createRadialGradient(w * 0.5, h * 0.42, 0, w * 0.5, h * 0.48, w * 0.72);
+    grd.addColorStop(0, '#2b2a27'); grd.addColorStop(0.45, '#1d1c1a'); grd.addColorStop(1, '#0e0e0d');
+    g.fillStyle = grd; g.fillRect(0, 0, w, h);
+  }, true);
   const pmrem = new THREE.PMREMGenerator(renderer);
   const envTex = pmrem.fromScene(new RoomEnvironment(), 0.04).texture;
   pmrem.dispose();
@@ -2044,6 +2064,7 @@ export async function createStage(container, { onAngle, onReady } = {}) {
   bodyGeo.setAttribute('position', new THREE.BufferAttribute(new Float32Array(D.m * 3), 3));
   bodyGeo.setAttribute('normal', new THREE.BufferAttribute(new Float32Array(D.m * 3), 3));
   bodyGeo.setAttribute('aRest', new THREE.BufferAttribute(D.rest, 3));
+  bodyGeo.setAttribute('aAO', new THREE.BufferAttribute(D.ao, 1));
   bodyGeo.setAttribute('aCoverA', new THREE.BufferAttribute(new Float32Array(D.m * 4).fill(-9), 4));
   bodyGeo.setAttribute('aCoverB', new THREE.BufferAttribute(new Float32Array(D.m).fill(-9), 1));
   bodyGeo.setIndex(new THREE.BufferAttribute(D.index, 1));
@@ -2333,11 +2354,11 @@ diffuseColor.rgb *= mix(1.0, 0.42, smoothstep(0.0, 0.42, vEyeUp));`)
     skinU.uSkin.value.setStyle(cfg.skinTone, THREE.SRGBColorSpace);
     skinU.uHair.value.setStyle(cfg.hairColor, THREE.SRGBColorSpace);
     const lip = new THREE.Color().setStyle(cfg.skinTone, THREE.SRGBColorSpace);
-    const hsl = {}; lip.getHSL(hsl); lip.setHSL((hsl.h + 0.985) % 1, Math.min(1, hsl.s * 1.05 + 0.08), hsl.l * 0.78);
+    const hsl = {}; lip.getHSL(hsl); lip.setHSL((hsl.h + 0.99) % 1, Math.min(1, hsl.s * 0.95 + 0.03), hsl.l * 0.86); // a man's lips: close to the skin, no rosy tint
     skinU.uLip.value.copy(lip);
     eyeU.uEye.value.setStyle(cfg.eyeColor, THREE.SRGBColorSpace);
     const beard = cfg.beard || 'clean';
-    skinU.uBeard.value.set(beard === 'stubble' ? 0.75 : beard === 'clean' ? 0.12 : 0.5, 1, 0, 0);
+    skinU.uBeard.value.set(beard === 'stubble' ? 0.75 : beard === 'clean' ? 0.2 : 0.5, 1, 0, 0);
     skinU.uScalp.value.set(cfg.hairStyle === 'shaved' ? 0.4 : cfg.hairStyle === 'buzz' ? 0.85 : cfg.hairStyle === 'fade' ? 0.75 : 0.5, 0);
   }
 
@@ -2608,8 +2629,10 @@ function headRadius(D, B, c, tris) {
 // Hairlines: rest height (dm) by the angle around the head (0 front, 180 back), symmetric.
 const LINE_SHORT = [[0, 8.72], [22, 8.67], [38, 8.56], [50, 8.44], [55, 8.3], [58, 7.9], [62, 7.88], [65.5, 8.36], [104, 8.38], [118, 8.02], [135, 7.78], [180, 7.72]];
 const LINE_CROP = [[0, 8.47], [26, 8.48], [40, 8.46], [50, 8.4], [55, 8.3], [58, 7.9], [62, 7.88], [65.5, 8.36], [104, 8.38], [118, 8.02], [135, 7.78], [180, 7.72]];
-const LINE_WAVY = [[0, 8.7], [22, 8.64], [38, 8.44], [52, 7.98], [62, 7.62], [90, 7.42], [140, 7.32], [180, 7.3]];
-const LINE_LONG = [[0, 8.7], [22, 8.64], [38, 8.42], [50, 7.95], [58, 7.35], [80, 7.0], [120, 6.96], [180, 6.94]];
+// men's lengths: wavy is a textured flow over the tops of the ears and down to the nape, long reaches
+// the bottom of the ears and the top of the neck (never a jaw-length bob or hair past the shoulders)
+const LINE_WAVY = [[0, 8.7], [22, 8.64], [38, 8.5], [50, 8.3], [56, 8.14], [70, 8.08], [100, 8.0], [125, 7.8], [150, 7.62], [180, 7.56]];
+const LINE_LONG = [[0, 8.7], [22, 8.64], [38, 8.48], [50, 8.2], [58, 7.86], [80, 7.72], [115, 7.5], [150, 7.34], [180, 7.3]];
 function lineAt(L, A) {
   for (let k = 1; k < L.length; k++) if (A <= L[k][0]) { const [a0, y0] = L[k - 1], [a1, y1] = L[k]; return mix(y0, y1, sstep(a0, a1, A)); }
   return L[L.length - 1][1];
@@ -2625,8 +2648,8 @@ const HAIR_SPECS = {
   crop: { T: [0.12, 0.045, 0.065], blunt: [0, 42], edge: 0.1, line: LINE_CROP, mode: 0, str: [90, 4], rough: 0.5 },
   slick: { T: [0.1, 0.04, 0.085], edge: 0.06, line: LINE_SHORT, mode: 1, str: [80, 3], rough: 0.3 },
   curly: { T: [0.2, 0.12, 0.15], curl: 0.08, edge: 0.14, line: LINE_SHORT, mode: 2, str: [40, 40], rough: 0.55, bump: 0.0007 },
-  wavy: { T: [0.16, 0.12, 0.14], wave: 0.03, hang: 0.12, blunt: [64, 181], edge: 0.08, line: LINE_WAVY, mode: 0, str: [80, 3], rough: 0.45 },
-  long: { T: [0.15, 0.13, 0.14], wave: 0.012, hang: 0.08, blunt: [56, 181], edge: 0.06, line: LINE_LONG, mode: 0, str: [80, 2.5], rough: 0.42 },
+  wavy: { T: [0.17, 0.075, 0.1], wave: 0.022, hang: 0.03, blunt: [64, 181], edge: 0.1, line: LINE_WAVY, mode: 0, str: [80, 3], rough: 0.48 },
+  long: { T: [0.15, 0.085, 0.11], wave: 0.014, hang: 0.04, blunt: [56, 181], edge: 0.08, line: LINE_LONG, mode: 1, str: [70, 3], rough: 0.44 },
 };
 const HAIR_CENTER = [0, 8.25, 0.35];
 
