@@ -10,10 +10,12 @@
 #
 # What goes in (all in MakeHuman units, decimetres; the stage scales to metres):
 #   base      every vertex of the base mesh (helpers too: the joints are averages of helper vertices),
-#             baked as a young man of mixed ethnicity with average proportions
+#             baked as a young man of mixed ethnicity with average proportions and a masculine
+#             finish (MASCULINE below: no breasts, narrower hips)
 #   index     the body's triangles (helpers left out)
 #   m:<name>  sparse morph targets: universal muscle x weight grid, height, and a few torso/shoulder
 #             shapes for the build (slim, regular, athletic, broad)
+#   ao        per vertex 0-255: ambient occlusion on the rest pose (255 open)
 #   region    per vertex: 1 torso, 2 upper arm, 3 forearm, 4 hand, 5 thigh, 6 shin, 7 foot, 8 head, 9 neck
 #   armL/armR/legL/legR  0-255 weights of the arm and leg chains (arms are lowered at run time)
 #   joints    named joints -> vertex lists (their average is the joint)
@@ -52,6 +54,21 @@ base = V.copy()
 for r in ['caucasian', 'african', 'asian']:
     base += target(f'macrodetails/{r}-male-young') / 3
 base += 0.5 * target('macrodetails/proportions/male-young-averagemuscle-averageweight-idealproportions')
+# MakeHuman's average young man still has soft, rounded breasts, wide hips and a full bottom (it
+# blends towards the genderless base mesh). A masculine finish: flat pectorals instead of breasts,
+# narrower hips, a flatter bottom, a slightly wider V from the shoulders to the waist.
+MASCULINE = [
+    ('breast/breast-point-decr', 1.0), ('breast/breast-volume-vert-up', 0.5),
+    ('measure/measure-bust-circ-decr', 0.35), ('torso/torso-muscle-pectoral-incr', 0.3),
+    ('hip/hip-scale-horiz-decr', 0.55), ('measure/measure-hips-circ-decr', 0.6),
+    ('buttocks/buttocks-volume-decr', 0.7), ('measure/measure-waist-circ-decr', 0.25),
+    ('torso/torso-vshape-incr', 0.35), ('measure/measure-shoulder-dist-incr', 0.35),
+    # and a man's face and neck: a squarer, wider jaw, a firmer chin, a thicker neck
+    ('head/head-square', 0.35), ('chin/chin-width-incr', 0.4), ('chin/chin-bones-incr', 0.35),
+    ('chin/chin-prominent-incr', 0.2), ('neck/neck-scale-horiz-incr', 0.3), ('measure/measure-neck-circ-incr', 0.3),
+]
+for name, w in MASCULINE:
+    base += w * target(name)
 
 morphs = {}
 for m in ['min', 'average', 'max']:
@@ -64,7 +81,8 @@ for h in ['min', 'max']:
 for name in ['torso/torso-vshape-incr', 'torso/torso-scale-horiz-incr', 'torso/torso-scale-horiz-decr',
              'measure/measure-shoulder-dist-incr', 'measure/measure-shoulder-dist-decr',
              'measure/measure-neck-circ-incr', 'measure/measure-upperarm-circ-incr',
-             'stomach/stomach-pregnant-incr']:
+             'stomach/stomach-pregnant-incr', 'breast/breast-point-decr', 'measure/measure-bust-circ-decr',
+             'buttocks/buttocks-volume-decr']:
     morphs[name.split('/')[1]] = target(name)
 
 tris = []
@@ -173,6 +191,58 @@ for c in (xs < ys, xs >= ys):
     irises.append([round(cx / W, 4), round(1 - cy / H, 4), round(float(np.median(rs)) / W, 4), round(pr / W, 4)])
 im.resize((256, 256), Image.LANCZOS).save(f'{OUT}/eye.png', optimize=True)
 
+
+
+def ambient_occlusion(P, T, voxel=0.03, reach=1.2, rays=48):
+    """Per vertex 0-255 (255 open): how much of the sky each point of the body sees, on the rest
+    pose. Darkens eye sockets, the nostrils, behind the ears, under the jaw, armpits and the fingers,
+    which the stage multiplies into the skin (no run-time cost)."""
+    used = np.unique(T)
+    # vertex normals
+    n = np.zeros_like(P)
+    a, b, c = P[T[:, 0]], P[T[:, 1]], P[T[:, 2]]
+    fn = np.cross(b - a, c - a)
+    for k in range(3):
+        np.add.at(n, T[:, k], fn)
+    n /= np.maximum(np.linalg.norm(n, axis=1, keepdims=True), 1e-12)
+    # the surface as voxels (triangles sampled finely enough to leave no gaps)
+    lo = P[used].min(axis=0) - reach - voxel
+    dims = np.ceil((P[used].max(axis=0) + reach + voxel - lo) / voxel).astype(int) + 1
+    grid = np.zeros(dims, dtype=bool)
+    edge = np.maximum(np.linalg.norm(b - a, axis=1), np.linalg.norm(c - a, axis=1))
+    steps = np.clip(np.ceil(edge / (voxel * 0.5)).astype(int), 1, 64)
+    for s in np.unique(steps):
+        sel = steps == s
+        uu, vv = np.meshgrid(np.arange(s + 1), np.arange(s + 1))
+        keep = uu + vv <= s
+        uu, vv = uu[keep] / s, vv[keep] / s
+        pts = a[sel, None] + uu[None, :, None] * (b[sel] - a[sel])[:, None] + vv[None, :, None] * (c[sel] - a[sel])[:, None]
+        ijk = np.floor((pts.reshape(-1, 3) - lo) / voxel).astype(int)
+        grid[ijk[:, 0], ijk[:, 1], ijk[:, 2]] = True
+    # cosine-weighted directions (a fixed spiral), turned into each vertex's hemisphere
+    k = np.arange(rays) + 0.5
+    r = np.sqrt(k / rays); th = k * np.pi * (3 - np.sqrt(5))
+    local = np.stack([r * np.cos(th), r * np.sin(th), np.sqrt(1 - r * r)], axis=1)
+    out = np.full(len(P), 255, dtype=np.uint8)
+    V = P[used]; N_ = n[used]
+    t1 = np.cross(N_, np.where(np.abs(N_[:, :1]) < 0.9, [[1.0, 0, 0]], [[0, 1.0, 0]]))
+    t1 /= np.linalg.norm(t1, axis=1, keepdims=True)
+    t2 = np.cross(N_, t1)
+    dists = np.arange(3, int(reach / voxel)) * voxel
+    occ = np.zeros(len(V))
+    for d in local:
+        dirs = t1 * d[0] + t2 * d[1] + N_ * d[2]
+        hit = np.zeros(len(V)); blocked = np.zeros(len(V), dtype=bool)
+        for t in dists:
+            q = np.floor((V + N_ * voxel * 1.5 + dirs * t - lo) / voxel).astype(int)
+            h = grid[q[:, 0], q[:, 1], q[:, 2]] & ~blocked
+            hit[h] = 1 - (t / reach) ** 2      # near walls count more than far ones
+            blocked |= h
+        occ += hit
+    out[used] = np.clip(255 * (1 - occ / rays), 0, 255).astype(np.uint8)
+    return out
+
+
 chunks, header = [], {}
 off = 0
 
@@ -195,6 +265,7 @@ for name, d in morphs.items():
     put(f'm:{name}:d', d[nz].ravel(), np.float32)
     mlist.append(name)
 put('region', region, np.uint8)
+put('ao', ambient_occlusion(base, tris), np.uint8)
 for nm, arr in [('armL', armL), ('armR', armR), ('legL', legL), ('legR', legR)]:
     put(nm, np.clip(arr, 0, 1) * 255, np.uint8)
 put('eyeRel', eyeRel.ravel(), np.float32)
