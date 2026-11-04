@@ -709,24 +709,45 @@ function boundaryEdges(tris, groups) {
 
 const SPECS = {
   tee: { slot: 'top', sleeve: 0.3, hem: 0.45, neck: 'crew', taper: 0.25, loose: 0.04, flare: 0.1, thick: 0.035, collar: 'rim' },
+  // a tank top: no sleeves, armholes cut deep into the side (armhole: the arm weight it is cut at)
+  tank: { slot: 'top', sleeve: 0, hem: 0.45, neck: 'tank', taper: 0.25, loose: 0.03, thick: 0.03, collar: 'rim', armhole: 0.1 },
+  longsleeve: { slot: 'top', sleeve: 0.97, hem: 0.45, neck: 'crew', taper: 0.25, loose: 0.035, sleeveLoose: 0.035, thick: 0.03, collar: 'rim' },
   sweater: { slot: 'layer', sleeve: 0.985, hem: 0.62, neck: 'crew', taper: 0.2, loose: 0.06, sleeveLoose: 0.07, thick: 0.05, rib: 0.55, cuff: 0.11, collar: 'rib' },
-  hoodie: { slot: 'layer', sleeve: 0.985, hem: 0.58, neck: 'hood', taper: 0.18, loose: 0.08, sleeveLoose: 0.09, thick: 0.04, rib: 0.6, cuff: 0.11, hood: true },
-  bomber: { slot: 'jacket', sleeve: 0.955, hem: 1.32, neck: 'jacket', open: 0.5, taper: 0.2, loose: 0.06, sleeveLoose: 0.075, thick: 0.035, rib: 0.55, cuff: 0.1, collar: 'stand' },
+  // fit-style knobs (all lengths in decimetres before the body's scale):
+  //   loft: how far the cloth stands off whatever is under it, below the chest (a jacket's volume);
+  //   loftTop: [rest y where it starts, rest y where it is full] (never on the tops of the shoulders);
+  //   blouse: the extra bag just above a rib/elastic hem; ribPull: how tightly the hem band pulls the
+  //   cloth back in (0-1); rolls / cuffRolls: soft horizontal folds above the hem / the cuffs;
+  //   sleeveTap: the sleeve's ease kept at [the deltoid, the wrist]; sleeveRamp: the share of it already
+  //   at the shoulder seam (the rest comes in by the biceps); baffle: quilting
+  hoodie: { slot: 'layer', sleeve: 0.985, hem: 0.58, neck: 'hood', taper: 0.18, loose: 0.08, sleeveLoose: 0.09, thick: 0.04, rib: 0.6, cuff: 0.11, hood: true, loft: 0.15, loftTop: [5.4, 4.6], blouse: 0.05, ribPull: 0.75 },
+  trackjacket: { slot: 'layer', sleeve: 0.985, hem: 0.62, neck: 'crew', taper: 0.2, loose: 0.05, sleeveLoose: 0.06, thick: 0.035, rib: 0.35, cuff: 0.08, collar: 'stand', ribPull: 0.6 },
+  // MA-1 blouson: a short body that billows and is gathered by a tight rib waistband and rib cuffs
+  bomber: { slot: 'jacket', sleeve: 0.955, hem: 1.7, neck: 'jacket', open: 0.5, taper: 0.2, loose: 0.06, sleeveLoose: 0.14, sleeveTap: [0.85, 0.8], sleeveRamp: 0.6, thick: 0.035, rib: 0.55, cuff: 0.1, collar: 'stand', loft: 0.4, loftTop: [4.9, 4.3], blouse: 0.12, ribPull: 0.85, rolls: 0.045, cuffRolls: 0.03 },
+  // a quilted down jacket: inflated, horizontal baffles every ~10 cm, a high stand collar, elastic hem and cuffs
+  puffer: { slot: 'jacket', sleeve: 0.97, hem: 1.05, neck: 'crew', taper: 0.06, loose: 0.08, sleeveLoose: 0.55, sleeveTap: [1, 0.8], sleeveRamp: 0.5, thick: 0.06, cuff: 0.07, collar: 'stand', collarR: 0.12, loft: 0.66, loftTop: [6.2, 5.5], hemPull: 0.3, ribPull: 0.4, baffle: { step: 1.05, amp: 0.12, armStep: 0.85, armAmp: 0.08 } },
   jacket_open: { slot: 'jacket', sleeve: 0.955, hem: 0.3, neck: 'jacket', open: 0.56, taper: 0.12, loose: 0.06, sleeveLoose: 0.08, thick: 0.03, collar: 'fold' },
   jeans: { slot: 'bottoms', waist: 2.02, leg: 1.0, loose: 0.06, taper: 0.12, thick: 0.015 },
   cargo: { slot: 'bottoms', waist: 2.02, leg: 1.0, loose: 0.1, taper: 0.06, thick: 0.015, pockets: true },
+  // joggers and track pants: tapered from the knee to an elastic ankle cuff (band: its height; tight:
+  // how far it stands off the leg), the cloth gathering just above it
+  jogger: { slot: 'bottoms', waist: 2.02, leg: 0.965, loose: 0.07, taper: 0.12, thick: 0.015, jogger: { band: 0.55, tight: 0.05, gather: 0.13 } },
+  // leggings: on the skin (skin: the offset), no drape and no folds
+  leggings: { slot: 'bottoms', waist: 2.02, leg: 0.975, loose: 0, taper: 0, thick: 0.008, skin: 0.018 },
   // footwear shells: a low sneaker, a high-top (higher collar, a tongue standing up at the front),
   // a boot (a ~15 cm shaft on a chunky lug sole)
   sneakers: { slot: 'shoes', collar: 1.02, sole: 0.3, toe: 0.24, bulk: 0.1, tongue: 0.05 },
   hightop: { slot: 'shoes', collar: 1.22, sole: 0.32, toe: 0.24, bulk: 0.11, tongue: 0.16 },
   boots: { slot: 'shoes', collar: 1.42, sole: 0.42, toe: 0.22, bulk: 0.14, tongue: 0.06, lug: true },
 };
+// A quilted baffle along u (one baffle per unit): 0 on the stitch lines, 1 in the middle of the puff.
+const puffOf = (u) => { const f = u - Math.floor(u), d = 2 * f - 1; return Math.sqrt(Math.max(0, 1 - d * d)); };
 const DEFAULT_SUBTYPE = { top: 'tee', layer: 'hoodie', jacket: 'bomber', bottoms: 'jeans', shoes: 'sneakers' };
 // How much looser than the spec a fit makes the piece (drape and how slowly it narrows).
-const FIT = { slim: 0.5, regular: 1, straight: 1.05, relaxed: 1.2, oversized: 1.5, baggy: 1.7, wide: 1.6, cropped: 1 };
+const FIT = { slim: 0.5, regular: 1, straight: 1.05, tapered: 0.9, relaxed: 1.2, oversized: 1.5, baggy: 1.7, wide: 1.6, cropped: 1 };
 // The fit: a keyword in the item's name first ("Dark blue straight jeans" is straight whatever was
 // saved), then the asset's fit, then regular.
-const FIT_WORDS = [[/\b(skinny|slim)\b/, 'slim'], [/\b(oversized?|boxy)\b/, 'oversized'], [/\b(baggy|wide)(-leg)?\b/, 'baggy'], [/\b(relaxed|loose)\b/, 'relaxed'], [/\bstraight\b/, 'straight'], [/\bregular\b/, 'regular']];
+const FIT_WORDS = [[/\b(skinny|slim)\b/, 'slim'], [/\b(oversized?|boxy)\b/, 'oversized'], [/\b(baggy|wide)(-leg)?\b/, 'baggy'], [/\b(relaxed|loose)\b/, 'relaxed'], [/\bstraight\b/, 'straight'], [/\b(tapered|joggers?)\b/, 'tapered'], [/\bregular\b/, 'regular']];
 // Which shell a shoe gets: the asset's shoeStyle, else its name, then its category.
 function shoeShell(asset, name, sub) {
   const style = { low_sneaker: 'sneakers', high_top_sneaker: 'hightop', boot: 'boots' }[asset?.shoeStyle];
@@ -1042,8 +1063,8 @@ function garmentFields(D, S, spec, sub, length) {
     return F;
   }
   // tops
-  const hemY = length === 'cropped' ? 1.95 : length === 'long' && sub === 'jacket_open' ? 0.18 : spec.hem;
-  const neck = spec.neck === 'jacket' ? [6.12, 6.43, 6.6] : spec.neck === 'hood' ? [6.2, 6.5, 6.66] : [6.24, 6.52, 6.66];
+  const hemY = length === 'cropped' ? 1.95 : length === 'long' && (sub === 'jacket_open' || sub === 'puffer') ? 0.18 : spec.hem;
+  const neck = spec.neck === 'jacket' ? [6.12, 6.43, 6.6] : spec.neck === 'hood' ? [6.2, 6.5, 6.66] : spec.neck === 'tank' ? [5.95, 6.42, 6.5] : [6.24, 6.52, 6.66];
   const neckY = (c) => { const k = Math.cos(S.thetaN[c]); return k >= 0 ? mix(neck[1], neck[0], k * k) : mix(neck[1], neck[2], k * k); };
   F.hem = f((c, x, y) => { const s = armS(c); return (1 - s) * (hemY - y) - s * 1; });
   F.neck = f((c, x, y) => y - neckY(c));
@@ -1052,6 +1073,7 @@ function garmentFields(D, S, spec, sub, length) {
     const g = (y) => spec.open + 0.22 * sstep(5.5, 6.4, y) - 0.05 * sstep(4.5, 2.5, y);
     F.open = f((c, x, y, z) => Math.min(g(y) - Math.abs(x), (z - S.rowVal(S.zc, y)) * 2 - 0.05) - (armS(c) > 0.5 ? 2 : 0));
   }
+  if (spec.armhole) F.armhole = f((c) => armW[c] - spec.armhole); // a tank top: cut where the arm begins
   F.arm = f((c) => armW[c] - 0.5);
   F.front = f((c, x, y, z) => -(z - S.rowVal(S.zc, y)));
   if (spec.rib) F.rib = f((c, x, y) => (armS(c) > 0.5 ? 1 : y - (hemY + spec.rib)));
@@ -1077,7 +1099,7 @@ function garmentTopology(D, S, sub, length) {
     cover = [id('waist'), id('legHem'), id('arms')]; split = [id('front')];
     groupOf = (a) => (a[id('front')] <= 0 ? G_FRONT : G_BACK);
   } else {
-    cover = [id('hem'), id('neck'), id('sleeve')].concat(spec.open ? [id('open')] : []);
+    cover = [id('hem'), id('neck'), id('sleeve')].concat(spec.open ? [id('open')] : [], spec.armhole ? [id('armhole')] : []);
     split = [id('arm'), id('front')].concat(spec.rib ? [id('rib')] : [], spec.cuff ? [id('cuff')] : []);
     groupOf = (a) => {
       if (a[id('arm')] > 0) return spec.cuff && a[id('cuff')] <= 0 ? G_TRIM : G_FABRIC;
@@ -1133,6 +1155,7 @@ function baseHeights(D, S, B, env, patch, asset, fitKey) {
     const legs = env.legs.map((L) => ({ ...L, hang: hangDown(L.hull, LB, LROWS, Math.round(((0.16 - LT0) / (LT1 - LT0)) * (LROWS - 1)), LROWS - 1, ((LT1 - LT0) / (LROWS - 1)) * S.legLen * B.s, taperT * 4) }));
     const extra = spec.loose * fit * B.s;
     for (const v of reg) {
+      if (spec.skin) { hmin[v] = spec.skin * B.s; continue; } // leggings: on the skin, no drape
       const o = v * 3, ls = sstep(0.25, 0.65, D.legW[v]);
       let hd = 0;
       // pelvis: follow the hips' hull
@@ -1163,6 +1186,7 @@ function baseHeights(D, S, B, env, patch, asset, fitKey) {
   } else {
     // tops: the torso hangs from the chest (and the shoulder blades) down, bridging hollows
     const torso = env.torso, taper = spec.taper / fit;
+    const loftK = fitKey === 'slim' ? 0.8 : fitKey === 'oversized' ? 1.2 : fitKey === 'relaxed' ? 1.1 : 1;
     const armpitRow = Math.round(S.rowOf(4.65));
     const hang = hangDown(torso.hull, TB, S.rows, armpitRow, 0, S.rowDy * B.s, taper);
     const extra = spec.loose * fit * B.s;
@@ -1180,12 +1204,18 @@ function baseHeights(D, S, B, env, patch, asset, fitKey) {
         // a ribbed hem gathers the cloth back in (the blouse above it)
         if (spec.rib) hd *= mix(0.25, 1, sstep(hemY + 0.05, hemY + spec.rib * 0.9, y));
         hd += extra * 0.25 * (1 - as);
+        // the jacket's volume over the upper chest and back (the drape below takes over under the
+        // arms); not where the body faces up, so the shoulders stay unpadded
+        if (spec.loft) hd += spec.loft * loftK * B.s * (1 - as) * sstep(spec.loftTop[0], spec.loftTop[1], y) * (1 - 0.7 * sstep(0.3, 0.75, Ns[o + 1]));
+        if (spec.baffle) hd += spec.baffle.amp * B.s * (1 - as) * (puffOf((y - hemY) / spec.baffle.step) - 0.75);
       }
       if (as > 0) {
         const t = S.armT[v];
         // a sleeve tapers from the deltoid to the wrist (no inflated tube)
-        const tap = spec.sleeve > 0.6 ? mix(spec.slot === 'jacket' ? 0.8 : 1.0, 0.4, sstep(0.12, 0.85, t)) : 1;
-        let sl = (spec.sleeveLoose ?? 0.04) * Math.min(fit, 1.25) * B.s * tap;
+        const tap = spec.sleeve > 0.6 ? mix(spec.sleeveTap ? spec.sleeveTap[0] : spec.slot === 'jacket' ? 0.8 : 1.0, spec.sleeveTap ? spec.sleeveTap[1] : 0.4, sstep(0.12, 0.85, t)) : 1;
+        let sl = (spec.sleeveLoose ?? 0.04) * Math.min(fit, 1.25) * B.s * tap * (spec.sleeveRamp ? mix(spec.sleeveRamp, 1, sstep(0.02, 0.25, t)) : 1);
+        // quilted sleeves: a puff between stitch lines, round the arm
+        if (spec.baffle) sl += spec.baffle.armAmp * B.s * (puffOf((t * S.armLen) / spec.baffle.armStep + 0.5) - 0.75) * sstep(spec.sleeve - (spec.cuff || 0) - 0.01, spec.sleeve - (spec.cuff || 0) - 0.06, t) * sstep(0.04, 0.12, t);
         if (spec.flare) sl += spec.flare * fit * B.s * sstep(0.05, spec.sleeve, t);
         if (spec.cuff) { const ce = spec.sleeve - spec.cuff; sl = mix(sl, 0.012 * B.s, sstep(ce - 0.02, ce + 0.01, t)); sl += 0.06 * B.s * Math.exp(-(((t - (ce - 0.05)) / 0.04) ** 2)); }
         const inner = Math.max(0, -Ns[o] * (D.rest[o] >= 0 ? 1 : -1));
@@ -1203,7 +1233,7 @@ function baseHeights(D, S, B, env, patch, asset, fitKey) {
   // hardly at all where two parts of the body face each other (between the legs, arm and torso)
   const cap = new Float32Array(D.m);
   for (const v of reg) {
-    let c = 0.15 * B.s;
+    let c = (spec.skin ? 0.01 : 0.15) * B.s;
     if (D.legW[v] > 0.2 && S.legT[v] > -0.2) c *= 1 - 0.9 * Math.max(0, -Math.sin(S.legPhi[v])) * sstep(0.2, 0.6, D.legW[v]);
     const aw = D.armW[v]; c *= 1 - 0.8 * sstep(0.1, 0.3, aw) * sstep(0.75, 0.5, aw);
     cap[v] = c;
@@ -1403,12 +1433,29 @@ function pantsTargets(D, S, B, patch, fitKey, shoeG) {
         for (let r = 1; r <= rK + 2; r++) if (prev[r] && prev[r - 1] && prev[r + 1]) for (let b = 0; b < PB; b++) leg[k][r][b] = Math.max(prev[r][b], (prev[r - 1][b] + prev[r][b] * 2 + prev[r + 1][b]) / 4);
       }
     }
+    // joggers: from the knee the leg narrows to the elastic cuff, which holds close round the ankle
+    // (or round a high-top's collar); tapered trousers narrow a little towards the ankle
+    const jog = spec.jogger, yCuff = yAnk + (1 - spec.leg) * (H[1] - yAnk) + (jog ? jog.band * s : 0);
+    if (jog || fitKey === 'tapered') for (let r = 0; r < NR; r++) {
+      const y = rowY(r); if (!leg[k][r] || !own[r] || y > yKnee) continue;
+      const w = jog ? sstep(yKnee, yCuff + 0.6 * s, y) : sstep(yKnee, yAnk, y), tightR = (jog ? jog.tight : 0.05) * s;
+      for (let b = 0; b < PB; b++) {
+        const lo = own[r][b] + tightR, cur = leg[k][r][b];
+        leg[k][r][b] = jog ? mix(cur, lo, w) : Math.max(lo, cur * mix(1, 0.88, w));
+      }
+    }
     // the max and the averages above may leave a dent: each slice convex again, and its corners
     // (where the flat inner side meets the round back, or the shoe's hull) rounded off, so no
     // vertical edge runs down the leg
     for (let r = 0; r < NR; r++) if (leg[k][r]) leg[k][r] = hullRadii(filletRadii(hullRadii(leg[k][r], PB, new Float32Array(PB)), 25), PB, new Float32Array(PB));
+    // joggers: the cloth gathers in soft rings just above the cuff
+    if (jog) for (let r = 0; r < NR; r++) {
+      const y = rowY(r), zz = (y - yCuff) / s; if (!leg[k][r] || zz < -0.05 || zz > 1.1) continue;
+      const g = 1 + jog.gather * sstep(-0.02, 0.08, zz) * sstep(1.1, 0.5, zz) * (0.55 + 0.45 * Math.sin((zz / 0.3) * 2 * Math.PI + 1.2));
+      for (let b = 0; b < PB; b++) leg[k][r][b] *= g;
+    }
     // stacked rings where a long hem rests on the shoe
-    if (baggy) {
+    if (baggy && !jog) {
       const yH = yAnk, span = 1.3 * s;
       for (let r = 0; r < NR; r++) {
         const y = rowY(r); if (!leg[k][r] || y > yH + span) continue;
@@ -1551,9 +1598,12 @@ function topTargets(D, S, B, g, worn) {
   // only the layering gap, so a jacket over a tee is ~1-1.5 cm off it, not a box around it
   const ease = (SLOT_OFFSET_MM[spec.slot] * 0.6 * MM + spec.loose * (0.45 + 0.6 * over) + 0.03 * over) * s * (1 - 0.5 * slim);
   const gapIn = (spec.slot === 'jacket' ? 0.07 : 0.04) * s;
+  // the garment's own volume (a bomber, a puffer): it stands this far off the body or the layer under it
+  const loft = (spec.loft || 0) * s * (slim ? 0.8 : fk === 'oversized' ? 1.2 : fk === 'relaxed' ? 1.1 : 1);
   // radius lost per unit of height going down, per side: the back follows the shoulder blades in
   // towards the waist, the front falls nearly straight from the chest (no bust), the sides between
-  const tF = slim ? 0.2 : 0.02, tB = slim ? 0.3 : over ? 0.08 : 0.16;
+  // (a lofted jacket falls plumb all round to its hem band: no waist, no bust)
+  const tF = loft ? 0 : slim ? 0.2 : 0.02, tB = loft ? 0.05 : slim ? 0.3 : over ? 0.08 : 0.16;
   const yOf = (ry) => (ry - B.lo) * s;
   const yArm = yOf(4.62), yTop = yArm + 0.85 * s, dy = 0.1 * s;
   let yLo = Infinity;
@@ -1582,14 +1632,19 @@ function topTargets(D, S, B, g, worn) {
   // straight from the chest instead of following the body back in under it (which reads as a bust)
   const rArm = clamp(Math.round((yArm - yLo) / dy), 0, NR - 1);
   for (let r = 0; r < rArm; r++) zc[r] = zc[rArm];
-  const ring = new Array(NR).fill(null);
+  const ring = new Array(NR).fill(null), tight = new Array(NR).fill(null);
   for (let r = 0; r < NR; r++) {
     const Rb = radialBins(rows[r], 0, zc[r]), Ri = rowsIn[r].length > 8 ? radialBins(rowsIn[r], 0, zc[r]) : null;
-    ring[r] = Rb ? Rb.map((v, b) => Math.max(v + ease, Ri ? Ri[b] + gapIn : 0)) : null;
+    ring[r] = Rb ? Rb.map((v, b) => Math.max(v + Math.max(ease, loft), Ri ? Ri[b] + Math.max(gapIn, loft) : 0)) : null;
+    // where a hem band pulls the cloth in to: close over what is under it
+    tight[r] = Rb ? Rb.map((v, b) => Math.max(v + ease, Ri ? Ri[b] + gapIn * 0.8 : 0)) : null;
   }
-  for (let r = 1; r < NR; r++) if (!ring[r]) ring[r] = ring[r - 1];
-  for (let r = NR - 2; r >= 0; r--) if (!ring[r]) ring[r] = ring[r + 1];
+  for (const A of [ring, tight]) {
+    for (let r = 1; r < NR; r++) if (!A[r]) A[r] = A[r - 1];
+    for (let r = NR - 2; r >= 0; r--) if (!A[r]) A[r] = A[r + 1];
+  }
   if (!ring[0]) return null;
+  for (let r = 0; r < NR; r++) tight[r] = hullRadii(tight[r], PB, new Float32Array(PB));
   // hang from the chest: from the widest row under the armpits down to the hem
   const tapB = Array.from({ length: PB }, (_, b) => mix(tF, tB, ((1 - Math.cos(-Math.PI + ((b + 0.5) * 2 * Math.PI) / PB)) / 2) ** 3)); // the sides fall nearly straight too
   for (let r = rArm - 1; r >= 0; r--) for (let b = 0; b < PB; b++) ring[r][b] = Math.max(ring[r][b], ring[r + 1][b] - tapB[b] * dy);
@@ -1606,13 +1661,22 @@ function topTargets(D, S, B, g, worn) {
     for (let r = 1; r < NR - 1; r++) for (let b = 0; b < PB; b++) ring[r][b] = Math.max(prev[r][b], (prev[r - 1][b] + 2 * prev[r][b] + prev[r + 1][b]) / 4);
   }
   for (let r = 0; r < NR; r++) ring[r] = hullRadii(ring[r], PB, new Float32Array(PB));
-  const hemTop = spec.rib ? yOf(g.patch.hemY + spec.rib * 0.9) : -Infinity, hemBot = yOf(g.patch.hemY);
+  const band = spec.rib || spec.hemPull || 0;
+  const hemTop = band ? yOf(g.patch.hemY + band * 0.9) : -Infinity, hemBot = yOf(g.patch.hemY);
   const place = (x, y, z, T, o) => {
     const f = clamp((y - yLo) / dy, 0, NR - 1), r0 = Math.floor(f), t = f - r0, r1 = Math.min(NR - 1, r0 + 1);
     const c = mix(zc[r0], zc[r1], t), a = Math.atan2(x, z - c);
     let Rr = mix(radiusAt(ring[r0], a), radiusAt(ring[r1], a), t);
-    // a ribbed hem gathers the cloth back in a little
-    if (spec.rib) Rr -= 0.35 * ease * sstep(hemTop, hemBot, y);
+    if (spec.ribPull && band) {
+      // the band (a rib, an elastic hem) holds the cloth close; above it the cloth bags out and rolls
+      const Rt = mix(radiusAt(tight[r0], a), radiusAt(tight[r1], a), t);
+      const zz = (y - hemTop) / s;
+      if (spec.blouse) Rr += spec.blouse * s * Math.exp(-(((zz - 0.3) / 0.3) ** 2));
+      if (spec.rolls) Rr += spec.rolls * s * Math.max(0, Math.sin((zz / 0.28) * 2 * Math.PI + 0.9 * Math.sin(2 * a + 0.7))) ** 1.5 * sstep(0, 0.06, zz) * sstep(1.0, 0.7, zz);
+      Rr = mix(Rr, Rt + 0.1 * Math.max(0, Rr - Rt), spec.ribPull * sstep(0.03, -0.06, zz));
+    } else if (spec.rib) Rr -= 0.35 * ease * sstep(hemTop, hemBot, y); // a ribbed hem gathers the cloth back in a little
+    // quilting: a puff between horizontal stitch lines
+    if (spec.baffle) Rr += spec.baffle.amp * s * (puffOf((y - hemBot) / s / spec.baffle.step) - 0.75) * sstep(0, 0.08, (y - hemBot) / s);
     T[o] = Math.sin(a) * Rr; T[o + 1] = y; T[o + 2] = c + Math.cos(a) * Rr;
   };
   const weight = (y, aw) => sstep(0.3, 0.04, aw) * sstep(yTop, yArm - 0.1 * s, y);
@@ -1672,7 +1736,7 @@ class GarmentMesh {
     const addExtra = (ex) => { ex.start = n; n += ex.count; for (const [g, list] of ex.index) for (const i of list) extraIdx[g].push(i + ex.start); this.extras.push(ex); };
     if (this.spec.collar === 'rim' || this.spec.collar === 'rib') addExtra(collarRim(this, 0.05, 8));
     // jackets: a soft rolled rib along the neckline (no stiff plates standing off the shoulders)
-    if (this.spec.collar === 'stand') addExtra(collarRim(this, 0.075, 8));
+    if (this.spec.collar === 'stand') addExtra(collarRim(this, this.spec.collarR || 0.075, 8));
     if (this.spec.collar === 'fold') addExtra(collarRim(this, 0.06, 8));
     if (this.spec.hood) addExtra(hoodPart(this));
     if (isShoe) {
@@ -1782,6 +1846,8 @@ class GarmentMesh {
     // folds where the cloth gathers (elbows of long sleeves; the pants make their own)
     if (targets) {
       // nothing: the slices are already shaped
+    } else if (spec.slot === 'bottoms' && spec.skin) {
+      // leggings: no folds
     } else if (spec.slot === 'bottoms') {
       const fit = FIT[this.fitKey] ?? 1, stack = clamp((fit - 0.8) / 1.2, 0, 1);
       for (let v = 0; v < nv; v++) {
@@ -1800,12 +1866,14 @@ class GarmentMesh {
         const el = Math.exp(-(((t - 0.5) / 0.07) ** 2)) * (0.5 + 0.5 * Math.sin(t * 130 + x * 4)) * crook;
         const lo = sstep(0.66, 0.86, t) * (0.5 + 0.5 * Math.sin(t * 80 + x * 9)) * (spec.cuff ? 0.6 : 0.3);
         hw[v] += s * (0.04 * el + 0.02 * lo) - s * 0.012 * Math.exp(-(((t - 0.5) / 0.05) ** 2)) * crook;
+        // soft rolls where the sleeve is gathered into its cuff
+        if (spec.cuffRolls) { const ce = spec.sleeve - spec.cuff; hw[v] += spec.cuffRolls * s * Math.max(0, Math.sin(((ce - t) / 0.045) * Math.PI + x * 3)) ** 1.5 * sstep(ce + 0.005, ce - 0.015, t) * sstep(ce - 0.16, ce - 0.1, t); }
       }
     }
     const G = new Float32Array(nv * 3);
     for (let v = 0; v < nv; v++) for (let k = 0; k < 3; k++) G[v * 3 + k] = Pw[v * 3 + k] + Nw[v * 3 + k] * hw[v];
     // round the facets (Taubin: smooth without shrinking); boundary vertices only along the boundary
-    if (!targets) taubin(G, p.adj, p.bound, 2);
+    if (!targets && !spec.skin) taubin(G, p.adj, p.bound, 2); // (leggings follow the skin as it is)
     if (drape) { // the torso part on its convex slices
       const Pb = interp(p, B.P, 3), T = new Float32Array(3);
       for (let v = 0; v < nv; v++) {
@@ -2466,7 +2534,7 @@ diffuseColor.rgb *= mix(1.0, 0.42, smoothstep(0.0, 0.42, vEyeUp));`)
     const finals = {};
     for (const slot of ORDER) {
       const g = st.worn[slot]; if (!g) continue;
-      if (slot === 'bottoms') {
+      if (slot === 'bottoms' && !g.spec.skin) {
         const t = pantsTargets(D, S, B, g.patch, g.fitKey, st.worn.shoes?.G);
         finals[slot] = t.h; g.pants = t;
         g.update(B, t.h, t);
@@ -2486,7 +2554,7 @@ diffuseColor.rgb *= mix(1.0, 0.42, smoothstep(0.0, 0.42, vEyeUp));`)
         for (const v of reg) { let a = 0, n = 0; for (let k = off[v]; k < off[v + 1]; k++) if (inR[nb[k]]) { a += t[nb[k]]; n++; } if (n && a / n > h[v]) h[v] = mix(h[v], a / n, 0.5); }
       }
       // the torso part: a convex drape (see topTargets)
-      const drape = slot !== 'shoes' ? topTargets(D, S, B, g, st.worn) : null;
+      const drape = slot !== 'shoes' && slot !== 'bottoms' ? topTargets(D, S, B, g, st.worn) : null;
       if (drape) for (const v of reg) if (drape.w[v] > 0) h[v] = mix(h[v], Math.max(h[v] * 0.5, drape.h[v]), drape.w[v]);
       finals[slot] = h;
       g.update(B, h, null, drape);
@@ -2551,7 +2619,8 @@ diffuseColor.rgb *= mix(1.0, 0.42, smoothstep(0.0, 0.42, vEyeUp));`)
       const isShoe = slotOf === 'shoes';
       // textiles: matte whatever the asset says (a nylon's low roughness reads as plastic); shoes'
       // leather may keep a little more sheen
-      const rough = isShoe ? clamp(asset.roughness ?? 0.6, 0.55, 0.85) : clamp(asset.roughness ?? 0.88, 0.85, 0.92);
+      // (a down jacket's nylon keeps a soft sheen, so its quilting reads)
+      const rough = isShoe ? clamp(asset.roughness ?? 0.6, 0.55, 0.85) : sub === 'puffer' ? clamp(asset.roughness ?? 0.6, 0.72, 0.9) : clamp(asset.roughness ?? 0.88, 0.85, 0.92);
       const spec = isShoe ? 0.35 : 0.2;
       // black cloth (by its base colour or its name) gets the deep-black albedo response
       const fl = 0.2126 * fabric.r + 0.7152 * fabric.g + 0.0722 * fabric.b;

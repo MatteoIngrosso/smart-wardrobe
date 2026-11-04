@@ -21,8 +21,8 @@ import { subTypeOf, lengthOf, PANEL_SIZE } from "./avatar-config.js";
 export const BAKER_VERSION = 3;
 
 const DB_NAME = "wardrobe-garments", STORE = "baked";
-const SLOT_OF = { tee: "top", hoodie: "layer", sweater: "layer", bomber: "jacket", jacket_open: "jacket", jeans: "bottoms", cargo: "bottoms", sneakers: "shoes", boots: "shoes" };
-const KIND_OF = { tee: "top", hoodie: "top", sweater: "top", bomber: "top", jacket_open: "top", jeans: "bottoms", cargo: "bottoms", sneakers: "shoes", boots: "shoes" };
+const SLOT_OF = { tee: "top", tank: "top", longsleeve: "top", hoodie: "layer", sweater: "layer", trackjacket: "layer", bomber: "jacket", puffer: "jacket", jacket_open: "jacket", jeans: "bottoms", cargo: "bottoms", jogger: "bottoms", leggings: "bottoms", sneakers: "shoes", boots: "shoes" };
+const KIND_OF = { tee: "top", tank: "top", longsleeve: "top", hoodie: "top", sweater: "top", trackjacket: "top", bomber: "top", puffer: "top", jacket_open: "top", jeans: "bottoms", cargo: "bottoms", jogger: "bottoms", leggings: "bottoms", sneakers: "shoes", boots: "shoes" };
 const WORK_MAX = 1400; // photos are decoded at most this big
 const TILE = 256; // the seamless fabric tile
 // How wide the front panel is on the body, roughly: for the fabric tile's real size.
@@ -1598,7 +1598,7 @@ function roughnessOf(item, sub) {
   if (/leather/.test(name)) return 0.45;
   if (sub === "bomber") return /wool|varsity/.test(name) ? 0.85 : 0.45;
   if (sub === "jacket_open") return /blazer|suit/.test(name) ? 0.75 : /denim/.test(name) ? 0.8 : 0.65;
-  if (sub === "jeans" || sub === "cargo") {
+  if (["jeans", "cargo", "jogger", "leggings"].includes(sub)) {
     if (["joggers", "track-pants", "gym-shorts"].includes(c) || /fleece|sweat|jogger/.test(name)) return 0.9;
     if (c === "leggings") return 0.5;
     if (c === "trousers" && !/cargo|denim/.test(name)) return 0.72;
