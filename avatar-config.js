@@ -38,7 +38,7 @@
  * @property {number} [roughness]   0-1 for the plain fabric (nylon bomber ~0.45, cotton ~0.85, denim ~0.8)
  * @property {string} [trimColor]   hex of ribbing, cuffs, collar or sole when it differs from the fabric
  * @property {string} [secondaryColor] hex
- * @property {string} [fit]         the item's fit: slim, regular, relaxed, oversized, baggy, straight, wide, cropped
+ * @property {string} [fit]         the item's fit: slim, regular, relaxed, oversized, baggy, straight, wide, tapered, cropped
  * @property {'full'|'short'|'long'|'cropped'} [length] shorts are short, coats long, cropped tops cropped
  * @property {boolean} [toeLeft]    shoes: the toe points left in the photos as they were taken
  * @property {boolean} [backToeLeft] shoes: the same for the second photo
@@ -54,16 +54,25 @@ export const SLOTS = /** @type {GarmentLayerSlot[]} */ (["top", "layer", "jacket
 export const ROLE_TO_SLOT = { base: "top", mid: "layer", outer: "jacket", bottom: "bottoms", shoes: "shoes" };
 export const SLOT_OFFSET_MM = { top: 4, layer: 11, jacket: 20, bottoms: 6, shoes: 8 };
 
-// What 3D shell a wardrobe piece is drawn with, from its category (and name for bombers and cargos).
+// What 3D shell a wardrobe piece is drawn with, from its category (and name for puffers, bombers,
+// cargos and joggers). Each shell has its own cut on the stage (avatar-stage.js SPECS): a bomber
+// billows over its rib waistband and cuffs, a puffer is quilted, joggers taper to an elastic cuff,
+// leggings are skin-tight, a tank top has no sleeves.
 export function subTypeOf(item) {
   const c = item?.category || "", name = (item?.name || "").toLowerCase();
-  if (["tshirt", "polo", "shirt", "gym-top", "tank-top", "long-sleeve-top", "sports-bra"].includes(c)) return "tee";
+  if (c === "tank-top") return "tank";
+  if (c === "long-sleeve-top") return "longsleeve";
+  if (["tshirt", "polo", "shirt", "gym-top", "sports-bra"].includes(c)) return "tee";
   if (["hoodie", "zip-hoodie", "gym-hoodie"].includes(c)) return "hoodie";
-  if (["sweatshirt", "sweater", "overshirt", "track-jacket"].includes(c)) return "sweater";
-  if (c === "puffer" || /bomber|harrington|varsity|flight/.test(name)) return "bomber";
+  if (c === "track-jacket") return "trackjacket";
+  if (["sweatshirt", "sweater", "overshirt"].includes(c)) return "sweater";
+  if (c === "puffer" || (["jacket", "rain", "coat"].includes(c) && /\b(puffer|down|padded|quilted)\b/.test(name))) return "puffer";
+  if (/bomber|harrington|varsity|flight/.test(name)) return "bomber";
   if (["jacket", "rain", "coat"].includes(c)) return "jacket_open";
+  if (c === "leggings") return "leggings";
+  if (["joggers", "track-pants"].includes(c) || (["trousers"].includes(c) && /\b(joggers?|sweatpants?|track ?pants?)\b/.test(name))) return "jogger";
   if (/cargo/.test(name)) return "cargo";
-  if (["jeans", "trousers", "joggers", "shorts", "track-pants", "gym-shorts", "leggings", "skirt"].includes(c)) return "jeans";
+  if (["jeans", "trousers", "shorts", "gym-shorts", "skirt"].includes(c)) return "jeans";
   if (c === "boots") return "boots";
   if (["sneakers", "training-shoes", "dress-shoes"].includes(c)) return "sneakers";
   return null; // not drawn on the mirror (accessories, headwear, underwear)
