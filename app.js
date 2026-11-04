@@ -196,6 +196,23 @@ const OCCASIONS = [
   { id: "event", label: "Elegant", target: 3.4, likes: ["formal", "smart", "luxury"] },
   { id: "gym", label: "Gym", target: 1, likes: ["sporty", "outdoor", "casual"] },
 ];
+// Gym clothes in everyday outfits: what each kind is worn as outside the gym (the fashion rules judge
+// it as that). A piece with "Everyday too" on goes in Everyday ideas like any other; the rest only
+// stand in when nothing else for that part of the outfit is free (all in the wash). Leggings, sports
+// bras, gym bags and gym gear stay at the gym; a tank top only on a hot day. Never for work, smart,
+// night out or events.
+const EVERYDAY_AS = { "gym-top": "tshirt", "long-sleeve-top": "tshirt", "tank-top": "tshirt", "gym-hoodie": "hoodie", "track-jacket": "zip-hoodie", "gym-shorts": "shorts", "track-pants": "joggers", "training-shoes": "sneakers" };
+const everydayOK = (it, feels) => !!EVERYDAY_AS[it.category] && (it.category !== "tank-top" || feels >= 22);
+const styleViews = new WeakMap();
+const styleView = (p) => {
+  if (!p || slotOf(p) !== "gym" || !EVERYDAY_AS[p.category]) return p;
+  const sig = [p.category, p.colors, p.fit, p.styles, p.tags, p.warmth, p.name, p.material].join("\u0001");
+  let h = styleViews.get(p);
+  if (!h || h.sig !== sig) styleViews.set(p, (h = { sig, v: { ...p, category: EVERYDAY_AS[p.category] } }));
+  return h.v;
+};
+// The pieces as the fashion rules should see them for an occasion (gym pieces as everyday ones outside the gym).
+const styleViewsFor = (pieces, occ) => (occ?.id === "gym" ? pieces : pieces.map(styleView));
 // Gym outfits use gym pieces; until there are some for a role, everyday sporty ones stand in.
 // A jacket over the top only comes from the everyday outerwear (cold or rainy days).
 const GYM_FALLBACK = { base: ["tshirt"], mid: ["hoodie", "zip-hoodie", "sweatshirt"], outer: ["rain", "puffer", "jacket"], bottom: ["shorts", "joggers"], shoes: ["sneakers"] };
@@ -1573,7 +1590,7 @@ function scoreOutfit(o, cond, occ, t = taste()) {
     const shorts = /shorts/.test(o.bottom.category);
     // Everyday on a hot day: shorts first, long trousers and jeans lose more the hotter it is.
     const relaxed = occ.id === "casual" && !occ.level;
-    if (shorts && feels < 17) s -= o.bottom.category === "gym-shorts" ? 1 : 5; // you train indoors in gym shorts
+    if (shorts && feels < 17) s -= o.bottom.category === "gym-shorts" && occ.id === "gym" ? 1 : 5; // you train indoors in gym shorts
     else if (shorts && feels >= 23) { s += relaxed ? (feels >= 27 ? 2.5 : feels >= 25 ? 2 : 1.8) : 1; reasons.push(`Shorts weather at ${fmtTemp(feels)}`); }
     else if (!shorts && relaxed && feels >= 23) s -= feels >= 28 ? 3 : feels >= 26 ? 2 : feels >= 24 ? 1 : 0.8;
     else if (!shorts && feels >= 27) s -= 1.5;
@@ -1581,7 +1598,7 @@ function scoreOutfit(o, cond, occ, t = taste()) {
   // The style: the fashion bible's rules (colour, dressiness, shoes, proportions, patterns...)
   let broken = [];
   if (Style.ready()) {
-    const j = Style.judge(pieces, styleCtx(cond, occ, t), OWN_COMFORT_RULES);
+    const j = Style.judge(styleViewsFor(pieces, occ), styleCtx(cond, occ, t), OWN_COMFORT_RULES);
     s += j.logit;
     reasons.unshift(...j.praise.slice(0, 2));
     broken = j.violations;
@@ -1658,7 +1675,7 @@ function scoreOutfit(o, cond, occ, t = taste()) {
   for (const p of pieces) {
     const d = daysSince(p.lastWorn), k = ROTATION[starsOf(p)] || 1;
     if (d <= 1) s -= 3 * k; else if (d <= 4) s -= 1.2 * k;
-    const over = (recent.w7.get(p.id) || 0) + 1 - budgetOf(p);
+    const over = (recent.w7.get(p.id) || 0) + 1 - budgetOf(p, occ);
     if (over > 0) s -= 3 * over;
     if (!p.isNew && budgetGroup(p) && !recent.w14.get(p.id) && d > 14) idle += 1.2;
   }
@@ -1676,13 +1693,34 @@ function scoreOutfit(o, cond, occ, t = taste()) {
 // Today's candidates, best first. Cheap enough to redo on every tap (900 tries).
 // The pieces that can fill each part of an outfit for an occasion (none that are in the wash).
 // Pieces you disliked are left out, except when you pick one yourself (`all`, for the ⇄ list).
+// Everyday also takes the gym pieces you switched to "Everyday too" (any of them when you pick one
+// yourself, `all`), and a gym piece stands in for a part of the outfit that has nothing else free.
 function piecesByRole(occ, all = false) {
-  const gym = occ.id === "gym";
+  const gym = occ.id === "gym", everyday = occ.id === "casual";
   const by = { base: [], mid: [], outer: [], bottom: [], shoes: [] };
   const from = all ? wearable() : suggestable();
-  for (const it of from) if (by[roleOf(it)] && (slotOf(it) === "gym") === gym) by[roleOf(it)].push(it);
+  const feels = everyday ? conditions().feels : 0;
+  for (const it of from) {
+    if (!by[roleOf(it)]) continue;
+    const g = slotOf(it) === "gym";
+    if (g === gym || (g && everyday && (it.everyday || all) && everydayOK(it, feels))) by[roleOf(it)].push(it);
+  }
   if (gym) for (const [role, cats] of Object.entries(GYM_FALLBACK)) if (!by[role].length) by[role] = from.filter((i) => cats.includes(i.category));
+  if (everyday && !all) for (const role of ["base", "mid", "bottom", "shoes"]) {
+    if (!by[role].some((i) => slotOf(i) !== "gym")) by[role].push(...from.filter((i) => slotOf(i) === "gym" && !i.everyday && roleOf(i) === role && everydayOK(i, feels)));
+  }
   return by;
+}
+// The line under an Everyday idea that has a gym piece standing in (not one you switched to "Everyday too").
+function standInLine(o, occId = state.occasion) {
+  if (occId !== "casual" || !o.pieces) return "";
+  const PLURAL = { base: "T-shirts and tops", mid: "hoodies and sweaters", bottom: "trousers and shorts", shoes: "shoes" };
+  const lines = Object.values(o.pieces).filter((p) => p && slotOf(p) === "gym" && !p.everyday).map((p) => {
+    const role = roleOf(p), mine = state.items.filter((i) => roleOf(i) === role && slotOf(i) !== "gym" && !leaving(i));
+    const why = mine.length && mine.every((i) => i.wash || i.disliked) && mine.some((i) => i.wash) ? `your ${PLURAL[role]} are in the wash` : `you have no other ${PLURAL[role]} free`;
+    return `${catLabel(p.category)} standing in: ${why}`;
+  });
+  return lines.length ? `<p class="why">${lines.map(esc).join(" · ")}</p>` : "";
 }
 // `opts` lets Discover ask for ideas around a piece you don't own yet ({ anchor, occ, cond }).
 // Events pass the pieces that suit their dress code (`by`) and whether a jacket is a must (`outer`).
@@ -1700,7 +1738,7 @@ function ideaPool(opts = {}) {
   // score enough smart outfits to choose from.
   // A piece already worn as often as its weekly budget allows is tried less, so there are enough
   // outfits around the others.
-  const tries = (x) => (({ 5: 3, 4: 2, 2: 0.6, 1: 0.4 })[starsOf(x)] || 1) * (dressy && casualPiece(x) ? 0.35 : 1) * (atBudget(x) ? 0.4 : 1);
+  const tries = (x) => (({ 5: 3, 4: 2, 2: 0.6, 1: 0.4 })[starsOf(x)] || 1) * (dressy && casualPiece(x) ? 0.35 : 1) * (atBudget(x, occ) ? 0.4 : 1);
   const pick = (arr) => {
     let r = rand() * arr.reduce((a, x) => a + tries(x), 0);
     for (const x of arr) if ((r -= tries(x)) < 0) return x;
@@ -1746,7 +1784,7 @@ function ideaPool(opts = {}) {
     if (seen.has(key)) continue;
     seen.add(key);
     const scored = scoreOutfit(o, cond, occ, t);
-    const level = Style.ready() ? dressLevel(Object.values(o).filter(Boolean)) : 0, range = level && levelsFor(occ);
+    const level = Style.ready() ? dressLevel(styleViewsFor(Object.values(o).filter(Boolean), occ)) : 0, range = level && levelsFor(occ);
     cands.push({ key, pieces: o, ...scored, level, levelOff: !range ? 0 : level < range[0] ? range[0] - level : Math.max(0, level - range[2]), jitter: rand() * 0.6, blocked: t.blocked.has(key), isBroken: scored.broken.length > 0 });
   }
   cands.sort((a, b) => b.score + b.jitter - (a.score + a.jitter));
@@ -1865,7 +1903,7 @@ const ownsDressShoes = () => state.items.some((i) => !i.disliked && !leaving(i) 
 // An idea that still breaks one of the fashion bible's important rules once its headwear and
 // accessories are on (only shown when nothing better is left) says so on its card.
 function withWarn(idea, cond, occ) {
-  const j = Style.ready() ? Style.judge([...Object.values(idea.pieces), ...(idea.extras || [])].filter(Boolean), styleCtx(cond, occ, taste())) : null;
+  const j = Style.ready() ? Style.judge(styleViewsFor([...Object.values(idea.pieces), ...(idea.extras || [])].filter(Boolean), occ), styleCtx(cond, occ, taste())) : null;
   // The warmth rule says the temperature the way the screen does (feels like, in your unit).
   const line = (v) => (v.rule.id === "warmth" ? ruleLine(v).replace(/ for -?\d+°C$/, ` for today (feels like ${fmtTemp(cond.feels)})`) : ruleLine(v));
   const shoesOnly = (v) => v.rule.id === "shoe-formality" && /^Sneakers with tailoring/.test(ruleLine(v)) && idea.pieces.shoes && !casualPiece(idea.pieces.shoes) && !ownsDressShoes();
@@ -2022,28 +2060,35 @@ const STAR_PULL = { 5: 2.5, 4: 1.2, 3: 0, 2: -1.2, 1: -2.5 };
 const ROTATION = { 5: 0.35, 4: 0.6 };
 // How many times in 7 days a piece can be worn before its outfits lose points (3 for each wear over),
 // by stars 1 to 5 (unrated counts as 3): loved pieces are still worn the most, but not every day, and
-// the rest of the wardrobe gets its turn. Shoes and gym clothes have no budget.
+// the rest of the wardrobe gets its turn. Shoes have no budget; gym clothes only outside the gym, where
+// their everyday wears count (recentWears leaves out the gym sessions).
 const WEAR_BUDGET = { top: [1, 1, 1.5, 2, 2.5], bottom: [1, 1, 2, 2.5, 3], outer: [1.5, 1.5, 2.5, 3, 4] };
-const budgetGroup = (p) => (slotOf(p) === "gym" ? null : { base: "top", mid: "top", bottom: "bottom", outer: "outer" }[roleOf(p)] || null);
-const budgetOf = (p) => (budgetGroup(p) ? WEAR_BUDGET[budgetGroup(p)][(starsOf(p) || 3) - 1] : Infinity);
+const BUDGET_GROUP = { base: "top", mid: "top", bottom: "bottom", outer: "outer" };
+const budgetGroup = (p) => (slotOf(p) === "gym" && !p.everyday ? null : BUDGET_GROUP[roleOf(p)] || null); // ("Everyday too": like an everyday piece)
+const budgetOf = (p, occ) => {
+  const g = budgetGroup(p) || (occ && occ.id !== "gym" && slotOf(p) === "gym" ? BUDGET_GROUP[roleOf(p)] : null);
+  return g ? WEAR_BUDGET[g][(starsOf(p) || 3) - 1] : Infinity;
+};
 // How often each piece was worn in the last 7 and 14 days, from the wear log.
 let wearsMemo = null;
 function recentWears() {
-  const key = `${state.log.length}|${today()}`;
+  const key = `${state.log.length}|${today()}|${state.items.length}`;
   if (wearsMemo?.key === key) return wearsMemo;
   const w7 = new Map(), w14 = new Map(), now = Date.now();
+  const gymIds = new Set(state.items.filter((i) => slotOf(i) === "gym").map((i) => i.id));
   for (const l of state.log) {
     if (logKind(l) !== "wear") continue;
     const d = (now - new Date(l.at || l.date).getTime()) / 864e5;
     if (!(d < 14)) continue;
     for (const id of l.itemIds || []) {
+      if (l.occasion === "gym" && gymIds.has(id)) continue; // a gym session doesn't use up a gym piece's everyday budget
       w14.set(id, (w14.get(id) || 0) + 1);
       if (d < 7) w7.set(id, (w7.get(id) || 0) + 1);
     }
   }
   return (wearsMemo = { key, w7, w14 });
 }
-const atBudget = (p) => (recentWears().w7.get(p.id) || 0) >= budgetOf(p);
+const atBudget = (p, occ) => (recentWears().w7.get(p.id) || 0) >= budgetOf(p, occ);
 // What stars on an outfit teach: 4 and 5 count like a wear and more, 3 nothing, 2 and 1 count against it.
 const RATE_WEIGHT = { 5: 2, 4: 1, 3: 0, 2: -1, 1: -2 };
 // What a piece is, for learning from the stars on pieces: its main colour, type, fit and styles.
@@ -2821,10 +2866,10 @@ async function aiGenerate(opts) {
 // "#n" numbers let the answer point at pieces, so their photos can be shown.
 // The wardrobe for the AI, one short line a piece (#numbers follow state.items, so the app finds them).
 // Left out to save tokens: underwear and socks, pieces you're giving away, and gym clothes unless the
-// question is about training (`gym`). The type, brand or colour isn't repeated when the name says it.
+// question is about training (`gym`) or the piece is "Everyday too". The type, brand or colour isn't repeated when the name says it.
 function wardrobeText({ gym = false } = {}) {
   return state.items.map((i, n) => {
-    if (slotOf(i) === "under" || leaving(i) || (!gym && slotOf(i) === "gym")) return "";
+    if (slotOf(i) === "under" || leaving(i) || (!gym && slotOf(i) === "gym" && !i.everyday)) return "";
     const b = brandInfo(i.brand), says = (w) => w && i.name.toLowerCase().includes(String(w).toLowerCase());
     const type = catLabel(i.category);
     return [
@@ -3377,8 +3422,10 @@ function openAnchorPicker() {
 async function setAnchor(id) {
   const it = state.items.find((i) => i.id === id);
   state.anchor = it ? id : null;
-  // A gym piece belongs in a gym outfit, and an everyday piece in an everyday one.
-  if (it && (slotOf(it) === "gym") !== (state.occasion === "gym")) state.occasion = slotOf(it) === "gym" ? "gym" : "casual";
+  // A gym piece belongs in a gym outfit, and an everyday piece in an everyday one; a gym piece that can
+  // be worn every day keeps you on Everyday when you're there.
+  const keep = it && slotOf(it) === "gym" && state.occasion === "casual" && EVERYDAY_AS[it.category];
+  if (it && !keep && (slotOf(it) === "gym") !== (state.occasion === "gym")) state.occasion = slotOf(it) === "gym" ? "gym" : "casual";
   closeSheet();
   generateOutfits();
   if (view !== "today") return go("today");
@@ -3445,7 +3492,7 @@ function levelGapLine() {
 }
 const levelBadge = (o) => {
   if (!Style.ready() || !o.pieces) return "";
-  const n = dressLevel(Object.values(o.pieces).filter(Boolean));
+  const n = dressLevel(styleViewsFor(Object.values(o.pieces).filter(Boolean), { id: state.occasion }));
   return `<span class="level" title="Elegance level ${n} of 5">${"●".repeat(n)}${"○".repeat(5 - n)} ${LEVELS[n]}</span>`;
 };
 function outfitCard(o, i) {
@@ -3459,6 +3506,7 @@ function outfitCard(o, i) {
     ${o.reasons.length || o.extrasWhy?.length ? `<p class="why">${[...o.reasons, ...(o.extrasWhy || [])].map(esc).join(" · ")}</p>` : ""}
     ${o.warn?.length ? `<p class="why warn">Heads up: ${o.warn.map(esc).join(" · ")}</p>` : ""}
     ${o.noDressShoes ? `<p class="why">Best with dress shoes: you don't have any yet.</p>` : ""}
+    ${o.planned ? "" : standInLine(o)}
     ${i === 0 && !o.planned ? finishingTouch(o) : ""}
     ${i > 0 && sharedScent() ? "" : todayScent(o)}
     ${o.asking
@@ -3910,6 +3958,7 @@ function openItem(id, showOriginal = false) {
       ${i.link && /^https?:\/\//.test(i.link) ? `<div><b>Shop</b><a href="${esc(i.link)}" target="_blank" rel="noopener">Product page ↗</a>${i.reference ? ` · ref ${esc(i.reference)}` : ""}</div>` : ""}
     </div>
     ${fitsFor(i).length ? `<div class="field" style="margin-bottom:14px"><label>Fit</label><div class="chips">${fitsFor(i).map((f) => `<button class="chip" aria-pressed="${i.fit === f}" data-setfit="${i.id}:${f}">${FITS[f].label}</button>`).join("")}</div></div>` : ""}
+    ${EVERYDAY_AS[i.category] ? `<div class="field" style="margin-bottom:14px"><label>Everyday too</label><div class="row"><button class="chip" data-everyday="${i.id}" aria-pressed="${!!i.everyday}">${i.everyday ? "On" : "Off"}</button><span class="muted small">${i.everyday ? "Also in your Everyday outfit ideas, not just at the gym." : "Only at the gym, unless everything else is in the wash. Turn it on to wear it every day too."}</span></div></div>` : ""}
     ${suitField(i)}
     ${i.look || (aiReady() && i.photos?.length) ? `<div class="field" style="margin-bottom:14px"><label>What the AI sees in the photo</label>
       <div class="row">${i.look ? `<span>${esc(lookLine(i.look))}</span>` : `<span class="muted small">Not looked at yet. Outfit ideas use it once it has (about 350 tokens, once).</span>`}
@@ -8145,6 +8194,15 @@ document.addEventListener("click", async (e) => {
     try { await lookAt(it); await autoLinkSuits(); } catch (e) { toast(e.message || "Couldn't look at the photo"); }
     state.outfits = [];
     tasteMemo = null;
+    openItem(it.id);
+    return render();
+  }
+  if (ds.everyday) {
+    const it = state.items.find((i) => i.id === ds.everyday);
+    if (it.everyday) delete it.everyday; else it.everyday = true;
+    await store.put("items", it);
+    state.outfits = [];
+    toast(it.everyday ? "In your Everyday ideas too" : "Back to gym only");
     openItem(it.id);
     return render();
   }
