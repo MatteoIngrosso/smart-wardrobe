@@ -2707,6 +2707,7 @@ diffuseColor.rgb *= mix(1.0, 0.42, smoothstep(0.0, 0.42, vEyeUp));`)
   const hairGroup = new THREE.Group(); body.add(hairGroup);
   let hairKey = '';
   function updateHair() { hairKey = buildHead(st, hairGroup, skinU, hairKey); }
+  st.onHairLoaded = () => { if (st.disposed) return; hairKey = ''; updateHair(); invalidate(); };
 
   // ---------- body config ----------
   function applyColors(cfg) {
@@ -2856,7 +2857,7 @@ diffuseColor.rgb *= mix(1.0, 0.42, smoothstep(0.0, 0.42, vEyeUp));`)
     for (const s of SLOTS) if (st.worn[s]) st.worn[s].dispose();
     for (const e of st.prepCache.values()) { e.value?.textures.forEach((t) => t.dispose()); e.value?.materials.forEach((m) => m.dispose()); }
     scene.traverse((o) => { if (o.isMesh) { o.geometry.dispose(); (Array.isArray(o.material) ? o.material : [o.material]).forEach((m) => m.dispose()); } });
-    envTex.dispose(); contactTex.dispose(); eyeTex?.dispose(); faceTex?.dispose(); st.hairTex?.dispose();
+    envTex.dispose(); contactTex.dispose(); eyeTex?.dispose(); faceTex?.dispose();
     renderer.dispose();
     canvas.remove();
   }
@@ -2872,6 +2873,8 @@ diffuseColor.rgb *= mix(1.0, 0.42, smoothstep(0.0, 0.42, vEyeUp));`)
       get buildMs() { return st.buildMs; },
       triangles() { let n = 0; scene.traverse((o) => { if (o.isMesh && o.visible && o.geometry.index) n += o.geometry.index.count / 3; }); return n; },
       setAngleNow(a) { st.snap = null; st.vel = 0; setAngle(a); render(); },
+      // resolves once the current hairstyle's photo is loaded and on the head
+      async hairReady() { const style = st.cfg?.hairStyle; if (HAIR_FILES.has(style)) await loadHairAsset(style); await null; },
     },
   };
   resize();
@@ -3228,174 +3231,79 @@ function glassesGroup(D, B, hf) {
 
 /* ---------- strand cards: the hair itself, over a thin dark under-layer ---------- */
 
-// Per cut: how many cards, how long (dm: top, sides, back), which way they're combed, how much they
-// fall (gravity), wave or curl, how far past the hairline a fringe may reach (dm, front only).
-// flow: crown (from the whorl at the back of the crown), back (combed back), part (a side part).
-// vol: how far the outer cards stand off the scalp (dm: top, sides, back); out: how far the tips of
-// the outer cards lift away (the clumps in the outline).
-const HAIR_CARDS = {
-  short: { n: 1900, len: [0.42, 0.24, 0.28], vol: [0.22, 0.08, 0.11], out: 0.09, flow: 'crown', w: 0.11 },
-  fade: { n: 1900, len: [0.46, 0.08, 0.1], vol: [0.24, 0.02, 0.025], out: 0.09, flow: 'crown', w: 0.1 },
-  sidepart: { n: 1900, len: [0.62, 0.3, 0.32], vol: [0.25, 0.09, 0.12], out: 0.07, flow: 'part', w: 0.12 },
-  crop: { n: 1900, len: [0.4, 0.22, 0.26], vol: [0.2, 0.08, 0.11], out: 0.07, flow: 'crown', fringe: 0.22, w: 0.11 },
-  slick: { n: 1800, len: [0.72, 0.3, 0.36], vol: [0.17, 0.07, 0.1], out: 0.03, flow: 'back', w: 0.13 },
-  curly: { n: 2100, len: [0.36, 0.26, 0.3], vol: [0.32, 0.18, 0.22], out: 0.12, flow: 'crown', curl: 7.5, w: 0.09 },
-  wavy: { n: 1900, len: [0.95, 0.75, 0.9], vol: [0.27, 0.14, 0.17], out: 0.08, flow: 'crown', grav: 0.55, wave: 0.05, w: 0.12 },
-  long: { n: 1900, len: [1.25, 1.05, 1.25], vol: [0.24, 0.13, 0.16], out: 0.06, flow: 'back', grav: 0.8, wave: 0.025, w: 0.13 },
-};
-const CARD_SEG = 5;
-
-// The strands on a card: four kinds side by side, roots at the top, tapered uneven tips.
-function hairStrandTexture() {
-  const W = 512, H = 512, cv = document.createElement('canvas'); cv.width = W; cv.height = H;
-  const g = cv.getContext('2d');
-  let seed = 9871; const rnd = () => ((seed = (Math.imul(seed, 1664525) + 1013904223) >>> 0) / 4294967296);
-  g.lineCap = 'round';
-  for (let col = 0; col < 4; col++) {
-    const x0 = col * 128;
-    const n = 44 + col * 4;
-    for (let k = 0; k < n; k++) {
-      const u = 0.08 + 0.84 * rnd(), x = x0 + u * 128, len = H * (0.62 + 0.38 * rnd()), bend = (rnd() - 0.5) * 16;
-      const lum = Math.round(150 + 105 * rnd()), wd = 1.6 + 2.0 * rnd(), a0 = 0.6 + 0.4 * rnd();
-      const edge = Math.min(u, 1 - u) / 0.5; // fewer, fainter strands at the card's sides
-      const steps = 12;
-      for (let i = 0; i < steps; i++) {
-        const t0 = i / steps, t1 = (i + 1) / steps;
-        const xa = x + bend * t0 * t0, xb = x + bend * t1 * t1;
-        g.strokeStyle = `rgba(${lum},${lum},${lum},${(a0 * (0.35 + 0.65 * edge) * (1 - 0.75 * t1 ** 2)).toFixed(3)})`;
-        g.lineWidth = wd * (1 - 0.6 * t0);
-        g.beginPath(); g.moveTo(xa, t0 * len); g.lineTo(xb, t1 * len); g.stroke();
-      }
-    }
+// Real hair: photographed hair from Microsoft Rocketbox's male heads (MIT, avatar/hair/LICENSE-rocketbox.md),
+// fitted to our head by tools/build-hair.py. Per style: avatar/hair/<style>.json (each vertex as a
+// direction from HAIR_CENTER + its height above the scalp, kind 0 = the hair painted on the scalp,
+// 1 = a hair card) and <style>.webp (the hair's luminance + alpha). Loaded only when the style is shown.
+const HAIR_FILES = new Set(['buzz', 'short', 'fade', 'sidepart', 'crop', 'slick', 'curly', 'wavy', 'long']);
+const CAP_OFF = 0.018; // the painted hair sits 1.8 mm off the scalp (dm, rest)
+const hairAssets = new Map();
+function loadHairAsset(style) {
+  if (!hairAssets.has(style)) {
+    const p = (async () => {
+      const [js, tex] = await Promise.all([
+        fetch(new URL(`hair/${style}.json`, DATA)).then((r) => { if (!r.ok) throw new Error(`hair/${style}.json ${r.status}`); return r.json(); }),
+        new THREE.TextureLoader().loadAsync(new URL(`hair/${style}.webp`, DATA).href),
+      ]);
+      tex.colorSpace = THREE.NoColorSpace; tex.anisotropy = 8; tex.generateMipmaps = true;
+      return { ...js, tex };
+    })();
+    p.catch((e) => { console.warn('avatar-stage: hair', e); });
+    hairAssets.set(style, p.then((v) => { hairAssets.set(style, v); return v; }, () => { hairAssets.set(style, null); return null; }));
   }
-  const tex = new THREE.CanvasTexture(cv);
-  tex.colorSpace = THREE.SRGBColorSpace; tex.anisotropy = 4; tex.generateMipmaps = true;
-  return tex;
+  return hairAssets.get(style);
 }
 
-// Alpha-tested cards (smooth edges through MSAA alpha-to-coverage), tinted by the hair colour, darker
-// at the roots, with a strand highlight that runs across the hair (anisotropic, along each card).
-function hairCardMaterial(skinU, opts, tex) {
-  const mat = new THREE.MeshStandardMaterial({ color: 0xffffff, map: tex, roughness: opts.rough ?? 0.62, metalness: 0, side: THREE.DoubleSide, alphaTest: 0.32, alphaToCoverage: true });
-  const U = { uHair: skinU.uHair, uShine: { value: opts.shine ?? 1 } };
-  mat.onBeforeCompile = (shader) => {
-    Object.assign(shader.uniforms, U);
-    shader.vertexShader = shader.vertexShader
-      .replace('#include <common>', '#include <common>\nattribute vec3 aHair; attribute vec3 aTan; varying vec3 vHair; varying vec3 vTanV;')
-      .replace('#include <begin_vertex>', '#include <begin_vertex>\nvHair = aHair; vTanV = normalize(normalMatrix * aTan);');
-    shader.fragmentShader = shader.fragmentShader
-      .replace('#include <common>', '#include <common>\nuniform vec3 uHair; uniform float uShine; varying vec3 vHair; varying vec3 vTanV;')
-      .replace('#include <map_fragment>', `#include <map_fragment>
-float hRoot = smoothstep(0.0, 0.55, vHair.x);
-diffuseColor.rgb *= uHair * (0.5 + 0.5 * hRoot) * (0.8 + 0.4 * vHair.y);
-diffuseColor.a *= 1.0 - 0.2 * vHair.z;`)
-      .replace('#include <lights_fragment_end>', `#include <lights_fragment_end>
-{
-  vec3 T = normalize(vTanV), V = normalize(vViewPosition), L = normalize(vec3(0.45, 0.65, 0.6));
-  vec3 Hh = normalize(L + V);
-  float th = dot(T, Hh), s1 = pow(sqrt(max(0.0, 1.0 - th * th)), 120.0);
-  float th2 = th + 0.18, s2 = pow(sqrt(max(0.0, 1.0 - th2 * th2)), 36.0);
-  float face = clamp(dot(normal, L) * 0.5 + 0.5, 0.0, 1.0);
-  reflectedLight.directSpecular += (mix(vec3(0.04), uHair * 0.5, 0.4) * s1 + uHair * 0.45 * s2) * face * uShine * (0.4 + 0.6 * hRoot);
-}`);
-  };
-  mat.customProgramCacheKey = () => 'hair-cards-1';
-  return mat;
-}
-
-function hairCards(hf, spec, cs, Rs, c, lineOf) {
-  const s = hf.s, N = cs.n, NP = CARD_SEG + 1;
-  let seed = 1234567 + N; const rnd = () => ((seed = (Math.imul(seed, 1664525) + 1013904223) >>> 0) / 4294967296);
-  const crown = norm3([0, 0.86, -0.5]);
-  const yRestOf = (d) => hf.restY(c[1] + Rs(Math.atan2(d[0], d[2]), Math.acos(clamp(d[1], -1, 1))) * d[1]);
-  const Adeg = (d) => (Math.abs(Math.atan2(d[0], d[2])) * 180) / Math.PI;
-  const lineY = (d) => lineOf(Adeg(d));
-  const region = (d) => { const A = Adeg(d), yR = yRestOf(d); const top = Math.max(sstep(8.35, 8.8, yR), sstep(40, 15, A) * sstep(8.2, 8.5, yR)); return { A, yR, top, back: sstep(95, 150, A) }; };
-  const flowAt = (d, t, curlPh) => {
-    let f;
-    if (cs.flow === 'back') f = [0, -0.2, -1];
-    else if (cs.flow === 'part') { const px = d[0] - 0.3; f = [Math.sign(px || 1) * (0.9 + 0.3 * sstep(0.3, 0, Math.abs(px))), -0.25, -0.3]; }
-    else { f = sub3(d, crown); const sw = cross3(crown, d); f = [f[0] + 0.25 * sw[0], f[1] + 0.25 * sw[1], f[2] + 0.25 * sw[2]]; }
-    if (cs.grav) { const gw = cs.grav * sstep(0.0, 0.5, t) * sstep(0.55, 0.0, d[1]); f = [f[0], f[1] - 1.6 * gw, f[2]]; }
-    let ft = norm3(sub3(f, d.map((v) => v * dot3(f, d))));
-    if (cs.curl) { // the direction turns round the head's normal as the strand goes
-      const b = cross3(d, ft), ca = Math.cos(curlPh), sa = Math.sin(curlPh);
-      ft = norm3([ft[0] * ca + b[0] * sa, ft[1] * ca + b[1] * sa, ft[2] * ca + b[2] * sa]);
-    }
-    return ft;
-  };
-  const pos = new Float32Array(N * NP * 2 * 3), nor = new Float32Array(N * NP * 2 * 3), uv = new Float32Array(N * NP * 2 * 2);
-  const hair = new Float32Array(N * NP * 2 * 3), tan = new Float32Array(N * NP * 2 * 3), idx = [];
-  let made = 0, tries = 0;
-  while (made < N && tries < N * 40) {
-    tries++;
-    // a root: a random direction in the hair (1 cm inside the hairline; thinner low on the sides of a fade)
-    const z0 = 1 - 2 * rnd(), ph = 2 * Math.PI * rnd(), rr = Math.sqrt(Math.max(0, 1 - z0 * z0));
-    let d = [rr * Math.cos(ph), z0, rr * Math.sin(ph)];
-    if (d[1] < -0.2) continue;
-    const reg = region(d);
-    // (sparser and lower right at the hairline: no hard edge)
-    const inside = sstep(lineY(d), lineY(d) + 0.3, reg.yR);
-    if (reg.yR < lineY(d) + 0.015 || rnd() > 0.35 + 0.65 * inside) continue;
-    if (spec.fade && reg.A > 30 && rnd() > sstep(spec.fade[0], spec.fade[1] + 0.1, reg.yR)) continue;
-    const side = mix(cs.vol[1], cs.vol[2], reg.back), T = mix(side, cs.vol[0], reg.top) * (0.35 + 0.65 * inside);
-    const L = mix(mix(cs.len[1], cs.len[2], reg.back), cs.len[0], reg.top) * (0.75 + 0.5 * rnd()) * s;
-    const layer = rnd(), lift = (spec.T[0] * 0.3 + T * Math.pow(layer, 0.8) + 0.004) * s, tipOut = 0.6 * cs.out * s * layer * layer * (rnd() - 0.25) * (0.4 + 0.6 * inside);
-    const w0 = cs.w * (0.75 + 0.5 * rnd()) * s, col = Math.floor(rnd() * 4), shade = rnd(), ph0 = rnd() * 6.283;
-    const base = made * NP * 2;
-    let end = NP;
-    const P = [], Dd = [];
-    for (let k = 0; k < NP; k++) {
-      const t = k / CARD_SEG;
-      if (k > 0) {
-        const ft = flowAt(d, t, cs.curl ? ph0 + cs.curl * t : 0);
-        const R0 = Rs(Math.atan2(d[0], d[2]), Math.acos(clamp(d[1], -1, 1))) + lift;
-        const ang = L / CARD_SEG / R0;
-        d = norm3([d[0] + ft[0] * ang, d[1] + ft[1] * ang, d[2] + ft[2] * ang]);
-        // the hairline: the strand ends there (a fringe may reach a little past it at the front)
-        const rg = region(d), over = (cs.fringe ?? 0) * sstep(45, 15, rg.A);
-        if (rg.yR < lineY(d) - over) { end = k; break; }
-      }
-      P.push(d); Dd.push(k > 0 ? norm3(sub3(d, P[k - 1])) : null);
-    }
-    if (end < 3) continue;
-    for (let k = 1; k < end; k++) if (!Dd[k]) Dd[k] = Dd[k - 1];
-    Dd[0] = Dd[1];
-    for (let k = 0; k < end; k++) {
-      const t = k / (end - 1), dk = P[k];
-      const az = Math.atan2(dk[0], dk[2]), q = Math.acos(clamp(dk[1], -1, 1));
-      // the card rises from the scalp at its root, keeps its height, and its tip drifts out a little (clumps)
-      let h = lift * (0.35 + 0.65 * sstep(0, 0.35, t)) + tipOut * t * t;
-      if (cs.wave) h += cs.wave * s * Math.sin(t * 9 + ph0) * sstep(0.2, 0.6, t);
-      const r = Rs(az, q) + Math.max(0.003 * s, h);
-      const p3 = [c[0] + r * dk[0], c[1] + r * dk[1], c[2] + r * dk[2]];
-      const tg = Dd[k], bn = norm3(cross3(dk, tg)), w = w0 * (1 - 0.45 * t) * 0.5;
-      for (let e = 0; e < 2; e++) {
-        const i = base + k * 2 + e, sg = e ? 1 : -1;
-        pos[i * 3] = p3[0] + bn[0] * w * sg; pos[i * 3 + 1] = p3[1] + bn[1] * w * sg; pos[i * 3 + 2] = p3[2] + bn[2] * w * sg;
-        nor[i * 3] = dk[0]; nor[i * 3 + 1] = dk[1]; nor[i * 3 + 2] = dk[2];
-        tan[i * 3] = tg[0]; tan[i * 3 + 1] = tg[1]; tan[i * 3 + 2] = tg[2];
-        uv[i * 2] = (col + (e ? 0.98 : 0.02)) / 4; uv[i * 2 + 1] = 1 - t * 0.98;
-        hair[i * 3] = t; hair[i * 3 + 1] = shade; hair[i * 3 + 2] = layer;
-      }
-      if (k > 0) { const a = base + (k - 1) * 2, b = a + 1, cc = a + 2, dd = a + 3; idx.push(a, cc, b, b, cc, dd); }
-    }
-    made++;
+function realHairGeometry(H, hf, Rs, c) {
+  const n = H.k.length, s = hf.s;
+  const pos = new Float32Array(n * 3), nor = new Float32Array(n * 3);
+  for (let v = 0; v < n; v++) {
+    const dx = H.d[v * 3], dy = H.d[v * 3 + 1], dz = H.d[v * 3 + 2];
+    const r = Rs(Math.atan2(dx, dz), Math.acos(clamp(dy, -1, 1))) + (CAP_OFF + H.h[v]) * s;
+    pos[v * 3] = c[0] + r * dx; pos[v * 3 + 1] = c[1] + r * dy; pos[v * 3 + 2] = c[2] + r * dz;
+    // lit as one soft volume (each card's own plane would flicker as the head turns)
+    nor[v * 3] = dx; nor[v * 3 + 1] = dy; nor[v * 3 + 2] = dz;
   }
   const g = new THREE.BufferGeometry();
   g.setAttribute('position', new THREE.BufferAttribute(pos, 3));
   g.setAttribute('normal', new THREE.BufferAttribute(nor, 3));
-  g.setAttribute('uv', new THREE.BufferAttribute(uv, 2));
-  g.setAttribute('aHair', new THREE.BufferAttribute(hair, 3));
-  g.setAttribute('aTan', new THREE.BufferAttribute(tan, 3));
-  g.setIndex(idx);
+  g.setAttribute('uv', new THREE.BufferAttribute(Float32Array.from(H.uv), 2));
+  g.setAttribute('aEdge', new THREE.BufferAttribute(H.e ? Float32Array.from(H.e) : new Float32Array(n).fill(1), 1));
+  g.setIndex(H.i);
   return g;
+}
+
+// Two passes over the same mesh, no dithering: the solid hair (alpha ≥ 0.5) with depth writes, then
+// the soft edges and stray strands blended on top without depth writes. The photo's luminance keeps
+// its strands and highlights; the colour is the chosen hair colour.
+function realHairMaterial(skinU, H, soft) {
+  // (the photo already holds the hair's shine: little reflection of its own, or the cards turn grey at grazing angles)
+  const mat = new THREE.MeshStandardMaterial({ color: 0xffffff, map: H.tex, roughness: 0.75, metalness: 0, side: THREE.DoubleSide,
+    envMapIntensity: 0.2, alphaTest: soft ? 0.02 : 0.5, transparent: soft, depthWrite: !soft });
+  const U = { uHair: skinU.uHair, uLum: { value: 1 / Math.max(0.03, H.lum) } };
+  mat.onBeforeCompile = (shader) => {
+    Object.assign(shader.uniforms, U);
+    shader.vertexShader = shader.vertexShader
+      .replace('#include <common>', '#include <common>\nattribute float aEdge; varying float vEdge;')
+      .replace('#include <begin_vertex>', '#include <begin_vertex>\nvEdge = aEdge;');
+    shader.fragmentShader = shader.fragmentShader
+      .replace('#include <common>', '#include <common>\nuniform vec3 uHair; uniform float uLum; varying float vEdge;')
+      .replace('#include <map_fragment>', `
+vec4 hairS = texture2D(map, vMapUv, 0.6); // a slightly softer mip: no single-pixel grain
+float hr = clamp(hairS.r * uLum, 0.12, 2.8);
+diffuseColor.rgb = uHair * pow(vec3(hr), vec3(2.2));
+float hairA = hairS.a * smoothstep(0.0, 1.0, vEdge);
+diffuseColor.a = ${soft ? 'hairA < 0.5 ? min(1.0, hairA * 1.4) : 0.0' : 'hairA'};`)
+      .replace('#include <roughnessmap_fragment>', '#include <roughnessmap_fragment>\nroughnessFactor = mix(0.85, 0.6, smoothstep(0.6, 1.6, hr));');
+  };
+  mat.customProgramCacheKey = () => (soft ? 'hair-real-soft-1' : 'hair-real-1');
+  return mat;
 }
 
 function buildHead(st, group, skinU, prevKey) {
   const { D, B, cfg } = st;
   if (!B || !cfg) return prevKey;
-  const key = [st.bodyVersion, cfg.hairStyle, cfg.beard, cfg.glasses].join('|');
+  let key = [st.bodyVersion, cfg.hairStyle, cfg.beard, cfg.glasses].join('|');
   if (key === prevKey) return key;
   for (const o of [...group.children]) {
     group.remove(o);
@@ -3414,19 +3322,21 @@ function buildHead(st, group, skinU, prevKey) {
     }
     const c = hf.at(...HAIR_CENTER);
     const Rs = headRadius(D, B, c, st.headTris);
-    const cs = HAIR_CARDS[cfg.hairStyle];
-    // the under-layer: a thin dark shell on the scalp (no scalp between the cards), soft at the hairline
-    // (a buzz cut is only this layer: 3 mm of hair has no strands to show)
-    const under = cs ? { ...hs, T: hs.T.map((t) => t * 0.32), edge: Math.max(hs.edge, 0.3), blunt: null, under: true } : hs;
-    const mesh = new THREE.Mesh(hairGeometry(D, B, hf, under, Rs, c), hairMaterial(skinU, under));
-    mesh.castShadow = true; mesh.receiveShadow = true; mesh.frustumCulled = false; mesh.name = 'hair';
-    group.add(mesh);
-    if (cs) {
-      st.hairTex ??= hairStrandTexture();
-      const line = hs.line;
-      const cards = new THREE.Mesh(hairCards(hf, hs, cs, Rs, c, (A) => (line ? lineAt(line, A) : 7.5)), hairCardMaterial(skinU, { rough: hs.rough + 0.12, shine: hs.mode === 1 ? 1.3 : 1 }, st.hairTex));
-      cards.castShadow = true; cards.receiveShadow = true; cards.frustumCulled = false; cards.name = 'hair-cards';
-      group.add(cards);
+    const H = HAIR_FILES.has(cfg.hairStyle) ? loadHairAsset(cfg.hairStyle) : null;
+    if (H && !(H instanceof Promise)) {
+      const g = realHairGeometry(H, hf, Rs, c);
+      const solid = new THREE.Mesh(g, realHairMaterial(skinU, H, false));
+      solid.castShadow = true; solid.receiveShadow = true; solid.frustumCulled = false; solid.name = 'hair';
+      const soft = new THREE.Mesh(g, realHairMaterial(skinU, H, true));
+      soft.receiveShadow = true; soft.frustumCulled = false; soft.name = 'hair-soft'; soft.renderOrder = 1;
+      group.add(solid, soft);
+    } else {
+      // while the style's photo loads (or if it can't): a thin hair shell
+      const under = { ...hs, T: hs.T.map((t) => t * 0.32), edge: Math.max(hs.edge, 0.3), blunt: null, under: true };
+      const mesh = new THREE.Mesh(hairGeometry(D, B, hf, under, Rs, c), hairMaterial(skinU, under));
+      mesh.castShadow = true; mesh.receiveShadow = true; mesh.frustumCulled = false; mesh.name = 'hair';
+      group.add(mesh);
+      if (H) { const style = cfg.hairStyle; H.then((v) => { if (v && st.cfg?.hairStyle === style) st.onHairLoaded?.(); }); key = 'loading'; }
     }
   }
   const bs = BEARD_SPECS[cfg.beard];
