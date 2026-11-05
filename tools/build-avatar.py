@@ -11,7 +11,7 @@
 # What goes in (all in MakeHuman units, decimetres; the stage scales to metres):
 #   base      every vertex of the base mesh (helpers too: the joints are averages of helper vertices),
 #             baked as a young man of mixed ethnicity with average proportions and a masculine
-#             finish (MASCULINE below: no breasts, narrower hips)
+#             finish (MASCULINE below: no breasts, narrower hips, sloped shoulders)
 #   index     the body's triangles (helpers left out)
 #   m:<name>  sparse morph targets: universal muscle x weight grid, height, and a few torso/shoulder
 #             shapes for the build (slim, regular, athletic, broad)
@@ -56,13 +56,15 @@ for r in ['caucasian', 'african', 'asian']:
 base += 0.5 * target('macrodetails/proportions/male-young-averagemuscle-averageweight-idealproportions')
 # MakeHuman's average young man still has soft, rounded breasts, wide hips and a full bottom (it
 # blends towards the genderless base mesh). A masculine finish: flat pectorals instead of breasts,
-# narrower hips, a flatter bottom, a slightly wider V from the shoulders to the waist.
+# narrower hips and a flatter bottom. The shoulders narrower and more sloped than MakeHuman's (about
+# 119 cm around the deltoids at 178 cm, 67 kg, was 128): broad square shoulders over a slim waist
+# read as a box once dressed. (A thicker waist was tried too: it only added a belly.)
 MASCULINE = [
     ('breast/breast-point-decr', 1.0), ('breast/breast-volume-vert-up', 0.5),
     ('measure/measure-bust-circ-decr', 0.35), ('torso/torso-muscle-pectoral-incr', 0.3),
     ('hip/hip-scale-horiz-decr', 0.55), ('measure/measure-hips-circ-decr', 0.6),
-    ('buttocks/buttocks-volume-decr', 0.7), ('measure/measure-waist-circ-decr', 0.25),
-    ('torso/torso-vshape-incr', 0.25), ('measure/measure-shoulder-dist-incr', 0.12),
+    ('buttocks/buttocks-volume-decr', 0.7),
+    ('torso/torso-vshape-decr', 0.3), ('measure/measure-shoulder-dist-decr', 0.5),
     # and a man's face and neck: a squarer, wider jaw, a firmer chin, a thicker neck
     ('head/head-square', 0.35), ('chin/chin-width-incr', 0.4), ('chin/chin-bones-incr', 0.35),
     ('chin/chin-prominent-incr', 0.2), ('neck/neck-scale-horiz-incr', 0.3), ('measure/measure-neck-circ-incr', 0.3),
