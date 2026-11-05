@@ -18,7 +18,7 @@
 import { subTypeOf, lengthOf, PANEL_SIZE } from "./avatar-config.js";
 
 /** Raise it when the bake changes, so every piece is baked again. */
-export const BAKER_VERSION = 3;
+export const BAKER_VERSION = 4;
 
 const DB_NAME = "wardrobe-garments", STORE = "baked";
 const SLOT_OF = { tee: "top", tank: "top", longsleeve: "top", hoodie: "layer", sweater: "layer", trackjacket: "layer", bomber: "jacket", puffer: "jacket", jacket_open: "jacket", jeans: "bottoms", cargo: "bottoms", jogger: "bottoms", leggings: "bottoms", sneakers: "shoes", boots: "shoes" };
@@ -1284,7 +1284,7 @@ const fromLin = (l) => FROM_LIN[l <= 0 ? 0 : l >= 1 ? 4096 : (Math.sqrt(l) * 409
 // The light is the fabric's own colour, blurred wide (prints, logos and zips left out and filled in
 // from the fabric around them); every pixel, prints included, is divided by it and multiplied by the
 // fabric's colour, so the fabric comes out even and prints keep their own contrast and colour.
-// Tops: the light followed closely (folds and shadows go); bottoms: only a plane (a gradient across
+// Tops: the light followed closely, down to about 6 px (folds, creases and shadows go); bottoms: only a plane (a gradient across
 // the panel), so the wash and fading of denim stay. Changes the panels' rgb in place.
 async function delight(panels, fabric, kind) {
   linTables();
@@ -1294,7 +1294,8 @@ async function delight(panels, fabric, kind) {
   const k1 = Math.exp(0.25), ur = (f0[0] + eps) / (f0[1] + eps), vr = (f0[2] + eps) / (f0[1] + eps);
   const uLo = ur / k1, uHi = ur * k1, vLo = vr / k1, vHi = vr * k1, yLo = (Y0 + eps) * 0.25 - eps, yHi = (Y0 + eps) * 3 - eps;
   // The light is worked out at half size (cells of 2 x 2 there, 4 x 4 px of the panel), applied at full size.
-  const R = kind === "top" ? 3 : 8;
+  // (tops: about 6 px, so creases and folds go too; the grain under 4 px stays)
+  const R = kind === "top" ? 1 : 8;
   const fields = [];
   for (const p of panels) {
     const { w, h, rgb, valid } = p, w2 = w >> 1, h2 = h >> 1, n = w2 * h2;
@@ -1317,9 +1318,10 @@ async function delight(panels, fabric, kind) {
     const check = fab.slice(); // what the checks call fabric
     let E = lightField(lin, fab, w2, h2, 2, R, f0, false);
     // pass 2: prints in the fabric's own colours stand out from the light around them (by more than
-    // 0.64-1.57x in brightness or ±12% in chromaticity)
+    // 0.4-2.5x in brightness on tops, 0.64-1.57x on bottoms, or ±12% in chromaticity)
     const gw = Math.ceil(w2 / 2), gh = Math.ceil(h2 / 2), print = new Uint8Array(n);
-    const kY = Math.exp(0.45), kC = Math.exp(0.12);
+    // (on tops a crease's shadow or highlight within 0.4-2.5x of the light around it is light, not print)
+    const kY = Math.exp(kind === "top" ? 0.9 : 0.45), kC = Math.exp(0.12);
     for (let y = 0; y < h2; y++) {
       const crow = Math.min(gh - 1, y >> 1) * gw;
       for (let x = 0; x < w2; x++) {
@@ -1347,7 +1349,7 @@ async function delight(panels, fabric, kind) {
   for (const f of fields) {
     const { p, E, gw, gh } = f, { w, h, rgb } = p;
     const gain = new Float32Array(gw * gh * 3);
-    for (let i = 0; i < gw * gh; i++) for (let c = 0; c < 3; c++) gain[i * 3 + c] = Math.max(0.4, Math.min(2.5, target[c] / Math.max(1e-4, E[i * 3 + c])));
+    for (let i = 0; i < gw * gh; i++) for (let c = 0; c < 3; c++) gain[i * 3 + c] = Math.max(0.3, Math.min(3.5, target[c] / Math.max(1e-4, E[i * 3 + c])));
     // the gain read back bilinearly (cell k's centre at (k + 0.5) * 4 px)
     const X0 = new Int32Array(w), X1 = new Int32Array(w), TX = new Float32Array(w);
     for (let x = 0; x < w; x++) { const fx = Math.max(0, Math.min(gw - 1, (x + 0.5) / 4 - 0.5)); X0[x] = fx | 0; X1[x] = Math.min(gw - 1, X0[x] + 1); TX[x] = fx - X0[x]; }
