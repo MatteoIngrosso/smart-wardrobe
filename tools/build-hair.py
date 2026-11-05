@@ -268,8 +268,25 @@ def build(style, folder, nape, mh, mh_grid):
     vset = {key(p) for t in T[cap] for p in t}
     ring = is_head & ~cap & ~face & np.array([any(key(p) in vset for p in t) for t in T]) & (above | behind)
     cap |= ring
-    # hair cards (not the brows or lashes: nothing in the front half below the hairline)
-    cards = (is_op if op_img is not None and style not in NO_CARDS else np.zeros(len(T), bool)) & ~((cen[:, 2] > CENTER[2]) & (cen[:, 1] < L['noseY'] + 0.6 * h)) & (cen[:, 1] > L['noseY'] - 0.2 * h)
+    # hair cards: the pieces of the card mesh that reach the hair (a fringe hangs over the forehead);
+    # pieces that stay low on the face are brows and lashes
+    cards = (is_op if op_img is not None and style not in NO_CARDS else np.zeros(len(T), bool)) & (cen[:, 1] > L['noseY'] - 0.2 * h)
+    ids = np.where(cards)[0]
+    parent = {i: i for i in ids}
+    def root(i):
+        while parent[i] != i: parent[i] = parent[parent[i]]; i = parent[i]
+        return i
+    seen = {}
+    for i in ids:
+        for p in T[i]:
+            k = tuple(np.round(p, 4))
+            if k in seen: parent[root(i)] = root(seen[k])
+            else: seen[k] = i
+    top = {}
+    for i in ids: r = root(i); top[r] = max(top.get(r, -1e9), T[i][:, 1].max())
+    for i in ids:
+        front = cen[i, 2] > CENTER[2]
+        if front and top[root(i)] < L['noseY'] + 0.5 * h: cards[i] = False
     # the cap's border (where it meets the rest of the head) fades out, wherever it was cut
     other = {key(p) for t in T[is_head & ~cap] for p in t}
 
