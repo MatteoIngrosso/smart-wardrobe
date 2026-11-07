@@ -722,8 +722,9 @@ const SPECS = {
   //   at the shoulder seam (the rest comes in by the biceps); baffle: quilting
   hoodie: { slot: 'layer', sleeve: 0.985, hem: 0.58, neck: 'hood', taper: 0.18, loose: 0.08, sleeveLoose: 0.09, thick: 0.04, rib: 0.6, cuff: 0.11, hood: true, loft: 0.15, loftTop: [5.4, 4.6], blouse: 0.05, ribPull: 0.75 },
   trackjacket: { slot: 'layer', sleeve: 0.985, hem: 0.62, neck: 'crew', taper: 0.2, loose: 0.05, sleeveLoose: 0.06, thick: 0.035, rib: 0.35, cuff: 0.08, collar: 'stand', ribPull: 0.6 },
-  // MA-1 blouson: a short body that billows and is gathered by a tight rib waistband and rib cuffs
-  bomber: { slot: 'jacket', sleeve: 0.955, hem: 1.7, neck: 'jacket', open: 0.5, taper: 0.2, loose: 0.06, sleeveLoose: 0.14, sleeveTap: [0.85, 0.8], sleeveRamp: 0.6, thick: 0.035, rib: 0.55, cuff: 0.1, collar: 'stand', loft: 0.4, loftTop: [4.9, 4.3], blouse: 0.12, ribPull: 0.85, rolls: 0.045, cuffRolls: 0.03 },
+  // MA-1 blouson: a short body that billows just above a tight rib waistband (at the belt line), a
+  // flat chest, a zip front whose edges hang straight down (zip: the gap between them), rib cuffs
+  bomber: { slot: 'jacket', sleeve: 0.955, hem: 1.8, neck: 'jacket', open: 0.24, zip: 0.7, taper: 0.2, loose: 0.06, sleeveLoose: 0.14, sleeveTap: [0.85, 0.8], sleeveRamp: 0.6, thick: 0.035, rib: 0.55, cuff: 0.1, collar: 'stand', loft: 0.2, loftTop: [4.9, 4.3], blouse: 0.16, ribPull: 0.85, rolls: 0.045, cuffRolls: 0.03 },
   // a quilted down jacket: inflated, horizontal baffles every ~10 cm, a high stand collar, elastic hem and cuffs
   puffer: { slot: 'jacket', sleeve: 0.97, hem: 1.05, neck: 'crew', taper: 0.06, loose: 0.08, sleeveLoose: 0.55, sleeveTap: [1, 0.8], sleeveRamp: 0.5, thick: 0.06, cuff: 0.07, collar: 'stand', collarR: 0.12, loft: 0.66, loftTop: [6.2, 5.5], hemPull: 0.3, ribPull: 0.4, baffle: { step: 1.05, amp: 0.12, armStep: 0.85, armAmp: 0.08 } },
   jacket_open: { slot: 'jacket', sleeve: 0.955, hem: 0.3, neck: 'jacket', open: 0.56, taper: 0.12, loose: 0.06, sleeveLoose: 0.08, thick: 0.03, collar: 'fold' },
@@ -1062,15 +1063,16 @@ function garmentFields(D, S, spec, sub, length) {
     F.front = f((c, x, y, z) => { const s = legS(c); return s * Math.cos(S.legPhi[c]) * -1 + (1 - s) * -(z - S.rowVal(S.zc, y)); }); // <0 front
     return F;
   }
-  // tops
-  const hemY = length === 'cropped' ? 1.95 : length === 'long' && (sub === 'jacket_open' || sub === 'puffer') ? 0.18 : spec.hem;
+  // tops (a top worn under a jacket is cut shorter: see tuckFor)
+  const [base, tuck] = String(length || 'full').split('@');
+  const hem0 = topHem(spec, sub, base), hemY = tuck ? Math.max(hem0, +tuck) : hem0;
   const neck = spec.neck === 'jacket' ? [6.12, 6.43, 6.6] : spec.neck === 'hood' ? [6.2, 6.5, 6.66] : spec.neck === 'tank' ? [5.95, 6.42, 6.5] : [6.24, 6.52, 6.66];
   const neckY = (c) => { const k = Math.cos(S.thetaN[c]); return k >= 0 ? mix(neck[1], neck[0], k * k) : mix(neck[1], neck[2], k * k); };
   F.hem = f((c, x, y) => { const s = armS(c); return (1 - s) * (hemY - y) - s * 1; });
   F.neck = f((c, x, y) => y - neckY(c));
   F.sleeve = f((c) => { const s = armS(c); return s * (S.armT[c] - spec.sleeve) * S.armLen - (1 - s) * 1; });
   if (spec.open) {
-    const g = (y) => spec.open + 0.22 * sstep(5.5, 6.4, y) - 0.05 * sstep(4.5, 2.5, y);
+    const g = (y) => openAt(spec, y);
     F.open = f((c, x, y, z) => Math.min(g(y) - Math.abs(x), (z - S.rowVal(S.zc, y)) * 2 - 0.05) - (armS(c) > 0.5 ? 2 : 0));
   }
   if (spec.armhole) F.armhole = f((c) => armW[c] - spec.armhole); // a tank top: cut where the arm begins
@@ -1078,9 +1080,14 @@ function garmentFields(D, S, spec, sub, length) {
   F.front = f((c, x, y, z) => -(z - S.rowVal(S.zc, y)));
   if (spec.rib) F.rib = f((c, x, y) => (armS(c) > 0.5 ? 1 : y - (hemY + spec.rib)));
   if (spec.cuff) F.cuff = f((c) => (armS(c) < 0.5 ? 1 : (spec.sleeve - spec.cuff - S.armT[c]) * S.armLen));
-  F._hemY = hemY;
+  F._hemY = hemY; F._hem0 = hem0;
   return F;
 }
+// half the width of an open front at rest height y: lapels open into a V by the collar; a zip front
+// is straight
+const openAt = (spec, y) => (spec.zip ? spec.open : spec.open + 0.22 * sstep(5.5, 6.4, y) - 0.05 * sstep(4.5, 2.5, y));
+// the hem of a top on the rest mesh, by its length
+const topHem = (spec, sub, length) => (length === 'cropped' ? 1.95 : length === 'long' && (sub === 'jacket_open' || sub === 'puffer') ? 0.18 : spec.hem);
 
 const G_FRONT = 0, G_BACK = 1, G_FABRIC = 2, G_TRIM = 3;
 
@@ -1108,7 +1115,7 @@ function garmentTopology(D, S, sub, length) {
     };
   }
   const patch = buildPatch(D.m, D.index, fields, cover, split, groupOf, spec.slot !== 'shoes');
-  patch.names = names; patch.spec = spec; patch.sub = sub; patch.length = length; patch.hemY = F._hemY;
+  patch.names = names; patch.spec = spec; patch.sub = sub; patch.length = length; patch.hemY = F._hemY; patch.hem0 = F._hem0 ?? F._hemY;
   // the body vertices the garment touches, and a ring around them (for smoothing the height field)
   const touched = new Uint8Array(D.m);
   for (let k = 0; k < patch.wIdx.length; k++) touched[patch.wIdx[k]] = 1;
@@ -1710,12 +1717,70 @@ const CLOTH_TYPE = {
   sweater: { around: 1.1, along: 0.04, sleeve: 1 },
   hoodie: { around: 1.3, along: 0.05, sleeve: 1.2 },
   trackjacket: { around: 1.1, along: 0.04, sleeve: 1 },
-  bomber: { around: 2.2, along: 0.1, sleeve: 1.5, rib: -0.06, room: 2.2 }, // (room: it blouses over its rib)
+  // (room: it blouses over its rib; chest / low: the ease over the upper chest and over the lowest
+  // quarter, x around: a blouson is flat on the chest and full just above its waistband)
+  // (tube: the sleeves hang as round tubes this far off the arm's outline with its hollows bridged,
+  // so the deltoid, the biceps and the forearm don't print through)
+  bomber: { around: 2.2, along: 0.1, sleeve: 1.5, rib: -0.06, room: 2.2, chest: 0.7, low: 1.25, tube: 0.05 },
   jacket_open: { around: 1.25, along: 0.03, sleeve: 1.1 },
 }; // (a puffer keeps its quilted shell)
 const CLOTH_STEPS = 30, CLOTH_ITERS = 4;
 let clothIds = 0; // (each prepared piece gets one, for the drape cache's keys)
 
+
+// Round sleeves: per arm, the radius around the arm's bones (shoulder-elbow-wrist) that the arm and
+// the sleeves under it stay inside (80th percentile), per ~7 mm along the arm, never growing from the
+// deltoid down to the wrist (the dips past the biceps, at the elbow and above the wrist are bridged),
+// plus room. It takes over within ~4 cm of the shoulder seam. out(X, v, w, snap) moves point v out to
+// the tube (w: how much; snap: onto it, as a pattern).
+function sleeveTubes(B, D, inner, gapBody, room) {
+  const J = B.J, NB = 72;
+  const arms = [[J.shoulderL, J.elbowL, J.wristL], [J.shoulderR, J.elbowR, J.wristR]].map(([a, b, c]) => {
+    const u1 = norm3(sub3(b, a)), u2 = norm3(sub3(c, b)), L1 = len3(sub3(b, a)), L2 = len3(sub3(c, b));
+    return { a, b, c, u1, u2, L1, L: L1 + L2, rs: Array.from({ length: NB }, () => []), R: new Float32Array(NB) };
+  });
+  const q = [0, 0, 0, 0]; // T along the arm, r, and the point's offset from the bone (scratch: out)
+  const off = [0, 0, 0];
+  const proj = (A, x, y, z) => {
+    let best = Infinity;
+    for (let sgi = 0; sgi < 2; sgi++) {
+      const o = sgi ? A.b : A.a, u = sgi ? A.u2 : A.u1, l = sgi ? A.L - A.L1 : A.L1;
+      const dx = x - o[0], dy = y - o[1], dz = z - o[2];
+      const t = clamp(dx * u[0] + dy * u[1] + dz * u[2], 0, l);
+      const ox = dx - t * u[0], oy = dy - t * u[1], oz = dz - t * u[2], r = Math.hypot(ox, oy, oz);
+      if (r < best) { best = r; q[0] = sgi ? A.L1 + t : t; q[1] = r; off[0] = ox; off[1] = oy; off[2] = oz; }
+    }
+    return q;
+  };
+  const add = (x, y, z, g) => {
+    const A = arms[x >= 0 ? 0 : 1], p = proj(A, x, y, z), k = Math.min(NB - 1, Math.floor((p[0] / A.L) * NB));
+    if (p[0] > 0) A.rs[k].push(p[1] + g);
+  };
+  for (let c = 0; c < D.m; c++) if (D.region[c] === R.UPPERARM || D.region[c] === R.FOREARM) add(B.P[c * 3], B.P[c * 3 + 1], B.P[c * 3 + 2], gapBody);
+  for (const L of inner) for (let v = 0; v < L.G.length / 3; v++) if (L.aw[v] >= 0.6) add(L.G[v * 3], L.G[v * 3 + 1], L.G[v * 3 + 2], L.gap);
+  for (const A of arms) {
+    // per bin, the radius most of the outline stays inside (not the odd far point: the arm is oval)
+    for (let k = 0; k < NB; k++) { const a = A.rs[k].sort((x, y) => x - y); A.R[k] = a.length ? a[Math.floor((a.length - 1) * 0.8)] : 0; }
+    // going up from the wrist the radius never comes in again; a little smoothing; then the room
+    const M = new Float32Array(NB);
+    let run = 0; for (let k = NB - 1; k >= 0; k--) { run = Math.max(run, A.R[k]); M[k] = run; }
+    // (the shoulders stay relaxed: over the deltoid the tube is barely wider than over the biceps; the
+    // deltoid keeps the cloth off itself as a collider, it doesn't blow the sleeve up)
+    const kB = Math.round(NB * 0.25); for (let k = 0; k < kB; k++) M[k] = Math.min(M[k], M[kB] + 0.05 * B.s * (1 - k / kB));
+    const H = new Float32Array(NB);
+    for (let k = 0; k < NB; k++) { let sm = 0, n = 0; for (let j = k - 2; j <= k + 2; j++) if (j >= 0 && j < NB) { sm += M[j]; n++; } H[k] = sm / n + room; }
+    A.H = H;
+  }
+  const out = (X, v, w, snap) => {
+    const o = v * 3, A = arms[X[o] >= 0 ? 0 : 1], p = proj(A, X[o], X[o + 1], X[o + 2]);
+    const f = (p[0] / A.L) * NB - 0.5, k0 = clamp(Math.floor(f), 0, NB - 1), k1 = Math.min(NB - 1, k0 + 1);
+    const Rt = mix(A.H[k0], A.H[k1], clamp(f - k0, 0, 1)), r = p[1];
+    if (r < 1e-6 || (!snap && r >= Rt)) return;
+    const k = (mix(r, Rt, w * sstep(0, 0.08, p[0] / A.L)) - r) / r;
+    X[o] += off[0] * k; X[o + 1] += off[1] * k; X[o + 2] += off[2] * k;
+  };
+  return { out, arms };
+}
 
 function clothSolve(gm, B, G0, inner) {
   const ty = CLOTH_TYPE[gm.sub]; if (!ty) return null;
@@ -1723,6 +1788,12 @@ function clothSolve(gm, B, G0, inner) {
   const p = gm.patch, nv = p.nv, s = B.s, spec = gm.spec;
   const ease = (CLOTH_EASE[gm.fitKey] ?? 0.08) * ty.around;
   const Pb = interp(p, B.P, 3);
+  // the ease by height on the torso (a blouson: flat on the chest, full over the lowest quarter)
+  const zoneK = new Float32Array(nv).fill(1);
+  if (ty.chest != null) {
+    const yR = p.hemY + (spec.rib || 0), yA = 4.65;
+    for (let v = 0; v < nv; v++) zoneK[v] = mix(1, mix(ty.low ?? 1, ty.chest, sstep(yR + 0.25 * (yA - yR), yR + 0.75 * (yA - yR), p.restP[v * 3 + 1])), sstep(0.5, 0.3, p.armW[v]));
+  }
   const fRib = p.names.indexOf('rib'), fCuff = p.names.indexOf('cuff'), fNeck = p.names.indexOf('neck');
   const band = new Float32Array(nv); // 1 in a rib or cuff
   for (let v = 0; v < nv; v++) {
@@ -1830,6 +1901,12 @@ function clothSolve(gm, B, G0, inner) {
     const k = mix(radiusAt(ring[r0], a), radiusAt(ring[r0 + 1], a), t) / rr;
     Q[v * 3] = x * k; Q[v * 3 + 1] = y; Q[v * 3 + 2] = c + dz * k;
   }
+  const tube = ty.tube ? sleeveTubes(B, D, inner, gapBody, ty.tube * s) : null;
+  // the sleeves' pattern: round tubes (see sleeveTubes) where there are any, else the arm
+  const tubeW = new Float32Array(nv);
+  if (tube) for (let v = 0; v < nv; v++) tubeW[v] = band[v] ? 0 : sstep(0.5, 0.75, aw[v]);
+  const QS = Float32Array.from(Pb);
+  if (tube) for (let v = 0; v < nv; v++) if (tubeW[v] > 0) tube.out(QS, v, tubeW[v], true);
   const { off, nb } = p.adj;
   const E = [];
   for (let v = 0; v < nv; v++) for (let k = off[v]; k < off[v + 1]; k++) if (nb[k] > v) E.push(v, nb[k]);
@@ -1838,11 +1915,11 @@ function clothSolve(gm, B, G0, inner) {
   for (let e = 0; e < ne; e++) {
     const a = E[e * 2], b = E[e * 2 + 1];
     const ew = (aw[a] + aw[b]) / 2, torso = aw[a] < 0.5 && aw[b] < 0.5;
-    const S0 = torso ? Q : Pb, L = len(S0, a, b);
+    const S0 = torso ? Q : QS, L = len(S0, a, b);
     const ax = ew > 0.5 ? (Pb[a * 3] >= 0 ? axL : axR) : [0, 1, 0];
     const c2 = (((S0[b * 3] - S0[a * 3]) * ax[0] + (S0[b * 3 + 1] - S0[a * 3 + 1]) * ax[1] + (S0[b * 3 + 2] - S0[a * 3 + 2]) * ax[2]) / L) ** 2; // 1 along, 0 around
     const bd = (band[a] + band[b]) / 2;
-    const around = mix(ew > 0.5 ? ease * ty.sleeve : ease, ty.rib ?? 0.015, bd), along = mix(ty.along, 0, bd);
+    const around = mix(ew > 0.5 ? ease * ty.sleeve * (tube ? 0.4 : 1) : ease * (zoneK[a] + zoneK[b]) / 2, ty.rib ?? 0.015, bd), along = mix(ty.along, 0, bd);
     rest[e] = L * (1 + around * (1 - c2) + along * c2);
   }
   const cp = [], cn = [], cg = [];
@@ -1877,7 +1954,7 @@ function clothSolve(gm, B, G0, inner) {
   // the fit: cloth with room to spare settles onto what is under it (its weight lays it on the chest,
   // the shoulder blades, the waistband) instead of standing off it where the old shell put it; how far
   // it stays off is the fit's ease
-  const room = 1 + ease * 0.6 * (ty.room ?? 1), pullK = 0.08;
+  const roomV = Float32Array.from(zoneK, (k) => 1 + ease * 0.6 * (ty.room ?? 1) * k), pullK = 0.08;
   const pullW = new Float32Array(nv); // (not by the collar: it rests on the neck and on the collars under it)
   for (let v = 0; v < nv; v++) pullW[v] = fNeck >= 0 ? sstep(0.4 * s, 1.0 * s, Math.abs(p.vf[v * p.nf + fNeck])) : 1;
   const collide = (pull, rings = ring) => {
@@ -1889,8 +1966,9 @@ function clothSolve(gm, B, G0, inner) {
         const c = mix(zc[r0], zc[r0 + 1], t), dz = z - c, rr = Math.hypot(x, dz), a = Math.atan2(x, dz);
         const rmin = mix(radiusAt(rings[r0], a), radiusAt(rings[r0 + 1], a), t) * (1 - sstep(0.3, 0.5, aw[v]));
         if (rr < rmin && rr > 1e-6) { const k = rmin / rr; X[v * 3] = x = x * k; X[v * 3 + 2] = z = c + dz * k; }
-        else if (pull && rr > rmin * room && pullW[v] > 0) { const k = 1 - (pullK * pullW[v] * (rr - rmin * room)) / rr; X[v * 3] = x = x * k; X[v * 3 + 2] = z = c + dz * k; }
+        else if (pull && rr > rmin * roomV[v] && pullW[v] > 0) { const k = 1 - (pullK * pullW[v] * (rr - rmin * roomV[v])) / rr; X[v * 3] = x = x * k; X[v * 3 + 2] = z = c + dz * k; }
       }
+      if (tubeW[v] > 0) { tube.out(X, v, tubeW[v], false); x = X[v * 3]; y = X[v * 3 + 1]; z = X[v * 3 + 2]; }
       const l = near[v]; if (!l) continue;
       let best = -1, bd = Infinity;
       for (let j = 0; j < l.length; j++) {
@@ -1903,6 +1981,17 @@ function clothSolve(gm, B, G0, inner) {
       if (d < CG[c]) { const k = CG[c] - d; X[v * 3] += nx * k; X[v * 3 + 1] += ny * k; X[v * 3 + 2] += nz * k; }
     }
   };
+  // a zip front: its two edges hang straight down, spec.zip apart (blending into the collar's shape)
+  const fOpen = p.names.indexOf('open'), zipV = [], zipW = [];
+  if (spec.zip && fOpen >= 0) {
+    const seen = new Uint8Array(nv);
+    for (const e of p.bound) for (const v of [e.a, e.b]) {
+      if (seen[v] || Math.abs(p.vf[v * p.nf + fOpen]) > 0.01 || aw[v] >= 0.3) continue;
+      seen[v] = 1; zipV.push(v); zipW.push(fNeck >= 0 ? sstep(0.15 * s, 0.5 * s, Math.abs(p.vf[v * p.nf + fNeck])) : 1);
+    }
+  }
+  const zipX = (spec.zip ?? 0) * 0.5 * s;
+  const zip = () => { for (let i = 0; i < zipV.length; i++) { const o = zipV[i] * 3; X[o] = mix(X[o], Math.sign(X[o]) * zipX, zipW[i]); } };
   const tmp = new Float32Array(nv * 3);
   gather(X);
   for (let step = 0; step < CLOTH_STEPS; step++) {
@@ -1931,11 +2020,13 @@ function clothSolve(gm, B, G0, inner) {
       tmp[v * 3] = X[v * 3] + lam * (x / c - X[v * 3]); tmp[v * 3 + 1] = X[v * 3 + 1] + lam * (y / c - X[v * 3 + 1]); tmp[v * 3 + 2] = X[v * 3 + 2] + lam * (z / c - X[v * 3 + 2]);
     }
     X.set(tmp);
+    zip();
     collide();
     if (step % 12 === 11) gather(X);
   }
   // a last smoothing that does not shrink (Taubin), then out of the way once more
   taubin(X, p.adj, p.bound, 2);
+  zip();
   collide();
   // the collar keeps the shell's shape (its fronts part cleanly over what is under them), blending into
   // the drape over the first few centimetres down; under a hood, the whole upper back does
@@ -1959,15 +2050,15 @@ function clothSolve(gm, B, G0, inner) {
 /* ---------- a worn garment: geometry built from its patch ---------- */
 
 class GarmentMesh {
-  constructor(stage, slot, prepared, name) {
-    this.stage = stage; this.slot = slot; this.prep = prepared;
+  constructor(stage, slot, prepared, name, tuck = null) {
+    this.stage = stage; this.slot = slot; this.prep = prepared; this.tuck = tuck;
     this.name = name || prepared.asset.name || '';
     this.fitKey = fitOf(prepared.asset, this.name);
     const { D, S } = stage;
     const asset = prepared.asset;
     this.sub = SPECS[prepared.sub].slot === 'shoes' ? shoeShell(prepared.asset, this.name, prepared.sub) : prepared.sub;
     this.spec = SPECS[this.sub];
-    this.patch = stage.topology(this.sub, prepared.length);
+    this.patch = stage.topology(this.sub, tuck ? `${prepared.length || 'full'}@${tuck}` : prepared.length);
     const p = this.patch;
     // render vertices: one per (welded vertex, group); bands per boundary edge (6 vertices)
     const key = new Map(), rv = [], rg = [], idxByGroup = [[], [], [], []];
@@ -2035,7 +2126,7 @@ class GarmentMesh {
   writeStatic() {
     const p = this.patch, { S } = this.stage, spec = this.spec;
     const uv = this.geo.attributes.uv.array, rest = this.geo.attributes.aRest.array, rib = this.geo.attributes.aRib.array;
-    const hemY = p.hemY, top = 6.45;
+    const hemY = p.hem0 ?? p.hemY, top = 6.45;
     let yLo = Infinity, yHi = -Infinity;
     for (let v = 0; v < p.nv; v++) { const y = p.restP[v * 3 + 1]; if (y < yLo) yLo = y; if (y > yHi) yHi = y; }
     const uvOf = (w, g) => {
@@ -2058,7 +2149,7 @@ class GarmentMesh {
       const v = clamp((y - hemY) / (top - hemY), 0, 1);
       let u;
       if (spec.open && g === G_FRONT) {
-        const gO = spec.open + 0.22 * sstep(5.5, 6.4, y) - 0.05 * sstep(4.5, 2.5, y);
+        const gO = openAt(spec, y);
         u = x < 0 ? 0.5 * clamp((x + hw) / Math.max(0.1, hw - gO), 0, 1) : 0.5 + 0.5 * clamp((x - gO) / Math.max(0.1, hw - gO), 0, 1);
       } else u = 0.5 + 0.5 * clamp(x / hw, -1, 1);
       return [g === G_FRONT ? u : 1 - u, v];
@@ -2868,7 +2959,7 @@ diffuseColor.rgb *= mix(1.0, 0.42, smoothstep(0.0, 0.42, vEyeUp));`)
       }
       // (a hood lies on the back, over the jacket's collar: the hoodie and the jacket keep their shells there)
       g.clothHood = (slot === 'jacket' && !!st.worn.layer?.spec.hood) || (slot === 'layer' && !!g.spec.hood);
-      g.clothKey = [st.bodyVersion, ...ORDER.slice(0, ORDER.indexOf(slot) + 1).map((s2) => { const gi = st.worn[s2]; return gi ? `${s2}:${(gi.prep.clothId ??= ++clothIds)}:${gi.sub}:${gi.fitKey}` : '-'; })].join('|');
+      g.clothKey = [st.bodyVersion, ...ORDER.slice(0, ORDER.indexOf(slot) + 1).map((s2) => { const gi = st.worn[s2]; return gi ? `${s2}:${(gi.prep.clothId ??= ++clothIds)}:${gi.sub}:${gi.fitKey}:${gi.tuck || ''}` : '-'; })].join('|');
       g.update(B, h, null, drape, inner);
     }
     st.finals = finals;
@@ -2985,12 +3076,36 @@ diffuseColor.rgb *= mix(1.0, 0.42, smoothstep(0.0, 0.42, vEyeUp));`)
     if (old && prep && old.prep === prep && (name ?? old.name) === old.name) { setVisibleNow(slot, visible); return; }
     if (old) { body.remove(old.mesh); old.dispose(); delete st.worn[slot]; }
     if (prep) {
-      const g = new GarmentMesh(st, slot, prep, name);
+      const g = new GarmentMesh(st, slot, prep, name, tuckFor(slot, prep));
       st.worn[slot] = g;
       body.add(g.mesh);
     }
     setVisibleNow(slot, visible);
+    retuck();
     if (st.B) refitGarments();
+  }
+  // Layer lengths: under a jacket that is worn and shown, a top hangs at most ~1.5 cm below the
+  // jacket's hem (a hoodie or a tee never sticks out a hand's width under a bomber); the top under a
+  // layer ends a little higher than the layer, so it stays hidden. Rest-mesh decimetres.
+  const TUCK = { layer: 0.08, top: 0.03 };
+  function tuckFor(slot, prep) {
+    if (slot !== 'top' && slot !== 'layer') return null;
+    const j = st.worn.jacket; if (!j || !st.slotState.jacket.visible) return null;
+    const sub = prep.sub, spec = SPECS[sub]; if (!spec || spec.slot !== 'top' && spec.slot !== 'layer') return null;
+    const under = slot === 'top' && st.worn.layer && st.slotState.layer.visible;
+    const want = Math.ceil((j.patch.hemY - (under ? TUCK.top : TUCK.layer)) * 50) / 50; // (2 mm steps: few cuts to cache)
+    return want > topHem(spec, sub, prep.length || 'full') + 0.02 ? want.toFixed(2) : null;
+  }
+  function retuck() {
+    let changed = false;
+    for (const slot of ['layer', 'top']) {
+      const g = st.worn[slot]; if (!g) continue;
+      const want = tuckFor(slot, g.prep); if (want === g.tuck) continue;
+      const ng = new GarmentMesh(st, slot, g.prep, g.name, want);
+      body.remove(g.mesh); g.dispose(); st.worn[slot] = ng; body.add(ng.mesh);
+      applyOpacity(slot); changed = true;
+    }
+    return changed;
   }
   function setVisibleNow(slot, visible) {
     const ss = st.slotState[slot];
@@ -3014,6 +3129,7 @@ diffuseColor.rgb *= mix(1.0, 0.42, smoothstep(0.0, 0.42, vEyeUp));`)
     st.fades.add(slot);
     // the inner layers show again at once, before the fade starts
     applyOpacity(slot);
+    if (retuck() && st.B) refitGarments(); // (the tops under a jacket get their length back, or lose it)
   }
 
   // ---------- hair, beard, glasses ----------
