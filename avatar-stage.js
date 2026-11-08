@@ -22,6 +22,7 @@
 import * as THREE from './vendor/three/three.module.min.js';
 import { RoomEnvironment } from './vendor/three/addons/RoomEnvironment.js';
 import { SLOTS, SLOT_OFFSET_MM, FACE_FRAME, cleanBody } from './avatar-config.js';
+import { ShellGarment, eggHead } from './mannequin-shells.js';
 
 const DATA = new URL('./avatar/', import.meta.url);
 const BACKDROP = '#141413';
@@ -815,6 +816,24 @@ function hookCommon(shader, uniforms) {
   shader.fragmentShader = shader.fragmentShader
     .replace('#include <common>', '#include <common>\n' + COVER_FRAG + GLSL_NOISE)
     .replace('#include <clipping_planes_fragment>', '#include <clipping_planes_fragment>\n' + COVER_TEST);
+}
+
+// The mannequin look: one matte warm grey, the baked AO for a little form; it hides under shoes like
+// the skin does (the shells are opaque, so they need no cover).
+function mannequinMaterial(U, headY) {
+  const mat = new THREE.MeshStandardMaterial({ color: 0x8c867e, roughness: 0.9, metalness: 0, envMapIntensity: 0.6 });
+  mat.onBeforeCompile = (shader) => {
+    hookCommon(shader, U);
+    shader.vertexShader = shader.vertexShader
+      .replace('#include <common>', '#include <common>\nattribute float aAO; varying float vAO;')
+      .replace('#include <begin_vertex>', '#include <begin_vertex>\nvAO = aAO;');
+    shader.fragmentShader = shader.fragmentShader
+      .replace('#include <common>', '#include <common>\nvarying float vAO;')
+      // (none on the head: the AO was baked for a face it no longer has)
+      .replace('#include <aomap_fragment>', `#include <aomap_fragment>\nreflectedLight.indirectDiffuse *= mix(1.0, vAO, 0.6 * (1.0 - smoothstep(${(headY - 0.3).toFixed(2)}, ${headY.toFixed(2)}, vRest.y)));`);
+  };
+  mat.customProgramCacheKey = () => 'mannequin';
+  return mat;
 }
 
 // Skin: wrap lighting with a warm terminator (a cheap stand-in for subsurface scattering), and the
@@ -2738,9 +2757,12 @@ function canvasTexture(w, h, draw, srgb = true) {
 
 /**
  * @param {HTMLElement} container
- * @param {{ onAngle?: (deg:number)=>void, onReady?: (stage:object)=>void }} [opts]
+ * @param {{ onAngle?: (deg:number)=>void, onReady?: (stage:object)=>void, mode?: 'avatar'|'mannequin' }} [opts]
+ *   mode 'mannequin': a faceless grey mannequin, each piece a curved shell of its cut-out photos
+ *   (mannequin-shells.js; prepare() then also takes the asset's cutFront / cutBack PNGs)
  */
-export async function createStage(container, { onAngle, onReady } = {}) {
+export async function createStage(container, { onAngle, onReady, mode = 'avatar' } = {}) {
+  const mannequin = mode === 'mannequin';
   const renderer = new THREE.WebGLRenderer({ antialias: true, alpha: false, powerPreference: 'high-performance', preserveDrawingBuffer: false });
   renderer.setPixelRatio(Math.min(2, window.devicePixelRatio || 1));
   renderer.outputColorSpace = THREE.SRGBColorSpace;
@@ -2820,7 +2842,7 @@ export async function createStage(container, { onAngle, onReady } = {}) {
   bodyGeo.setAttribute('aCoverA', new THREE.BufferAttribute(new Float32Array(D.m * 4).fill(-9), 4));
   bodyGeo.setAttribute('aCoverB', new THREE.BufferAttribute(new Float32Array(D.m).fill(-9), 1));
   bodyGeo.setIndex(new THREE.BufferAttribute(D.index, 1));
-  const skinMat = skinMaterial(skinU);
+  const skinMat = mannequin ? mannequinMaterial(skinU, D.rest.reduce((m, v, i) => (i % 3 === 1 && D.region[(i - 1) / 3] === R.HEAD ? Math.min(m, v) : m), Infinity)) : skinMaterial(skinU);
   const bodyMesh = new THREE.Mesh(bodyGeo, skinMat);
   bodyMesh.castShadow = true; bodyMesh.receiveShadow = true; bodyMesh.frustumCulled = false;
   body.add(bodyMesh);
@@ -2861,11 +2883,12 @@ diffuseColor.rgb *= mix(1.0, 0.42, smoothstep(0.0, 0.42, vEyeUp));`)
   const eyes = new THREE.Mesh(eyeGeo, eyeMat);
   eyes.frustumCulled = false;
   body.add(eyes);
+  if (mannequin) eyes.visible = false;
 
   // ---------- state ----------
   const st = {
     D, S, cfg: null, B: null, env: null, bodyVersion: 0, clothCache: new Map(),
-    topoCache: new Map(), prepCache: new Map(), worn: {}, slotState: {},
+    topoCache: new Map(), prepCache: new Map(), worn: {}, slotState: {}, mode, shells: {},
     angle: 0, vel: 0, snap: null, fades: new Set(), dirty: true, raf: 0, disposed: false,
     lastFrameMs: 0, buildMs: 0, pendingBody: null, bodyTimer: 0, lastBodyAt: 0,
   };
@@ -2884,6 +2907,7 @@ diffuseColor.rgb *= mix(1.0, 0.42, smoothstep(0.0, 0.42, vEyeUp));`)
     B.Dir = clothDirections(D, S, B, st.env);
     bodyGeo.attributes.position.array.set(B.P);
     bodyGeo.attributes.normal.array.set(B.N);
+    if (mannequin) eggHead(bodyGeo.attributes.position.array, bodyGeo.attributes.normal.array, D, R, B.J);
     bodyGeo.attributes.position.needsUpdate = true; bodyGeo.attributes.normal.needsUpdate = true;
     bodyGeo.computeBoundingSphere();
     // eyes at the eye joints
@@ -2896,6 +2920,7 @@ diffuseColor.rgb *= mix(1.0, 0.42, smoothstep(0.0, 0.42, vEyeUp));`)
     st.bodyVersion++;
     for (const s of SLOTS) if (st.worn[s]) st.worn[s].h = null;
     refitGarments();
+    if (mannequin) refitShells();
     updateHair();
     frame();
     st.buildMs = performance.now() - t0;
@@ -3042,7 +3067,9 @@ diffuseColor.rgb *= mix(1.0, 0.42, smoothstep(0.0, 0.42, vEyeUp));`)
       // the cut of this kind of garment on the body (cached per kind), so putting it on is quick
       await new Promise((r) => setTimeout(r, 0));
       if (!st.disposed) st.topology(sub, asset.length || 'full');
-      entry.value = { asset, sub, length: asset.length || 'full', materials: mats, textures: [front, back, normal, roughMap, tile].filter(Boolean) };
+      // the mannequin's shells: the cut-out photos themselves (with their alpha)
+      const cut = mannequin && !isShoe && asset.cutFront ? { front: await blobTexture(asset.cutFront, true), back: await blobTexture(asset.cutBack, true) } : null;
+      entry.value = { asset, sub, length: asset.length || 'full', materials: mats, textures: [front, back, normal, roughMap, tile, cut?.front, cut?.back].filter(Boolean), cut, tile };
       entry.ready = true;
       return entry.value;
     })();
@@ -3072,6 +3099,7 @@ diffuseColor.rgb *= mix(1.0, 0.42, smoothstep(0.0, 0.42, vEyeUp));`)
     putOn(slot, prep, visible, nm);
   }
   function putOn(slot, prep, visible, name) {
+    if (mannequin && slot !== 'shoes') { putShell(slot, prep, visible); return; }
     const old = st.worn[slot];
     if (old && prep && old.prep === prep && (name ?? old.name) === old.name) { setVisibleNow(slot, visible); return; }
     if (old) { body.remove(old.mesh); old.dispose(); delete st.worn[slot]; }
@@ -3083,6 +3111,26 @@ diffuseColor.rgb *= mix(1.0, 0.42, smoothstep(0.0, 0.42, vEyeUp));`)
     setVisibleNow(slot, visible);
     retuck();
     if (st.B) refitGarments();
+  }
+  // The mannequin look: every piece but the shoes is a shell of its photos (mannequin-shells.js).
+  function putShell(slot, prep, visible) {
+    const old = st.shells[slot];
+    if (old && prep && old.prep === prep) { setVisibleNow(slot, visible); return; }
+    if (old) { body.remove(old.group); old.dispose(); delete st.shells[slot]; }
+    if (prep) {
+      const a = prep.asset;
+      const g = new ShellGarment({ slot, sub: prep.sub, spec: SPECS[prep.sub], cut: prep.cut, fabric: a.fabricBaseColor, tile: prep.tile, tileCm: a.fabricTileCm, roughness: a.roughness, R });
+      g.prep = prep; st.shells[slot] = g; body.add(g.group);
+    }
+    setVisibleNow(slot, visible);
+    if (st.B) refitShells();
+  }
+  function refitShells() {
+    const j = st.shells.jacket; j?.update(st.B, D);
+    const hemMin = j && st.slotState.jacket.visible && j.info ? j.info.yHem - 0.15 * st.B.s : -Infinity;
+    st.shells.bottoms?.update(st.B, D);
+    for (const s of ['top', 'layer']) st.shells[s]?.update(st.B, D, { hemMin });
+    invalidate();
   }
   // Layer lengths: under a jacket that is worn and shown, a top hangs at most ~1.5 cm below the
   // jacket's hem (a hoodie or a tee never sticks out a hand's width under a bomber); the top under a
@@ -3118,6 +3166,7 @@ diffuseColor.rgb *= mix(1.0, 0.42, smoothstep(0.0, 0.42, vEyeUp));`)
       g.mesh.visible = ss.opacity > 0.001;
       for (const m of g.prep.materials) m.opacity = ss.opacity;
     }
+    if (st.shells[slot]) st.shells[slot].setVisible(ss.opacity > 0.5); // (opaque shells switch half-way)
     updateCoverUniforms();
     if (slot === 'jacket') updateHood();
     invalidate();
@@ -3130,12 +3179,13 @@ diffuseColor.rgb *= mix(1.0, 0.42, smoothstep(0.0, 0.42, vEyeUp));`)
     // the inner layers show again at once, before the fade starts
     applyOpacity(slot);
     if (retuck() && st.B) refitGarments(); // (the tops under a jacket get their length back, or lose it)
+    if (mannequin && slot === 'jacket' && st.B) refitShells();
   }
 
   // ---------- hair, beard, glasses ----------
   const hairGroup = new THREE.Group(); body.add(hairGroup);
   let hairKey = '';
-  function updateHair() { hairKey = buildHead(st, hairGroup, skinU, hairKey); }
+  function updateHair() { if (!mannequin) hairKey = buildHead(st, hairGroup, skinU, hairKey); }
   st.onHairLoaded = () => { if (st.disposed) return; hairKey = ''; updateHair(); invalidate(); };
 
   // ---------- body config ----------
@@ -3157,7 +3207,7 @@ diffuseColor.rgb *= mix(1.0, 0.42, smoothstep(0.0, 0.42, vEyeUp));`)
     st.cfg = cfg;
     applyColors(cfg);
     const geomChanged = !prev || prev.heightCm !== cfg.heightCm || prev.weightKg !== cfg.weightKg || prev.build !== cfg.build;
-    if (cfg.facePhotoDataUrl !== prev?.facePhotoDataUrl) loadFace(cfg.facePhotoDataUrl);
+    if (!mannequin && cfg.facePhotoDataUrl !== prev?.facePhotoDataUrl) loadFace(cfg.facePhotoDataUrl);
     if (geomChanged) {
       const now = performance.now();
       if (!prev || now - st.lastBodyAt > REFIT_MS) { st.lastBodyAt = now; clearTimeout(st.bodyTimer); applyBodyGeometry(); }
@@ -3284,6 +3334,7 @@ diffuseColor.rgb *= mix(1.0, 0.42, smoothstep(0.0, 0.42, vEyeUp));`)
     canvas.removeEventListener('pointerdown', onDown); canvas.removeEventListener('pointermove', onMove);
     canvas.removeEventListener('pointerup', onUp); canvas.removeEventListener('pointercancel', onUp);
     for (const s of SLOTS) if (st.worn[s]) st.worn[s].dispose();
+    for (const s of SLOTS) st.shells[s]?.dispose();
     for (const e of st.prepCache.values()) { e.value?.textures.forEach((t) => t.dispose()); e.value?.materials.forEach((m) => m.dispose()); }
     scene.traverse((o) => { if (o.isMesh) { o.geometry.dispose(); (Array.isArray(o.material) ? o.material : [o.material]).forEach((m) => m.dispose()); } });
     envTex.dispose(); contactTex.dispose(); eyeTex?.dispose(); faceTex?.dispose();
@@ -3293,7 +3344,7 @@ diffuseColor.rgb *= mix(1.0, 0.42, smoothstep(0.0, 0.42, vEyeUp));`)
 
   st.renderer = renderer;
   const stage = {
-    setBody, prepare, setGarment, setVisible, snapTo, resize, dispose,
+    setBody, prepare, setGarment, setVisible, snapTo, resize, dispose, mode,
     get angle() { return wrapAngle(st.angle); },
     debug: {
       renderer, scene, camera, avatar, body: bodyMesh, head: hairGroup, state: st,

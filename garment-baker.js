@@ -159,6 +159,37 @@ export async function bakeGarment(item, { front, back } = {}, opts = {}) {
   return asset;
 }
 
+/**
+ * The garment's own pixels with their outline as alpha, for the mirror's mannequin look: each photo
+ * cropped like its panel (tops: shoulder line to hem, side seam to side seam; bottoms: waistband to
+ * hems), at the photo's own resolution (≤ 1024 px). An opaque photo gets its alpha from the baker's
+ * mask. In memory only: nothing is stored or sent, and the baked asset doesn't change.
+ * @returns {Promise<{front: Blob, back: Blob|null} | null>} PNGs; null when the piece isn't drawn
+ */
+export async function cutoutPanels(item, { front, back } = {}) {
+  const sub = subTypeOf(item);
+  if (!sub || !front) return null;
+  const kind = KIND_OF[sub];
+  if (kind === "shoes") return null;
+  const one = async (blob) => {
+    const a = await analysePhoto(blob, kind);
+    const { w, data, mask, core } = a;
+    const cw = core.x1 - core.x0 + 1, ch = core.y1 - core.y0 + 1, k = Math.min(1, 1024 / Math.max(cw, ch));
+    const W = Math.max(1, Math.round(cw * k)), H = Math.max(1, Math.round(ch * k)), out = new Uint8ClampedArray(W * H * 4);
+    for (let y = 0; y < H; y++) for (let x = 0; x < W; x++) {
+      const sx = Math.min(core.x1, core.x0 + Math.floor((x + 0.5) / k)), sy = Math.min(core.y1, core.y0 + Math.floor((y + 0.5) / k));
+      const i = sy * w + sx, o = (y * W + x) * 4;
+      out[o] = data[i * 4]; out[o + 1] = data[i * 4 + 1]; out[o + 2] = data[i * 4 + 2];
+      out[o + 3] = mask[i] ? (a.fromAlpha ? data[i * 4 + 3] : 255) : 0;
+    }
+    return encodeRGBA(out, W, H, "image/png");
+  };
+  const f = await one(front);
+  await yieldNow();
+  const b = back ? await one(back).catch(() => null) : null;
+  return { front: f, back: b };
+}
+
 const mem = new Map(); // garmentId → asset
 const inflight = new Map(); // garmentId|sig → Promise
 
