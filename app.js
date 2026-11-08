@@ -3558,6 +3558,10 @@ const mirror = {
 const MIRROR_ROLES = ["outer", "mid", "base", "bottom", "shoes"];
 const ROLE_WORD = { coat: "Coat", outer: "Jacket", mid: "Layer", base: "Top", bottom: "Bottoms", shoes: "Shoes" };
 const MIRROR_ANGLES = [[0, "Front"], [90, "Right side"], [180, "Back"], [270, "Left side"]];
+// The mirror's look (Avatar | Mannequin, next to the angle buttons), kept on this device like the
+// other settings: the mannequin wears each piece as a shell of its own cut-out photos.
+const MIRROR_MODES = [["avatar", "Avatar"], ["mannequin", "Mannequin"]];
+const mirrorMode = () => (state.settings.mirrorMode === "mannequin" ? "mannequin" : "avatar");
 
 const bodyDraft = () => (mirror.draft ||= Avatar.cleanBody(state.avatar?.body || {}));
 function wornList(o) {
@@ -3595,15 +3599,21 @@ function bakePiece(item) {
   if (bakedAsset(item)) return Promise.resolve(bakedAsset(item));
   let p = mirror.pending.get(item.id);
   if (p) return p;
-  const photo = item.photos?.[0];
+  const photo = item.photos?.[0], stage = mirror.stage;
   p = (async () => {
     const [front, back] = await Promise.all([asBlob(photo), asBlob(item.photos?.[1])]);
-    const asset = front && await mirror.baker.getBaked(item, { front, back });
+    let asset = front && await mirror.baker.getBaked(item, { front, back });
     if (!asset) throw new Error("Nothing to bake");
-    await mirror.stage.prepare(asset);
+    // the mannequin: the cut-out photos themselves too (made in memory, never stored)
+    if (stage?.mode === "mannequin" && asset.slot !== "shoes") {
+      const cut = await mirror.baker.cutoutPanels(item, { front, back });
+      if (cut) asset = { ...asset, cutFront: cut.front, cutBack: cut.back || undefined };
+    }
+    if (mirror.stage !== stage) return null; // (the look was switched meanwhile)
+    await stage.prepare(asset);
     mirror.assets.set(item.id, { photo, asset });
     return asset;
-  })().catch((e) => { console.warn("Mirror: couldn't bake", item.name, e); mirror.noBake.add(item.id); return null; })
+  })().catch((e) => { console.warn("Mirror: couldn't bake", item.name, e); if (mirror.stage === stage) mirror.noBake.add(item.id); return null; })
     .finally(() => { mirror.pending.delete(item.id); dressStage(); });
   mirror.pending.set(item.id, p);
   return p;
@@ -3642,8 +3652,10 @@ function startStage() {
     try {
       const [{ createStage }, baker] = await Promise.all([import("./avatar-stage.js"), import("./garment-baker.js")]);
       mirror.baker = baker;
-      mirror.stage = await createStage(mirror.host, { onAngle: (deg) => { mirror.angle = deg; paintAngles(); } });
+      const mode = mirrorMode();
+      mirror.stage = await createStage(mirror.host, { mode, onAngle: (deg) => { mirror.angle = deg; paintAngles(); } });
       mirror.stage.setBody(bodyDraft());
+      if (mirror.angle) mirror.stage.snapTo(mirror.angle);
       dressStage();
       prebake();
     } catch (e) {
@@ -3655,6 +3667,22 @@ function startStage() {
     }
   })();
 }
+// Switch the look: the stage is made again in the other look, in the same place, and dressed again.
+async function setMirrorMode(mode) {
+  if (mode === mirrorMode()) return;
+  state.settings.mirrorMode = mode;
+  await saveSettings();
+  paintModes();
+  if (mirror.loading) await mirror.loading;
+  if (!mirror.host) return;
+  if (mirror.stage) { mirror.stage.dispose(); mirror.stage = null; }
+  mirror.assets.clear(); mirror.pending.clear(); mirror.worn = {}; mirror.failed = null;
+  paintStageNote(); paintLooks();
+  startStage();
+}
+function paintModes() {
+  document.querySelectorAll("#mirror [data-mmode]").forEach((b) => b.setAttribute("aria-pressed", b.dataset.mmode === mirrorMode()));
+}
 function mountMirror() {
   try {
     const slot = $("#stage3d");
@@ -3663,6 +3691,7 @@ function mountMirror() {
     slot.prepend(mirror.host);
     bodyUI();
     paintAngles();
+    paintModes();
     if (mirror.stage) {
       mirror.stage.resize();
       mirror.stage.setBody(bodyDraft());
@@ -3777,6 +3806,7 @@ function mirrorHTML() {
         <div class="stage-note" role="status"></div>
       </div>
       <div class="angle-pills" role="group" aria-label="Turn him">${MIRROR_ANGLES.map(([deg, label]) => `<button class="chip" data-mangle="${deg}" aria-pressed="false">${label}</button>`).join("")}</div>
+      <div class="angle-pills" role="group" aria-label="Look">${MIRROR_MODES.map(([m, label]) => `<button class="chip" data-mmode="${m}" aria-pressed="${m === mirrorMode()}">${label}</button>`).join("")}</div>
     </div>
     <aside class="mirror-side mirror-looks" aria-label="Today's ideas">
       <h2>Today's ideas</h2>
@@ -7958,6 +7988,7 @@ document.addEventListener("click", async (e) => {
   }
   if (ds.mbtab) { mirror.bodyTab = ds.mbtab; return remountBody(); }
   if (ds.mangle != null) { mirror.angle = +ds.mangle; mirror.stage?.snapTo(mirror.angle); return paintAngles(); }
+  if (ds.mmode) return setMirrorMode(ds.mmode);
   // Fragrances
   if (ds.side) { state.wardSide = ds.side; render(); main.scrollTop = 0; return; }
   if (ds.scf) { state.scentFilter = ds.scf; return render(); }
