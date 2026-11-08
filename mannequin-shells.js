@@ -287,7 +287,7 @@ export class ShellGarment {
     this.meshes = this.mats.map(({ m, depth }, i) => {
       const mesh = new THREE.Mesh(new THREE.BufferGeometry(), m);
       mesh.customDepthMaterial = depth;
-      mesh.castShadow = true; mesh.receiveShadow = true; mesh.frustumCulled = false;
+      mesh.frustumCulled = false; // (no shadow map since round 8: castShadow stays off)
       mesh.renderOrder = ORDER[slot] ?? 1; mesh.name = ['front', 'back', 'fabric'][i];
       this.group.add(mesh);
       return mesh;

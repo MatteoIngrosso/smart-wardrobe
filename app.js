@@ -3562,6 +3562,16 @@ const MIRROR_ANGLES = [[0, "Front"], [90, "Right side"], [180, "Back"], [270, "L
 // other settings: the mannequin wears each piece as a shell of its own cut-out photos.
 const MIRROR_MODES = [["avatar", "Avatar"], ["mannequin", "Mannequin"]];
 const mirrorMode = () => (state.settings.mirrorMode === "mannequin" ? "mannequin" : "avatar");
+// The avatar's hair: the photographed hair, or the same style sculpted as a smooth matte volume
+// (also kept on this device, so the saved body that syncs stays as it is)
+const HAIR_FINISHES = [["real", "Real"], ["sculpted", "Sculpted"]];
+const hairFinish = () => (state.settings.hairFinish === "sculpted" ? "sculpted" : "real");
+async function setHairFinish(f) {
+  state.settings.hairFinish = f === "sculpted" ? "sculpted" : "real";
+  document.querySelectorAll("[data-hfin]").forEach((x) => x.setAttribute("aria-pressed", x.dataset.hfin === hairFinish()));
+  mirror.stage?.setHairFinish?.(hairFinish());
+  await saveSettings();
+}
 
 const bodyDraft = () => (mirror.draft ||= Avatar.cleanBody(state.avatar?.body || {}));
 function wornList(o) {
@@ -3653,7 +3663,7 @@ function startStage() {
       const [{ createStage }, baker] = await Promise.all([import("./avatar-stage.js"), import("./garment-baker.js")]);
       mirror.baker = baker;
       const mode = mirrorMode();
-      mirror.stage = await createStage(mirror.host, { mode, onAngle: (deg) => { mirror.angle = deg; paintAngles(); } });
+      mirror.stage = await createStage(mirror.host, { mode, hairFinish: hairFinish(), onAngle: (deg) => { mirror.angle = deg; paintAngles(); } });
       mirror.stage.setBody(bodyDraft());
       if (mirror.angle) mirror.stage.snapTo(mirror.angle);
       dressStage();
@@ -3673,6 +3683,7 @@ async function setMirrorMode(mode) {
   state.settings.mirrorMode = mode;
   await saveSettings();
   paintModes();
+  remountBody(); // (the hair look only applies to the avatar)
   if (mirror.loading) await mirror.loading;
   if (!mirror.host) return;
   if (mirror.stage) { mirror.stage.dispose(); mirror.stage = null; }
@@ -3756,6 +3767,8 @@ function bodyPanelHTML() {
       ${swatches("skinTone", "Skin tone", Avatar.SKINS, b.skinTone)}`
       : `<div class="mb-face-tab">${swatches("hairColor", "Hair colour", Avatar.HAIR_COLORS, b.hairColor)}
       ${chips("hairStyle", "Hair", Avatar.HAIR_STYLES, b.hairStyle)}
+      ${mirrorMode() === "avatar" ? `<div class="field mb-field"><label>Hair look</label><div class="mb-chips">${HAIR_FINISHES.map(([f, l]) =>
+        `<button class="chip" data-hfin="${f}" aria-pressed="${hairFinish() === f}">${l}</button>`).join("")}</div></div>` : ""}
       ${chips("beard", "Beard", Avatar.BEARDS, b.beard)}
       ${swatches("eyeColor", "Eyes", Avatar.EYES, b.eyeColor)}
       ${chips("glasses", "Glasses", Avatar.GLASSES, b.glasses)}</div>`}
@@ -3857,7 +3870,9 @@ function bodyInput(k, v) {
   else if (k === "build") b.build = Avatar.BUILDS[+v]?.id || b.build;
   const out = $(`#mb-${k}-v`);
   if (out) out.textContent = { height: `${b.heightCm} cm`, weight: `${b.weightKg} kg`, build: Avatar.BUILDS.find((x) => x.id === b.build)?.label }[k];
-  bodyChanged();
+  // while the slider moves the 3D man is only scaled (cheap); the exact body and clothes come on release
+  mirror.stage?.setBody(b, { live: true });
+  bodyUI();
 }
 async function saveBody() {
   const body = Avatar.cleanBody(bodyDraft());
@@ -7989,6 +8004,7 @@ document.addEventListener("click", async (e) => {
   if (ds.mbtab) { mirror.bodyTab = ds.mbtab; return remountBody(); }
   if (ds.mangle != null) { mirror.angle = +ds.mangle; mirror.stage?.snapTo(mirror.angle); return paintAngles(); }
   if (ds.mmode) return setMirrorMode(ds.mmode);
+  if (ds.hfin) return setHairFinish(ds.hfin);
   // Fragrances
   if (ds.side) { state.wardSide = ds.side; render(); main.scrollTop = 0; return; }
   if (ds.scf) { state.scentFilter = ds.scf; return render(); }
@@ -8554,6 +8570,10 @@ document.addEventListener("keydown", (e) => {
   }
   if (e.key === "Enter" && e.target.dataset?.input === "need") askNeed(e.target.value);
   if (e.key === "Enter" && ["evtext", "evplace"].includes(e.target.dataset?.input)) addEventFromForm();
+});
+// a body slider let go: build the exact body and refit the clothes now (not ~250 ms later)
+document.addEventListener("change", (e) => {
+  if (e.target.dataset?.input?.startsWith("mb-")) bodyChanged();
 });
 document.addEventListener("input", (e) => {
   const k = e.target.dataset.input;
