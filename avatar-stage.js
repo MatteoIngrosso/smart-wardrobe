@@ -3,11 +3,14 @@
 // garment-baker.js bakes. Everything is drawn on the device with three.js: no server, no AI.
 //
 //   const stage = await createStage(container, { onAngle, onReady });
-//   stage.setBody(config)                  live while sliders move (geometry refits at most every ~90 ms)
+//   stage.setBody(config)                  rebuilds the body and refits the clothes now
+//   stage.setBody(config, { live: true })  while a slider moves: a cheap scale preview at once, one
+//                                          rebuild ~250 ms after the last move (or on the next plain setBody)
 //   await stage.prepare(asset)             decode the textures and build the materials ahead
 //   stage.setGarment(slot, asset | null, { visible })   instant (same frame) once prepared
 //   stage.setVisible(slot, visible)        a ~170 ms fade that starts in the same frame
 //   stage.snapTo(deg)                      0 front, 90 his right side, 180 back, 270 his left side
+//   stage.setHairFinish('real' | 'sculpted')   the photographed hair, or a smooth matte sculpted volume
 //   stage.angle; stage.resize(); stage.dispose(); stage.debug
 //
 // How the clothes are made: every garment is a patch of the body surface (clipped along smooth
@@ -35,7 +38,14 @@ const LID_DROP = 8 * D2R;        // the upper lids come down a little (no wide-e
 const LEG_IN = 0.02;             // feet a touch closer than MakeHuman's stance (rad)
 const FADE_MS = 170;
 const SNAP_MS = 520;
-const REFIT_MS = 90;             // live body changes refit the clothes at most this often
+const LIVE_REBUILD_MS = 250;     // a slider that stops moving this long gets the exact body and clothes
+const SHAPE_CACHE = 8;           // bodies kept (height, weight, build), so going back to one is instant
+// the live preview's scale, fitted to built bodies (160-200 cm, 50-120 kg): the chest's depth grows
+// as height^0.15 x weight^0.22, the width as height^0.75 x weight^0.1, and each build is this much
+// wider than "regular"
+const BUILD_WIDTH = { slim: 0.91, regular: 1, athletic: 1.08, broad: 1.15 };
+const bodyKey = (c) => `${c.heightCm}|${c.weightKg}|${c.build}`;
+let bodyIds = 0;
 const SLOT_INDEX = { top: 0, layer: 1, jacket: 2, bottoms: 3, shoes: 4 };
 // Which slots cover which (outer → inner), for the "not drawn where fully covered" test.
 const OUTER_OF = { top: ['layer', 'jacket'], layer: ['jacket'], jacket: [], bottoms: ['top', 'layer', 'jacket'], shoes: ['bottoms'], skin: SLOTS };
@@ -2135,7 +2145,6 @@ class GarmentMesh {
     geo.setIndex(index);
     this.geo = geo;
     this.mesh = new THREE.Mesh(geo, prepared.materials);
-    this.mesh.castShadow = true; this.mesh.receiveShadow = true;
     this.mesh.frustumCulled = false;
     this.mesh.renderOrder = 1 + SLOT_INDEX[slot];
     this.writeStatic();
@@ -2761,15 +2770,14 @@ function canvasTexture(w, h, draw, srgb = true) {
  *   mode 'mannequin': a faceless grey mannequin, each piece a curved shell of its cut-out photos
  *   (mannequin-shells.js; prepare() then also takes the asset's cutFront / cutBack PNGs)
  */
-export async function createStage(container, { onAngle, onReady, mode = 'avatar' } = {}) {
+export async function createStage(container, { onAngle, onReady, mode = 'avatar', hairFinish = 'real' } = {}) {
   const mannequin = mode === 'mannequin';
   const renderer = new THREE.WebGLRenderer({ antialias: true, alpha: false, powerPreference: 'high-performance', preserveDrawingBuffer: false });
-  renderer.setPixelRatio(Math.min(2, window.devicePixelRatio || 1));
+  renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, 1.5)); // (2-3x retina costs 1.8-4x the pixels for little visible gain)
   renderer.outputColorSpace = THREE.SRGBColorSpace;
   renderer.toneMapping = THREE.NeutralToneMapping;
   renderer.toneMappingExposure = 1.0;
-  renderer.shadowMap.enabled = true;
-  renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+  renderer.shadowMap.enabled = false; // no real-time shadow map: soft painted floor shadows instead (see "floor")
   renderer.setClearColor(BACKDROP, 1);
   const canvas = renderer.domElement;
   canvas.style.cssText = 'display:block;width:100%;height:100%;touch-action:pan-y;user-select:none;-webkit-user-select:none;-webkit-tap-highlight-color:transparent;outline:none';
@@ -2777,11 +2785,13 @@ export async function createStage(container, { onAngle, onReady, mode = 'avatar'
 
   const scene = new THREE.Scene();
   // a studio backdrop: a soft pool of light behind the man, falling off to the corners
-  scene.background = canvasTexture(512, 512, (g, w, h) => {
+  const backTex = canvasTexture(512, 512, (g, w, h) => {
     const grd = g.createRadialGradient(w * 0.5, h * 0.42, 0, w * 0.5, h * 0.48, w * 0.72);
     grd.addColorStop(0, '#2b2a27'); grd.addColorStop(0.45, '#1d1c1a'); grd.addColorStop(1, '#0e0e0d');
     g.fillStyle = grd; g.fillRect(0, 0, w, h);
   }, true);
+  backTex.generateMipmaps = false; backTex.minFilter = THREE.LinearFilter; // (drawn about 1:1: no mipmaps to build)
+  scene.background = backTex;
   const pmrem = new THREE.PMREMGenerator(renderer);
   const envTex = pmrem.fromScene(new RoomEnvironment(), 0.04).texture;
   pmrem.dispose();
@@ -2790,10 +2800,6 @@ export async function createStage(container, { onAngle, onReady, mode = 'avatar'
 
   // three-point soft lighting; the lights stay with the camera while the man turns
   const key = new THREE.DirectionalLight(0xfff2e6, 2.5); key.position.set(1.7, 2.9, 2.6);
-  key.castShadow = true;
-  key.shadow.mapSize.set(2048, 2048);
-  key.shadow.radius = 4; key.shadow.bias = -0.0004; key.shadow.normalBias = 0.012;
-  Object.assign(key.shadow.camera, { left: -0.75, right: 0.75, top: 1.15, bottom: -1.15, near: 0.5, far: 8 });
   const fill = new THREE.DirectionalLight(0xe4ecff, 0.75); fill.position.set(-2.4, 1.3, 1.9);
   const rim = new THREE.DirectionalLight(0xffffff, 1.5); rim.position.set(-1.1, 2.3, -2.6);
   const rim2 = new THREE.DirectionalLight(0xfff4ea, 0.9); rim2.position.set(1.9, 1.6, -2.2);
@@ -2803,17 +2809,27 @@ export async function createStage(container, { onAngle, onReady, mode = 'avatar'
 
   const camera = new THREE.PerspectiveCamera(20, 1, 0.5, 40);
 
-  // floor: soft shadow + a contact shadow under the feet
-  const floorMat = new THREE.ShadowMaterial({ opacity: 0.28 });
-  const floor = new THREE.Mesh(new THREE.CircleGeometry(2.2, 64), floorMat);
-  floor.rotation.x = -Math.PI / 2; floor.receiveShadow = true; scene.add(floor);
+  // floor: two painted shadows, no shadow map. A dark contact shadow under the feet (it turns with
+  // him) and a long soft one cast away from the key light (it stays put, like the light).
   const contactTex = canvasTexture(256, 256, (g, w, h) => {
     const grd = g.createRadialGradient(w / 2, h / 2, 0, w / 2, h / 2, w / 2);
-    grd.addColorStop(0, 'rgba(0,0,0,0.62)'); grd.addColorStop(0.35, 'rgba(0,0,0,0.38)'); grd.addColorStop(0.7, 'rgba(0,0,0,0.1)'); grd.addColorStop(1, 'rgba(0,0,0,0)');
+    grd.addColorStop(0, 'rgba(0,0,0,0.66)'); grd.addColorStop(0.3, 'rgba(0,0,0,0.42)'); grd.addColorStop(0.65, 'rgba(0,0,0,0.12)'); grd.addColorStop(1, 'rgba(0,0,0,0)');
     g.fillStyle = grd; g.fillRect(0, 0, w, h);
   }, false);
-  const contact = new THREE.Mesh(new THREE.PlaneGeometry(1, 1), new THREE.MeshBasicMaterial({ map: contactTex, transparent: true, depthWrite: false, toneMapped: false }));
+  const castTex = canvasTexture(128, 512, (g, w, h) => {
+    // darkest at the feet (the top edge), fading out along the light's direction
+    g.save(); g.scale(1, 4);
+    const grd = g.createRadialGradient(w / 2, 0.1 * h / 4, 0, w / 2, 0.1 * h / 4, w / 2);
+    grd.addColorStop(0, 'rgba(0,0,0,0.5)'); grd.addColorStop(0.45, 'rgba(0,0,0,0.24)'); grd.addColorStop(1, 'rgba(0,0,0,0)');
+    g.fillStyle = grd; g.fillRect(0, 0, w, h / 4); g.restore();
+  }, false);
+  for (const t of [contactTex, castTex]) { t.generateMipmaps = false; t.minFilter = THREE.LinearFilter; }
+  const shadowMat = (map) => new THREE.MeshBasicMaterial({ map, transparent: true, depthWrite: false, toneMapped: false });
+  const contact = new THREE.Mesh(new THREE.PlaneGeometry(1, 1), shadowMat(contactTex));
   contact.rotation.x = -Math.PI / 2; contact.position.y = 0.0015; contact.renderOrder = -1;
+  const cast = new THREE.Mesh(new THREE.PlaneGeometry(1, 1).translate(0, -0.5, 0), shadowMat(castTex));
+  cast.rotation.set(-Math.PI / 2, Math.atan2(-1.7, -2.6), 0, 'YXZ'); // along the floor, away from the key light
+  cast.position.y = 0.001; cast.renderOrder = -2; scene.add(cast);
 
   const D = await loadAvatarData();
   const S = staticFields(D);
@@ -2844,7 +2860,7 @@ export async function createStage(container, { onAngle, onReady, mode = 'avatar'
   bodyGeo.setIndex(new THREE.BufferAttribute(D.index, 1));
   const skinMat = mannequin ? mannequinMaterial(skinU, D.rest.reduce((m, v, i) => (i % 3 === 1 && D.region[(i - 1) / 3] === R.HEAD ? Math.min(m, v) : m), Infinity)) : skinMaterial(skinU);
   const bodyMesh = new THREE.Mesh(bodyGeo, skinMat);
-  bodyMesh.castShadow = true; bodyMesh.receiveShadow = true; bodyMesh.frustumCulled = false;
+  bodyMesh.frustumCulled = false;
   body.add(bodyMesh);
 
   // ---------- eyes ----------
@@ -2890,7 +2906,7 @@ diffuseColor.rgb *= mix(1.0, 0.42, smoothstep(0.0, 0.42, vEyeUp));`)
     D, S, cfg: null, B: null, env: null, bodyVersion: 0, clothCache: new Map(),
     topoCache: new Map(), prepCache: new Map(), worn: {}, slotState: {}, mode, shells: {},
     angle: 0, vel: 0, snap: null, fades: new Set(), dirty: true, raf: 0, disposed: false,
-    lastFrameMs: 0, buildMs: 0, pendingBody: null, bodyTimer: 0, lastBodyAt: 0,
+    lastFrameMs: 0, buildMs: 0, bodyTimer: 0, builtCfg: null, bodyId: 0, shapeCache: new Map(), preview: false, rebuilds: 0,
   };
   for (const s of SLOTS) st.slotState[s] = { visible: true, opacity: 1 };
   st.topology = (sub, length) => {
@@ -2901,10 +2917,23 @@ diffuseColor.rgb *= mix(1.0, 0.42, smoothstep(0.0, 0.42, vEyeUp));`)
 
   function applyBodyGeometry() {
     const t0 = performance.now();
-    const B = shapeBody(D, S, st.cfg);
-    st.B = B;
-    st.env = { torso: torsoEnvelope(D, S, B), legs: legEnvelopes(D, S, B) };
-    B.Dir = clothDirections(D, S, B, st.env);
+    clearTimeout(st.bodyTimer); st.bodyTimer = 0;
+    st.rebuilds++;
+    const k = bodyKey(st.cfg);
+    let E = st.shapeCache.get(k);
+    if (E) st.shapeCache.delete(k); // (and back in at the end: most recently used)
+    else {
+      const B = shapeBody(D, S, st.cfg);
+      const env = { torso: torsoEnvelope(D, S, B), legs: legEnvelopes(D, S, B) };
+      B.Dir = clothDirections(D, S, B, env);
+      E = { B, env, id: ++bodyIds };
+    }
+    st.shapeCache.set(k, E);
+    if (st.shapeCache.size > SHAPE_CACHE) st.shapeCache.delete(st.shapeCache.keys().next().value);
+    const B = E.B;
+    st.B = B; st.env = E.env; st.bodyId = E.id;
+    st.builtCfg = { heightCm: st.cfg.heightCm, weightKg: st.cfg.weightKg, build: st.cfg.build };
+    st.preview = false; body.scale.setScalar(0.1);
     bodyGeo.attributes.position.array.set(B.P);
     bodyGeo.attributes.normal.array.set(B.N);
     if (mannequin) eggHead(bodyGeo.attributes.position.array, bodyGeo.attributes.normal.array, D, R, B.J);
@@ -2926,8 +2955,8 @@ diffuseColor.rgb *= mix(1.0, 0.42, smoothstep(0.0, 0.42, vEyeUp));`)
     st.buildMs = performance.now() - t0;
   }
 
-  function frame() {
-    const H = st.B.height / 10; // metres
+  function frame(heightDm = st.B.height, redraw = true) {
+    const H = heightDm / 10; // metres
     const aspect = Math.max(0.2, camera.aspect);
     const fov = camera.fov * D2R;
     const needH = H * 1.1 + 0.08, needW = 0.95;
@@ -2936,10 +2965,10 @@ diffuseColor.rgb *= mix(1.0, 0.42, smoothstep(0.0, 0.42, vEyeUp));`)
     camera.position.set(0, cy + 0.05, dist);
     camera.lookAt(0, cy, 0);
     camera.near = dist - 2; camera.far = dist + 3; camera.updateProjectionMatrix();
-    key.shadow.camera.top = H * 0.62; key.shadow.camera.bottom = -H * 0.62; key.shadow.camera.updateProjectionMatrix();
     keyTarget.position.set(0, H * 0.5, 0); key.position.set(1.7, H * 0.5 + 2.1, 2.6);
     contact.scale.set(0.78, 0.62, 1);
-    invalidate();
+    cast.scale.set(0.62, H * 1.15, 1);
+    if (redraw) invalidate();
   }
 
   // ---------- garments ----------
@@ -2984,7 +3013,7 @@ diffuseColor.rgb *= mix(1.0, 0.42, smoothstep(0.0, 0.42, vEyeUp));`)
       }
       // (a hood lies on the back, over the jacket's collar: the hoodie and the jacket keep their shells there)
       g.clothHood = (slot === 'jacket' && !!st.worn.layer?.spec.hood) || (slot === 'layer' && !!g.spec.hood);
-      g.clothKey = [st.bodyVersion, ...ORDER.slice(0, ORDER.indexOf(slot) + 1).map((s2) => { const gi = st.worn[s2]; return gi ? `${s2}:${(gi.prep.clothId ??= ++clothIds)}:${gi.sub}:${gi.fitKey}:${gi.tuck || ''}` : '-'; })].join('|');
+      g.clothKey = [st.bodyId, ...ORDER.slice(0, ORDER.indexOf(slot) + 1).map((s2) => { const gi = st.worn[s2]; return gi ? `${s2}:${(gi.prep.clothId ??= ++clothIds)}:${gi.sub}:${gi.fitKey}:${gi.tuck || ''}` : '-'; })].join('|');
       g.update(B, h, null, drape, inner);
     }
     st.finals = finals;
@@ -3057,9 +3086,11 @@ diffuseColor.rgb *= mix(1.0, 0.42, smoothstep(0.0, 0.42, vEyeUp));`)
       const deep = isShoe ? 0 : (/\bblack\b/i.test(asset.name || '') ? 1 : sstep(0.12, 0.05, fl)) * sstep(0.025, 0.07, fl);
       // the sole: its own colour, else the trim's, else the upper's (never a made-up white)
       const sole = new THREE.Color(asset.soleColor || asset.trimColor || asset.fabricBaseColor || '#777777');
+      // (the two halves of the normal map are textures of their own: listed below so they are disposed)
+      const nF = isShoe ? null : half(normal, false), nB = isShoe ? null : half(normal, true);
       const mats = [
-        clothMaterial('panel', { map: front, normalMap: isShoe ? null : half(normal, false), roughness: rough, specular: spec, lining, deep, fabric, edge: !isShoe, tile: isShoe ? null : tile, tileScale: 1.4, color: front ? 0xffffff : fabric }, U()),
-        clothMaterial('panel', { map: back || front, normalMap: isShoe ? null : half(normal, true), roughness: rough, specular: spec, lining, deep, fabric, edge: !isShoe, tile: isShoe ? null : tile, tileScale: 1.4, color: back || front ? 0xffffff : fabric }, U()),
+        clothMaterial('panel', { map: front, normalMap: nF, roughness: rough, specular: spec, lining, deep, fabric, edge: !isShoe, tile: isShoe ? null : tile, tileScale: 1.4, color: front ? 0xffffff : fabric }, U()),
+        clothMaterial('panel', { map: back || front, normalMap: nB, roughness: rough, specular: spec, lining, deep, fabric, edge: !isShoe, tile: isShoe ? null : tile, tileScale: 1.4, color: back || front ? 0xffffff : fabric }, U()),
         clothMaterial('fabric', { color: tile ? 0xffffff : fabric, tile, roughness: rough, specular: spec, lining, deep, tileScale: 1.4 }, U()),
         clothMaterial('trim', { color: isShoe ? sole : trim, roughness: isShoe ? 0.8 : Math.min(0.92, rough + 0.03), specular: spec, lining, deep: isShoe ? 0 : deep, grain: 0.6 }, U()),
       ];
@@ -3069,7 +3100,7 @@ diffuseColor.rgb *= mix(1.0, 0.42, smoothstep(0.0, 0.42, vEyeUp));`)
       if (!st.disposed) st.topology(sub, asset.length || 'full');
       // the mannequin's shells: the cut-out photos themselves (with their alpha)
       const cut = mannequin && !isShoe && asset.cutFront ? { front: await blobTexture(asset.cutFront, true), back: await blobTexture(asset.cutBack, true) } : null;
-      entry.value = { asset, sub, length: asset.length || 'full', materials: mats, textures: [front, back, normal, roughMap, tile, cut?.front, cut?.back].filter(Boolean), cut, tile };
+      entry.value = { asset, sub, length: asset.length || 'full', materials: mats, textures: [front, back, normal, nF, nB, roughMap, tile, cut?.front, cut?.back].filter(Boolean), cut, tile };
       entry.ready = true;
       return entry.value;
     })();
@@ -3187,6 +3218,9 @@ diffuseColor.rgb *= mix(1.0, 0.42, smoothstep(0.0, 0.42, vEyeUp));`)
   let hairKey = '';
   function updateHair() { if (!mannequin) hairKey = buildHead(st, hairGroup, skinU, hairKey); }
   st.onHairLoaded = () => { if (st.disposed) return; hairKey = ''; updateHair(); invalidate(); };
+  st.hairFinish = hairFinish === 'sculpted' ? 'sculpted' : 'real';
+  // 'real': the photographed hair; 'sculpted': the same style as a smooth matte volume
+  function setHairFinish(f) { st.hairFinish = f === 'sculpted' ? 'sculpted' : 'real'; updateHair(); invalidate(); }
 
   // ---------- body config ----------
   function applyColors(cfg) {
@@ -3201,18 +3235,32 @@ diffuseColor.rgb *= mix(1.0, 0.42, smoothstep(0.0, 0.42, vEyeUp));`)
     skinU.uScalp.value.set(cfg.hairStyle === 'shaved' ? 0.4 : cfg.hairStyle === 'buzz' ? 0.85 : cfg.hairStyle === 'fade' ? 0.75 : 0.5, 0);
   }
 
-  function setBody(config) {
+  // A slider drag never rebuilds anything: the built body (and everything it wears) is scaled to
+  // about the new size in the next frame, and the exact body and clothes follow once it stops.
+  function setBody(config, { live = false } = {}) {
     const cfg = cleanBody(config || {});
     const prev = st.cfg;
     st.cfg = cfg;
     applyColors(cfg);
-    const geomChanged = !prev || prev.heightCm !== cfg.heightCm || prev.weightKg !== cfg.weightKg || prev.build !== cfg.build;
     if (!mannequin && cfg.facePhotoDataUrl !== prev?.facePhotoDataUrl) loadFace(cfg.facePhotoDataUrl);
-    if (geomChanged) {
-      const now = performance.now();
-      if (!prev || now - st.lastBodyAt > REFIT_MS) { st.lastBodyAt = now; clearTimeout(st.bodyTimer); applyBodyGeometry(); }
-      else { clearTimeout(st.bodyTimer); st.bodyTimer = setTimeout(() => { st.lastBodyAt = performance.now(); applyBodyGeometry(); }, REFIT_MS - (now - st.lastBodyAt)); }
-    } else { updateHair(); invalidate(); }
+    const geomChanged = !st.builtCfg || bodyKey(st.builtCfg) !== bodyKey(cfg);
+    if (geomChanged && live && st.B) {
+      st.preview = true; invalidate(); // (applied in tick: one scale per frame, however many events came in)
+      clearTimeout(st.bodyTimer);
+      st.bodyTimer = setTimeout(() => { st.bodyTimer = 0; if (!st.disposed) applyBodyGeometry(); }, LIVE_REBUILD_MS);
+    } else if (geomChanged) applyBodyGeometry();
+    else {
+      if (st.preview || st.bodyTimer) { clearTimeout(st.bodyTimer); st.bodyTimer = 0; st.preview = false; body.scale.setScalar(0.1); frame(); } // (dragged back to the built body)
+      updateHair(); invalidate();
+    }
+  }
+  function previewBody() {
+    const a = st.builtCfg, b = st.cfg; if (!a) return;
+    const hr = b.heightCm / a.heightCm, wr = b.weightKg / a.weightKg;
+    const sx = hr ** 0.75 * wr ** 0.1 * (BUILD_WIDTH[b.build] || 1) / (BUILD_WIDTH[a.build] || 1);
+    const sz = hr ** 0.15 * wr ** 0.22;
+    body.scale.set(0.1 * sx, 0.1 * hr, 0.1 * sz); // (the feet stay on the floor: the body stands on y = 0)
+    frame(b.heightCm / 10, false);
   }
 
   let faceTex = null;
@@ -3291,6 +3339,7 @@ diffuseColor.rgb *= mix(1.0, 0.42, smoothstep(0.0, 0.42, vEyeUp));`)
   function tick(now) {
     st.raf = 0;
     let more = false;
+    if (st.preview) { st.preview = false; if (st.bodyTimer) previewBody(); }
     if (st.snap) {
       const t = clamp((now - st.snap.t0) / SNAP_MS, 0, 1), e = t < 0.5 ? 4 * t * t * t : 1 - (-2 * t + 2) ** 3 / 2;
       setAngle(mix(st.snap.from, st.snap.to, e));
@@ -3335,16 +3384,20 @@ diffuseColor.rgb *= mix(1.0, 0.42, smoothstep(0.0, 0.42, vEyeUp));`)
     canvas.removeEventListener('pointerup', onUp); canvas.removeEventListener('pointercancel', onUp);
     for (const s of SLOTS) if (st.worn[s]) st.worn[s].dispose();
     for (const s of SLOTS) st.shells[s]?.dispose();
+    for (const g of st.headCache?.values() || []) disposeTree(g);
     for (const e of st.prepCache.values()) { e.value?.textures.forEach((t) => t.dispose()); e.value?.materials.forEach((m) => m.dispose()); }
     scene.traverse((o) => { if (o.isMesh) { o.geometry.dispose(); (Array.isArray(o.material) ? o.material : [o.material]).forEach((m) => m.dispose()); } });
-    envTex.dispose(); contactTex.dispose(); eyeTex?.dispose(); faceTex?.dispose();
+    envTex.dispose(); contactTex.dispose(); castTex.dispose(); backTex.dispose(); eyeTex?.dispose(); faceTex?.dispose();
+    // (the hair photos are kept for the next stage, but this renderer's copies go now: a next use uploads them again)
+    for (const h of hairAssets.values()) if (h && !(h instanceof Promise)) h.tex.dispose();
     renderer.dispose();
     canvas.remove();
   }
 
   st.renderer = renderer;
   const stage = {
-    setBody, prepare, setGarment, setVisible, snapTo, resize, dispose, mode,
+    setBody, prepare, setGarment, setVisible, snapTo, resize, dispose, mode, setHairFinish,
+    get hairFinish() { return st.hairFinish; },
     get angle() { return wrapAngle(st.angle); },
     debug: {
       renderer, scene, camera, avatar, body: bodyMesh, head: hairGroup, state: st,
@@ -3495,8 +3548,13 @@ const HAIR_SPECS = {
 };
 const HAIR_CENTER = [0, 8.25, 0.35];
 
+// opts.clay: the "Sculpted" finish, a smooth matte volume with soft carved grooves (no strands, no
+// dithered edge: the hairline fades by alpha to coverage)
 function hairMaterial(skinU, opts) {
-  const mat = new THREE.MeshStandardMaterial({ color: 0xffffff, roughness: opts.rough ?? 0.5, metalness: 0, side: THREE.DoubleSide, alphaHash: true });
+  const clay = !!opts.clay;
+  const mat = new THREE.MeshStandardMaterial(clay
+    ? { color: 0xffffff, roughness: 0.9, metalness: 0, side: THREE.DoubleSide, envMapIntensity: 0.25, alphaTest: 0.15, alphaToCoverage: true }
+    : { color: 0xffffff, roughness: opts.rough ?? 0.5, metalness: 0, side: THREE.DoubleSide, alphaHash: true });
   const U = { uHair: skinU.uHair, uHairP: { value: new THREE.Vector4(opts.mode ?? 0, opts.str?.[0] ?? 90, opts.str?.[1] ?? 4, opts.bump ?? 0.0004) }, uHairP2: { value: opts.under ? 0.62 : 1 } };
   mat.onBeforeCompile = (shader) => {
     Object.assign(shader.uniforms, U);
@@ -3515,12 +3573,13 @@ float hairN() {
       .replace('#include <color_fragment>', `#include <color_fragment>
 float hn = hairN();
 float clump = vnoise(vec3(cos(vHair.x) * 7.0, sin(vHair.x) * 7.0, vHair.y * 1.5));
-diffuseColor.rgb = uHair * (0.6 + 0.6 * hn) * (0.82 + 0.36 * clump) * uHairP2;
-diffuseColor.a = clamp(vHair.z * 1.7 - 0.35 + (hn - 0.5) * 0.9, 0.0, 1.0);`)
-      .replace('#include <roughnessmap_fragment>', '#include <roughnessmap_fragment>\nroughnessFactor *= 0.8 + 0.45 * hn;')
-      .replace('#include <normal_fragment_maps>', '#include <normal_fragment_maps>\nnormal = bumpN(normal, (hn - 0.5) * uHairP.w, 1.0);');
+${clay ? `diffuseColor.rgb = uHair * (0.9 + 0.2 * hn) * (0.94 + 0.12 * clump);
+diffuseColor.a = smoothstep(0.25, 0.75, vHair.z * 1.7 - 0.35);` : `diffuseColor.rgb = uHair * (0.6 + 0.6 * hn) * (0.82 + 0.36 * clump) * uHairP2;
+diffuseColor.a = clamp(vHair.z * 1.7 - 0.35 + (hn - 0.5) * 0.9, 0.0, 1.0);`}`)
+      .replace('#include <roughnessmap_fragment>', clay ? '#include <roughnessmap_fragment>' : '#include <roughnessmap_fragment>\nroughnessFactor *= 0.8 + 0.45 * hn;')
+      .replace('#include <normal_fragment_maps>', `#include <normal_fragment_maps>\nnormal = bumpN(normal, (hn - 0.5) * uHairP.w${clay ? ' * 1.6' : ''}, 1.0);`);
   };
-  mat.customProgramCacheKey = () => 'hair-1';
+  mat.customProgramCacheKey = () => (clay ? 'hair-clay-1' : 'hair-1');
   return mat;
 }
 
@@ -3705,7 +3764,7 @@ function glassesGroup(D, B, hf) {
     new THREE.Vector3(xm - gap - 0.01 * s, yE + H * 0.35, zF), new THREE.Vector3(xm, yE + H * 0.5, zF + 0.015 * s), new THREE.Vector3(xm + gap + 0.01 * s, yE + H * 0.35, zF),
   ]);
   g.add(new THREE.Mesh(new THREE.TubeGeometry(br, 16, 0.02 * s, 6, false), frame));
-  g.traverse((o) => { if (o.isMesh) { o.castShadow = o.material === frame; o.frustumCulled = false; } });
+  g.traverse((o) => { if (o.isMesh) o.frustumCulled = false; });
   return g;
 }
 
@@ -3753,13 +3812,15 @@ function realHairGeometry(H, hf, Rs, c) {
   return g;
 }
 
-// Two passes over the same mesh, no dithering: the solid hair (alpha ≥ 0.5) with depth writes, then
-// the soft edges and stray strands blended on top without depth writes. The photo's luminance keeps
-// its strands and highlights; the colour is the chosen hair colour.
-function realHairMaterial(skinU, H, soft) {
-  // (the photo already holds the hair's shine: little reflection of its own, or the cards turn grey at grazing angles)
-  const mat = new THREE.MeshStandardMaterial({ color: 0xffffff, map: H.tex, roughness: 0.75, metalness: 0, side: THREE.DoubleSide,
-    envMapIntensity: 0.2, alphaTest: soft ? 0.02 : 0.5, transparent: soft, depthWrite: !soft });
+// One pass, nothing to sort: the strands' alpha becomes MSAA coverage (alpha to coverage, WebGL2 with
+// antialias on), so the edges stay soft while every fragment writes depth like a solid. The photo
+// gives the strands (its luminance, gently compressed so no strand goes black or neon); the colour is
+// the chosen hair colour. Matte: the photo already holds the hair's own highlights.
+const HAIR_CONTRAST = 0.8;     // how much of the photo's strand contrast is kept (1 = all of it)
+const HAIR_ALPHA = [0.15, 0.6]; // alpha below the first is cut; above the second is fully covered
+function realHairMaterial(skinU, H) {
+  const mat = new THREE.MeshStandardMaterial({ color: 0xffffff, map: H.tex, roughness: 0.88, metalness: 0, side: THREE.DoubleSide,
+    envMapIntensity: 0.25, alphaTest: HAIR_ALPHA[0], alphaToCoverage: true, transparent: false, depthWrite: true });
   const U = { uHair: skinU.uHair, uLum: { value: 1 / Math.max(0.03, H.lum) } };
   mat.onBeforeCompile = (shader) => {
     Object.assign(shader.uniforms, U);
@@ -3770,25 +3831,45 @@ function realHairMaterial(skinU, H, soft) {
       .replace('#include <common>', '#include <common>\nuniform vec3 uHair; uniform float uLum; varying float vEdge;')
       .replace('#include <map_fragment>', `
 vec4 hairS = texture2D(map, vMapUv, 0.6); // a slightly softer mip: no single-pixel grain
-float hr = clamp(hairS.r * uLum, 0.12, 2.8);
-diffuseColor.rgb = uHair * pow(vec3(hr), vec3(2.2));
-float hairA = hairS.a * smoothstep(0.0, 1.0, vEdge);
-diffuseColor.a = ${soft ? 'hairA < 0.5 ? min(1.0, hairA * 1.4) : 0.0' : 'hairA'};`)
-      .replace('#include <roughnessmap_fragment>', '#include <roughnessmap_fragment>\nroughnessFactor = mix(0.85, 0.6, smoothstep(0.6, 1.6, hr));');
+diffuseColor.a = hairS.a * smoothstep(0.0, 1.0, vEdge);
+// (thin wisps take the mean colour: their grey in the photo is mostly its background, not hair)
+float hr = clamp(mix(1.0, hairS.r * uLum, ${HAIR_CONTRAST.toFixed(2)} * smoothstep(0.15, 0.6, hairS.a)), 0.3, 1.4);
+diffuseColor.rgb = uHair * pow(vec3(hr), vec3(2.2));`)
+      // coverage follows the strand's alpha (three's own alpha-to-coverage turns it into a hard edge)
+      .replace('#include <alphatest_fragment>', `
+if (diffuseColor.a < alphaTest) discard;
+diffuseColor.a = smoothstep(alphaTest, ${HAIR_ALPHA[1].toFixed(2)}, diffuseColor.a);`);
   };
-  mat.customProgramCacheKey = () => (soft ? 'hair-real-soft-1' : 'hair-real-1');
+  mat.customProgramCacheKey = () => 'hair-real-2';
   return mat;
 }
 
+// The head's hair, beard and glasses for one (body, style, beard, glasses), kept in a small cache so
+// going back to a style (or a body) puts the built meshes back instead of building them again.
+const HEAD_CACHE = 4;
 function buildHead(st, group, skinU, prevKey) {
-  const { D, B, cfg } = st;
+  const { B, cfg } = st;
   if (!B || !cfg) return prevKey;
-  let key = [st.bodyVersion, cfg.hairStyle, cfg.beard, cfg.glasses].join('|');
+  const key = [st.bodyId, cfg.hairStyle, st.hairFinish || 'real', cfg.beard, cfg.glasses].join('|');
   if (key === prevKey) return key;
-  for (const o of [...group.children]) {
-    group.remove(o);
-    o.traverse((m) => { if (m.isMesh) { m.geometry.dispose(); m.material.dispose(); } });
-  }
+  const cache = (st.headCache ??= new Map());
+  for (const o of [...group.children]) { group.remove(o); if (!o.userData.cached) disposeTree(o); }
+  let g = cache.get(key);
+  if (g) { cache.delete(key); cache.set(key, g); group.add(g); return key; }
+  const made = makeHead(st, skinU);
+  g = made.group; group.add(g);
+  if (made.loading) return 'loading'; // (a stand-in while the style's photo loads: not kept)
+  g.userData.cached = true; cache.set(key, g);
+  if (cache.size > HEAD_CACHE) { const k0 = cache.keys().next().value; disposeTree(cache.get(k0)); cache.delete(k0); }
+  return key;
+}
+function disposeTree(o) {
+  o.traverse((m) => { if (m.isMesh) { m.geometry.dispose(); (Array.isArray(m.material) ? m.material : [m.material]).forEach((x) => x.dispose()); } });
+}
+function makeHead(st, skinU) {
+  const { D, B, cfg } = st;
+  const group = new THREE.Group();
+  let loading = false;
   const hf = headFrame(D, B);
   const hs = HAIR_SPECS[cfg.hairStyle];
   if (hs) {
@@ -3802,21 +3883,24 @@ function buildHead(st, group, skinU, prevKey) {
     }
     const c = hf.at(...HAIR_CENTER);
     const Rs = headRadius(D, B, c, st.headTris);
-    const H = HAIR_FILES.has(cfg.hairStyle) ? loadHairAsset(cfg.hairStyle) : null;
-    if (H && !(H instanceof Promise)) {
-      const g = realHairGeometry(H, hf, Rs, c);
-      const solid = new THREE.Mesh(g, realHairMaterial(skinU, H, false));
-      solid.castShadow = true; solid.receiveShadow = true; solid.frustumCulled = false; solid.name = 'hair';
-      const soft = new THREE.Mesh(g, realHairMaterial(skinU, H, true));
-      soft.receiveShadow = true; soft.frustumCulled = false; soft.name = 'hair-soft'; soft.renderOrder = 1;
-      group.add(solid, soft);
+    const H = st.hairFinish !== 'sculpted' && HAIR_FILES.has(cfg.hairStyle) ? loadHairAsset(cfg.hairStyle) : null;
+    if (st.hairFinish === 'sculpted') {
+      // the "Sculpted" finish: the style's own volume, smooth and matte, like a display bust
+      const mesh = new THREE.Mesh(hairGeometry(D, B, hf, hs, Rs, c), hairMaterial(skinU, { ...hs, clay: true, str: [hs.str[0] * (hs.mode === 2 ? 0.6 : 0.4), hs.str[1]], bump: Math.max(0.0005, hs.bump ?? 0.0004) }));
+      mesh.frustumCulled = false; mesh.name = 'hair';
+      group.add(mesh);
+    } else if (H && !(H instanceof Promise)) {
+      // one mesh, one pass: alpha to coverage gives soft strand edges with depth writes, so nothing to sort
+      const mesh = new THREE.Mesh(realHairGeometry(H, hf, Rs, c), realHairMaterial(skinU, H));
+      mesh.frustumCulled = false; mesh.name = 'hair';
+      group.add(mesh);
     } else {
       // while the style's photo loads (or if it can't): a thin hair shell
       const under = { ...hs, T: hs.T.map((t) => t * 0.32), edge: Math.max(hs.edge, 0.3), blunt: null, under: true };
       const mesh = new THREE.Mesh(hairGeometry(D, B, hf, under, Rs, c), hairMaterial(skinU, under));
-      mesh.castShadow = true; mesh.receiveShadow = true; mesh.frustumCulled = false; mesh.name = 'hair';
+      mesh.frustumCulled = false; mesh.name = 'hair';
       group.add(mesh);
-      if (H) { const style = cfg.hairStyle; H.then((v) => { if (v && st.cfg?.hairStyle === style) st.onHairLoaded?.(); }); key = 'loading'; }
+      if (H) { const style = cfg.hairStyle; loading = true; H.then((v) => { if (v && st.cfg?.hairStyle === style) st.onHairLoaded?.(); }); }
     }
   }
   const bs = BEARD_SPECS[cfg.beard];
@@ -3824,9 +3908,9 @@ function buildHead(st, group, skinU, prevKey) {
     st.beardTopo ??= {};
     st.beardTopo[cfg.beard] ??= beardTopology(D, bs);
     const mesh = new THREE.Mesh(beardGeometry(D, B, st.beardTopo[cfg.beard], bs), hairMaterial(skinU, { mode: 3, str: [160, 9], rough: 0.6, bump: 0.0005 }));
-    mesh.castShadow = true; mesh.receiveShadow = true; mesh.frustumCulled = false; mesh.name = 'beard';
+    mesh.frustumCulled = false; mesh.name = 'beard';
     group.add(mesh);
   }
   if (cfg.glasses === 'glasses') { const g = glassesGroup(D, B, hf); g.name = 'glasses'; group.add(g); }
-  return key;
+  return { group, loading };
 }
