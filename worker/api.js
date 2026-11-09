@@ -4,6 +4,7 @@
 // only after you sign in with the password.
 //
 //     GET  /login, POST /login, GET /logout   the password page
+//     GET  /sw.js                         the service worker, with this deploy's version written in
 //     GET  /api/ping                      {"ok": true, "rev": n, "sync": bool, "keys": {...}}
 //     GET  /api/changes?since=r&wait=s    records changed after rev r; waits up to s seconds
 //     POST /api/records                   {"records": [...]}, the newest updatedAt wins
@@ -29,6 +30,7 @@
 //     CLAUDE_KEY    optional secret
 //     SERPAPI_KEY   optional secret: product photos in Discover, Google Images and Google Lens for
 //                   adding pieces (free plan, 250 searches a month)
+//     CF_VERSION_METADATA  this deploy's version id (wrangler.jsonc), which names the offline cache
 
 const COLS = new Set(["items", "log", "kv", "wants", "scents", "events"]);
 const BLOB_KEY = /^[0-9a-z-]{4,80}\.(jpg|webp|png|bin)$/;
@@ -50,6 +52,7 @@ const redirect = (to, cookie) => new Response(null, { status: 303, headers: { Lo
 export default {
   async fetch(request, env) {
     const url = new URL(request.url);
+    if (url.pathname === "/sw.js") return serviceWorker(request, env);
     if (PUBLIC.has(url.pathname)) return env.ASSETS.fetch(request);
     if (url.pathname.startsWith("/lens/")) return lensPhoto(env, url.pathname.slice("/lens/".length));
     if (!env.APP_PASSWORD) return loginPage(503, "", "Almost there: add the APP_PASSWORD secret in the Worker's settings, then reload.");
@@ -92,6 +95,21 @@ export async function handleApi(request, env) {
   } catch (e) {
     return fail(e.status || 500, e.status ? e.message : "Server error");
   }
+}
+
+/* ---------- Offline cache ---------- */
+
+// sw.js with this deploy's version id written in. Every deploy is then a new service worker
+// with its own cache, so no device keeps running old code (see sw.js). It holds no data, and it
+// stays reachable without the sign-in cookie so a signed-out device still gets updates.
+async function serviceWorker(request, env) {
+  const res = await env.ASSETS.fetch(new Request(new URL("/sw.js", request.url)));
+  if (!res.ok) return res;
+  const id = String(env.CF_VERSION_METADATA?.id || "").replace(/[^0-9a-z-]/gi, "");
+  const body = (await res.text()).replace('"__SW_VERSION__"', id ? JSON.stringify(`v${id}`) : '"__SW_VERSION__"');
+  return new Response(body, {
+    headers: { "Content-Type": "text/javascript; charset=utf-8", "Cache-Control": "no-cache", "X-Content-Type-Options": "nosniff" },
+  });
 }
 
 /* ---------- Sign-in (one password, kept as a Cloudflare secret) ---------- */

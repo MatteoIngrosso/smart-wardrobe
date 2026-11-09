@@ -1,6 +1,8 @@
 # The wall screen
 
-A Raspberry Pi with a touch screen that opens the live app full screen as soon as it is switched on. Nothing of the app runs on the Pi: it is a browser locked to https://smart-wardrobe.matteo08-ingrosso.workers.dev, so every update merged into `main` reaches the wall by itself.
+A Raspberry Pi with a touch screen that opens the live app full screen as soon as it is switched on. Nothing of the app runs on the Pi: it is a browser locked to https://smart-wardrobe.matteo08-ingrosso.workers.dev, so every update merged into `main` reaches the wall by itself (the app's offline cache picks up a new deploy within about half an hour, at a moment nobody is touching the screen).
+
+The same setup also works on an x86_64 mini-PC with a touch monitor running Debian or Ubuntu with a desktop: see "On a mini-PC" below.
 
 ## Parts
 - Raspberry Pi 5 (4 GB)
@@ -50,11 +52,18 @@ Settings live in `~/.config/wardrobe-kiosk/kiosk.conf` on the Pi (over SSH: `nan
 - `BLANK_MINUTES`: minutes before the screen turns off (0 = never)
 - `ROTATION`: `normal`, `90`, `180` or `270` if the picture is the wrong way round
 - `NIGHTLY_RESTART_HOUR`: the hour the browser restarts every night to stay fresh
+- `GPU_BOOST`: `1` (default) makes Chromium draw with the graphics chip, so the 3D mirror runs smoothly. Set `0` if the screen flickers or shows stripes
+- `EXTRA_FLAGS`: extra Chromium switches, for trying things out
 - `URL`: the page it opens
 
 `wardrobe-kiosk restart` restarts the browser without restarting the Pi. To get the normal desktop back, run `rm ~/.config/labwc/autostart` and restart.
 
+If something looks wrong, the kiosk writes what it did to `~/.config/wardrobe-kiosk/kiosk.log` (start, screen, every browser restart) and the browser's own messages to `browser.log` next to it.
+
+## On a mini-PC
+Any x86_64 mini-PC with Debian or Ubuntu (with a desktop) and a touch monitor works. Copy the `device` folder onto it, open a terminal in that folder and run `bash install.sh`, then restart. The script installs the same things (Chromium; on Ubuntu that's the snap, which the kiosk handles), starts the kiosk at login through the desktop's autostart (`~/.config/autostart/wardrobe-kiosk.desktop`; delete it to stop) and turns on auto login where the desktop uses LightDM. With GNOME (Ubuntu) turn on **Settings > Users > Automatic Login** once by hand; the kiosk turns GNOME's screen lock off itself. On an X11 desktop the kiosk stops X11's own screen blanking and turns the screen off after `BLANK_MINUTES` instead, like on the Pi. There's no on-screen keyboard on X11: type the app password once with a USB keyboard.
+
 ## Files
-- `install.sh`: run once on the Pi. Installs Chromium and the screen tools, turns on auto login, and starts the kiosk at login instead of the desktop. Safe to run again.
-- `kiosk.sh`: installed as `~/.local/bin/wardrobe-kiosk`. Waits for Wi-Fi, opens the app full screen (no address bar, no pinch zoom, no swipe-back, no "Restore pages?" after a power cut), turns the screen off when idle, starts the on-screen keyboard and reopens the browser if it ever closes.
+- `install.sh`: run once on the Pi (64-bit ARM) or a mini-PC (x86_64). Checks the computer, installs Chromium and the screen tools from the system's own packages, turns on auto login, and starts the kiosk at login instead of the desktop. Safe to run again, also while the kiosk is running. `bash install.sh --lint` also installs `shellcheck` (from the system's packages) and checks both scripts first.
+- `kiosk.sh`: installed as `~/.local/bin/wardrobe-kiosk`. Works on Wayland (the Pi) and X11. Waits for Wi-Fi, opens the app full screen (no address bar, no pinch zoom, no swipe-back, no "Restore pages?" after a power cut, no "Chromium is out of date" or translate bars), uses the graphics chip for the 3D mirror, turns the screen off when idle, starts the on-screen keyboard and reopens the browser 2 seconds after it closes or crashes. Only one runs at a time.
 - `kiosk.conf`: the default settings above.
