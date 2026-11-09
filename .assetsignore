@@ -1,19 +1,23 @@
-# Files that are part of the repository but not of the app
-.git
-.github
+# Files that are part of the repository but not of the app (never served by Cloudflare)
+.git*
 .wrangler
 .assetsignore
-.gitignore
 .dev.vars
 wrangler.jsonc
 worker
 server.py
 tools
-device
+/device
 data
 dist
 node_modules
+__pycache__
+.venv
 README.md
+*.whl
+*.sh
+*.conf
+*.log
 *.pem
 *.key
 package.json

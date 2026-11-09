@@ -17,6 +17,7 @@ def read(name):
 
 
 body = re.search(r"<body>(.*)</body>", read("index.html"), re.S).group(1)
+body = body.replace('  <script src="sw-register.js" defer></script>\n', "")  # no offline cache in the preview
 body = body.replace('<script src="sample/seed.js"></script>', "<script>\n" + read("sample/seed.js") + "\n</script>")
 # app.js imports calendar.js; inline it in place of the import, as plain declarations.
 app = re.sub(r'^import \{[^}]*\} from "\./calendar\.js";$', lambda m: re.sub(r"^export ", "", read("calendar.js"), flags=re.M), read("app.js"), count=1, flags=re.M)
