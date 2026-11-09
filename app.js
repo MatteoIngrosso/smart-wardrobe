@@ -6336,7 +6336,7 @@ function dayCellHTML(date, inMonth = date.slice(0, 7) === planner.month) {
   return `<button class="cal-cell${inMonth ? "" : " out"}${date < now ? " past" : ""}${date === now ? " today" : ""}" data-date="${date}" data-calday="${date}" aria-pressed="${date === planner.sel}" aria-label="${esc(label)}">
     <span class="cal-num">${+date.slice(8)}</span>${dots ? `<span class="cal-dots" aria-hidden="true">${"<i></i>".repeat(dots)}</span>` : ""}
     ${f ? `<span class="cal-wx">${wxIcon(f.code)}<span>${fmtTemp(f.max)}<i>${fmtTemp(f.min)}</i></span></span>` : ""}
-    ${thumbs.length ? `<span class="cal-fit${worn?.length ? " worn" : ""}">${thumbs.map((p) => `<img src="${photoURL(p.photos[0])}" alt="" loading="lazy" decoding="async">`).join("")}${removed ? `<b class="cal-flag" aria-hidden="true">!</b>` : ""}</span>`
+    ${thumbs.length ? `<span class="cal-fit${worn?.length ? " worn" : ""}">${thumbs.map((p) => pieceImg(p, "")).join("")}${removed ? `<b class="cal-flag" aria-hidden="true">!</b>` : ""}</span>`
       : parts.length || removed ? `<span class="cal-fit"><b class="cal-flag" aria-hidden="true">${removed ? "!" : "✓"}</b></span>` : ""}
     ${plan?.notes ? `<span class="cal-txt">${esc(plan.notes)}</span>` : ""}
   </button>`;
