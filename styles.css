@@ -609,3 +609,64 @@ details summary { cursor: pointer; }
   .mirror-stage { order: -1; }
   .stage3d { height: min(68vh, 600px); }
 }
+
+/* ---------- calendar: a month of planned outfits, the forecast, one day at a time ---------- */
+.cal-wrap { display: grid; grid-template-columns: minmax(0, 3fr) minmax(320px, 2fr); gap: 20px; align-items: start; }
+@media (max-width: 900px) { .cal-wrap { grid-template-columns: minmax(0, 1fr); } }
+.cal-month { display: grid; gap: 14px; padding: 16px; }
+.cal-nav { flex-wrap: nowrap; gap: 8px; }
+.cal-nav h2 { margin: 0; flex: 1; text-align: center; }
+.cal-nav h2::first-letter { text-transform: uppercase; }
+.cal-grid { display: grid; grid-template-columns: repeat(7, minmax(0, 1fr)); gap: 6px; }
+.cal-wd { font-size: 12px; font-weight: 500; color: var(--muted); text-align: center; text-transform: uppercase; letter-spacing: .06em; }
+.cal-cell {
+  position: relative; min-width: 0; min-height: 104px; padding: 6px; border: 1px solid var(--line); border-radius: 12px;
+  background: var(--surface-2); color: var(--text); font: inherit; text-align: left;
+  display: flex; flex-direction: column; align-items: flex-start; gap: 4px; overflow: hidden;
+}
+.cal-cell:active { transform: scale(.97); }
+.cal-cell.past { background: transparent; }
+.cal-cell.out { opacity: .38; }
+.cal-cell[aria-pressed="true"] { border-color: var(--text); box-shadow: inset 0 0 0 1px var(--text); }
+.cal-num { font-size: 14px; font-weight: 500; min-width: 26px; height: 26px; border-radius: 13px; display: grid; place-items: center; }
+.cal-cell.today .cal-num { background: var(--accent); color: var(--accent-ink); }
+.cal-dots { position: absolute; top: 15px; right: 8px; display: flex; gap: 3px; }
+.cal-dots i { width: 6px; height: 6px; border-radius: 50%; background: var(--warn); }
+.cal-wx { display: flex; align-items: center; gap: 3px; font-size: 12px; line-height: 1; white-space: nowrap; }
+.cal-wx svg { width: 18px; height: 18px; flex: none; stroke-width: 1.6; }
+.cal-wx i { font-style: normal; color: var(--muted); margin-left: 3px; }
+.cal-fit { display: flex; gap: 3px; align-items: flex-end; width: 100%; margin-top: auto; }
+.cal-fit img { width: calc((100% - 6px) / 3); max-width: 32px; aspect-ratio: 3 / 4; object-fit: cover; border-radius: 5px; background: var(--surface); }
+.cal-fit.worn img { opacity: .7; }
+.cal-flag { font-size: 13px; font-weight: 600; color: var(--warn); align-self: center; }
+.cal-txt { font-size: 11px; line-height: 1.2; color: var(--muted); width: 100%; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.cal-foot { margin: 0; }
+.cal-day { display: grid; gap: 16px; align-content: start; }
+.cal-day h2 { margin: 0; }
+.cal-day h3 { margin: 0; font-size: 17px; font-weight: 500; }
+.cal-day .pieces { display: grid; grid-template-columns: repeat(auto-fill, minmax(84px, 1fr)); gap: 10px; }
+.cal-day .pieces.extras { grid-template-columns: repeat(auto-fill, minmax(60px, 76px)); }
+.cal-day .pieces.extras span { font-size: 12px; }
+.cal-wxline { display: flex; align-items: center; gap: 10px; margin: 0; color: var(--muted); }
+.cal-wxline svg { width: 30px; height: 30px; flex: none; color: var(--text); }
+.cal-events { list-style: none; margin: 0; padding: 0; display: grid; gap: 6px; }
+.cal-idea { padding: 14px; border-radius: 14px; background: var(--surface-2); }
+.cal-note span { font-size: 14px; font-weight: 500; color: var(--muted); text-transform: uppercase; letter-spacing: .06em; }
+.cal-note textarea.input { min-height: 64px; }
+.piece.removed .ph { border-color: color-mix(in srgb, var(--warn) 50%, var(--line)); color: var(--warn); }
+.piece.removed .ph svg.kind { color: var(--warn); opacity: .7; }
+.piece.removed small.gone { font-weight: 600; letter-spacing: .04em; text-transform: uppercase; }
+@media (max-width: 600px) {
+  .cal-month { padding: 12px; }
+  .cal-grid { gap: 4px; }
+  .cal-cell { min-height: 72px; padding: 4px; border-radius: 10px; }
+  .cal-num { min-width: 22px; height: 22px; font-size: 13px; }
+  .cal-dots { top: 12px; right: 4px; }
+  .cal-dots i { width: 5px; height: 5px; }
+  .cal-wx svg { width: 14px; height: 14px; }
+  .cal-wx i, .cal-fit img + img, .cal-txt { display: none; }
+  .cal-fit img { width: 60%; }
+}
+/* Six tabs on a narrow phone: smaller labels so they fit. */
+@media (max-width: 420px) { .tab { font-size: 11px; letter-spacing: 0; } .tab.add { flex-basis: 60px; } }
+@media (max-width: 600px) { .cal-nav h2 { font-size: 19px; } .cal-nav .icon-btn { width: 48px; height: 48px; } }
