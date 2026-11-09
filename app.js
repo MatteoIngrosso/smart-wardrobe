@@ -3,7 +3,8 @@
 // Token budget: background removal and daily outfit ideas run on the device and
 // cost nothing; the AI (Gemini or Claude) is only called to recognise a new photo
 // once, and when you ask the stylist something.
-import { parseICS, eventsBetween, guessOccasion, titleKey } from "./calendar.js";
+import { parseICS, eventsBetween, guessOccasion, titleKey, monthGrid, addMonths, dayDiff, getForecast, dayWeather, wxIcon, FORECAST_TTL,
+  makeEntry, entryIds, resolveEntry, pruneDays, nearbyCost, nearestUse, ROTATION_DAYS } from "./calendar.js";
 import * as Style from "./stylist.js";
 import * as Label from "./label.js";
 import { editCutout } from "./cutout-editor.js";
@@ -321,7 +322,8 @@ const state = {
   event: null, // the calendar event the ideas dress for
   occChosen: "", // the day you picked an occasion yourself, so the calendar leaves it alone
   editingEvent: null, // key of the event whose occasion is being changed
-  plan: null, // shared: an outfit planned the evening before {date, itemIds, occasion, title}
+  plan: null, // shared, before the Calendar: an outfit planned the evening before {date, itemIds, occasion, title}
+  days: {}, // shared: the Calendar, an outfit (piece ids) and notes per day {"YYYY-MM-DD": entry} (see calendar.js)
   aiAnswer: "",
   // Discover: the open tab, which version of each idea is picked, real photos found,
   // "Try a piece", "New look" and the shop trip being planned.
@@ -391,7 +393,7 @@ const sync = {
 };
 const SYNC_STATE = "sync";
 // Shared values kept under "kv", and what each is when there's nothing yet.
-const SHARED_KV = { wishlist: () => [], calendar: () => ({ links: [], occ: {} }), plan: () => null, audit: () => null, avatar: () => null };
+const SHARED_KV = { wishlist: () => [], calendar: () => ({ links: [], occ: {} }), plan: () => null, days: () => ({}), audit: () => null, avatar: () => null };
 function syncKey(s, k) {
   if (["items", "log", "wants", "events", "scents"].includes(s)) return `${s}/${k}`;
   return s === "kv" && Object.hasOwn(SHARED_KV, k) ? `kv/${k}` : null;
@@ -557,8 +559,10 @@ async function applyRecords(records) {
       else { await raw.put(rec.col, rec.data); if (at >= 0) list[at] = rec.data; else list.push(rec.data); }
       if (rec.col === "events" && (rec.data?.date || list[at]?.date) === localDay()) state.outfits = []; // a plan for today
     } else if (rec.col === "kv" && Object.hasOwn(SHARED_KV, rec.id)) {
+      const todayWas = rec.id === "days" && JSON.stringify(state.days?.[localDay()] ?? null);
       state[rec.id] = (rec.deleted ? null : rec.data) ?? SHARED_KV[rec.id]();
       await raw.put("kv", state[rec.id], rec.id);
+      if (todayWas !== false && todayWas !== JSON.stringify(state.days?.[localDay()] ?? null)) state.outfits = []; // today's plan
       if (rec.id === "calendar") state.cal.at = 0; // read the calendars again
       if (rec.id === "plan") state.outfits = [];
       if (rec.id === "audit") state.disc.feedMemo = null;
@@ -1673,8 +1677,8 @@ function scoreOutfit(o, cond, occ, t = taste()) {
   const recent = recentWears();
   let idle = 0;
   for (const p of pieces) {
-    const d = daysSince(p.lastWorn), k = ROTATION[starsOf(p)] || 1;
-    if (d <= 1) s -= 3 * k; else if (d <= 4) s -= 1.2 * k;
+    const d = daysSince(p.lastWorn);
+    s -= wornCost(p, d);
     const over = (recent.w7.get(p.id) || 0) + 1 - budgetOf(p, occ);
     if (over > 0) s -= 3 * over;
     if (!p.isNew && budgetGroup(p) && !recent.w14.get(p.id) && d > 14) idle += 1.2;
@@ -1695,11 +1699,12 @@ function scoreOutfit(o, cond, occ, t = taste()) {
 // Pieces you disliked are left out, except when you pick one yourself (`all`, for the ⇄ list).
 // Everyday also takes the gym pieces you switched to "Everyday too" (any of them when you pick one
 // yourself, `all`), and a gym piece stands in for a part of the outfit that has nothing else free.
-function piecesByRole(occ, all = false) {
+// The Calendar plans later days: the clothes in the wash now count (`wash`), and that day's `feels`.
+function piecesByRole(occ, all = false, { wash = false, feels: dayFeels } = {}) {
   const gym = occ.id === "gym", everyday = occ.id === "casual";
   const by = { base: [], mid: [], outer: [], bottom: [], shoes: [] };
-  const from = all ? wearable() : suggestable();
-  const feels = everyday ? conditions().feels : 0;
+  const from = wash ? owned() : all ? wearable() : suggestable();
+  const feels = everyday ? dayFeels ?? conditions().feels : 0;
   for (const it of from) {
     if (!by[roleOf(it)]) continue;
     const g = slotOf(it) === "gym";
@@ -1974,10 +1979,13 @@ function withLoved(pool, picks, keep, avoid) {
   if (swap >= 0) picks[swap] = best;
   else if (picks.length < 3 - keep.length) picks.push(best);
 }
-// The outfit you planned last night comes first today, while all of it is out of the wash.
+// The outfit you planned for today (in the Calendar, or last night) comes first, while all of it is
+// out of the wash; then one planned for an event today. One you wore or turned down doesn't come back.
 function plannedIdea(pool) {
   const ev = state.events.find((e) => e.date === localDay() && e.outfit?.itemIds?.length);
-  const p = state.plan?.date === localDay() ? state.plan : ev && { date: ev.date, itemIds: ev.outfit.itemIds, occasion: ev.dressCode?.occasion, title: ev.title, eventId: ev.id };
+  const day = dayPlan(localDay());
+  const p = day && !day.worn && entryIds(day).length ? { date: day.date, itemIds: entryIds(day), occasion: day.occasion, title: day.title, src: day.src, day: true }
+    : state.plan?.date === localDay() ? state.plan : ev && { date: ev.date, itemIds: ev.outfit.itemIds, occasion: ev.dressCode?.occasion, title: ev.title, eventId: ev.id };
   if (!p || state.event?.day === "tomorrow" || state.anchor) return null;
   const items = (p.itemIds || []).map((id) => state.items.find((i) => i.id === id)).filter(Boolean);
   if (!items.length || items.some((i) => i.wash)) return null;
@@ -1993,10 +2001,11 @@ function plannedIdea(pool) {
   const key = outfitKey([...Object.values(pieces)]);
   return withWarn({ key, pieces, coat, planned: p, missing: [], ...ratedToday(key), ...scoreOutfit(pieces, pool.cond, pool.occ), extras, extrasWhy: [] }, pool.cond, pool.occ);
 }
+// "Plan it for tomorrow" (in the evening, for tomorrow's event): tomorrow in the Calendar.
 async function planOutfit(o) {
-  const e = state.event;
-  state.plan = { date: localDay(1), itemIds: allPieces(o).map((p) => p.id), occasion: state.occasion, title: e?.title || "", at: new Date().toISOString() };
-  await savePlan();
+  const e = state.event, date = localDay(1);
+  state.days = { ...state.days, [date]: makeEntry({ date, pieces: o.pieces, coat: o.coat, extras: o.extras, occasion: state.occasion, title: e?.title || "", notes: dayPlan(date)?.notes, src: "tonight" }) };
+  await saveDays();
   await addLog({ kind: "like", itemIds: Object.values(o.pieces).filter(Boolean).map((p) => p.id), ...outfitContext(), source: "plan" });
 }
 // Swapping one piece of an idea: every other piece that could take its place, best fit with
@@ -2058,6 +2067,8 @@ const STAR_WORDS = ["", "Hate it", "Meh", "Fine", "Like it", "Love it"];
 const STAR_PULL = { 5: 2.5, 4: 1.2, 3: 0, 2: -1.2, 1: -2.5 };
 // Loved pieces come back sooner after you wore them (the rotation penalty is scaled down).
 const ROTATION = { 5: 0.35, 4: 0.6 };
+// What wearing a piece `d` days ago costs an outfit with it (see Rotation in scoreOutfit).
+const wornCost = (p, d) => (d <= 1 ? 3 : d <= 4 ? 1.2 : 0) * (ROTATION[starsOf(p)] || 1);
 // How many times in 7 days a piece can be worn before its outfits lose points (3 for each wear over),
 // by stars 1 to 5 (unrated counts as 3): loved pieces are still worn the most, but not every day, and
 // the rest of the wardrobe gets its turn. Shoes have no budget; gym clothes only outside the gym, where
@@ -3256,7 +3267,7 @@ function go(v) {
   main.scrollTop = 0;
 }
 function render() {
-  ({ today: renderToday, wardrobe: renderWardrobe, add: renderAdd, shop: renderShop, settings: renderSettings })[view]();
+  ({ today: renderToday, plan: renderPlan, wardrobe: renderWardrobe, add: renderAdd, shop: renderShop, settings: renderSettings })[view]();
   watchTiles();
 }
 
@@ -3499,7 +3510,7 @@ function outfitCard(o, i) {
   const order = ["outer", "mid", "base", "bottom", "shoes"];
   const ph = (o.missing || []).map((m) => `<button class="piece" data-go="shop"><div class="ph">${kindIcon(SLOT_ICON[m])}<small>No ${SLOTS[m].toLowerCase()} yet<br>tap to shop</small></div><span>${SLOTS[m]}</span></button>`).join("");
   return `<article class="card outfit">
-    <div class="row" style="justify-content:space-between"><h2 style="margin:0">${o.planned ? (o.planned.eventId ? `Planned for ${esc(o.planned.title)}` : `Planned last night${o.planned.title ? `: ${esc(o.planned.title)}` : ""}`) : ["Best match", "Option 2", "Option 3"][i] || "Option"}</h2>${levelBadge(o)}${o.planned ? '<span class="score">Your plan</span>' : i === 0 ? '<span class="score">Top<span class="wide"> pick</span></span>' : ""}</div>
+    <div class="row" style="justify-content:space-between"><h2 style="margin:0">${o.planned ? (o.planned.eventId ? `Planned for ${esc(o.planned.title)}` : `${o.planned.src && o.planned.src !== "tonight" ? "Planned in your calendar" : "Planned last night"}${o.planned.title ? `: ${esc(o.planned.title)}` : ""}`) : ["Best match", "Option 2", "Option 3"][i] || "Option"}</h2>${levelBadge(o)}${o.planned ? '<span class="score">Your plan</span>' : i === 0 ? '<span class="score">Top<span class="wide"> pick</span></span>' : ""}</div>
     <div class="pieces">${order.filter((k) => o.pieces[k]).map((k) => `<div class="swap-wrap">${pieceTile(o.pieces[k])}<button class="swap-btn" data-swap="${i}:${k}" aria-pressed="${o.swapping === k}" aria-label="Swap the ${esc(o.pieces[k].name)}">${ICON_SWAP}</button></div>`).join("")}${ph}</div>
     ${o.swapping ? swapPicker(o, i) : ""}
     ${o.coat || o.extras?.length ? `<div class="pieces extras">${[o.coat, ...(o.extras || [])].filter(Boolean).map(pieceTile).join("")}</div>` : ""}
@@ -5871,14 +5882,15 @@ function eventDetail(ev) {
   const w = ev.weather;
   const past = ev.date < localDay();
   const wLine = w ? `${w.source === "forecast" ? "forecast" : `usually`} ${fmtTemp(w.feels)}${w.source === "usual" ? ` in ${new Date(`${ev.date}T12:00`).toLocaleDateString(undefined, { month: "long" })}` : ""}${w.wet ? ", rain likely" : ""}` : "weather unknown";
-  const planned = ev.outfit && ev.outfit.itemIds.map((id) => state.items.find((i) => i.id === id)).filter(Boolean);
+  const plannedIds = ev.outfit?.itemIds || [];
+  const planned = plannedIds.map((id) => state.items.find((i) => i.id === id)).filter(Boolean);
   const k = Math.min(state.disc.evPick[ev.id] || 0, Math.max(0, r.ideas.length - 1));
   const o = r.ideas[k];
   const order = ["outer", "mid", "base", "bottom", "shoes"];
   const dashed = r.need.filter((n) => CORE.includes(n.role)).map((n) => `<div class="piece"><div class="ph">${kindIcon(SLOT_ICON[n.role])}<small>${esc(n.title)}<br>to buy</small></div><span>${esc(SLOTS[n.role])}</span></div>`).join("");
   const scent = scentOn() ? scentBlock(`e:${ev.id}`, eventScentContext(ev, planned?.length ? planned : o ? allPieces(o) : []), ev.outfit?.scentId) : "";
-  const outfit = planned?.length
-    ? `<div class="pieces">${planned.map(pieceTile).join("")}</div>${scent}
+  const outfit = plannedIds.length
+    ? `<div class="pieces">${planned.map(pieceTile).join("")}${removedTile().repeat(plannedIds.length - planned.length)}</div>${scent}
        <div class="row outfit-actions"><span class="score">Planned for the day</span><button class="btn ghost" data-evunplan="${ev.id}">Change</button></div>`
     : o
       ? `<div class="pieces">${order.filter((x) => o.pieces[x]).map((x) => pieceTile(o.pieces[x])).join("")}${dashed}</div>
@@ -5912,6 +5924,314 @@ function eventDetail(ev) {
       const options = variantsOf(s).filter(soldHere).map((b) => ({ ...b, eventId: ev.id, needBy: ev.date, source: "event" }));
       return options.length ? ideaBlock(`ev${ev.id}:${j}:${s.title}`, { label: SLOTS[s.role] ? cap(SLOTS[s.role]) : "", title: s.title, why: s.why, options }) : "";
     }).join("") || `<p class="muted">None of it is sold at ${esc(state.trip?.name)}.</p>`}</div></section>` : ""}`;
+}
+
+/* ---- Calendar: what to wear, day by day ----
+   A month of days. The next two weeks show the forecast (Open-Meteo, free and keyless, kept on the
+   device for 3 hours), and each day the outfit you planned (or, before today, wore) and a dot for
+   what's in your calendars. Tap a day to plan it: "Suggest an outfit" asks the same engine as Today
+   (the fashion bible's rules, your stars and taste, the elegance levels) for that day's weather and
+   occasion, and keeps the wardrobe turning: a piece worn or planned up to 5 days away from it counts
+   against an idea. No AI tokens. Plans are the shared record "days" (piece ids only, see calendar.js),
+   so a piece you rename or cut out again shows as it is now, and one you delete shows as "Removed".
+   Today's plan is the first idea on Today. Changing a day redraws only that day and the panel. */
+const planner = { month: "", sel: "", fc: null, fcBusy: false, fcTried: 0, occ: {}, sugg: null };
+const dayPlan = (date) => { const e = state.days?.[date]; return e && typeof e === "object" ? e : null; };
+const saveDays = () => { state.days = pruneDays(state.days, localDay()); return store.put("kv", state.days, "days"); };
+const setDay = (date, entry) => {
+  const { [date]: _, ...rest } = state.days || {};
+  state.days = entry ? { ...rest, [date]: entry } : rest;
+  return saveDays();
+};
+const notesOnly = (e) => (e.notes ? makeEntry({ date: e.date, occasion: e.occasion, notes: e.notes, src: "note", at: e.at }) : null); // a plan taken off, your notes kept
+const longDay = (date) => new Date(`${date}T12:00`).toLocaleDateString(undefined, { weekday: "long", day: "numeric", month: "long" });
+const logDay = (l) => (l.at ? new Date(l.at).toLocaleDateString("sv") : l.date); // the day here (older entries only have the UTC date)
+const itemMap = () => new Map(state.items.map((i) => [i.id, i]));
+const removedTile = (role) => `<div class="piece removed"><div class="ph">${kindIcon(SLOT_ICON[role] || "hanger")}<small class="gone">Removed</small></div><span>${role && SLOTS[role] ? `${esc(SLOTS[role])} · no longer in your wardrobe` : "No longer in your wardrobe"}</span></div>`;
+const fcDay = (date) => (planner.fc && planner.fc.lat === state.settings.lat && planner.fc.lon === state.settings.lon ? planner.fc.days[date] || null : null);
+
+// The forecast for the next two weeks: from this device's copy while it's under 3 hours old. When a
+// newer one comes, only the days it covers are drawn again.
+async function loadForecast(force = false) {
+  const { lat, lon } = state.settings;
+  if (lat == null || planner.fcBusy) return;
+  if (!force && fcDay(localDay()) && Date.now() - planner.fc.at < FORECAST_TTL) return;
+  if (!force && !planner.fc && Date.now() - planner.fcTried < 10 * 60e3) return; // offline: try again in a while
+  planner.fcBusy = true;
+  planner.fcTried = Date.now();
+  const fc = await getForecast({ lat, lon, fetchJSON: getJSON, force }).catch(() => null);
+  planner.fcBusy = false;
+  const before = JSON.stringify(planner.fc?.days || null);
+  planner.fc = fc && { ...fc, lat, lon };
+  if (view !== "plan") return;
+  if (JSON.stringify(planner.fc?.days || null) !== before) {
+    for (const d of Object.keys({ ...JSON.parse(before || "{}"), ...(planner.fc?.days || {}) })) paintDay(d);
+    paintPanel();
+  }
+  const foot = $("#cal-foot");
+  if (foot) foot.outerHTML = forecastNote();
+}
+function forecastNote() {
+  const s = state.settings, fc = planner.fc;
+  if (s.lat == null) return `<div class="row cal-foot" id="cal-foot"><span class="muted small" style="flex:1">Set your city in Settings to see the forecast on the next two weeks.</span><button class="btn ghost" data-act="cal-locate">Use my location</button></div>`;
+  if (!fc) return `<p class="muted small cal-foot" id="cal-foot">${planner.fcBusy || !planner.fcTried ? "Getting the forecast…" : "The forecast can't be reached right now. Days are planned for the usual weather of the month."}</p>`;
+  return `<p class="muted small cal-foot" id="cal-foot">Forecast for ${esc(s.city || "your city")} from Open-Meteo, ${fc.stale ? `last read ${fmtTime(fc.at)} (offline)` : `updated ${fmtTime(fc.at)}`}.</p>`;
+}
+// No city yet: ask this device where it is (and keep it as the city for Today too).
+async function useMyLocation() {
+  const pos = await new Promise((ok) => (navigator.geolocation ? navigator.geolocation.getCurrentPosition(ok, () => ok(null), { timeout: 10000, maximumAge: 3600e3 }) : ok(null)));
+  if (!pos) return toast("No location from this device. Pick your city in Settings.");
+  const lat = Math.round(pos.coords.latitude * 100) / 100, lon = Math.round(pos.coords.longitude * 100) / 100;
+  Object.assign(state.settings, { lat, lon, city: nearestCity(lat, lon, 40)?.name || "Your location" });
+  await saveSettings();
+  state.outfits = [];
+  loadWeather(true);
+  await loadForecast(true);
+  render();
+}
+
+// How a day will be: its forecast, or (further ahead, or offline) the usual weather there that month.
+function dayCond(date) {
+  const f = fcDay(date);
+  if (f) return { ...dayWeather(f), source: "forecast" };
+  const { lat, lon } = state.settings;
+  const u = lat != null && usualWeather(lat, lon, date, null);
+  return u ? { feels: u.feels, wet: false, cool: false, humid: 0, source: "usual" } : { feels: 18, wet: false, cool: false, humid: 0, source: "none" };
+}
+// What's on that day: your calendars' events (six weeks ahead) and the events you plan in Discover.
+function eventsOn(date) {
+  return {
+    cal: state.cal.events.filter((e) => new Date(e.start).toLocaleDateString("sv") === date).map((e) => ({ ...e, key: eventKey(e), occasion: eventOcc(e) })),
+    mine: state.events.filter((e) => e.date === date),
+  };
+}
+const dressyEvent = (date) => {
+  const { cal, mine } = eventsOn(date);
+  const target = (id) => OCCASIONS.find((o) => o.id === id)?.target ?? 0;
+  return [...mine.map((e) => ({ title: e.title, occasion: e.dressCode?.occasion })), ...cal]
+    .filter((e) => e.occasion && !["skip", "gym", "casual"].includes(e.occasion)).sort((a, b) => target(b.occasion) - target(a.occasion))[0] || null;
+};
+// The occasion a day dresses for: the one you tapped, the plan's, the smartest event that day, else Everyday.
+function dayOcc(date) {
+  const ok = (id) => OCCASIONS.some((o) => o.id === id) && id;
+  return ok(planner.occ[date]) || ok(dayPlan(date)?.occasion) || ok(dressyEvent(date)?.occasion) || "casual";
+}
+// What you wore that day (the last outfit logged), as pieces; null for a piece deleted since.
+function wornOn(date) {
+  const l = state.log.filter((x) => logKind(x) === "wear" && logDay(x) === date).at(-1);
+  return l ? (l.itemIds || []).map((id) => state.items.find((i) => i.id === id) || null) : null;
+}
+// Where each piece is worn (the wear log) or planned (other days) in the week around `date`. Like the
+// weekly budget, a gym session doesn't count for a gym piece.
+function pieceUses(date) {
+  const uses = new Map(), gym = new Set(state.items.filter((i) => slotOf(i) === "gym").map((i) => i.id));
+  const add = (id, d, kind) => { if (!uses.has(id)) uses.set(id, []); uses.get(id).push({ date: d, kind }); };
+  const near = (d) => d && d !== date && Math.abs(dayDiff(d, date)) <= 6;
+  for (const l of state.log) {
+    if (logKind(l) === "wear" && near(logDay(l))) for (const id of l.itemIds || []) if (!(l.occasion === "gym" && gym.has(id))) add(id, logDay(l), "worn");
+  }
+  for (const [d, e] of Object.entries(state.days || {})) if (near(d)) for (const id of entryIds(e)) add(id, d, "planned");
+  return uses;
+}
+// The days in the week before `date` a piece is worn or planned on (for its weekly budget).
+const weekUses = (uses, id, date) => new Set((uses.get(id) || []).filter((u) => dayDiff(u.date, date) >= 1).map((u) => u.date)).size;
+
+// Three ideas for a day from Today's engine, for that day's weather and occasion. The engine counts
+// the last wear and the weekly budget from today; for this day they count from the day instead, with
+// the days planned around it. In the wash now is fine for a later day (it says to wash it before).
+// The outfit already planned for the day isn't suggested again.
+function suggestDay(date, avoid = []) {
+  const plan = dayPlan(date);
+  if (plan && !avoid.length && entryIds(plan).length) avoid = [Object.values(plan.slots || {}).sort().join("|")];
+  const occ = OCCASIONS.find((o) => o.id === dayOcc(date)) || OCCASIONS[0];
+  const cond = dayCond(date);
+  seedIdeas(["calendar", date, occ.id, Math.round(cond.feels), cond.wet, avoid.length].join("|"));
+  tasteMemo = null;
+  const by = piecesByRole(occ, false, { wash: date !== localDay(), feels: cond.feels });
+  const pool = ideaPool({ occ, cond, by, anchor: null, outer: cond.cool });
+  const uses = pieceUses(date), w7 = recentWears().w7;
+  for (const c of pool.cands) {
+    for (const p of Object.values(c.pieces)) {
+      if (!p) continue;
+      const near = nearbyCost(nearestUse(uses, p.id, date).k) * (ROTATION[starsOf(p)] || 1) * (roleOf(p) === "shoes" ? 0.5 : 1);
+      const b = budgetOf(p, occ), over = (n) => 3 * Math.max(0, n + 1 - b);
+      c.score += wornCost(p, daysSince(p.lastWorn)) - near + over(w7.get(p.id) || 0) - over(weekUses(uses, p.id, date));
+    }
+  }
+  pool.cands.sort((a, b) => b.score + b.jitter - (a.score + a.jitter));
+  const used = new Set();
+  const ideas = pickIdeas(pool, 3, [], avoid).map((c) => dressIdea(c, pool, used));
+  return { date, occ: occ.id, cond, uses, ideas, k: 0, seen: [...avoid, ...ideas.map((o) => o.key)] };
+}
+function nextIdea(date) {
+  const s = planner.sugg;
+  if (s?.date !== date) return;
+  if (s.k + 1 < s.ideas.length) s.k++;
+  else {
+    const more = suggestDay(date, s.seen);
+    if (more.ideas.length) planner.sugg = more;
+    else { s.k = 0; toast("That's every good idea for this day: back to the first"); }
+  }
+  paintPanel();
+}
+async function planDay(date) {
+  const s = planner.sugg, o = s?.date === date && s.ideas[s.k];
+  if (!o) return;
+  await setDay(date, makeEntry({ date, pieces: o.pieces, coat: o.coat, extras: o.extras, occasion: s.occ, title: dressyEvent(date)?.title || "", notes: dayPlan(date)?.notes }));
+  await addLog({ kind: "like", itemIds: Object.values(o.pieces).filter(Boolean).map((p) => p.id), occasion: s.occ, feels: Math.round(s.cond.feels), source: "calendar" });
+  planner.sugg = null;
+  if (date === localDay()) state.outfits = [];
+  paintDay(date);
+  paintPanel();
+  toast(date === localDay() ? "Planned. It's the first idea on Today." : `Planned for ${fmtDay(date)}`);
+}
+async function clearDay(date) {
+  const gone = dayPlan(date);
+  if (!gone) return;
+  const keep = notesOnly(gone);
+  const redraw = () => { if (date === localDay()) state.outfits = []; paintDay(date); paintPanel(); };
+  await setDay(date, keep);
+  redraw();
+  toast("Plan cleared", { label: "Undo", run: async () => { await setDay(date, gone); redraw(); } });
+}
+// The planned idea on Today was worn (it stays in the Calendar, ticked) or turned down (it goes).
+async function planDone(p, worn) {
+  if (!p.day) { state.plan = null; return savePlan(); }
+  const e = dayPlan(p.date);
+  if (!e) return;
+  await setDay(p.date, worn ? { ...e, worn: new Date().toISOString() } : notesOnly(e));
+}
+function dayNote(el, v) {
+  const date = el.dataset.day;
+  clearTimeout(el._t);
+  el._t = setTimeout(async () => {
+    const e = dayPlan(date), notes = v.trim();
+    if (!e && !notes) return;
+    const next = e ? { ...e, notes } : makeEntry({ date, occasion: dayOcc(date), notes, src: "note" });
+    await setDay(date, entryIds(next).length || notes ? next : null);
+    paintDay(date);
+  }, 500);
+}
+function pickDay(date) {
+  if (date.slice(0, 7) !== planner.month) { planner.month = date.slice(0, 7); planner.sel = date; planner.sugg = null; return render(); }
+  const old = planner.sel;
+  planner.sel = date;
+  if (planner.sugg?.date !== date) planner.sugg = null;
+  for (const d of [old, date]) main.querySelector(`.cal-cell[data-date="${d}"]`)?.setAttribute("aria-pressed", String(d === date));
+  paintPanel();
+  if (matchMedia("(max-width: 900px)").matches) $("#cal-day")?.scrollIntoView({ behavior: "smooth", block: "start" });
+}
+
+// The few pieces that say which outfit it is, for the little pictures on a day: the outer layer or
+// the top, the bottoms, the shoes.
+function cellThumbs(items) {
+  const it = items.filter((p) => p?.photos?.[0]);
+  const first = (...roles) => roles.map((r) => it.find((p) => roleOf(p) === r)).find(Boolean);
+  return [first("outer", "mid", "base"), first("bottom"), first("shoes")].filter(Boolean);
+}
+function dayCellHTML(date, inMonth = date.slice(0, 7) === planner.month) {
+  const now = localDay(), f = fcDay(date), plan = dayPlan(date);
+  const worn = date <= now ? wornOn(date) : null;
+  const parts = resolveEntry(plan, itemMap());
+  const evPlan = !parts.length && state.events.find((e) => e.date === date && e.outfit?.itemIds?.length);
+  const pieces = worn?.length ? worn : parts.length ? parts.map((x) => x.item) : evPlan ? evPlan.outfit.itemIds.map((id) => state.items.find((i) => i.id === id)) : [];
+  const thumbs = cellThumbs(pieces);
+  const removed = parts.some((x) => !x.item);
+  const { cal, mine } = eventsOn(date);
+  const dots = Math.min(3, cal.filter((e) => e.occasion !== "skip").length + mine.length);
+  const label = [longDay(date), f && `${WMO(f.code)}, ${fmtTemp(f.min)} to ${fmtTemp(f.max)}`, worn?.length ? "outfit worn" : parts.length || evPlan ? "outfit planned" : "",
+    removed && "a planned piece was removed", dots && `${dots} event${dots > 1 ? "s" : ""}`].filter(Boolean).join(", ");
+  return `<button class="cal-cell${inMonth ? "" : " out"}${date < now ? " past" : ""}${date === now ? " today" : ""}" data-date="${date}" data-calday="${date}" aria-pressed="${date === planner.sel}" aria-label="${esc(label)}">
+    <span class="cal-num">${+date.slice(8)}</span>${dots ? `<span class="cal-dots" aria-hidden="true">${"<i></i>".repeat(dots)}</span>` : ""}
+    ${f ? `<span class="cal-wx">${wxIcon(f.code)}<span>${fmtTemp(f.max)}<i>${fmtTemp(f.min)}</i></span></span>` : ""}
+    ${thumbs.length ? `<span class="cal-fit${worn?.length ? " worn" : ""}">${thumbs.map((p) => `<img src="${photoURL(p.photos[0])}" alt="" loading="lazy" decoding="async">`).join("")}${removed ? `<b class="cal-flag" aria-hidden="true">!</b>` : ""}</span>`
+      : parts.length || removed ? `<span class="cal-fit"><b class="cal-flag" aria-hidden="true">${removed ? "!" : "✓"}</b></span>` : ""}
+    ${plan?.notes ? `<span class="cal-txt">${esc(plan.notes)}</span>` : ""}
+  </button>`;
+}
+// Redraw one day of the month (after a plan, a note or the forecast changed it), not the whole month.
+function paintDay(date) {
+  if (view !== "plan") return;
+  const el = main.querySelector(`.cal-cell[data-date="${date}"]`);
+  if (el) el.outerHTML = dayCellHTML(date);
+}
+function paintPanel() {
+  const el = view === "plan" && $("#cal-day");
+  if (!el) return;
+  const ta = el.querySelector('[data-input="daynote"]');
+  const typing = ta && document.activeElement === ta && { day: ta.dataset.day, v: ta.value, at: ta.selectionStart, t: ta._t };
+  el.innerHTML = dayPanelHTML(planner.sel);
+  const now = typing && el.querySelector(`[data-input="daynote"][data-day="${typing.day}"]`);
+  if (now) { now.value = typing.v; now._t = typing.t; now.focus(); now.setSelectionRange(typing.at, typing.at); }
+}
+const washNote = (pieces, date) => (date > localDay() ? pieces.filter((p) => p?.wash).map((p) => `<p class="why warn">Your ${esc(p.name)} is in the wash now: wash it before ${esc(fmtDay(date))}.</p>`).join("") : "");
+function dayPanelHTML(date) {
+  const now = localDay(), past = date < now, f = fcDay(date), c = dayCond(date);
+  const plan = dayPlan(date), parts = resolveEntry(plan, itemMap());
+  const { cal, mine } = eventsOn(date);
+  const occ = dayOcc(date);
+  const month = new Date(`${date}T12:00`).toLocaleDateString(undefined, { month: "long" });
+  const wx = f
+    ? `<p class="cal-wxline">${wxIcon(f.code)}<span>${esc(WMO(f.code))} · ${fmtTemp(f.min)}–${fmtTemp(f.max)} · feels ${fmtTemp(c.feels)}${f.rain ? ` · rain ${f.rain}%` : ""}</span></p>`
+    : c.source === "usual" && !past ? `<p class="cal-wxline muted small">No forecast this far ahead: usually about ${fmtTemp(c.feels)} in ${esc(month)}.</p>` : "";
+  const events = [
+    ...mine.map((e) => `<li><button class="linkish" data-calev="${e.id}">${e.time ? `<b>${esc(e.time)}</b> ` : ""}${esc(e.title)}</button> <span class="muted small">${esc(occLabel(e.dressCode?.occasion))}${e.outfit ? " · outfit planned" : ""}</span></li>`),
+    ...cal.filter((e) => e.occasion !== "skip" || !e.allDay).map((e) => `<li><b>${e.allDay ? "All day" : fmtTime(e.start)}</b> ${esc(e.title)} <span class="muted small">${esc(occLabel(e.occasion))}</span></li>`),
+  ];
+  const s = planner.sugg?.date === date ? planner.sugg : null, o = s?.ideas[s.k];
+  // The plan: each piece as it is now, a deleted one as "Removed".
+  const planned = parts.length ? `<div class="stack" style="gap:10px">
+      <h3>${plan.worn ? "Planned and worn ✓" : "Planned"}${plan.title ? ` for ${esc(plan.title)}` : ""} <span class="muted small">· ${esc(occLabel(plan.occasion))}</span></h3>
+      <div class="pieces">${parts.map((x) => (x.item ? pieceTile(x.item) : removedTile(x.role))).join("")}</div>
+      ${parts.some((x) => !x.item) ? `<p class="why warn">A piece of this plan is no longer in your wardrobe.${past ? "" : " Suggest a new outfit to replace it."}</p>` : ""}
+      ${washNote(parts.map((x) => x.item), date)}</div>` : "";
+  const wore = date <= now ? wornOn(date) : null;
+  const wornIds = wore && wore.map((p) => p?.id).sort().join();
+  const wornHTML = wore?.length && !(plan?.worn && wornIds === parts.map((x) => x.item?.id).sort().join())
+    ? `<div class="stack" style="gap:10px"><h3>You wore</h3><div class="pieces">${wore.map((p) => (p ? pieceTile(p) : removedTile())).join("")}</div></div>` : "";
+  const evPlans = mine.filter((e) => e.outfit?.itemIds?.length).map((e) => `<div class="stack" style="gap:10px"><h3>For ${esc(e.title)}</h3><div class="pieces">${e.outfit.itemIds.map((id) => { const p = state.items.find((i) => i.id === id); return p ? pieceTile(p) : removedTile(); }).join("")}</div></div>`).join("");
+  const order = ["outer", "mid", "base", "bottom", "shoes"];
+  const near = o ? Object.values(o.pieces).filter(Boolean).map((p) => [p, nearestUse(s.uses, p.id, date)]).filter(([, u]) => u.k <= 2) : [];
+  const idea = o ? `<div class="cal-idea stack" style="gap:10px">
+      <div class="row" style="justify-content:space-between"><h3 style="margin:0">Idea ${s.k + 1} of ${s.ideas.length} · ${esc(occLabel(s.occ))}</h3>${levelBadge(o)}</div>
+      <div class="pieces">${order.filter((r) => o.pieces[r]).map((r) => pieceTile(o.pieces[r])).join("")}</div>
+      ${o.coat || o.extras?.length ? `<div class="pieces extras">${[o.coat, ...(o.extras || [])].filter(Boolean).map(pieceTile).join("")}</div>` : ""}
+      ${o.reasons.length ? `<p class="why">${o.reasons.map(esc).join(" · ")}</p>` : ""}
+      ${o.warn?.length ? `<p class="why warn">Heads up: ${o.warn.map(esc).join(" · ")}</p>` : ""}
+      <p class="why">${near.length ? near.map(([p, u]) => `${esc(p.name)} is also ${u.kind === "worn" ? "worn" : "planned"} ${esc(fmtDay(u.date))}`).join(" · ") : `Nothing in it is worn or planned within ${ROTATION_DAYS} days`}</p>
+      ${washNote(allPieces(o), date)}
+      <div class="row"><button class="btn primary" data-calplan="${date}">Plan it</button><button class="btn" data-calnext="${date}">Another idea</button><button class="btn ghost" data-calcancel="${date}">Cancel</button></div>
+    </div>` : s ? `<p class="muted" style="margin:0">Nothing you own makes an outfit for this day yet.</p>` : "";
+  return `
+    <div><h2>${esc(longDay(date))}</h2>${date === now ? `<p class="muted small" style="margin:2px 0 0">Today</p>` : ""}</div>
+    ${wx}
+    ${events.length ? `<ul class="cal-events">${events.join("")}</ul>` : ""}
+    ${past ? "" : `<div class="chips scroller" role="group" aria-label="Dress for">${OCCASIONS.map((x) => `<button class="chip" aria-pressed="${occ === x.id}" data-calocc="${date}|${x.id}">${esc(x.label)}</button>`).join("")}</div>`}
+    ${wornHTML}${planned}${evPlans}${idea}
+    ${past || o ? "" : `<div class="row"><button class="btn primary" data-calsuggest="${date}">${parts.length ? "Suggest another outfit" : "Suggest an outfit for this day"}</button>${parts.length ? `<button class="btn ghost danger" data-calclear="${date}">Clear the plan</button>` : ""}</div>`}
+    <label class="field cal-note"><span>Notes</span><textarea class="input" data-input="daynote" data-day="${date}" rows="2" placeholder="${past ? "How it went" : "Dinner with Luca, pack the umbrella…"}">${esc(plan?.notes || "")}</textarea></label>`;
+}
+function renderPlan() {
+  const now = localDay();
+  planner.month ||= now.slice(0, 7);
+  planner.sel ||= now;
+  const grid = monthGrid(planner.month);
+  const title = new Date(`${planner.month}-01T12:00`).toLocaleDateString(undefined, { month: "long", year: "numeric" });
+  const week = grid.slice(0, 7).map((d) => new Date(`${d.date}T12:00`).toLocaleDateString(undefined, { weekday: "short" }));
+  const away = planner.month !== now.slice(0, 7) || planner.sel !== now;
+  main.innerHTML = `
+    <div class="head"><div><h1>Calendar</h1><p class="sub">Plan what to wear. The next two weeks show the forecast: tap a day for an outfit that suits it.</p></div></div>
+    <div class="cal-wrap">
+      <section class="card cal-month">
+        <div class="row cal-nav"><button class="btn ghost icon-btn" data-calmonth="-1" aria-label="Previous month"><svg viewBox="0 0 24 24"><path d="M15 5l-7 7 7 7"/></svg></button>
+          <h2>${esc(title)}</h2>${away ? `<button class="chip" data-calday="${now}">Today</button>` : ""}
+          <button class="btn ghost icon-btn" data-calmonth="1" aria-label="Next month"><svg viewBox="0 0 24 24"><path d="M9 5l7 7-7 7"/></svg></button></div>
+        <div class="cal-grid">${week.map((w) => `<span class="cal-wd" aria-hidden="true">${esc(w)}</span>`).join("")}${grid.map((d) => dayCellHTML(d.date, d.inMonth)).join("")}</div>
+        ${forecastNote()}
+      </section>
+      <section class="card cal-day" id="cal-day" aria-live="polite">${dayPanelHTML(planner.sel)}</section>
+    </div>`;
+  setTimeout(loadForecast, 0);
 }
 
 /* ---- The closet audit (For you) ----
@@ -7848,7 +8168,7 @@ async function exportBackup() {
   });
   const scents = [];
   for (const sc of state.scents) scents.push({ ...sc, photos: await Promise.all((sc.photos || []).map(blobToDataURL)) });
-  const blob = new Blob([JSON.stringify({ version: 2, exportedAt: new Date().toISOString(), items, scents, log: state.log, wants: state.wants, events: state.events, calendar: state.calendar })], { type: "application/json" });
+  const blob = new Blob([JSON.stringify({ version: 2, exportedAt: new Date().toISOString(), items, scents, log: state.log, wants: state.wants, events: state.events, calendar: state.calendar, days: state.days })], { type: "application/json" });
   const a = Object.assign(document.createElement("a"), { href: URL.createObjectURL(blob), download: `wardrobe-backup-${today()}.json` });
   a.click();
 }
@@ -7916,6 +8236,7 @@ async function importBackup() {
       for (const w of data.wants || []) if (w?.id && !state.wants.some((x) => x.id === w.id)) { state.wants.push(w); await store.put("wants", w); }
       for (const e of data.events || []) if (e?.id && !state.events.some((x) => x.id === e.id)) { state.events.push(e); await store.put("events", e); }
       if (data.calendar?.links) { state.calendar = data.calendar; await saveCalendar(); state.cal.at = 0; }
+      if (data.days && typeof data.days === "object") { state.days = { ...state.days, ...data.days }; await saveDays(); }
       await loadAll();
       state.outfits = [];
       toast(`Imported ${data.items?.length || 0} pieces${data.scents?.length ? ` and ${data.scents.length} fragrances` : ""}`);
@@ -8005,6 +8326,21 @@ document.addEventListener("click", async (e) => {
   if (ds.mangle != null) { mirror.angle = +ds.mangle; mirror.stage?.snapTo(mirror.angle); return paintAngles(); }
   if (ds.mmode) return setMirrorMode(ds.mmode);
   if (ds.hfin) return setHairFinish(ds.hfin);
+  // Calendar: a day, the month, and planning (each redraws only that day and the panel)
+  if (ds.calday) return pickDay(ds.calday);
+  if (ds.calmonth) { planner.month = addMonths(planner.month || localDay().slice(0, 7), +ds.calmonth); return render(); }
+  if (ds.calsuggest) { planner.sugg = suggestDay(ds.calsuggest); return paintPanel(); }
+  if (ds.calnext) return nextIdea(ds.calnext);
+  if (ds.calplan) return planDay(ds.calplan);
+  if (ds.calcancel) { planner.sugg = null; return paintPanel(); }
+  if (ds.calclear) return clearDay(ds.calclear);
+  if (ds.calocc) {
+    const [d, id] = ds.calocc.split("|");
+    planner.occ[d] = id;
+    if (planner.sugg?.date === d) planner.sugg = suggestDay(d);
+    return paintPanel();
+  }
+  if (ds.calev) { state.disc.tab = "events"; state.disc.ev = ds.calev; state.disc.evOcc = false; return go("shop"); }
   // Fragrances
   if (ds.side) { state.wardSide = ds.side; render(); main.scrollTop = 0; return; }
   if (ds.scf) { state.scentFilter = ds.scf; return render(); }
@@ -8182,7 +8518,7 @@ document.addEventListener("click", async (e) => {
     const [i, reason] = ds.skipwhy.split(":");
     const o = state.outfits[+i];
     await addLog({ kind: "skip", reason, itemIds: Object.values(o.pieces).filter(Boolean).map((p) => p.id), ...outfitContext() });
-    if (o.planned) { state.plan = null; await savePlan(); }
+    if (o.planned) await planDone(o.planned, false);
     replaceOutfit(+i);
     toast(reason === "today" ? "Okay, here's another idea" : "Got it. Here's another idea");
     return render();
@@ -8192,7 +8528,7 @@ document.addEventListener("click", async (e) => {
     const sc = outfitScent(o);
     const washed = await wearOutfit(ds.mirror ? mirrorWorn(o) : allPieces(o), { source: o.planned ? "plan" : "idea", ...(sc && { scentIds: [sc.id] }) });
     if (sc) await countScentWear(sc);
-    if (o.planned) { state.plan = null; await savePlan(); }
+    if (o.planned) await planDone(o.planned, true);
     state.anchor = null;
     wornToast(sc ? `Logged with ${sc.name}. Enjoy your day!` : "Logged. Enjoy your day!", washed);
     generateOutfits();
@@ -8484,6 +8820,7 @@ document.addEventListener("click", async (e) => {
       return render();
     }
     case "cal-add": return addCalendar($('[data-input="cal"]')?.value || "");
+    case "cal-locate": return useMyLocation();
     case "cal-refresh": await loadCalendar(true); toast(Object.keys(state.cal.errors).length ? "Some calendars couldn't be read" : "Calendars read"); return render();
     case "anchor-clear": return setAnchor(null);
     case "try": return tryIt();
@@ -8591,6 +8928,7 @@ document.addEventListener("input", (e) => {
   if (k === "tripq") { state.disc.tripq = v; return; }
   if (scentDraft && k.startsWith("sc-")) return scentTyped(scentDraft, k.slice(3), v);
   if (["evtext", "evdate", "evtime", "evplace"].includes(k)) { state.disc.evForm[k.slice(2)] = v; return; }
+  if (k === "daynote") return dayNote(e.target, v);
   if (k.startsWith("wash-") && WASH_GROUPS[k.slice(5)]) {
     const n = Math.round(+v);
     if (!(n >= 0 && n <= 30) || v === "") return;
@@ -8650,7 +8988,7 @@ async function refreshCalendar() {
   autoPickEvent();
   if (moved || state.event?.key !== was) {
     if (state.event?.key !== was) state.outfits = [];
-    if (view === "today" && !document.activeElement?.matches("input, textarea")) render();
+    if ((view === "today" || view === "plan") && !document.activeElement?.matches("input, textarea")) render();
   }
 }
 refreshCalendar();
