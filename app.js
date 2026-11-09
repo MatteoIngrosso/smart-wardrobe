@@ -7,7 +7,7 @@ import { parseICS, eventsBetween, guessOccasion, titleKey, monthGrid, addMonths,
   makeEntry, entryIds, resolveEntry, pruneDays, nearbyCost, nearestUse, ROTATION_DAYS } from "./calendar.js";
 import * as Style from "./stylist.js";
 import * as Label from "./label.js";
-import { editCutout } from "./cutout-editor.js";
+import { editCutout, workingCopy, basicCutout, frameCutout, WORK_MAX } from "./cutout-editor.js";
 import * as Avatar from "./avatar-config.js";
 
 /* ======================================================================
@@ -781,12 +781,13 @@ function applyTheme() {
 const newCanvas = (w, h) => Object.assign(document.createElement("canvas"), { width: w, height: h });
 const canvasBlob = (c, type = "image/webp", q = 0.86) => new Promise((r) => c.toBlob(r, type, q));
 
-async function resizeImage(file, max = 1100) {
-  const bmp = await createImageBitmap(file, { imageOrientation: "from-image" }).catch(() => createImageBitmap(file));
-  const scale = Math.min(1, max / Math.max(bmp.width, bmp.height));
-  const c = newCanvas(Math.round(bmp.width * scale), Math.round(bmp.height * scale));
-  c.getContext("2d").drawImage(bmp, 0, 0, c.width, c.height);
-  return canvasBlob(c, "image/jpeg", 0.82);
+// A photo as it comes in (file, blob or canvas), as a JPEG at most `max` px on its longest side.
+// Photos of pieces are worked on at WORK_MAX (1024 px): see workingCopy in cutout-editor.js.
+async function resizeImage(file, max = WORK_MAX) {
+  const c = await workingCopy(file, max);
+  const blob = await canvasBlob(c, "image/jpeg", 0.82);
+  c.width = c.height = 0;
+  return blob;
 }
 
 // Whether a photo already has a plain light background (shop photos usually do): the frame
@@ -869,130 +870,12 @@ async function aiCutout(blob) {
   }
 }
 
-async function basicCutout(blob) {
-  const bmp = await createImageBitmap(blob);
-  const S = 360 / Math.max(bmp.width, bmp.height);
-  const w = Math.round(bmp.width * S), h = Math.round(bmp.height * S);
-  const ctx = newCanvas(w, h).getContext("2d", { willReadFrequently: true });
-  ctx.drawImage(bmp, 0, 0, w, h);
-  const px = ctx.getImageData(0, 0, w, h).data;
-  const N = w * h;
-  const rgb = (i) => [px[i * 4], px[i * 4 + 1], px[i * 4 + 2]];
-  const isEdge = (x, y, bw) => x < bw || y < bw || x >= w - bw || y >= h - bw;
+// basicCutout (the colour-based fallback) lives in cutout-editor.js.
 
-  // Model the background from the photo's border with a few colour clusters.
-  const bw = Math.max(3, Math.round(Math.min(w, h) * 0.03));
-  const border = [];
-  for (let y = 0; y < h; y++) for (let x = 0; x < w; x++) if (isEdge(x, y, bw) && (x + y) % 2 === 0) border.push(rgb(y * w + x));
-  let centers = Array.from({ length: 5 }, (_, k) => border[Math.floor((k + 0.5) * border.length / 5)].slice());
-  for (let it = 0; it < 8; it++) {
-    const sum = centers.map(() => [0, 0, 0, 0]);
-    for (const p of border) {
-      let bi = 0, bd = Infinity;
-      centers.forEach((c, k) => { const d = (p[0] - c[0]) ** 2 + (p[1] - c[1]) ** 2 + (p[2] - c[2]) ** 2; if (d < bd) { bd = d; bi = k; } });
-      sum[bi][0] += p[0]; sum[bi][1] += p[1]; sum[bi][2] += p[2]; sum[bi][3]++;
-    }
-    centers = sum.map((s, k) => (s[3] ? [s[0] / s[3], s[1] / s[3], s[2] / s[3]] : centers[k]));
-  }
-  const distBg = new Float32Array(N);
-  for (let i = 0; i < N; i++) {
-    const p = rgb(i);
-    let bd = Infinity;
-    for (const c of centers) bd = Math.min(bd, Math.sqrt((p[0] - c[0]) ** 2 + (p[1] - c[1]) ** 2 + (p[2] - c[2]) ** 2));
-    distBg[i] = bd;
-  }
-  const bdists = [];
-  for (let y = 0; y < h; y++) for (let x = 0; x < w; x++) if (isEdge(x, y, bw)) bdists.push(distBg[y * w + x]);
-  bdists.sort((a, b) => a - b);
-  const T = Math.max(18, bdists[Math.floor(bdists.length * 0.9)] * 1.25);
-
-  // Grow the background inwards from the border through background-like pixels.
-  const bg = new Uint8Array(N);
-  const q = new Int32Array(N);
-  let qh = 0, qt = 0;
-  const seed = (i) => { if (!bg[i] && distBg[i] < T * 1.6) { bg[i] = 1; q[qt++] = i; } };
-  for (let x = 0; x < w; x++) { seed(x); seed((h - 1) * w + x); }
-  for (let y = 0; y < h; y++) { seed(y * w); seed(y * w + w - 1); }
-  while (qh < qt) {
-    const i = q[qh++], x = i % w, y = (i / w) | 0;
-    const a = rgb(i);
-    for (const j of [x > 0 ? i - 1 : -1, x < w - 1 ? i + 1 : -1, y > 0 ? i - w : -1, y < h - 1 ? i + w : -1]) {
-      if (j < 0 || bg[j]) continue;
-      const b = rgb(j);
-      const step = Math.abs(a[0] - b[0]) + Math.abs(a[1] - b[1]) + Math.abs(a[2] - b[2]);
-      if (distBg[j] < T || (step < 9 && distBg[j] < T * 1.8)) { bg[j] = 1; q[qt++] = j; }
-    }
-  }
-  // Clean up: open (erode + dilate) the foreground, keep the biggest piece.
-  let fg = new Uint8Array(N);
-  for (let i = 0; i < N; i++) fg[i] = bg[i] ? 0 : 1;
-  const morph = (src, erode) => {
-    const out = new Uint8Array(N);
-    for (let y = 1; y < h - 1; y++) for (let x = 1; x < w - 1; x++) {
-      const i = y * w + x;
-      const n = src[i] + src[i - 1] + src[i + 1] + src[i - w] + src[i + w];
-      out[i] = erode ? (n === 5 ? 1 : 0) : (n > 0 ? 1 : 0);
-    }
-    return out;
-  };
-  fg = morph(morph(fg, true), false);
-  const lab = new Int32Array(N);
-  let best = 0, bestSize = 0, label = 0;
-  for (let s = 0; s < N; s++) {
-    if (!fg[s] || lab[s]) continue;
-    label++; let size = 0; qh = qt = 0; q[qt++] = s; lab[s] = label;
-    while (qh < qt) {
-      const i = q[qh++]; size++;
-      const x = i % w;
-      for (const j of [x > 0 ? i - 1 : -1, x < w - 1 ? i + 1 : -1, i - w, i + w]) {
-        if (j >= 0 && j < N && fg[j] && !lab[j]) { lab[j] = label; q[qt++] = j; }
-      }
-    }
-    if (size > bestSize) { bestSize = size; best = label; }
-  }
-  const share = bestSize / N;
-  if (share < 0.06 || share > 0.92) throw new Error("Couldn't find the garment");
-
-  const mask = newCanvas(w, h);
-  const mctx = mask.getContext("2d");
-  const md = mctx.createImageData(w, h);
-  for (let i = 0; i < N; i++) md.data[i * 4 + 3] = lab[i] === best ? 255 : 0;
-  mctx.putImageData(md, 0, 0);
-
-  const out = newCanvas(bmp.width, bmp.height);
-  const octx = out.getContext("2d");
-  octx.drawImage(bmp, 0, 0);
-  octx.globalCompositeOperation = "destination-in";
-  octx.filter = "blur(1.5px)";
-  octx.imageSmoothingQuality = "high";
-  octx.drawImage(mask, 0, 0, out.width, out.height);
-  return canvasBlob(out, "image/png");
-}
-
-// Crop to the garment and centre it on a transparent 3:4 canvas.
-const framePiece = async (src) => (await frameGeo(src)).blob;
-// The same, plus where each pixel of `src` (a blob or canvas) lands in the result.
-async function frameGeo(src) {
-  const bmp = src instanceof Blob ? await createImageBitmap(src) : src;
-  const s = 200 / Math.max(bmp.width, bmp.height);
-  const sw = Math.max(1, Math.round(bmp.width * s)), sh = Math.max(1, Math.round(bmp.height * s));
-  const sctx = newCanvas(sw, sh).getContext("2d", { willReadFrequently: true });
-  sctx.drawImage(bmp, 0, 0, sw, sh);
-  const a = sctx.getImageData(0, 0, sw, sh).data;
-  let x0 = sw, y0 = sh, x1 = -1, y1 = -1;
-  for (let y = 0; y < sh; y++) for (let x = 0; x < sw; x++) if (a[(y * sw + x) * 4 + 3] > 40) { x0 = Math.min(x0, x); x1 = Math.max(x1, x); y0 = Math.min(y0, y); y1 = Math.max(y1, y); }
-  if (x1 < 0) return { blob: src instanceof Blob ? src : await canvasBlob(src, "image/png"), m: new DOMMatrix() };
-  const bx = Math.max(0, (x0 - 1) / s), by = Math.max(0, (y0 - 1) / s);
-  const bwid = Math.min(bmp.width - bx, (x1 - x0 + 3) / s), bhei = Math.min(bmp.height - by, (y1 - y0 + 3) / s);
-  const m = Math.max(bwid, bhei) * 0.06;
-  const W = Math.max(bwid + 2 * m, (bhei + 2 * m) * 0.75), H = W / 0.75;
-  const scale = Math.min(1, 1200 / H);
-  const c = newCanvas(Math.round(W * scale), Math.round(H * scale));
-  const ctx = c.getContext("2d");
-  ctx.imageSmoothingQuality = "high";
-  ctx.drawImage(bmp, bx, by, bwid, bhei, (W - bwid) / 2 * scale, (H - bhei) / 2 * scale, bwid * scale, bhei * scale);
-  return { blob: await canvasBlob(c, "image/webp", 0.86), m: new DOMMatrix().scale(scale).translate((W - bwid) / 2 - bx, (H - bhei) / 2 - by) };
-}
+// Crop to the garment and centre it on the standard transparent 3:4 frame (768 x 1024, WebP).
+async function framePiece(src) { return (await frameCutout(src)).blob; }
+// The same, plus `m`: where each pixel of `src` (a blob or canvas) lands in the result.
+function frameGeo(src) { return frameCutout(src); }
 
 // Returns { blob, raw, engine } or throws if no method could find the garment.
 // `raw` is the cut-out before framing, pixel for pixel on top of the photo: the hand editor starts from it.
@@ -1005,6 +888,7 @@ async function removeBackground(blob) {
     c.getContext("2d").drawImage(b, 0, 0, a.width, a.height);
     raw = await canvasBlob(c, "image/png");
   }
+  a.close?.(); b.close?.();
   return { blob: await framePiece(raw), raw, engine };
 }
 
@@ -4395,8 +4279,13 @@ async function fixCutout(d, p) {
   try {
     start = await rawFor(p, d).catch(() => null);
     if (start) {
-      photo = await createImageBitmap(await rotateImage(p.src, start.rot, false));
-      mask = turnCanvas(await createImageBitmap(start.raw), quarterOf(start.rot)).c;
+      // Straight from canvas to canvas: no JPEG or PNG made and read back just to open the editor.
+      const src = await createImageBitmap(p.src);
+      photo = turnCanvas(src, quarterOf(start.rot)).c;
+      src.close?.();
+      const raw = start.raw instanceof Blob ? await createImageBitmap(start.raw) : start.raw;
+      mask = turnCanvas(raw, quarterOf(start.rot)).c;
+      if (raw !== start.raw) raw.close?.();
     } else {
       // The original photo couldn't be cut out again (offline): edit the cut-out itself.
       photo = await createImageBitmap(p.cut);
@@ -4412,7 +4301,9 @@ async function fixCutout(d, p) {
   rerenderAdd(d);
   if (!mask) return;
   const kept = await editCutout(photo, mask, { note });
-  if (!kept) return;
+  mask.width = mask.height = 0;
+  const free = () => { if (photo.close) photo.close(); else photo.width = photo.height = 0; };
+  if (!kept) return free();
   p.busy = true;
   p.busyText = "Saving the cut-out…";
   rerenderAdd(d);
@@ -4427,7 +4318,8 @@ async function fixCutout(d, p) {
       const bctx = back.getContext("2d");
       bctx.setTransform(turnGeo(src.width, src.height, quarterOf(start.rot)).m.inverse());
       bctx.drawImage(kept, 0, 0);
-      p.raw = await canvasBlob(back, "image/png");
+      src.close?.();
+      p.raw = back; // kept as a canvas while the piece is open: makeCut and the editor read it as it is
       p.cutSrc = await framePiece(p.raw);
       p.rot = start.rot;
     } else p.cutSrc = await rotateImage(await framePiece(kept), -p.rot, true);
@@ -4439,6 +4331,8 @@ async function fixCutout(d, p) {
   } catch {
     toast("Couldn't save the cut-out");
   }
+  free();
+  kept.width = kept.height = 0;
   p.busy = false;
   p.busyText = "";
   rerenderAdd(d);
@@ -4457,8 +4351,10 @@ async function rawFor(p, d) {
     ctx.resetTransform();
     ctx.globalCompositeOperation = "source-in";
     ctx.drawImage(src, 0, 0);
-    return { raw: await canvasBlob(c, "image/png"), rot: p.rot };
+    src.close?.();
+    return { raw: c, rot: p.rot }; // a canvas: the editor reads it straight away
   }
+  src.close?.();
   // Saved before the editor existed: cut the original photo out again, keeping the slight tilt
   // that stands it upright (the original is only turned in quarter steps).
   const r = await removeBackground(p.src);
@@ -5141,7 +5037,8 @@ async function snap() {
   c.getContext("2d").drawImage(v, 0, 0);
   cam.el.classList.add("flash");
   setTimeout(() => cam.el.classList.remove("flash"), 150);
-  cam.shots.push(await resizeImage(await canvasBlob(c, "image/jpeg", 0.92)));
+  cam.shots.push(await resizeImage(c)); // straight from the frame: no full-size JPEG in between
+  c.width = c.height = 0;
   if (cam.shots.length < 2) return updateCamera();
   finishShooting();
 }
