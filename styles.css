@@ -33,7 +33,13 @@
 }
 
 * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
-html, body { margin: 0; height: 100%; touch-action: manipulation; }
+html, body { margin: 0; height: 100%; }
+/* Touch screen and wall kiosk: no pinch or double-tap zoom (on every element, because each scrolling
+   area starts its own touch rules), no rubber-band bounce, no long-press menu or dragging on pictures.
+   Sliders and text boxes keep their own touch handling; the 3D stage and the cut-out editor set theirs. */
+:where(*:not(input, textarea, select)) { touch-action: pan-x pan-y; }
+html, main, .sheet-panel { overscroll-behavior: none; }
+img { -webkit-user-drag: none; -webkit-touch-callout: none; }
 body {
   background: var(--bg); color: var(--text);
   font: 300 17px/1.5 Inter, system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
@@ -134,6 +140,10 @@ input[type=range] { width: 100%; height: 44px; accent-color: var(--accent); }
   border: 1px solid var(--line); display: flex; flex-direction: column;
 }
 .item:active { transform: scale(.98); }
+/* Filtering hides tiles instead of drawing the grid again (see fillGrid in app.js). */
+.grid[hidden], .grid > .item[hidden] { display: none; }
+/* Tiles off the screen aren't laid out or painted until they scroll near (their last size is kept). */
+.grid > .item { content-visibility: auto; contain-intrinsic-size: auto 340px; }
 .thumb { aspect-ratio: 3/4; width: 100%; object-fit: cover; background: var(--surface-2); display: block; }
 .item .meta { padding: 10px 14px 14px; display: grid; gap: 2px; }
 .item .name { font-weight: 500; font-size: 16px; line-height: 1.25; }
@@ -261,7 +271,7 @@ img.pic-bg { object-fit: contain; background: var(--pic); }
 .photo-wrap { position: relative; }
 .busy {
   position: absolute; inset: 0; border-radius: var(--radius); display: grid; place-content: center; justify-items: center; gap: 10px;
-  background: color-mix(in srgb, var(--bg) 55%, transparent); color: var(--text); font-weight: 500; backdrop-filter: blur(2px);
+  background: color-mix(in srgb, var(--bg) 78%, transparent); color: var(--text); font-weight: 500; /* no blur: cheaper to draw */
 }
 .tier { font-size: 12px; font-weight: 500; letter-spacing: .05em; text-transform: uppercase; color: var(--accent); }
 
@@ -312,6 +322,7 @@ img.pic-bg { object-fit: contain; background: var(--pic); }
 
 /* Add form: types grouped by section */
 .type-group { display: grid; gap: 6px; margin-top: 6px; }
+.type-guess { padding: 10px 12px; border-radius: 12px; background: var(--surface-2); }
 /* outfit cards: headwear and accessories as a smaller row */
 .outfit .pieces.extras { grid-template-columns: repeat(auto-fill, minmax(64px, 1fr)); }
 .outfit .pieces.extras span { font-size: 12px; }
