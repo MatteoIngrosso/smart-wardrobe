@@ -223,11 +223,12 @@ const SEED_VERSION = 3;
    Storage (IndexedDB)
    ====================================================================== */
 const db = await new Promise((resolve, reject) => {
-  const req = indexedDB.open("smart-wardrobe", 4);
+  const req = indexedDB.open("smart-wardrobe", 5);
   req.onupgradeneeded = () => {
     const d = req.result;
     // Version 2 adds "wants": Must-Buy, and suggestions you said no to. Version 3: "events". Version 4: "scents".
-    for (const [name, opts] of [["items", { keyPath: "id" }], ["log", { keyPath: "id", autoIncrement: true }], ["kv"], ["wants", { keyPath: "id" }], ["events", { keyPath: "id" }], ["scents", { keyPath: "id" }]]) {
+    // Version 5: "thumbs", a small copy of each piece's first photo for grids and lists (this device only, see thumbURL).
+    for (const [name, opts] of [["items", { keyPath: "id" }], ["log", { keyPath: "id", autoIncrement: true }], ["kv"], ["wants", { keyPath: "id" }], ["events", { keyPath: "id" }], ["scents", { keyPath: "id" }], ["thumbs", { keyPath: "id" }]]) {
       if (!d.objectStoreNames.contains(name)) d.createObjectStore(name, opts);
     }
   };
@@ -266,7 +267,7 @@ const store = {
     return r;
   },
   async del(s, k) {
-    if (s === "items") await syncTomb(await raw.get(s, k));
+    if (s === "items") { await syncTomb(await raw.get(s, k)); revokeGarmentURLs(k); }
     await raw.del(s, k);
     await syncTouch(syncKey(s, k));
   },
@@ -274,7 +275,7 @@ const store = {
     const gone = await raw.all(s);
     await raw.clear(s);
     for (const v of gone) {
-      if (s === "items") await syncTomb(v);
+      if (s === "items") { await syncTomb(v); revokeGarmentURLs(v.id); }
       await syncTouch(syncKey(s, v.id));
     }
   },
@@ -348,6 +349,8 @@ async function loadAll() {
   }
   state.events = (await store.all("events")) || [];
   state.scents = (await store.all("scents")) || [];
+  for (const t of (await raw.all("thumbs")) || []) thumbs.set(t.id, t);
+  await blobPhotos();
   Object.assign(state.settings, (await store.get("kv", "settings")) || {});
   for (const [k, empty] of Object.entries(SHARED_KV)) state[k] = (await store.get("kv", k)) ?? empty();
   state.cal = { ...state.cal, ...((await raw.get("kv", "calEvents")) || {}), loading: false };
@@ -360,6 +363,22 @@ async function loadAll() {
   for (const it of state.items) {
     if (!it.styles) { it.styles = guessStyles(it); it.formality = formalityOf(it.styles); }
     if (!it.fit) it.fit = guessFit(it);
+  }
+}
+// Photos are kept as Blobs (IndexedDB stores them as files, outside the records' data). A photo
+// still held as base64 text (a data: URL from a very old backup or version) becomes a Blob here,
+// once, so no long base64 strings are kept in the records or copied around with them.
+async function blobPhotos() {
+  const isText = (v) => typeof v === "string" && v.startsWith("data:image/");
+  for (const [s, list, keys] of [["items", state.items, ["photos", "originals"]], ["scents", state.scents, ["photos"]]]) {
+    for (const rec of list) {
+      const fix = keys.filter((k) => Array.isArray(rec[k]) && rec[k].some(isText));
+      if (!fix.length) continue;
+      try {
+        for (const k of fix) rec[k] = await Promise.all(rec[k].map(async (v) => (isText(v) ? (await fetch(v)).blob() : v)));
+        await raw.put(s, rec); // the same photos, so the other devices needn't hear about it
+      } catch { /* left as it was: photoURL shows a data: URL too */ }
+    }
   }
 }
 const saveSettings = () => store.put("kv", state.settings, "settings");
@@ -537,10 +556,12 @@ async function applyRecords(records) {
     if (rec.col === "items") {
       const at = state.items.findIndex((i) => i.id === rec.id);
       if (rec.deleted) {
+        revokeGarmentURLs(rec.id);
         await raw.del("items", rec.id);
         if (at >= 0) { state.items.splice(at, 1); newSet = true; }
       } else {
         const it = await unpackBlobs(rec.data);
+        revokeGarmentURLs(rec.id, it);
         await raw.put("items", it);
         if (at >= 0) state.items[at] = it; else { state.items.push(it); newSet = true; }
       }
@@ -750,12 +771,106 @@ function guessFit(item) {
   return f && fitsFor(item).includes(f) ? f : f === "baggy" && fitsFor(item).includes("oversized") ? "oversized" : undefined;
 }
 
-const urlCache = new WeakMap();
+/* ---------- photo URLs and thumbnails ---------- */
+// An <img> shows a photo Blob through an object URL, made once per Blob. A URL keeps its Blob in
+// memory until it's revoked, so the URLs of photos that are gone are revoked: revokeGarmentURLs when
+// a piece is deleted or changed (here or on another device), sweepURLs for everything else no longer
+// used (a draft's in-between turns, a deleted fragrance…) when you move to another screen.
+const urlCache = new Map(); // Blob → object URL
 function photoURL(blob) {
   if (!blob) return "";
   if (typeof blob === "string") return blob;
-  if (!urlCache.has(blob)) urlCache.set(blob, URL.createObjectURL(blob));
-  return urlCache.get(blob);
+  let u = urlCache.get(blob);
+  if (!u) urlCache.set(blob, (u = URL.createObjectURL(blob)));
+  return u;
+}
+function revokeURL(blob) {
+  const u = urlCache.get(blob);
+  if (u) { URL.revokeObjectURL(u); urlCache.delete(blob); }
+}
+// Piece `id` is deleted, or replaced by `next`: revoke the URLs of its photos that `next` doesn't
+// keep, and drop its thumbnail if its first photo is no longer the same.
+function revokeGarmentURLs(id, next = null) {
+  const it = state.items.find((i) => i.id === id);
+  const keep = new Set([...(next?.photos || []), ...(next?.originals || [])]);
+  for (const b of [...(it?.photos || []), ...(it?.originals || [])]) if (!keep.has(b)) revokeURL(b);
+  if (!next || thumbs.get(id)?.sig !== photoSig(next.photos?.[0])) dropThumb(id);
+  wardTiles.delete(id);
+}
+function sweepURLs() {
+  const live = new Set();
+  const add = (b) => b instanceof Blob && live.add(b);
+  for (const i of state.items) { i.photos?.forEach(add); i.originals?.forEach(add); }
+  for (const sc of state.scents) sc.photos?.forEach(add);
+  for (const t of thumbs.values()) add(t.blob);
+  for (const p of draft?.photos || []) [p.src, p.orig, p.cut, p.cutSrc, p.raw].forEach(add);
+  scentDraft?.photos?.forEach(add);
+  cam.shots.forEach(add);
+  pendingShots.forEach(add);
+  for (const b of [...urlCache.keys()]) if (!live.has(b)) revokeURL(b);
+}
+
+// Grids and lists show a small copy of each piece's first photo, made once in the background and
+// kept on this device ("thumbs"), so a wardrobe of 100 pieces doesn't decode 100 full-size photos.
+// Until it's made, the photo itself is shown. `sig` notices a new photo (also one from another device).
+const THUMB_MAX = 512; // px, the long side: sharp on a 2x screen at the wardrobe grid's tile size
+const thumbs = new Map(); // piece id → { id, sig, blob }
+const thumbQueue = new Set();
+let thumbsBusy = false;
+const photoSig = (b) => (b instanceof Blob ? `${b.size}:${b.type}` : "");
+function thumbURL(item) {
+  const p = item?.photos?.[0];
+  if (!(p instanceof Blob)) return photoURL(p);
+  const t = thumbs.get(item.id);
+  if (t?.sig === photoSig(p)) return photoURL(t.blob);
+  queueThumb(item.id);
+  return photoURL(p);
+}
+// An <img> of a piece for grids and lists: its thumbnail, swapped in when it's ready.
+const pieceImg = (item, cls = "pic-bg", src = thumbURL(item)) => `<img${cls ? ` class="${cls}"` : ""} src="${src}" data-thumb="${esc(item.id)}" loading="lazy" decoding="async" alt="">`;
+function queueThumb(id) {
+  thumbQueue.add(id);
+  if (!thumbsBusy) { thumbsBusy = true; setTimeout(makeThumbs, 50); }
+}
+async function makeThumbs() {
+  for (const id of thumbQueue) {
+    thumbQueue.delete(id);
+    const it = state.items.find((i) => i.id === id);
+    const p = it?.photos?.[0];
+    if (!(p instanceof Blob) || thumbs.get(id)?.sig === photoSig(p)) continue;
+    try {
+      const blob = await shrinkPhoto(p, THUMB_MAX);
+      if (it.photos[0] !== p) continue; // changed while it was made
+      dropThumb(id, false);
+      const t = { id, sig: photoSig(p), blob };
+      thumbs.set(id, t);
+      await raw.put("thumbs", t);
+      const url = photoURL(blob);
+      for (const img of document.querySelectorAll(`img[data-thumb="${CSS.escape(id)}"]`)) img.src = url;
+    } catch { /* the full photo stays */ }
+    await new Promise((r) => setTimeout(r, 0)); // let taps and frames through between pieces
+  }
+  thumbsBusy = false;
+}
+function dropThumb(id, fromDisk = true) {
+  const t = thumbs.get(id);
+  if (!t) return;
+  revokeURL(t.blob);
+  thumbs.delete(id);
+  if (fromDisk) raw.del("thumbs", id).catch(() => {});
+}
+// Thumbnails for every piece that hasn't one yet, a few seconds after the app opens.
+const warmThumbs = () => { for (const i of state.items) if (i.photos?.[0] instanceof Blob && thumbs.get(i.id)?.sig !== photoSig(i.photos[0])) queueThumb(i.id); };
+async function shrinkPhoto(blob, max) {
+  const bmp = await createImageBitmap(blob);
+  const s = Math.min(1, max / Math.max(bmp.width, bmp.height));
+  const c = newCanvas(Math.max(1, Math.round(bmp.width * s)), Math.max(1, Math.round(bmp.height * s)));
+  const ctx = c.getContext("2d");
+  ctx.imageSmoothingQuality = "high";
+  ctx.drawImage(bmp, 0, 0, c.width, c.height);
+  bmp.close?.();
+  // Cut-outs keep their transparency (WebP; PNG where the browser can't make WebP, e.g. Safari).
+  return blob.type === "image/jpeg" ? canvasBlob(c, "image/jpeg", 0.82) : canvasBlob(c, "image/webp", 0.8);
 }
 const swatches = (colors = []) =>
   `<span class="swatches">${colors.map((c) => `<i style="background:${COLORS[c]?.hex || "#888"}" title="${esc(c)}"></i>`).join("")}</span>`;
@@ -809,40 +924,130 @@ async function plainBackground(blob) {
     return mean > 200 && Math.sqrt(lum.reduce((a, v) => a + (v - mean) ** 2, 0) / lum.length) < 12;
   } catch { return false; }
 }
-// Guess the garment colours. On a cut-out photo only the garment pixels count;
-// on a normal photo we sample the centre.
-async function detectColors(blob) {
-  const bmp = await createImageBitmap(blob);
-  const w = 60, h = 80;
-  const ctx = newCanvas(w, h).getContext("2d", { willReadFrequently: true });
-  ctx.drawImage(bmp, 0, 0, w, h);
-  let { data } = ctx.getImageData(0, 0, w, h);
-  let opaque = 0;
-  for (let i = 3; i < data.length; i += 4) if (data[i] > 200) opaque++;
-  const cutout = opaque < (w * h) * 0.9;
-  if (!cutout) data = ctx.getImageData(Math.round(w * 0.3), Math.round(h * 0.28), Math.round(w * 0.4), Math.round(h * 0.44)).data;
-  const palette = Object.entries(COLORS).map(([name, v]) => [name, hexToRgb(v.hex)]);
-  const counts = {};
-  let total = 0;
-  for (let i = 0; i < data.length; i += 4) {
-    if (cutout && data[i + 3] < 200) continue;
-    total++;
-    const p = [data[i], data[i + 1], data[i + 2]];
-    let best = null, bd = Infinity;
-    for (const [name, rgb] of palette) {
-      const d = colorDist(p, rgb);
-      if (d < bd) { bd = d; best = name; }
-    }
-    counts[best] = (counts[best] || 0) + 1;
+/* ---------- reading a photo on the device (no tokens) ----------
+   One small pass over the photo (at most 48 px) gives:
+   - colours: the garment's pixels (on a cut-out, the ones at least half opaque; on a normal photo,
+     the centre) are grouped into 4 colours (k-means in CIELAB, lightness at half weight: shading on
+     cloth is the same colour), each named after the closest of PHOTO_TONES. The main one comes
+     first; another is added when it covers at least 30% of the piece.
+   - shape (cut-outs only): what the outline looks like, for the Type field (see SHAPE_TYPES).
+   PHOTO_TONES are the wardrobe colours as they come out in photos (CIELAB), measured on the
+   labelled pieces of a real wardrobe and the samples: photos are duller than the swatches, black
+   reads dark grey, beige reads nearly grey. On those pieces the main colour is right twice as often
+   as with the swatch colours. Colours none of them had are the swatch, dulled the same way. */
+const PHOTO_TONES = {
+  black: [13.8, 0.8, -1.3], charcoal: [29.2, 1, 0], grey: [56.9, 0.3, 0.4], white: [81.9, -1, -1.3],
+  cream: [77.7, -0.3, 5.5], beige: [67, 1.6, 6.2], brown: [35.7, 6, 8.7], navy: [19.5, 1.2, -6.9],
+  denim: [41.5, -1.1, -10.6], olive: [41, -2.3, 9.4], burgundy: [29, 16.2, 5.1], red: [47.8, 25.3, 12.7],
+  orange: [56.6, 15.3, 25.2], yellow: [69.6, -0.5, 29.3], green: [45.1, -14, 9.9], blue: [43, 4.5, -20.7],
+  "light blue": [72.1, -1.9, -7.2], purple: [39.4, 12.6, -14.4], pink: [65.3, 12.6, 0.9],
+};
+const SRGB_LINEAR = Float32Array.from({ length: 256 }, (_, i) => { const c = i / 255; return c <= 0.04045 ? c / 12.92 : ((c + 0.055) / 1.055) ** 2.4; });
+const labF = (t) => (t > 0.008856 ? Math.cbrt(t) : 7.787 * t + 16 / 116);
+function toLab(r, g, b) {
+  const R = SRGB_LINEAR[r], G = SRGB_LINEAR[g], B = SRGB_LINEAR[b];
+  const x = labF((R * 0.4124 + G * 0.3576 + B * 0.1805) / 0.95047), y = labF(R * 0.2126 + G * 0.7152 + B * 0.0722), z = labF((R * 0.0193 + G * 0.1192 + B * 0.9505) / 1.08883);
+  return [116 * y - 16, 500 * (x - y), 200 * (y - z)];
+}
+function toneName(c) {
+  let best = "", bd = Infinity;
+  for (const [n, t] of Object.entries(PHOTO_TONES)) {
+    const d = ((c[0] - t[0]) * 0.7) ** 2 + (c[1] - t[1]) ** 2 + (c[2] - t[2]) ** 2;
+    if (d < bd) { bd = d; best = n; }
   }
-  return Object.entries(counts).sort((a, b) => b[1] - a[1]).filter(([, n], i) => i === 0 || n / total > 0.3).slice(0, 2).map(([n]) => n);
+  return best;
 }
-function hexToRgb(h) { const n = parseInt(h.slice(1), 16); return [n >> 16, (n >> 8) & 255, n & 255]; }
-function colorDist(a, b) {
-  const rm = (a[0] + b[0]) / 2;
-  const dr = a[0] - b[0], dg = a[1] - b[1], db = a[2] - b[2];
-  return (2 + rm / 256) * dr * dr + 4 * dg * dg + (2 + (255 - rm) / 256) * db * db;
+// What a cut-out's outline looks like, and the types that have that outline (most likely first).
+// On a real wardrobe's cut-outs: 70 of 79 sorted right, 7 left open (polos, boots, accessories), 2 wrong.
+const SHAPE_TYPES = {
+  trousers: ["jeans", "trousers", "joggers", "track-pants", "leggings"],
+  shorts: ["shorts", "gym-shorts"],
+  shoes: ["sneakers", "boots", "dress-shoes", "training-shoes"],
+  hooded: ["hoodie", "zip-hoodie", "puffer", "rain", "gym-hoodie"],
+  long: ["sweater", "sweatshirt", "shirt", "overshirt", "jacket", "coat", "long-sleeve-top", "track-jacket", "tank-top"],
+  short: ["tshirt", "polo", "shirt", "gym-top", "tank-top"],
+};
+const SHAPE_WORDS = { trousers: "trousers", shorts: "shorts", shoes: "shoes", hooded: "a hooded top", long: "a top with long sleeves", short: "a short-sleeved top" };
+// a: RGBA pixels of a w×h cut-out (upright). Rows of the outline are measured from the top to the bottom.
+function outlineShape(a, w, h) {
+  const on = (x, y) => a[(y * w + x) * 4 + 3] >= 128;
+  let x0 = w, y0 = h, x1 = -1, y1 = -1;
+  for (let y = 0; y < h; y++) for (let x = 0; x < w; x++) if (on(x, y)) { if (x < x0) x0 = x; if (x > x1) x1 = x; if (y < y0) y0 = y; if (y > y1) y1 = y; }
+  if (x1 < 0) return null;
+  const bw = x1 - x0 + 1, bh = y1 - y0 + 1, aspect = bw / bh;
+  if (aspect < 0.3 || aspect > 3 || bh < 12) return null; // a belt, a watch, a tie…
+  const mid = Math.round((x0 + x1) / 2);
+  const rows = [];
+  for (let y = y0; y <= y1; y++) {
+    let runs = 0, n = 0, prev = false, first = -1, last = -1;
+    for (let x = x0; x <= x1; x++) { const o = on(x, y); if (o) { n++; if (first < 0) first = x; last = x; if (!prev) runs++; } prev = o; }
+    // A gap down the middle: between two legs.
+    rows.push({ runs, fill: n / bw, gap: first >= 0 && first < mid && last > mid && !on(mid, y) && !on(mid - 1, y) });
+  }
+  const band = (f0, f1) => rows.slice(Math.floor(f0 * bh), Math.max(Math.floor(f0 * bh) + 1, Math.floor(f1 * bh)));
+  const mean = (rs, f) => rs.reduce((s, r) => s + +f(r), 0) / rs.length;
+  const fill = (f0, f1) => mean(band(f0, f1), (r) => r.fill);
+  const upper = fill(0, 0.5) / Math.max(0.01, fill(0.5, 1)); // wider at the top: sleeves out to the sides
+  const legs = mean(band(0.6, 0.95), (r) => r.gap);
+  const arms = mean(band(0.45, 0.9), (r) => r.runs >= 3); // arm, body, arm
+  const top = fill(0.05, 0.3), middle = fill(0.4, 0.6), low = fill(0.7, 0.95);
+  if (aspect >= 1.4 && low >= 0.5 && top < 0.45) return "shoes"; // side on, a pair
+  if (legs >= 0.85 && aspect < 1) return "trousers";
+  if (legs >= 0.2 && aspect >= 1 && upper < 0.95) return "shorts";
+  if (top < 0.42 && upper < 0.68 && aspect < 0.85) return "hooded"; // a narrow hood on top
+  if (arms >= 0.3 || middle >= 0.8) return "long"; // sleeves down the sides fill the middle
+  if (top >= 0.65 && middle < 0.78 && upper >= 0.95) return "short";
+  return null;
 }
+async function readPhoto(blob) {
+  const bmp = await createImageBitmap(blob);
+  const s = 48 / Math.max(bmp.width, bmp.height);
+  const w = Math.max(1, Math.round(bmp.width * s)), h = Math.max(1, Math.round(bmp.height * s));
+  const ctx = newCanvas(w, h).getContext("2d", { willReadFrequently: true });
+  ctx.imageSmoothingQuality = "high";
+  ctx.drawImage(bmp, 0, 0, w, h);
+  bmp.close?.();
+  const data = ctx.getImageData(0, 0, w, h).data;
+  let opaque = 0;
+  for (let i = 3; i < data.length; i += 4) if (data[i] >= 128) opaque++;
+  const cutout = opaque < w * h * 0.9;
+  const [cx0, cx1, cy0, cy1] = cutout ? [0, w, 0, h] : [Math.round(w * 0.3), Math.round(w * 0.7), Math.round(h * 0.28), Math.round(h * 0.72)];
+  const px = [], wt = [];
+  for (let y = cy0; y < cy1; y++) for (let x = cx0; x < cx1; x++) {
+    const i = (y * w + x) * 4;
+    if (data[i + 3] < 128) continue;
+    px.push(toLab(data[i], data[i + 1], data[i + 2]));
+    wt.push(data[i + 3] / 255);
+  }
+  return { colors: photoColours(px, wt), shape: cutout ? outlineShape(data, w, h) : null };
+}
+function photoColours(px, wt) {
+  const K = Math.min(4, px.length);
+  if (!K) return [];
+  // Start from the lightness quartiles, so the same photo always gives the same colours.
+  const byL = px.map((_, i) => i).sort((i, j) => px[i][0] - px[j][0]);
+  let C = Array.from({ length: K }, (_, k) => px[byL[Math.floor((k + 0.5) * px.length / K)]].slice());
+  const of = new Uint8Array(px.length);
+  let sum;
+  for (let it = 0; it < 12; it++) {
+    sum = C.map(() => [0, 0, 0, 0]);
+    for (let i = 0; i < px.length; i++) {
+      const p = px[i];
+      let b = 0, bd = Infinity;
+      for (let k = 0; k < K; k++) { const c = C[k], d = ((p[0] - c[0]) / 2) ** 2 + (p[1] - c[1]) ** 2 + (p[2] - c[2]) ** 2; if (d < bd) { bd = d; b = k; } }
+      of[i] = b;
+      const s = sum[b], a = wt[i];
+      s[0] += p[0] * a; s[1] += p[1] * a; s[2] += p[2] * a; s[3] += a;
+    }
+    C = sum.map((s, k) => (s[3] ? [s[0] / s[3], s[1] / s[3], s[2] / s[3]] : C[k]));
+  }
+  const share = {};
+  let total = 0;
+  sum.forEach((s, k) => { if (!s[3]) return; const n = toneName(C[k]); share[n] = (share[n] || 0) + s[3]; total += s[3]; });
+  return Object.entries(share).sort((a, b) => b[1] - a[1]).filter(([, n], i) => i === 0 || n / total >= 0.3).slice(0, 3).map(([n]) => n);
+}
+// The garment's colours, main first (names from COLORS).
+async function detectColors(blob) { return (await readPhoto(blob)).colors; }
 function blobToBase64(blob) {
   return new Promise((r) => { const fr = new FileReader(); fr.onload = () => r(fr.result.split(",")[1]); fr.readAsDataURL(blob); });
 }
@@ -2950,7 +3155,7 @@ function buyRow(b, { label = "To buy", shops = 4, extra = "" } = {}) {
 }
 const wishBtn = (b) => verdictHTML(b);
 
-const pieceTile = (p) => `<button class="piece" data-item="${p.id}"><img class="pic-bg" src="${photoURL(p.photos?.[0])}" alt=""><span>${esc(p.name)}</span></button>`;
+const pieceTile = (p) => `<button class="piece" data-item="${p.id}">${pieceImg(p)}<span>${esc(p.name)}</span></button>`;
 // Advice that isn't an outfit: each line with photos of the pieces it mentions; buys get their own row.
 function tipsHTML(lines, refs, named) {
   const out = [];
@@ -3147,6 +3352,7 @@ function go(v) {
   if (v !== "add" && scentDraft && !scentDraft.id && !scentDraft.name.trim() && !scentDraft.photos.length) scentDraft = null; // started, nothing in it
   view = v;
   document.querySelectorAll(".tab").forEach((b) => (b.dataset.view === v ? b.setAttribute("aria-current", "page") : b.removeAttribute("aria-current")));
+  sweepURLs();
   render();
   main.scrollTop = 0;
 }
@@ -3296,7 +3502,7 @@ function anchorBar() {
   const a = state.items.find((i) => i.id === state.anchor);
   if (!a) return `<div class="row"><button class="btn" data-act="anchor-pick"><svg viewBox="0 0 24 24"><path d="${KIND_ICON.hanger}"/></svg>Start from a piece</button><span class="muted small">Pick what you want to wear and get outfits built around it.</span></div>`;
   return `<div class="card row anchor-bar">
-    <img class="pic-bg" src="${photoURL(a.photos?.[0])}" alt="">
+    ${pieceImg(a)}
     <span style="flex:1;min-width:0">Ideas built around your <b>${esc(a.name)}</b></span>
     <button class="chip" data-act="anchor-pick">Pick another</button>
     <button class="chip" data-act="anchor-clear">Show all ideas</button>
@@ -3311,7 +3517,7 @@ function openAnchorPicker() {
       <div><h1 style="font-size:28px">What do you want to wear?</h1><p class="sub">Pick a piece and the outfit ideas are built around it.</p></div>
       <button class="btn icon-btn ghost" data-close aria-label="Close"><svg viewBox="0 0 24 24"><path d="M6 6l12 12M18 6 6 18"/></svg></button>
     </div>
-    <div class="stack">${groups.map(([r, label]) => `<section><h2 style="margin:0 0 10px">${label}</h2><div class="pieces mini anchor-grid">${by[r].map((p) => `<button class="piece" data-anchor="${p.id}" aria-pressed="${state.anchor === p.id}"><img class="pic-bg" src="${photoURL(p.photos?.[0])}" alt=""><span>${esc(p.name)}</span></button>`).join("")}</div></section>`).join("") || `<p class="muted">Add some clothes first.</p>`}</div>`;
+    <div class="stack">${groups.map(([r, label]) => `<section><h2 style="margin:0 0 10px">${label}</h2><div class="pieces mini anchor-grid">${by[r].map((p) => `<button class="piece" data-anchor="${p.id}" aria-pressed="${state.anchor === p.id}">${pieceImg(p)}<span>${esc(p.name)}</span></button>`).join("")}</div></section>`).join("") || `<p class="muted">Add some clothes first.</p>`}</div>`;
   $("#sheet").hidden = false;
 }
 async function setAnchor(id) {
@@ -3339,7 +3545,7 @@ function swapPicker(o, i) {
   return `<div class="swap-pick stack" style="gap:8px">
     <span class="muted small">Instead of the ${esc(o.pieces[role]?.name)}: all ${options.length} option${options.length === 1 ? "" : "s"}, best match first.</span>
     ${cats.length > 1 ? `<div class="chips"><button class="chip" aria-pressed="${cat === "all"}" data-swapcat="${i}:all">All</button>${cats.map((c) => `<button class="chip" aria-pressed="${cat === c}" data-swapcat="${i}:${c}">${esc(catLabel(c))} <span class="muted">${options.filter((p) => p.category === c).length}</span></button>`).join("")}</div>` : ""}
-    <div class="pieces mini">${shown.map((p) => `<button class="piece" data-swapto="${i}:${role}:${p.id}">${top.has(p.id) ? `<em class="best">Best match</em>` : ""}<img class="pic-bg" src="${photoURL(p.photos?.[0])}" alt=""><span>${esc(p.name)}</span></button>`).join("")}</div>
+    <div class="pieces mini">${shown.map((p) => `<button class="piece" data-swapto="${i}:${role}:${p.id}">${top.has(p.id) ? `<em class="best">Best match</em>` : ""}${pieceImg(p)}<span>${esc(p.name)}</span></button>`).join("")}</div>
     ${!options.length ? `<span class="muted small">Nothing else of this kind for this occasion yet.</span>` : ""}
     <div class="chips">${canDrop ? `<button class="chip" data-swapto="${i}:${role}:">${DROP_LABEL[role]}</button>` : ""}${state.anchor !== o.pieces[role]?.id ? `<button class="chip" data-anchor="${o.pieces[role]?.id}">Keep it, build around it</button>` : ""}<button class="chip" data-swap="${i}:${role}">Cancel</button></div>
   </div>`;
@@ -3719,13 +3925,13 @@ function mirrorHTML() {
     <aside class="mirror-side mirror-looks" aria-label="Today's ideas">
       <h2>Today's ideas</h2>
       <div class="m-looks">${ideas.map((x, i) => `<button class="m-look" data-mlook="${i}" aria-pressed="${i === pick}">
-        <span class="look-pics">${wornList(x).filter((w) => w.role !== "coat").map((w) => `<img src="${photoURL(w.item.photos?.[0])}" alt="">`).join("")}</span>
+        <span class="look-pics">${wornList(x).filter((w) => w.role !== "coat").map((w) => pieceImg(w.item, "")).join("")}</span>
         <span class="look-text"><b>${x.planned ? "Your plan" : ["Best match", "Option 2", "Option 3"][i]}</b><span class="muted small" data-lookstate="${i}"></span></span>
       </button>`).join("") || `<p class="muted small">Add a few more tops to get outfit ideas.</p>`}</div>
       ${o ? `<h2 class="wearing-head">Wearing</h2>
       <div class="wearing">${wornList(o).map((w) => {
         const on = !off.includes(w.role);
-        return `<div class="wear-row${on ? "" : " is-off"}"><img src="${photoURL(w.item.photos?.[0])}" alt=""><span class="wear-name"><b>${esc(w.item.name)}</b><span class="muted small">${ROLE_WORD[w.role]}</span></span><button class="chip" data-mpiece="${w.role}" aria-pressed="${!on}">${on ? "Take off" : "Put on"}</button></div>`;
+        return `<div class="wear-row${on ? "" : " is-off"}">${pieceImg(w.item, "")}<span class="wear-name"><b>${esc(w.item.name)}</b><span class="muted small">${ROLE_WORD[w.role]}</span></span><button class="chip" data-mpiece="${w.role}" aria-pressed="${!on}">${on ? "Take off" : "Put on"}</button></div>`;
       }).join("")}</div>
       ${state.event?.day === "tomorrow" ? `<button class="btn primary" data-plan="${pick}">Plan it for tomorrow</button>` : `<button class="btn primary" data-wear="${pick}" data-mirror="1">Wear this today</button>`}` : ""}
     </aside>
@@ -3823,12 +4029,27 @@ function filteredItems() {
 function renderWardrobe() {
   if (state.wardView === "report") return renderReport();
   if (state.wardSide === "scents") return renderCabinet();
-  const list = filteredItems();
+  const types = typeRow(), top = wardTop(types);
+  wardTopKey = pressFree(wardTop(""));
+  wardTypesKey = pressFree(types);
+  main.innerHTML = `<div id="ward-top">${top}</div>${state.items.length
+    ? `<div class="grid" id="grid"></div><p class="muted" id="grid-none" hidden>Nothing matches these filters.</p>`
+    : emptyState("No clothes yet", "Snap a photo of each piece to start your catalogue.", `<button class="btn primary" data-go="add">Add clothes</button><button class="btn" data-act="seed">Load sample wardrobe</button>`)}`;
+  refreshGrid();
+}
+// Inside a section (e.g. Accessories): one chip per type you own, e.g. Watches, Bracelets.
+function typeRow() {
+  const f = state.filters;
+  const types = CATS.filter((c) => c.slot === f.slot && state.items.some((i) => i.category === c.id));
+  return types.length > 1 ? `<div class="chips scroller" data-row="types"><button class="chip" aria-pressed="${f.cat === "all"}" data-catf="all">All ${esc(SLOTS[f.slot].toLowerCase())}</button>${types.map((c) => `<button class="chip" aria-pressed="${f.cat === c.id}" data-catf="${c.id}">${c.label} <span class="muted">${state.items.filter((i) => i.category === c.id).length}</span></button>`).join("")}</div>` : "";
+}
+// The head, the filters and the laundry line above the grid.
+function wardTop(types = typeRow()) {
   const usedColors = [...new Set(state.items.flatMap((i) => i.colors || []))];
   const usedStyles = Object.keys(STYLES).filter((s) => state.items.some((i) => (i.styles || []).includes(s)));
   const f = state.filters;
   const washing = inWash().length;
-  main.innerHTML = `
+  return `
     <div class="head">
       <div><h1>Wardrobe</h1><p class="sub">${state.items.length} pieces${washing ? ` · ${washing} in the wash` : ""}</p></div>
       <div class="chips"><button class="chip report-btn" data-act="report">${ICON_CHART}Report</button>${[["recent", "Newest"], ["most", "Most worn"], ["least", "Least worn"], ["name", "A–Z"]].map(([k, l]) => `<button class="chip" aria-pressed="${f.sort === k}" data-sort="${k}">${l}</button>`).join("")}</div>
@@ -3843,23 +4064,90 @@ function renderWardrobe() {
         ${state.items.some((i) => i.disliked) || f.slot === "disliked" ? `<button class="chip" aria-pressed="${f.slot === "disliked"}" data-slot="disliked">Disliked <span class="muted">${state.items.filter((i) => i.disliked).length}</span></button>` : ""}
         ${Object.entries(SLOTS).map(([k, l]) => `<button class="chip" aria-pressed="${f.slot === k}" data-slot="${k}">${l}</button>`).join("")}
       </div>
-      ${(() => {
-        // Inside a section (e.g. Accessories): one chip per type you own, e.g. Watches, Bracelets.
-        const types = CATS.filter((c) => c.slot === f.slot && state.items.some((i) => i.category === c.id));
-        return types.length > 1 ? `<div class="chips scroller"><button class="chip" aria-pressed="${f.cat === "all"}" data-catf="all">All ${esc(SLOTS[f.slot].toLowerCase())}</button>${types.map((c) => `<button class="chip" aria-pressed="${f.cat === c.id}" data-catf="${c.id}">${c.label} <span class="muted">${state.items.filter((i) => i.category === c.id).length}</span></button>`).join("")}</div>` : "";
-      })()}
+      ${types}
       ${usedStyles.length > 1 ? `<div class="chips scroller"><button class="chip" aria-pressed="${f.style === "all"}" data-style="all">Any style</button>${usedStyles.map((s) => `<button class="chip" aria-pressed="${f.style === s}" data-style="${esc(s)}">${styleLabel(s)}</button>`).join("")}</div>` : ""}
       ${usedColors.length > 1 ? `<div class="chips scroller"><button class="chip" aria-pressed="${f.color === "all"}" data-color="all">Any colour</button>${usedColors.map((c) => `<button class="chip" aria-pressed="${f.color === c}" data-color="${esc(c)}"><span class="dot" style="background:${COLORS[c]?.hex}"></span>${esc(cap(c))}</button>`).join("")}</div>` : ""}
     </div>
-    ${f.slot === "wash" ? `<div class="row laundry-row"><span class="muted small">${washing ? "These pieces are left out of outfit ideas until they're back." : "Nothing in the wash. Everything is back in your wardrobe."}</span>${washing ? `<button class="btn" data-act="wash-done">Laundry done: all ${washing} back</button>` : ""}</div>` : ""}
-    ${list.length ? `<div class="grid" id="grid">${list.map(itemTile).join("")}</div>` :
-      state.items.length ? `<p class="muted">Nothing matches these filters.</p>` :
-      emptyState("No clothes yet", "Snap a photo of each piece to start your catalogue.", `<button class="btn primary" data-go="add">Add clothes</button><button class="btn" data-act="seed">Load sample wardrobe</button>`)}`;
+    ${f.slot === "wash" ? `<div class="row laundry-row"><span class="muted small">${washing ? "These pieces are left out of outfit ideas until they're back." : "Nothing in the wash. Everything is back in your wardrobe."}</span>${washing ? `<button class="btn" data-act="wash-done">Laundry done: all ${washing} back</button>` : ""}</div>` : ""}`;
 }
-function itemTile(i) {
+// A filter or the order changed: the grid keeps its tiles, and the filter chips just change which
+// are pressed. Picking a section only swaps its row of types; the filters are drawn again only
+// when other chips come or go (each chip row then keeps where it was scrolled to).
+let wardTopKey = "", wardTypesKey = "";
+const pressFree = (html) => html.replace(/ aria-pressed="(?:true|false)"/g, "");
+function setPressed(els, html) {
+  const pressed = Array.from(html.matchAll(/ aria-pressed="(true|false)"/g), (m) => m[1]);
+  els.forEach((el, k) => { if (pressed[k] && el.getAttribute("aria-pressed") !== pressed[k]) el.setAttribute("aria-pressed", pressed[k]); });
+}
+function refilter() {
+  const top = $("#ward-top");
+  if (view !== "wardrobe" || !top || !$("#grid")) return render();
+  const types = typeRow(), rest = wardTop(""), key = pressFree(rest);
+  let scrolled = null;
+  const rowKey = (el) => el.firstElementChild?.getAttributeNames().find((a) => a.startsWith("data-")) || "";
+  if (key !== wardTopKey) {
+    scrolled = new Map([...top.querySelectorAll(".scroller")].map((el) => [rowKey(el), el.scrollLeft]));
+    top.innerHTML = wardTop(types);
+    wardTopKey = key;
+    wardTypesKey = pressFree(types);
+  } else {
+    setPressed(top.querySelectorAll('[aria-pressed]:not([data-row="types"] *)'), rest);
+    const row = top.querySelector('[data-row="types"]');
+    if (pressFree(types) !== wardTypesKey) {
+      row?.remove();
+      if (types) top.querySelector(".toolbar > .scroller").insertAdjacentHTML("afterend", types);
+      wardTypesKey = pressFree(types);
+    } else if (row) setPressed(row.querySelectorAll("[aria-pressed]"), types);
+  }
+  refreshGrid();
+  // Last, so the page is laid out once: setting scrollLeft lays it out straight away.
+  if (scrolled) for (const el of top.querySelectorAll(".scroller")) { const x = scrolled.get(rowKey(el)); if (x) el.scrollLeft = x; }
+}
+function refreshGrid() {
+  const grid = $("#grid");
+  if (!grid) return;
+  const list = filteredItems();
+  fillGrid(grid, list);
+  $("#grid-none").hidden = list.length > 0;
+}
+// The grid keeps one tile per piece and reuses it: filtering, searching and sorting only show,
+// hide and move tiles that are already there, so no tile is built and no photo decoded again
+// (about 1 ms for 100+ pieces). A tile is only built again when something on it changes.
+const wardTiles = new Map(); // piece id → { key, el }
+function wardTile(i) {
+  const key = itemTile(i, ""); // the tile without its photo address (that changes once the thumbnail is made)
+  let t = wardTiles.get(i.id);
+  if (!t || t.key !== key) {
+    const tpl = document.createElement("template");
+    tpl.innerHTML = itemTile(i).trim();
+    wardTiles.set(i.id, (t = { key, el: tpl.content.firstElementChild }));
+  } else {
+    const img = t.el.querySelector("img[data-thumb]"), src = thumbURL(i);
+    if (img && img.getAttribute("src") !== src) img.src = src;
+  }
+  return t.el;
+}
+function fillGrid(grid, list) {
+  const shown = new Set();
+  let prev = null;
+  for (const i of list) {
+    const el = wardTile(i);
+    shown.add(el);
+    el.hidden = false;
+    const at = prev ? prev.nextElementSibling : grid.firstElementChild;
+    if (at !== el) grid.insertBefore(el, at); // only tiles out of order move
+    prev = el;
+  }
+  for (const el of [...grid.children]) {
+    if (shown.has(el)) continue;
+    if (wardTiles.get(el.dataset.item)?.el === el) el.hidden = true; else el.remove(); // filtered out, or an old tile
+  }
+  grid.hidden = !list.length;
+}
+function itemTile(i, src) {
   const sub = [i.brand, (i.styles || []).slice(0, 1).map(styleLabel)[0]].filter(Boolean).join(" · ") || catLabel(i.category);
   return `<button class="item" data-item="${i.id}">
-    <div class="pic${i.wash ? " washing" : ""}"><img class="thumb pic-bg" loading="lazy" src="${photoURL(i.photos?.[0])}" alt="">${isFavourite(i) ? `<span class="fav">★ ${starsOf(i)}</span>` : ""}${i.wash ? '<span class="wash-badge">In the wash</span>' : leaving(i) ? `<span class="wash-badge">To ${i.fate.status}</span>` : ""}</div>
+    <div class="pic${i.wash ? " washing" : ""}">${pieceImg(i, "thumb pic-bg", src)}${isFavourite(i) ? `<span class="fav">★ ${starsOf(i)}</span>` : ""}${i.wash ? '<span class="wash-badge">In the wash</span>' : leaving(i) ? `<span class="wash-badge">To ${i.fate.status}</span>` : ""}</div>
     <div class="meta"><span class="name">${esc(i.name)}</span><span class="info">${swatches(i.colors)} ${esc(sub)}</span></div>
   </button>`;
 }
@@ -3884,7 +4172,7 @@ function openItem(id, showOriginal = false) {
       <button class="btn" data-dislike="${i.id}" aria-pressed="${!!i.disliked}">${i.disliked ? "Disliked" : "Dislike"}</button>
       ${i.disliked ? `<span class="muted small">Left out of outfit ideas. You can still build outfits around it.</span>` : ""}
     </div>
-    <div class="gallery">${pics.map((p) => `<img class="pic-bg" src="${photoURL(p)}" alt="">`).join("")}</div>
+    <div class="gallery">${pics.map((p) => `<img class="pic-bg" src="${photoURL(p)}" decoding="async" alt="">`).join("")}</div>
     ${i.originals?.length ? `<div class="row" style="margin-top:10px"><button class="chip" data-orig="${i.id}" data-show="${showOriginal ? 0 : 1}">${showOriginal ? "Show cut-out" : "Show original photo"}</button></div>` : ""}
     <div class="kv" style="margin:18px 0">
       <div><b>Style</b>${(i.styles || []).map(styleLabel).join(", ") || "Not set"}</div>
@@ -4184,7 +4472,7 @@ function renderAdd() {
       <div class="stack">
         ${lensHTML(d)}
         <div class="field"><label for="f-name">Name</label><input id="f-name" class="input" data-input="name" value="${esc(d.name || "")}" placeholder="${esc(autoName(d) || "e.g. Navy cable-knit sweater")}"></div>
-        <div class="field"><label>Type</label>${Object.entries(SLOTS).map(([slot, label]) => `<div class="type-group"><span class="muted small">${label}</span><div class="chips">${CATS.filter((c) => c.slot === slot).map((c) => `<button class="chip" aria-pressed="${d.category === c.id}" data-cat="${c.id}">${c.label}</button>`).join("")}</div></div>`).join("")}</div>
+        <div class="field"><label>Type</label>${!d.category && SHAPE_TYPES[d.shape] ? `<div class="type-group type-guess"><span class="muted small">Looks like ${SHAPE_WORDS[d.shape]}</span><div class="chips">${SHAPE_TYPES[d.shape].map((c) => `<button class="chip" data-cat="${c}">${CAT[c].label}</button>`).join("")}</div></div>` : ""}${Object.entries(SLOTS).map(([slot, label]) => `<div class="type-group"><span class="muted small">${label}</span><div class="chips">${CATS.filter((c) => c.slot === slot).map((c) => `<button class="chip" aria-pressed="${d.category === c.id}" data-cat="${c.id}">${c.label}</button>`).join("")}</div></div>`).join("")}</div>
         <div class="field"><label for="f-brand">Brand</label>
           <input id="f-brand" class="input" data-input="brand" value="${esc(d.brand)}" placeholder="e.g. Lacoste" list="brand-list" autocomplete="off">
           <datalist id="brand-list">${BRAND_LIST.map(([n]) => `<option value="${esc(n)}"></option>`).join("")}</datalist>
@@ -4253,7 +4541,12 @@ async function preparePhoto(p, d, cut = state.settings.autoCutout) {
     }
     if (p.cutSrc && !p.manual) p.rot = await uprightAngle(p.cutSrc, kindOf(d.category));
     await applyRotation(p);
-    if (d.photos[0] === p && !d.keepColors) d.colors = await detectColors(shown(p)).catch(() => d.colors);
+    if (d.photos[0] === p) {
+      // The colours and, on a cut-out, the outline (a hint in the Type field): on the device, no tokens.
+      const seen = await readPhoto(shown(p)).catch(() => null);
+      if (seen && !d.keepColors) d.colors = seen.colors;
+      d.shape = seen?.shape || null;
+    }
   } catch {
     if (draft === d && view === "add") toast("Couldn't separate the garment from the background");
   }
@@ -4893,7 +5186,7 @@ function lensHTML(d) {
   const picked = l.items[l.picked];
   if (picked && !l.open) return `<div class="row"><span class="muted small" style="flex:1;min-width:0">From Google Lens: ${esc([picked.title, picked.shop].filter(Boolean).join(" · "))}</span><button class="chip" data-act="lens-more">Other matches</button></div>`;
   return `<div class="field"><label>Google Lens found <span style="text-transform:none;font-weight:400">(tap the one you have)</span></label>
-    <div class="real">${l.items.map((m, k) => `<button class="real-card lens-card" data-lens="${k}" aria-pressed="${l.picked === k}" ${d.scanningTag ? "disabled" : ""}><img class="real-img" src="${esc(m.thumb)}" referrerpolicy="no-referrer" loading="lazy" alt=""><b>${esc(m.title)}</b><span class="muted small">${esc([m.shop, m.price].filter(Boolean).join(" · "))}</span></button>`).join("")}</div></div>`;
+    <div class="real">${l.items.map((m, k) => `<button class="real-card lens-card" data-lens="${k}" aria-pressed="${l.picked === k}" ${d.scanningTag ? "disabled" : ""}><img class="real-img" src="${esc(m.thumb)}" referrerpolicy="no-referrer" loading="lazy" decoding="async" alt=""><b>${esc(m.title)}</b><span class="muted small">${esc([m.shop, m.price].filter(Boolean).join(" · "))}</span></button>`).join("")}</div></div>`;
 }
 async function pickLens(d, k) {
   const m = d.lens?.items?.[k];
@@ -5023,7 +5316,7 @@ function updateCamera() {
   const back = cam.shots.length === 1;
   cam.el.querySelector(".cam-step").textContent = back ? "2 of 2 · Back: flip it over" : "1 of 2 · Front";
   cam.el.querySelector('[data-cam="skip"]').hidden = !back;
-  cam.el.querySelector(".cam-thumbs").innerHTML = cam.shots.map((b) => `<img src="${photoURL(b)}" alt="">`).join("");
+  cam.el.querySelector(".cam-thumbs").innerHTML = cam.shots.map((b) => `<img src="${photoURL(b)}" decoding="async" alt="">`).join("");
 }
 function stopCamera() {
   cam.stream?.getTracks().forEach((t) => t.stop());
@@ -5073,8 +5366,10 @@ async function saveDraft(next = false) {
   if (d.look) applyLook(item, d.look);
   // Added from Must-Buy's Bought, or the only piece you bought in this type that isn't in yet.
   const sameType = !existing && !d.want ? pendingBuys(true).filter((w) => w.cat === item.category) : [];
+  // Colours from the photo when nothing set them (no AI, the detection was still running…). No tokens.
+  if (!item.colors?.length && item.photos[0] instanceof Blob) item.colors = await detectColors(item.photos[0]).catch(() => []);
   await store.put("items", item);
-  if (existing) Object.assign(existing, item); else state.items.push(item);
+  if (existing) { revokeGarmentURLs(existing.id, item); Object.assign(existing, item); } else state.items.push(item);
   const bought = (d.want && state.wants.find((w) => w.id === d.want)) || (sameType.length === 1 ? sameType[0] : null);
   if (bought) { bought.boughtItemId = item.id; await store.put("wants", bought); state.buying = null; }
   lookupBrand(item.brand);
@@ -6041,7 +6336,7 @@ function dayCellHTML(date, inMonth = date.slice(0, 7) === planner.month) {
   return `<button class="cal-cell${inMonth ? "" : " out"}${date < now ? " past" : ""}${date === now ? " today" : ""}" data-date="${date}" data-calday="${date}" aria-pressed="${date === planner.sel}" aria-label="${esc(label)}">
     <span class="cal-num">${+date.slice(8)}</span>${dots ? `<span class="cal-dots" aria-hidden="true">${"<i></i>".repeat(dots)}</span>` : ""}
     ${f ? `<span class="cal-wx">${wxIcon(f.code)}<span>${fmtTemp(f.max)}<i>${fmtTemp(f.min)}</i></span></span>` : ""}
-    ${thumbs.length ? `<span class="cal-fit${worn?.length ? " worn" : ""}">${thumbs.map((p) => `<img src="${photoURL(p.photos[0])}" alt="" loading="lazy" decoding="async">`).join("")}${removed ? `<b class="cal-flag" aria-hidden="true">!</b>` : ""}</span>`
+    ${thumbs.length ? `<span class="cal-fit${worn?.length ? " worn" : ""}">${thumbs.map((p) => pieceImg(p, "")).join("")}${removed ? `<b class="cal-flag" aria-hidden="true">!</b>` : ""}</span>`
       : parts.length || removed ? `<span class="cal-fit"><b class="cal-flag" aria-hidden="true">${removed ? "!" : "✓"}</b></span>` : ""}
     ${plan?.notes ? `<span class="cal-txt">${esc(plan.notes)}</span>` : ""}
   </button>`;
@@ -7012,7 +7307,7 @@ function photosHTML(b) {
   const safe = (u) => (/^https?:\/\//i.test(u || "") ? u : "");
   return `<div class="real">
     ${ph.note ? `<p class="muted small" style="margin:0;grid-column:1/-1">${esc(ph.note)}</p>` : ""}
-    ${ph.items.map((p) => `<a class="real-card" href="${esc(safe(p.url))}" target="_blank" rel="noopener"><img class="real-img" src="${esc(safe(p.image))}" referrerpolicy="no-referrer" loading="lazy" alt=""><b>${esc(p.title)}</b><span class="muted small">${esc([p.shop, p.price].filter(Boolean).join(" · "))}</span></a>`).join("")}
+    ${ph.items.map((p) => `<a class="real-card" href="${esc(safe(p.url))}" target="_blank" rel="noopener"><img class="real-img" src="${esc(safe(p.image))}" referrerpolicy="no-referrer" loading="lazy" decoding="async" alt=""><b>${esc(p.title)}</b><span class="muted small">${esc([p.shop, p.price].filter(Boolean).join(" · "))}</span></a>`).join("")}
     ${!ph.items.length && ph.links.length ? `<div class="stack" style="gap:6px"><span class="muted small">${ph.noServer ? "Photos can only be loaded on the hosted app. Products found:" : "No photos could be loaded from these shops. Products found:"}</span>${ph.links.map((p) => `<a class="btn ghost" href="${esc(safe(p.url))}" target="_blank" rel="noopener">${esc([p.title, p.shop, p.price].filter(Boolean).join(" · "))}</a>`).join("")}</div>` : ""}
     ${!ph.items.length && !ph.links.length ? `<p class="muted small" style="margin:0">No products found this time. The shop buttons above still search for it.</p>` : ""}
   </div>`;
@@ -7126,7 +7421,7 @@ function loadProducts(b) {
 }
 // Inside a picture tile: your own photo, a product photo, or the drawing.
 function tileInner(b) {
-  if (b.photo) return `<img src="${photoURL(b.photo)}" alt="">`;
+  if (b.photo) return `<img src="${photoURL(b.photo)}" decoding="async" alt="">`;
   const img = productsOn() && productsFor(b)?.[0]?.image;
   // The drawing stays underneath, so a photo that won't load just goes away.
   return garmentArt(b) + (img ? `<img class="prod-img" src="${esc(img)}" referrerpolicy="no-referrer" alt="">` : "");
@@ -7452,7 +7747,7 @@ function seasonDots(sc) {
 function scentTile(sc) {
   const kind = [sc.concentration, (sc.families || []).slice(0, 2).map((f) => SCENT_FAMILIES[f].toLowerCase()).join(" ")].filter(Boolean).join(" · ");
   return `<button class="item bottle" data-scent="${sc.id}">
-    <div class="pic">${sc.photos?.[0] ? `<img class="thumb pic-bg" loading="lazy" src="${photoURL(sc.photos[0])}" alt="">` : `<div class="thumb bottle-ph">${ICON_BOTTLE}</div>`}${isFavourite(sc) ? `<span class="fav">★ ${starsOf(sc)}</span>` : ""}${runningLow(sc) ? `<span class="wash-badge">${FILLS[sc.fill]}</span>` : ""}</div>
+    <div class="pic">${sc.photos?.[0] ? `<img class="thumb pic-bg" loading="lazy" decoding="async" src="${photoURL(sc.photos[0])}" alt="">` : `<div class="thumb bottle-ph">${ICON_BOTTLE}</div>`}${isFavourite(sc) ? `<span class="fav">★ ${starsOf(sc)}</span>` : ""}${runningLow(sc) ? `<span class="wash-badge">${FILLS[sc.fill]}</span>` : ""}</div>
     <div class="meta"><span class="name">${esc(sc.name)}</span><span class="info">${esc(sc.house || "")}</span><span class="info">${seasonDots(sc)}${esc(kind)}</span></div>
   </button>`;
 }
@@ -7498,7 +7793,7 @@ function openScent(id) {
       <button class="btn" data-scdislike="${sc.id}" aria-pressed="${!!sc.disliked}">${sc.disliked ? "Disliked" : "Dislike"}</button>
       ${sc.disliked ? `<span class="muted small">Won't be suggested with outfits.</span>` : ""}
     </div>
-    ${sc.photos?.length ? `<div class="gallery bottle-gallery">${sc.photos.map((ph) => `<img class="pic-bg" src="${photoURL(ph)}" alt="">`).join("")}</div>` : ""}
+    ${sc.photos?.length ? `<div class="gallery bottle-gallery">${sc.photos.map((ph) => `<img class="pic-bg" src="${photoURL(ph)}" decoding="async" alt="">`).join("")}</div>` : ""}
     ${notes.length ? `<div class="kv scent-notes">${notes.map(([l, list]) => `<div><b>${l}</b>${esc(list.join(", "))}</div>`).join("")}</div>` : ""}
     ${sc.families?.length || sc.accords?.length ? `<div class="chips" style="margin:14px 0">${(sc.families || []).map((f) => `<span class="chip on">${SCENT_FAMILIES[f]}</span>`).join("")}${(sc.accords || []).filter((a) => !(sc.families || []).some((f) => scentNorm(SCENT_FAMILIES[f]) === scentNorm(a))).map((a) => `<span class="chip">${esc(a)}</span>`).join("")}</div>` : ""}
     <div class="pbars">${PROFILE_BARS.map(([k, l, lo, hi]) => p[k] == null ? "" : `<div class="pbar"><span>${l}</span><i style="--v:${(p[k] - lo) / (hi - lo)}"></i><span class="muted small">${PROFILE_WORDS[k][p[k]]}</span></div>`).join("")}</div>
@@ -8321,10 +8616,10 @@ document.addEventListener("click", async (e) => {
     toast("Planned. It'll be first on Today tomorrow morning.");
     return render();
   }
-  if (ds.slot) { state.filters.slot = ds.slot; state.filters.cat = "all"; return render(); }
-  if (ds.catf) { state.filters.cat = ds.catf; return render(); }
-  if (ds.color) { state.filters.color = ds.color; return render(); }
-  if (ds.style) { state.filters.style = ds.style; return render(); }
+  if (ds.slot) { state.filters.slot = ds.slot; state.filters.cat = "all"; return refilter(); }
+  if (ds.catf) { state.filters.cat = ds.catf; return refilter(); }
+  if (ds.color) { state.filters.color = ds.color; return refilter(); }
+  if (ds.style) { state.filters.style = ds.style; return refilter(); }
   if (ds.stylego) { Object.assign(state.filters, { style: ds.stylego, slot: "all", color: "all", q: "" }); return go("wardrobe"); }
   if (ds.brandmerge) {
     const [from, to] = ds.brandmerge.split("|");
@@ -8340,7 +8635,7 @@ document.addEventListener("click", async (e) => {
     return render();
   }
   if (ds.brandgo) { Object.assign(state.filters, { q: ds.brandgo, style: "all", slot: "all", color: "all" }); return go("wardrobe"); }
-  if (ds.sort) { state.filters.sort = ds.sort; return render(); }
+  if (ds.sort) { state.filters.sort = ds.sort; return refilter(); }
   if (ds.cat && draft) {
     const prev = CAT[draft.category];
     draft.category = ds.cat;
@@ -8523,7 +8818,7 @@ document.addEventListener("click", async (e) => {
     const out = $("#pair-answer");
     const matches = pairingsFor(it);
     out.innerHTML = matches.length
-      ? `<h2>Goes well with</h2><div class="grid">${matches.map(itemTile).join("")}</div>`
+      ? `<h2>Goes well with</h2><div class="grid">${matches.map((m) => itemTile(m)).join("")}</div>`
       : `<p class="muted">Add pieces from other categories (bottoms, shoes, jackets) to see pairings.</p>`;
     if (aiReady()) {
       out.insertAdjacentHTML("beforeend", `<div id="pair-ai" class="ai-answer" style="margin-top:14px"></div>`);
@@ -8814,9 +9109,7 @@ document.addEventListener("input", (e) => {
   const v = e.target.value;
   if (k === "q") {
     state.filters.q = v;
-    const grid = $("#grid");
-    if (grid) grid.innerHTML = filteredItems().map(itemTile).join("");
-    else render();
+    if ($("#grid")) refreshGrid(); else render();
     return;
   }
   if (k.startsWith("mb-")) return bodyInput(k.slice(3), v);
@@ -8898,6 +9191,7 @@ previewSample.then((f) => {
 go("today");
 syncLoop();
 setTimeout(lookupWardrobeBrands, 3000);
+setTimeout(warmThumbs, 2500);
 {
   // Join the shared wardrobe before deciding whether this device needs the samples.
   await Promise.race([syncFirst, new Promise((r) => setTimeout(r, 4000))]);

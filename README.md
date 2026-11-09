@@ -191,6 +191,19 @@ Every piece is shown the same way: upright, collar or waistband at the top, cent
 
 The in-app camera needs https or localhost. Where it isn't available, the system camera opens instead, once for the front and once for the back.
 
+### Colours and type from the photo (on the device, no AI tokens)
+When a cut-out is ready, one small pass over it (48 px) reads its colours and its outline:
+- **Colours**: the garment's pixels are grouped into four colours (k-means in CIELAB, with lightness at half weight, since shading on cloth is the same colour), and each is named after the closest wardrobe colour *as it comes out in photos*: photos are duller than the colour swatches, black reads dark grey and beige nearly grey, so the app compares with tones measured on a real wardrobe's labelled pieces. The main colour comes first; a second (or third) is added when it covers at least 30% of the piece. On the 30 sample photos the main colour is right for 15 (8 with the swatch colours). With an AI key, the AI's colours still win.
+- **Type hint**: until a type is picked, the Type field shows "Looks like trousers / shorts / shoes / a hooded top / a top with long sleeves / a short-sleeved top" with those types first. It comes from the outline: its width against its height, a gap between two legs, a narrow hood on top, sleeves down the sides. On the samples it's right for 29 of 30 (and says nothing rather than guess for polos, boots and accessories).
+- A piece saved with no colours gets them from its photo when it's saved.
+
+### Photos on the device
+- Photos are kept as Blobs in IndexedDB (stored as files beside the records), never as base64 text; a photo still held as a `data:` URL (from a very old backup or version) is turned into a Blob once when the app starts. Backups (Settings > Export backup) still write photos as text, so the file stands on its own.
+- Grids and lists (Wardrobe, outfit cards, the mirror's lists, the Calendar) show a **thumbnail** of each piece's first photo, at most 512 px, made once in the background and kept on this device only (the `thumbs` store). Until it's made, the photo itself is shown. A new photo (also one changed on another device) gets a new thumbnail.
+- Each photo gets one object URL. URLs of photos that are gone are revoked, so they don't stay in memory: a piece's when it's deleted or changed (`revokeGarmentURLs`), and everything else no longer used when you move to another screen.
+- **Wardrobe** keeps one tile per piece: filtering, searching and sorting show, hide and move the tiles already there, and the filter chips only change which is pressed (picking a section swaps just its row of types). With 131 pieces a chip tap takes about 2 ms and a search keystroke about 1 ms (headless Chromium, `tools/photos.test.mjs`), against 8 and 4 ms when the screen was drawn again. Tiles off the screen aren't laid out until they scroll near. Pictures load lazily and decode off the main thread.
+- **Touch screen**: no pinch or double-tap zoom, no rubber-band bounce, no long-press menu or dragging on pictures, and no blur effects (nothing over the 3D stage asks the GPU to blur it).
+
 ### Brand and style recognition
 - **Offline.** About 85 brands are built in with a tier and their usual styles, so typing "Lacoste" sets the style to preppy and smart casual. Without a known brand, the style comes from the garment type and tags (cargo or graphic means streetwear, knit means smart casual, plain means minimal).
 - **Any other brand (Wikidata, free, no key).** The Brand box suggests matching brands from Wikidata as you type, and brands that aren't built in are looked up there once and remembered on the device. Wikidata only gives a short description ("British streetwear brand", "Italian luxury fashion company"), so the app reads the style from it, and the tier only when the description says luxury or fast fashion. The built-in list stays the reliable source for tiers. Lookups need internet. If Wikidata asks the app to slow down, it waits 10 minutes.
@@ -255,6 +268,7 @@ Settings shows how many requests and tokens were used this month.
 - `fashion-model/`: a Python menswear model that learns from videos, magazines and styling rules and builds the "fashion bible" (never served; see its README). Training writes `fashion-bible.json` for the app
 - `tools/stylist.test.mjs`: checks that `stylist.js` judges outfits exactly like the Python model (`node --test tools/stylist.test.mjs`)
 - `tools/label.test.mjs`: checks `label.js` (`node --test tools/label.test.mjs`)
+- `tools/photos.test.mjs`: checks in headless Chromium how photos are kept and shown: the database upgrade, colours and the type hint on the samples, thumbnails, the wardrobe grid's speed, freeing photo URLs and the touch-screen rules (`node --test tools/photos.test.mjs`)
 - `tools/calendar.test.mjs`: checks the Calendar's logic in `calendar.js` (`node --test tools/calendar.test.mjs`)
 - `tools/cutout.test.mjs`: checks the cut-out pixels in `cutout-editor.js`: the colour cut-out, the tight box, the edge clean-up, the frame (`node --test tools/cutout.test.mjs`)
 - `tools/cutout-editor.e2e.mjs`: the cut-out pipeline and the editor in headless Chromium, plus the 3D mirror's baker on re-framed cut-outs (`node tools/cutout-editor.e2e.mjs`; needs Playwright)
