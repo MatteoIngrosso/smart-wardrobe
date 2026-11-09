@@ -6218,13 +6218,12 @@ function renderPlan() {
   const grid = monthGrid(planner.month);
   const title = new Date(`${planner.month}-01T12:00`).toLocaleDateString(undefined, { month: "long", year: "numeric" });
   const week = grid.slice(0, 7).map((d) => new Date(`${d.date}T12:00`).toLocaleDateString(undefined, { weekday: "short" }));
-  const away = planner.month !== now.slice(0, 7) || planner.sel !== now;
   main.innerHTML = `
     <div class="head"><div><h1>Calendar</h1><p class="sub">Plan what to wear. The next two weeks show the forecast: tap a day for an outfit that suits it.</p></div></div>
     <div class="cal-wrap">
       <section class="card cal-month">
         <div class="row cal-nav"><button class="btn ghost icon-btn" data-calmonth="-1" aria-label="Previous month"><svg viewBox="0 0 24 24"><path d="M15 5l-7 7 7 7"/></svg></button>
-          <h2>${esc(title)}</h2>${away ? `<button class="chip" data-calday="${now}">Today</button>` : ""}
+          <h2>${esc(title)}</h2><button class="chip" data-calday="${now}">Today</button>
           <button class="btn ghost icon-btn" data-calmonth="1" aria-label="Next month"><svg viewBox="0 0 24 24"><path d="M9 5l7 7-7 7"/></svg></button></div>
         <div class="cal-grid">${week.map((w) => `<span class="cal-wd" aria-hidden="true">${esc(w)}</span>`).join("")}${grid.map((d) => dayCellHTML(d.date, d.inMonth)).join("")}</div>
         ${forecastNote()}
