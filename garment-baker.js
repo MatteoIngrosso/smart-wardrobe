@@ -15,10 +15,10 @@
 //      The last 24 px all round fade into the plain fabric (cosine), so no rectangle can show where
 //      the panel meets the stage's fabric.
 //   5. Normal map (Sobel of the panel's luminance, subtle) and roughness map, front and back side by side.
-import { subTypeOf, lengthOf, PANEL_SIZE } from "./avatar-config.js";
+import { subTypeOf, lengthOf, PANEL_SIZE, cleanCutMeta } from "./avatar-config.js";
 
 /** Raise it when the bake changes, so every piece is baked again. */
-export const BAKER_VERSION = 4;
+export const BAKER_VERSION = 5;
 
 const DB_NAME = "wardrobe-garments", STORE = "baked";
 const SLOT_OF = { tee: "top", tank: "top", longsleeve: "top", hoodie: "layer", sweater: "layer", trackjacket: "layer", bomber: "jacket", puffer: "jacket", jacket_open: "jacket", jeans: "bottoms", cargo: "bottoms", jogger: "bottoms", leggings: "bottoms", sneakers: "shoes", boots: "shoes" };
@@ -96,10 +96,15 @@ export async function bakeGarment(item, { front, back } = {}, opts = {}) {
   const edge = (rgb) => (kind === "shoes" ? rgb : featherEdge(rgb, PW, PH, fabric, tile)); // shoes: the sole runs along the edge
   const frontRGB = edge(await finishPanel(fp, fabric, tile));
   await yieldNow();
+  const shape = shapeOf(fa, kind);
+  const crotchV = kind === "bottoms" ? crotchOf(fp) : null;
   let backRGB;
   if (bp) backRGB = edge(await finishPanel(bp, fabric, tile));
-  else if (kind === "top") backRGB = plainPanel(PW, PH, fabric, tile);
-  else backRGB = kind === "bottoms" ? mirrored(frontRGB, PW, PH) : frontRGB.slice(); // shoes: the same side again
+  else if (kind === "shoes") backRGB = frontRGB.slice(); // the same side again
+  else {
+    // no back photo: a back made from the front (its prints and front details out, the back's seams in)
+    backRGB = edge(synthBack(frontRGB, PW, PH, fabric, tile, { kind, sub, valid: fp.valid, crotchV, ratio: shape?.ratio, aspect: shape?.aspect, denim: isDenim(item) }).rgb);
+  }
   mark("panels");
   await yieldNow();
 
@@ -130,8 +135,11 @@ export async function bakeGarment(item, { front, back } = {}, opts = {}) {
     fit: item.fit || undefined,
     length: lengthOf(item),
     hasBack: !!bp,
+    backSynth: !bp && kind !== "shoes" ? true : undefined,
+    shape: shape || undefined,
+    adjust: adjustOf(item),
   };
-  if (kind === "bottoms") { const c = crotchOf(fp); if (c) asset.crotchV = c; }
+  if (crotchV) asset.crotchV = crotchV;
   if (fabric.trim) asset.trimColor = hexOf(fabric.trim);
   if (fabric.second) asset.secondaryColor = hexOf(fabric.second);
   if (kind === "shoes") {
@@ -171,23 +179,42 @@ export async function cutoutPanels(item, { front, back } = {}) {
   if (!sub || !front) return null;
   const kind = KIND_OF[sub];
   if (kind === "shoes") return null;
-  const one = async (blob) => {
+  let seen = null; // the front as cropped: what a back is made from when there's no back photo
+  const one = async (blob, keep) => {
     const a = await analysePhoto(blob, kind);
-    const { w, data, mask, core } = a;
+    const { w, data, mask, eroded, core } = a;
     const cw = core.x1 - core.x0 + 1, ch = core.y1 - core.y0 + 1, k = Math.min(1, 1024 / Math.max(cw, ch));
     const W = Math.max(1, Math.round(cw * k)), H = Math.max(1, Math.round(ch * k)), out = new Uint8ClampedArray(W * H * 4);
+    const valid = keep ? new Uint8Array(W * H) : null;
     for (let y = 0; y < H; y++) for (let x = 0; x < W; x++) {
       const sx = Math.min(core.x1, core.x0 + Math.floor((x + 0.5) / k)), sy = Math.min(core.y1, core.y0 + Math.floor((y + 0.5) / k));
       const i = sy * w + sx, o = (y * W + x) * 4;
       out[o] = data[i * 4]; out[o + 1] = data[i * 4 + 1]; out[o + 2] = data[i * 4 + 2];
       out[o + 3] = mask[i] ? (a.fromAlpha ? data[i * 4 + 3] : 255) : 0;
+      if (valid) valid[y * W + x] = eroded[i];
     }
+    if (keep) seen = { a, W, H, rgba: out, valid };
     return encodeRGBA(out, W, H, "image/png");
   };
-  const f = await one(front);
+  const f = await one(front, !back);
   await yieldNow();
-  const b = back ? await one(back).catch(() => null) : null;
-  return { front: f, back: b };
+  let b = back ? await one(back).catch(() => null) : null, backSynth = false;
+  if (!b && seen) {
+    try {
+      const { a, W, H, rgba, valid } = seen, n = W * H, rgb = new Float32Array(n * 3), alpha = new Uint8ClampedArray(n);
+      for (let i = 0; i < n; i++) { rgb[i * 3] = rgba[i * 4]; rgb[i * 3 + 1] = rgba[i * 4 + 1]; rgb[i * 3 + 2] = rgba[i * 4 + 2]; alpha[i] = rgba[i * 4 + 3]; }
+      const p = { w: W, h: H, rgb, valid }, fabric = fabricColours([p], kind);
+      await yieldNow();
+      const tile = fabricTile([p], fabric, kind), shape = shapeOf(a, kind);
+      await yieldNow();
+      const s = synthBack(rgb, W, H, fabric, tile, { kind, sub, valid, alpha, crotchV: kind === "bottoms" ? crotchOf(p) : null, ratio: shape?.ratio, aspect: shape?.aspect, denim: isDenim(item) });
+      const out = new Uint8ClampedArray(n * 4);
+      for (let i = 0; i < n; i++) { out[i * 4] = s.rgb[i * 3]; out[i * 4 + 1] = s.rgb[i * 3 + 1]; out[i * 4 + 2] = s.rgb[i * 3 + 2]; out[i * 4 + 3] = s.alpha[i]; }
+      b = await encodeRGBA(out, W, H, "image/png");
+      backSynth = true;
+    } catch (e) { console.warn("Garment baker: no back made for", item.name || item.id, e); }
+  }
+  return { front: f, back: b, backSynth };
 }
 
 const mem = new Map(); // garmentId → asset
@@ -222,14 +249,22 @@ export async function getBaked(item, { front, back } = {}) {
 }
 // The fit and length are the item's, not the photo's: follow edits without baking again.
 function withItem(a, item) {
-  const fit = item.fit || undefined, length = lengthOf(item);
-  if (a.fit === fit && a.length === length) return a;
-  const b = { ...a, fit, length };
+  const fit = item.fit || undefined, length = lengthOf(item), adjust = adjustOf(item);
+  if (a.fit === fit && a.length === length && sameAdjust(a.adjust, adjust)) return a;
+  const b = { ...a, fit, length, adjust };
   if (!fit) delete b.fit;
+  if (!adjust) delete b.adjust;
   mem.set(b.garmentId, b);
   idbPut(b).catch(() => {});
   return b;
 }
+
+// How the wearer set this piece to sit (Scale and Vertical offset on its sheet), or undefined.
+const adjustOf = (item) => { const m = cleanCutMeta(item?.cutoutMeta); return m.scale !== 1 || m.offsetY !== 0 ? { scale: m.scale, offsetY: m.offsetY } : undefined; };
+const sameAdjust = (a, b) => (a?.scale ?? 1) === (b?.scale ?? 1) && (a?.offsetY ?? 0) === (b?.offsetY ?? 0);
+const isDenim = (item) => item?.category === "jeans" || /\b(jeans?|denim)\b/i.test(item?.name || "");
+/** The baked piece as this item wears it now (fit, length, scale and offset), without baking. */
+export const withFit = (asset, item) => (asset && item ? withItem(asset, item) : asset);
 
 /** A baked piece without checking its photos: memory first, then IndexedDB. Null if never baked. */
 export async function peekBaked(garmentId) {
@@ -1519,6 +1554,275 @@ function mirrored(rgb, w, h) {
   }
   return out;
 }
+/* ---------- the piece's own proportions ---------- */
+// How long the piece is for its width, from the photo. Tops: the panel's height over its width
+// (shoulder line to hem over side seam to side seam; `how` says how the sides were found, and only
+// "run", a tee with its sleeves out, gives a width to trust). Bottoms: waistband to hems over the
+// waistband's width (shorts 1.3-1.8, trousers 2.1-2.9), plus the whole outline's width over height.
+function shapeOf(a, kind) {
+  const { core, mask, w } = a, cw = core.x1 - core.x0 + 1, ch = core.y1 - core.y0 + 1, r3 = (v) => Math.round(v * 1000) / 1000;
+  if (kind === "top") return { ratio: r3(ch / cw), how: a.how || "" };
+  if (kind !== "bottoms") return null;
+  // the waistband: the median width of the rows a little below the top (not a label or a loop sticking up)
+  const ws = [];
+  for (let y = core.y0 + Math.round(ch * 0.04); y <= core.y0 + Math.round(ch * 0.09); y++) {
+    let l = -1, r = -1;
+    for (let x = core.x0; x <= core.x1; x++) if (mask[y * w + x]) { if (l < 0) l = x; r = x; }
+    if (l >= 0) ws.push(r - l + 1);
+  }
+  const waist = ws.length ? median(ws) : cw;
+  return { ratio: r3(ch / Math.max(1, waist)), how: "waist", aspect: r3(cw / ch) };
+}
+
+/* ======================================================================
+   4b. A back for a piece with a front photo only
+   ====================================================================== */
+/**
+ * The back of a piece photographed from the front only, made on the device: the front as seen from
+ * behind (mirrored), with what belongs to the front taken out (prints, logos, a label, the fly and
+ * pockets) and the fabric's own tone and grain in their place, then a soft shading round the body, a
+ * few folds and the back's own seams. With an outline (`alpha`, the mannequin look's cut-outs) the
+ * outline is mirrored too, an open front is closed and the neckline's dip is raised to a back collar.
+ * An all-over pattern (stripes, checks, camo) is the fabric itself and stays. Pure: arrays in, arrays out.
+ *
+ * @param {ArrayLike<number>} src  the front's colours, w*h*3, 0-255
+ * @param {number} w
+ * @param {number} h
+ * @param {{rgb:number[], tol:number, dist:Float32Array, trim?:number[]}} fabric  as fabricColours gives it
+ * @param {{hf:Float32Array}} tile  the grain, TILE x TILE x 3 around 0
+ * @param {{kind?:"top"|"bottoms", sub?:string, valid?:ArrayLike<number>|null, alpha?:ArrayLike<number>|null,
+ *          crotchV?:number|null, ratio?:number, aspect?:number, denim?:boolean}} [o]
+ *   valid: the garment's own pixels in `src` (1/0); alpha: its outline, 0-255
+ * @returns {{rgb: Float32Array, alpha: Uint8ClampedArray|null, pattern: boolean, neck: {x0:number, x1:number, raised:number}|null}}
+ */
+export function synthBack(src, w, h, fabric, tile, o = {}) {
+  const kind = o.kind || "top", sub = o.sub || "", n = w * h, F = fabric.rgb, dist = fabric.dist;
+  const inside = o.valid || null, alphaIn = o.alpha || null;
+  const lim = Math.max(16, fabric.tol * 1.7);
+  const px = w / 768; // seams are drawn for a 768 px wide panel
+  // 1. The front on a grid of 4 px cells, as seen from behind: which cells are plain fabric.
+  const q = 4, w4 = Math.ceil(w / q), h4 = Math.ceil(h / q), n4 = w4 * h4;
+  const sum = new Float32Array(n4 * 3), sumAll = new Float32Array(n4 * 3), ok = new Float32Array(n4), all = new Float32Array(n4);
+  for (let y = 0; y < h; y++) {
+    const cy = ((y / q) | 0) * w4;
+    for (let x = 0; x < w; x++) {
+      const i = y * w + x;
+      if (inside && !inside[i]) continue;
+      const c = cy + (((w - 1 - x) / q) | 0), r = src[i * 3], g = src[i * 3 + 1], b = src[i * 3 + 2];
+      all[c]++; sumAll[c * 3] += r; sumAll[c * 3 + 1] += g; sumAll[c * 3 + 2] += b;
+      if (dist[lutIndex(r, g, b)] <= lim) { ok[c]++; sum[c * 3] += r; sum[c * 3 + 1] += g; sum[c * 3 + 2] += b; }
+    }
+  }
+  // An all-over pattern is everywhere (a print sits in one place): most blocks of an 8 x 8 grid have it.
+  const GB = 8, blockAll = new Float32Array(GB * GB), blockFar = new Float32Array(GB * GB);
+  let cells = 0, farCells = 0;
+  for (let y = 0; y < h4; y++) for (let x = 0; x < w4; x++) {
+    const c = y * w4 + x;
+    if (all[c] < 4) continue;
+    const b = Math.min(GB - 1, ((y * GB) / h4) | 0) * GB + Math.min(GB - 1, ((x * GB) / w4) | 0), far = ok[c] < all[c] * 0.6;
+    cells++; blockAll[b]++;
+    if (far) { farCells++; blockFar[b]++; }
+  }
+  let blocks = 0, patterned = 0;
+  for (let b = 0; b < GB * GB; b++) if (blockAll[b] >= 12) { blocks++; if (blockFar[b] > blockAll[b] * 0.18) patterned++; }
+  const pattern = cells > 0 && farCells / cells > 0.28 && blocks > 0 && patterned / blocks >= 0.85;
+
+  // 2. The fabric's tone: the plain cells (not the ones next to a print: its soft edge and shadow),
+  // everything else filled in from around them, then blurred so no front seam survives.
+  const rgb4 = new Float32Array(n4 * 3), a4 = new Float32Array(n4), plain = new Uint8Array(n4);
+  for (let c = 0; c < n4; c++) plain[c] = all[c] >= 4 && (pattern || ok[c] >= all[c] * 0.6) ? 1 : 0;
+  for (let y = 0; y < h4; y++) for (let x = 0; x < w4; x++) {
+    const c = y * w4 + x;
+    if (!plain[c]) continue;
+    let near = false; // a printed cell of the garment within 2 cells
+    for (let dy = -2; dy <= 2 && !near; dy++) for (let dx = -2; dx <= 2; dx++) {
+      const xx = x + dx, yy = y + dy;
+      if (xx < 0 || yy < 0 || xx >= w4 || yy >= h4) continue;
+      const d = yy * w4 + xx;
+      if (all[d] >= 4 && !plain[d]) { near = true; break; }
+    }
+    if (near) continue;
+    a4[c] = 1;
+    const s3 = pattern ? sumAll : sum, k = 1 / (pattern ? all[c] : ok[c]);
+    rgb4[c * 3] = s3[c * 3] * k; rgb4[c * 3 + 1] = s3[c * 3 + 1] * k; rgb4[c * 3 + 2] = s3[c * 3 + 2] * k;
+  }
+  const low = boxBlur3(pullPush(rgb4, a4, w4, h4, F), w4, h4, kind === "bottoms" ? 2 : 3, 2);
+  const keep = kind === "bottoms" ? 1 : 0.8; // bottoms keep their whole wash; a top's tone a little evened
+
+  // 3. The outline as seen from behind; a top's open front closed and its neckline raised.
+  let alpha = null, neck = null, edgeTop = null;
+  if (alphaIn) {
+    alpha = new Uint8ClampedArray(n);
+    for (let y = 0; y < h; y++) for (let x = 0; x < w; x++) alpha[y * w + x] = alphaIn[y * w + (w - 1 - x)];
+    if (kind === "top") {
+      const top = new Int32Array(w).fill(h);
+      for (let x = 0; x < w; x++) for (let y = 0; y < h; y++) if (alpha[y * w + x] >= 128) { top[x] = y; break; }
+      // the collar's high points either side of the middle, and the dip between them
+      const cx = w >> 1, x0 = Math.round(w * 0.14), x1 = Math.round(w * 0.86);
+      let xl = cx, xr = cx;
+      for (let x = cx; x >= x0; x--) if (top[x] < top[xl]) xl = x;
+      for (let x = cx; x <= x1; x++) if (top[x] < top[xr]) xr = x;
+      let deep = 0;
+      for (let x = xl; x <= xr; x++) deep = Math.max(deep, top[x] - Math.max(top[xl], top[xr]));
+      const hood = sub === "hoodie";
+      if (!hood && xr - xl > w * 0.12 && deep > h * 0.012) {
+        // a back neckline: a shallow curve between the two high points
+        const dipB = Math.min(deep * 0.45, (xr - xl) * 0.1);
+        edgeTop = new Float32Array(w).fill(-1);
+        let raised = 0;
+        for (let x = xl; x <= xr; x++) {
+          const t = (x - xl) / Math.max(1, xr - xl), yB = top[xl] + (top[xr] - top[xl]) * t + dipB * 4 * t * (1 - t);
+          edgeTop[x] = Math.min(top[x], yB);
+          if (yB >= top[x]) continue;
+          const ya = Math.ceil(yB);
+          if (ya > 0 && ya - yB > 0.02) alpha[(ya - 1) * w + x] = Math.max(alpha[(ya - 1) * w + x], Math.round(255 * (ya - yB)));
+          for (let y = ya; y < top[x] + 2 && y < h; y++) alpha[y * w + x] = 255;
+          raised = Math.max(raised, top[x] - yB);
+        }
+        neck = { x0: xl, x1: xr, raised: Math.round(raised) };
+      }
+      // a back has no opening: each row is filled from its first to its last pixel
+      for (let y = 0; y < h; y++) {
+        let l = -1, r = -1;
+        for (let x = 0; x < w; x++) if (alpha[y * w + x] >= 128) { if (l < 0) l = x; r = x; }
+        if (l < 0) continue;
+        for (let x = l; x <= r; x++) {
+          if (alpha[y * w + x] >= 250) continue;
+          if (edgeTop && edgeTop[x] >= 0 ? y >= edgeTop[x] : y > top[x]) alpha[y * w + x] = 255;
+        }
+      }
+    }
+  }
+
+  // 4. Seams and folds, as a shade of the cloth (negative darkens).
+  const seam = new Float32Array(n);
+  const stamp = (x, y, amt, rad) => {
+    const R = Math.max(1, Math.ceil(rad * 1.6)), xi = Math.round(x), yi = Math.round(y);
+    for (let dy = -R; dy <= R; dy++) for (let dx = -R; dx <= R; dx++) {
+      const xx = xi + dx, yy = yi + dy;
+      if (xx < 0 || yy < 0 || xx >= w || yy >= h) continue;
+      const d2 = (xx - x) * (xx - x) + (yy - y) * (yy - y), v = amt * Math.exp(-d2 / (rad * rad)), i = yy * w + xx;
+      if (Math.abs(v) > Math.abs(seam[i])) seam[i] = v;
+    }
+  };
+  // a stitched seam: a dark groove with a light ridge beside it
+  const line = (xa, ya, xb, yb, amt = 0.1, rad = 1.3 * px) => {
+    const len = Math.hypot(xb - xa, yb - ya), steps = Math.max(1, Math.ceil(len / 0.7)), nx = -(yb - ya) / (len || 1), ny = (xb - xa) / (len || 1);
+    for (let k = 0; k <= steps; k++) {
+      const t = k / steps, x = xa + (xb - xa) * t, y = ya + (yb - ya) * t;
+      stamp(x, y, -amt, rad);
+      stamp(x + nx * rad * 2.2, y + ny * rad * 2.2, amt * 0.45, rad);
+    }
+  };
+  const U = (u) => u * (w - 1), V = (v) => (1 - v) * (h - 1); // v: 1 = the top edge
+  let fold = null; // (u, v) → shade
+  const g = (t) => Math.exp(-t * t), sstep = (a, b, x) => { const t = Math.max(0, Math.min(1, (x - a) / (b - a))); return t * t * (3 - 2 * t); };
+  if (kind === "top") {
+    if (sub === "tee" || sub === "tank" || sub === "longsleeve") { // the twin-needle hem
+      line(U(0), V(0.045), U(1), V(0.045), 0.07, 1.1 * px);
+      line(U(0), V(0.058), U(1), V(0.058), 0.05, 1 * px);
+    }
+    if (sub === "jacket_open") line(U(0.5), V(0.985), U(0.5), V(0.02), 0.09); // a tailored back's centre seam
+    if (sub === "jacket_open" || sub === "trackjacket" || sub === "bomber") { // the yoke under the collar
+      const steps = 24;
+      for (let k = 0; k < steps; k++) {
+        const ua = 0.04 + (0.92 * k) / steps, ub = 0.04 + (0.92 * (k + 1)) / steps, yv = (u) => 0.865 + 0.02 * Math.cos((u - 0.5) * Math.PI);
+        line(U(ua), V(yv(ua)), U(ub), V(yv(ub)), 0.06, 1.1 * px);
+      }
+    }
+    // the spine's hollow and two soft folds from the shoulder blades to the waist
+    fold = (u, v) => -0.022 * g((u - 0.5) / 0.04) * sstep(0.12, 0.3, v) * sstep(0.9, 0.7, v)
+      - 0.02 * (g((u - (0.24 + 0.07 * v)) / 0.035) + g((u - (0.76 - 0.07 * v)) / 0.035)) * sstep(0.1, 0.3, v) * sstep(0.72, 0.5, v);
+  } else {
+    const cV = o.crotchV && o.crotchV > 0.2 && o.crotchV < 0.98 ? o.crotchV : null;
+    const lenCm = Math.max(28, Math.min(115, (o.ratio || 2.4) * 39)), cmV = 1 / lenCm, cmU = 1 / (lenCm * Math.max(0.25, o.aspect || 0.45));
+    const band = 4 * cmV, seat = cV ?? 1 - 27 * cmV;
+    // the seat seam, from the waistband down to where the legs part
+    line(U(0.5), V(1 - band), U(0.5), V(Math.max(0.02, seat + 0.01)), 0.1);
+    // the waistband's seam
+    line(U(0.02), V(1 - band), U(0.98), V(1 - band), 0.08, 1.1 * px);
+    if (o.denim) {
+      // the yoke, deeper at the middle, and a patch pocket on each side with its second row of stitches
+      const yoke = (u) => 1 - band - cmV * (2 + 5 * (1 - Math.abs(2 * u - 1)));
+      line(U(0.02), V(yoke(0.02)), U(0.5), V(yoke(0.5)), 0.09);
+      line(U(0.5), V(yoke(0.5)), U(0.98), V(yoke(0.98)), 0.09);
+      for (const side of [-1, 1]) {
+        const uc = 0.5 + side * 10.5 * cmU, hw = 7 * cmU, vt = yoke(uc) - 2.5 * cmV, vb = vt - 13.5 * cmV, vp = vb - 2.2 * cmV;
+        if (vp < seat * 0.55 || uc - hw < 0.03 || uc + hw > 0.97) continue; // (no room on very short shorts)
+        for (const [ins, amt] of [[0, 0.1], [0.55 * cmU, 0.06]]) {
+          const a = hw - ins, b = hw * 0.9 - ins, i2 = ins * (cmV / cmU);
+          const pts = [[uc - a, vt - i2], [uc + a, vt - i2], [uc + b, vb + i2 * 0.4], [uc, vp + i2], [uc - b, vb + i2 * 0.4], [uc - a, vt - i2]];
+          for (let k = 0; k + 1 < pts.length; k++) line(U(pts[k][0]), V(pts[k][1]), U(pts[k + 1][0]), V(pts[k + 1][1]), amt, 1.1 * px);
+        }
+      }
+    }
+    // creases under the seat, and behind the knees of long legs
+    const knee = (o.ratio || 0) >= 2.05 ? seat * 0.5 : null;
+    fold = (u, v) => {
+      const ul = u < 0.5 ? u * 2 : (u - 0.5) * 2, mid = g((ul - 0.5) / 0.3);
+      let s = -0.03 * mid * g((v - (seat - 0.03 - 0.04 * Math.abs(ul - 0.5))) / 0.012);
+      if (knee) s -= 0.026 * mid * (g((v - knee) / 0.008) + 0.7 * g((v - knee + 0.028) / 0.007));
+      return s;
+    };
+  }
+
+  // 5. The back: tone, grain, shading. Where a pattern stays, the front's own pixels.
+  const out = new Float32Array(n * 3), hf = tile.hf, t3 = [0, 0, 0], trim = kind === "top" && fabric.trim ? fabric.trim : null;
+  const trimY = h * 0.94, row = { l: 0, r: w - 1 };
+  for (let y = 0; y < h; y++) {
+    const v = 1 - y / (h - 1), trow = (y & 255) << 8;
+    // the cloth turns away at its sides: by the outline when there is one, else by the panel's edges
+    let runs = null;
+    if (alpha) {
+      runs = [];
+      let l = -1;
+      for (let x = 0; x <= w; x++) {
+        const on = x < w && alpha[y * w + x] >= 128;
+        if (on && l < 0) l = x;
+        else if (!on && l >= 0) { if (x - l > 3) runs.push([l, x - 1]); l = -1; }
+      }
+    }
+    let ri = 0;
+    for (let x = 0; x < w; x++) {
+      const i = y * w + x, oi = i * 3, u = x / (w - 1);
+      if (alpha && alpha[i] === 0) continue;
+      bilinear(low, w4, h4, (x + 0.5) / q - 0.5, (y + 0.5) / q - 0.5, t3, 0);
+      const j = y * w + (w - 1 - x);
+      let r, gg, b;
+      if (pattern && (!inside || inside[j]) && !(edgeTop && edgeTop[x] >= 0 && alphaIn && alphaIn[j] < 250)) { r = src[j * 3]; gg = src[j * 3 + 1]; b = src[j * 3 + 2]; }
+      else {
+        const t = (trow | (x & 255)) * 3;
+        if (trim && y >= trimY - 6) {
+          const m = Math.min(1, (y - trimY + 6) / 6);
+          r = t3[0] + (trim[0] - t3[0]) * m; gg = t3[1] + (trim[1] - t3[1]) * m; b = t3[2] + (trim[2] - t3[2]) * m;
+          r += hf[t]; gg += hf[t + 1]; b += hf[t + 2];
+        } else {
+          r = F[0] + (t3[0] - F[0]) * keep + hf[t]; gg = F[1] + (t3[1] - F[1]) * keep + hf[t + 1]; b = F[2] + (t3[2] - F[2]) * keep + hf[t + 2];
+        }
+      }
+      let ue = u;
+      if (runs) {
+        while (ri < runs.length - 1 && x > runs[ri][1]) ri++;
+        const rn = runs[ri] || row;
+        ue = (x - rn[0]) / Math.max(1, rn[1] - rn[0]);
+      } else if (kind === "bottoms") {
+        const cV = o.crotchV || 0.7, legs = sstep(cV + 0.04, cV - 0.04, v), ul = u < 0.5 ? u * 2 : (u - 0.5) * 2;
+        ue = u + (ul - u) * legs;
+      }
+      let sh = 1 - 0.055 * Math.pow(Math.min(1, Math.abs(2 * ue - 1)), 2.4) + seam[i];
+      if (fold && !pattern) sh += fold(u, v);
+      // a knit band along a raised neckline
+      if (edgeTop && edgeTop[x] >= 0) {
+        const d = y - edgeTop[x], tb = Math.max(6, h * 0.022);
+        if (d >= 0 && d < tb) sh *= 0.94 + 0.025 * Math.sin(x * 2.1);
+        else if (d >= tb && d < tb + 2.5 * px) sh *= 0.9;
+      }
+      out[oi] = clamp255(r * sh); out[oi + 1] = clamp255(gg * sh); out[oi + 2] = clamp255(b * sh);
+    }
+  }
+  return { rgb: out, alpha, pattern, neck };
+}
+
 // Pull-push: average the valid pixels down a pyramid, then fill each level's gaps from the level
 // below it (bilinear), from the coarsest up. Smooth and local, like the cloth around the gap.
 function pullPush(rgb, valid, w, h, fallback) {

@@ -80,6 +80,20 @@ export function subTypeOf(item) {
 export const lengthOf = (item) => (["shorts", "gym-shorts"].includes(item?.category) ? "short"
   : item?.category === "coat" ? "long" : item?.fit === "cropped" ? "cropped" : "full");
 
+/* How one piece sits on the avatar, kept on the item as `cutoutMeta`:
+   - aspectRatio: the trimmed cut-out's height over its width (as photographed, never stretched)
+   - trimBounds:  [x, y, w, h] of the garment inside its photo, as fractions of the photo
+   - scale:       the wearer's own tweak of its size, 1 = as measured (CUT_SCALE)
+   - offsetY:     the wearer's own tweak of where it sits, in cm, + is higher (CUT_OFFSET) */
+export const CUT_SCALE = [0.8, 1.25], CUT_OFFSET = [-8, 8];
+export function cleanCutMeta(m) {
+  const num = (v, lo, hi, d) => (Number.isFinite(+v) && v !== null && v !== "" ? Math.max(lo, Math.min(hi, +v)) : d);
+  const out = { scale: Math.round(num(m?.scale, CUT_SCALE[0], CUT_SCALE[1], 1) * 100) / 100, offsetY: Math.round(num(m?.offsetY, CUT_OFFSET[0], CUT_OFFSET[1], 0) * 2) / 2 };
+  if (Number.isFinite(+m?.aspectRatio) && +m.aspectRatio > 0) out.aspectRatio = Math.round(+m.aspectRatio * 1000) / 1000;
+  if (Array.isArray(m?.trimBounds) && m.trimBounds.length === 4 && m.trimBounds.every((v) => Number.isFinite(+v))) out.trimBounds = m.trimBounds.map((v) => Math.round(+v * 10000) / 10000);
+  return out;
+}
+
 /* Framing of the baked panels, so the baker and the stage agree.
    - Tops (tee, hoodie, sweater, bomber, jacket_open): the torso only, no sleeves and no hood.
      x: side seam to side seam; y: the top of the shoulders (where the shoulder seam meets the
