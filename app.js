@@ -3894,7 +3894,7 @@ function previewOnAvatar(o, { title = "On the avatar", sub = "", actions = "" } 
       <div class="stage3d preview-stage" id="stage3d-preview" tabindex="0" role="img" aria-label="You in 3D, wearing this outfit. Drag sideways to turn him, or use the angle buttons."><div class="stage-note" role="status"></div></div>
       <div class="angle-pills" role="group" aria-label="Turn him">${MIRROR_ANGLES.map(([deg, label]) => `<button class="chip" data-mangle="${deg}" aria-pressed="false">${label}</button>`).join("")}</div>
     </div>
-    <div class="pieces">${wornList(o).map((w) => pieceTile(w.item)).join("")}${(o.extras || []).map(pieceTile).join("")}</div>
+    <div class="pieces mini">${wornList(o).map((w) => pieceTile(w.item)).join("")}${(o.extras || []).map(pieceTile).join("")}</div>
     ${actions ? `<div class="row" style="margin-top:14px">${actions}</div>` : ""}`;
   $("#sheet").hidden = false;
   mountMirror();
