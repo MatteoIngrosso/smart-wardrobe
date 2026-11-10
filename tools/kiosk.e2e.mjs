@@ -69,7 +69,11 @@ async function ready(page, { mirror = true } = {}) {
     t.go("today");
   });
   if (mirror) await page.waitForFunction(() => window.__t.mirror.stage && !window.__t.mirror.loading, null, { timeout: 90000 });
+  // the pieces baked for the mirror and the thumbnails made (after 3 idle minutes they long are)
+  await page.waitForFunction(() => !window.__t.mirror.pending.size && !window.__t.thumbsBusy, null, { timeout: 120000 });
+  await page.waitForTimeout(500);
 }
+const angleNear = (page, deg) => page.waitForFunction((d) => Math.abs(((window.__t.mirror.stage.angle - d + 540) % 360) - 180) < 1, deg, { timeout: 10000 });
 const frames = (page) => page.evaluate(() => window.__t.mirror.stage?.debug.renderer.info.render.frame ?? -1);
 
 const ctx = await browser.newContext(IPAD);
@@ -168,10 +172,9 @@ test("5 taps on the page title open the diagnostics", async () => {
 
 test("diagnostics: reset camera, 3D speed test", async () => {
   await page.evaluate(() => window.__t.mirror.stage.snapTo(180));
-  await page.waitForTimeout(800);
+  await angleNear(page, 180);
   await page.click('[data-kdiag="camera"]');
-  await page.waitForTimeout(800);
-  assert.ok(Math.abs(await page.evaluate(() => window.__t.mirror.stage.angle)) < 1 || Math.abs(await page.evaluate(() => window.__t.mirror.stage.angle) - 360) < 1, "faces front again");
+  await angleNear(page, 0); // faces front again
   assert.match(await page.textContent("#kd-note"), /faces you again/);
   await page.click('[data-kdiag="speed"]');
   await page.waitForFunction(() => /frames a second while turning/.test(document.querySelector("#kd-note").textContent), null, { timeout: 15000 });
@@ -203,7 +206,7 @@ test("everything you tap in sheets, the cut-out editor and the diagnostics is at
     c.getContext("2d").fillRect(100, 100, 400, 600);
     const m = Object.assign(document.createElement("canvas"), { width: 600, height: 800 });
     m.getContext("2d").fillRect(150, 150, 300, 500);
-    window.__editing = window.__t.editCutout(c, m);
+    window.__editing = import("/cutout-editor.js").then((x) => x.editCutout(c, m));
   });
   await page.waitForSelector(".cutfix");
   found.editor = await small();
@@ -271,8 +274,9 @@ test("with a fake clock: idle 3 minutes → asleep; the clock block moves every 
   await p2.clock.fastForward("00:15");
   assert.equal(await p2.evaluate(() => window.__t.kiosk.asleep), true, "asleep after 3 minutes");
   const at = () => p2.evaluate(() => {
-    const b = document.querySelector(".amb-block"), m = getComputedStyle(b).transform.match(/-?[\d.]+/g).map(Number), r = b.getBoundingClientRect();
-    return { x: m[4], y: m[5], w: r.width, h: r.height };
+    // where it's going (style), not where the transition has got to (it runs on the real clock)
+    const b = document.querySelector(".amb-block"), m = b.style.transform.match(/-?[\d.]+/g).map(Number);
+    return { x: m[0], y: m[1], w: b.offsetWidth, h: b.offsetHeight };
   });
   const a = await at();
   await p2.clock.fastForward("01:01");

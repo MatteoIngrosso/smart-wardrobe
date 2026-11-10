@@ -234,7 +234,7 @@ export function startKiosk(app) {
     if (taps.length >= TAPS) { taps = []; openDiag(); }
   }, true);
 
-  let diagEl = null, diagRaf = 0, diagTimer = 0, gpu = null, note = "";
+  let diagEl = null, diagRaf = 0, diagTimer = 0, gpu = null, note = "", openedAt = 0;
   const fps = { screen: null, stage: null, frames: 0, t0: 0, f0: 0 };
   const stageInfo = () => safe(() => app.stage()?.debug?.renderer?.info) || null;
   function readGPU() {
@@ -261,6 +261,7 @@ export function startKiosk(app) {
   const row = (label, id) => `<div><dt>${label}</dt><dd id="kd-${id}">…</dd></div>`;
   function openDiag() {
     if (diagEl) return;
+    openedAt = performance.now();
     diagEl = document.createElement("div");
     diagEl.className = "kdiag";
     diagEl.setAttribute("role", "dialog");
@@ -319,7 +320,8 @@ export function startKiosk(app) {
     put("fps", fps.screen == null ? "Measuring…" : `Screen ${Math.round(fps.screen)} · 3D mirror ${Math.round(fps.stage)}${st?.paused ? " (paused)" : fps.stage < 1 ? " (it only draws while something moves)" : ""}`);
     put("mem", info ? `${info.memory.geometries} meshes · ${info.memory.textures} textures · ${info.programs?.length ?? 0} shaders` : "The 3D mirror hasn't started (open Today)");
     put("frame", info && info.render.frame ? `${st.debug.lastFrameMs.toFixed(1)} ms on the processor · ${info.render.calls} draw calls · ${Math.round(info.render.triangles / 1000)}k triangles` : "None yet");
-    put("screen", `${innerWidth} × ${innerHeight} (${devicePixelRatio}x) · ${screen.orientation?.type?.split("-")[0] || (innerHeight > innerWidth ? "portrait" : "landscape")} · ${navigator.maxTouchPoints ? `touch, ${navigator.maxTouchPoints} points` : "no touch"}${matchMedia("(pointer: coarse)").matches ? "" : " · mouse"}`);
+    const pts = navigator.maxTouchPoints;
+    put("screen", `${innerWidth} × ${innerHeight} (${devicePixelRatio}x) · ${innerHeight > innerWidth ? "portrait" : "landscape"} · ${pts ? `touch, ${pts} point${pts > 1 ? "s" : ""} at once` : "no touch"}${matchMedia("(pointer: coarse)").matches ? "" : " · mouse"}`);
     const heap = performance.memory?.usedJSHeapSize;
     const up = Math.round(performance.now() / 60_000);
     put("browser", `${browserName()} · ${navigator.onLine ? "online" : "offline"} · open ${up >= 60 ? `${Math.floor(up / 60)} h ${up % 60} min` : `${up} min`}${heap ? ` · app memory ${mb(heap)}` : ""}`);
@@ -387,6 +389,8 @@ export function startKiosk(app) {
     const b = e.target.closest?.("[data-kdiag], [data-kiosk-idle], [data-kiosk]");
     if (!b) return;
     const ds = b.dataset;
+    // the click of the 5th tap lands on the panel that tap just opened: it presses nothing
+    if (ds.kdiag && performance.now() - openedAt < 450) return;
     if (ds.kdiag === "close") return closeDiag();
     if (ds.kdiag === "speed") return speedTest(b);
     if (ds.kdiag === "refresh") return forceRefresh(b);
