@@ -3,7 +3,7 @@
 // Token budget: background removal and daily outfit ideas run on the device and
 // cost nothing; the AI (Gemini or Claude) is only called to recognise a new photo
 // once, and when you ask the stylist something.
-import { parseICS, eventsBetween, guessOccasion, titleKey, monthGrid, addMonths, dayDiff, getForecast, dayWeather, wxIcon, FORECAST_TTL,
+import { parseICS, eventsBetween, guessOccasion, titleKey, monthGrid, addDays, addMonths, dayDiff, getForecast, dayWeather, wxIcon, FORECAST_TTL,
   makeEntry, entryIds, resolveEntry, pruneDays, nearbyCost, nearestUse, ROTATION_DAYS } from "./calendar.js";
 import * as Style from "./stylist.js";
 import * as Label from "./label.js";
@@ -2455,17 +2455,20 @@ function extrasFor(pieces, cond, occ, used) {
 
 // `ctx` (for whole outfits) records the occasion and how warm it felt, so ideas can learn from it.
 // Returns the pieces that went straight into the wash (see Laundry).
-async function wearOutfit(items, ctx) {
-  const now = new Date().toISOString();
-  const washed = state.settings.autoWash ? items.filter((it) => washAfterWear(it) && !it.wash) : [];
+// `date` (the Calendar): a day before today is logged at noon that day; it counts as a wear, but
+// moves nothing into the wash (the pieces may have been washed since).
+async function wearOutfit(items, ctx, { date = null } = {}) {
+  const past = !!date && date < localDay();
+  const now = past ? new Date(`${date}T12:00`).toISOString() : new Date().toISOString();
+  const washed = !past && state.settings.autoWash ? items.filter((it) => washAfterWear(it) && !it.wash) : [];
   for (const it of items) {
     it.wearCount = (it.wearCount || 0) + 1;
-    it.lastWorn = now;
-    it.wornSinceWash = (it.wornSinceWash || 0) + 1;
+    if (!past || !it.lastWorn || it.lastWorn < now) it.lastWorn = now;
+    if (!past) it.wornSinceWash = (it.wornSinceWash || 0) + 1;
     if (washed.includes(it)) { it.wash = now; it.wornSinceWash = 0; }
     await store.put("items", it);
   }
-  await addLog({ itemIds: items.map((i) => i.id), ...(ctx && outfitContext()), ...ctx });
+  await addLog({ itemIds: items.map((i) => i.id), ...(ctx && outfitContext()), ...ctx, ...(past && { at: now, date: now.slice(0, 10) }) });
   return washed;
 }
 // Settings > Laundry > Back from the wash: clothes come back by themselves after that many days.
@@ -3427,6 +3430,7 @@ function renderToday() {
         </div>
       </div>
       ${dayCard()}
+      ${planCheckCard()}
       ${rateCard()}
       <div class="chips scroller">${OCCASIONS.map((o) => `<button class="chip" aria-pressed="${state.occasion === o.id}" data-occ="${o.id}">${o.label}</button>`).join("")}</div>
       ${levelChips()}
@@ -3642,6 +3646,7 @@ function outfitCard(o, i) {
           ${state.event?.day === "tomorrow" ? `<button class="btn primary" data-plan="${i}">Plan it for tomorrow</button>` : `<button class="btn primary" data-wear="${i}">Wear this today</button>`}
           <button class="btn rate${o.stars ? "" : " icon-btn"}" data-rate="${i}" aria-pressed="${!!o.stars}" aria-expanded="${!!o.rating}" aria-label="${o.stars ? `Rated ${o.stars} stars, change` : "Rate this outfit"}">${o.stars ? `★ ${o.stars}` : "☆"}</button>
           <button class="btn ghost" data-skip="${i}">Not for me</button>
+          ${i < 3 && stageOK() ? `<button class="btn ghost" data-tryon="${i}">On the avatar</button>` : ""}
         </div>
         ${o.rating ? starPicker(`o|${i}`, o.stars) : ""}`}
   </article>`;
@@ -3676,6 +3681,7 @@ const mirror = {
   host: null, // the element its canvas lives in
   loading: null,
   failed: null, // why the 3D stage couldn't start
+  preview: null, // an outfit shown on the avatar in a sheet ("On the avatar" in the Calendar): the stage moves there meanwhile
   baker: null, // garment-baker.js, once loaded
   assets: new Map(), // item id → { photo, asset }: baked and prepared on the stage
   pending: new Map(), // item id → Promise while it's baked
@@ -3713,7 +3719,14 @@ function mirrorWorn(o) {
 }
 const asBlob = async (x) => (x instanceof Blob ? x : x ? fetch(x).then((r) => r.blob()).catch(() => null) : null);
 // The idea he wears: the one picked on the right (the last one if there are fewer ideas now).
-const mirrorIdea = () => { const ideas = state.outfits.slice(0, 3); return ideas[Math.min(mirror.pick, ideas.length - 1)]; };
+const mirrorIdea = () => {
+  if (mirror.preview && !document.getElementById("stage3d-preview")) mirror.preview = null; // its sheet shows something else now
+  if (mirror.preview) return mirror.preview;
+  const ideas = state.outfits.slice(0, 3);
+  return ideas[Math.min(mirror.pick, ideas.length - 1)];
+};
+// The 3D stage can start here (a device without WebGL says so on Today, and offers no previews).
+const stageOK = () => !mirror.failed;
 
 // The piece each garment layer shows for an idea. A coat goes in the jacket layer, over the jacket:
 // take the coat off and the jacket under it shows.
@@ -3824,7 +3837,7 @@ function paintModes() {
 }
 function mountMirror() {
   try {
-    const slot = $("#stage3d");
+    const slot = $(mirror.preview ? "#stage3d-preview" : "#stage3d");
     if (!slot) return;
     mirror.host ||= Object.assign(document.createElement("div"), { className: "stage3d-host" });
     slot.prepend(mirror.host);
@@ -3842,7 +3855,7 @@ function mountMirror() {
 }
 // The line over the stage: starting, can't start, or a piece being prepared for the first time.
 function paintStageNote() {
-  const note = $("#stage3d .stage-note");
+  const note = $(mirror.preview ? "#stage3d-preview .stage-note" : "#stage3d .stage-note");
   if (!note) return;
   const busy = mirror.stage && Object.values(slotsFor(mirrorIdea())).find((w) => mirror.pending.has(w.item.id));
   const html = mirror.failed ? `<b>The 3D mirror can't start here</b><span>${esc(mirror.failed.message || String(mirror.failed))}</span>`
@@ -3853,7 +3866,7 @@ function paintStageNote() {
 }
 function paintAngles() {
   const near = (Math.round((((mirror.angle % 360) + 360) % 360) / 90) % 4) * 90;
-  document.querySelectorAll("#mirror [data-mangle]").forEach((b) => b.setAttribute("aria-pressed", +b.dataset.mangle === near));
+  document.querySelectorAll("[data-mangle]").forEach((b) => b.setAttribute("aria-pressed", +b.dataset.mangle === near));
 }
 // How ready each idea is: its pieces are baked once, the first time they're needed.
 function paintLooks() {
@@ -3867,6 +3880,47 @@ function paintLooks() {
       : missing ? `Ready · ${missing} not shown` : "Ready";
   });
   paintStageNote();
+}
+
+// "On the avatar": any outfit (a Calendar idea or plan) on the 3D avatar, in a sheet. The stage
+// itself moves into the sheet (it's made once, see startStage) and goes back to Today when the sheet
+// closes, wearing Today's idea again. Pieces are baked the same way, once, on this device.
+function previewOnAvatar(o, { title = "On the avatar", sub = "", actions = "" } = {}) {
+  mirror.preview = { ...o, key: `preview:${o.key || outfitKey(Object.values(o.pieces || {}).filter(Boolean))}` };
+  $(".sheet-panel").innerHTML = `
+    <div class="detail-head"><div><h1 style="font-size:26px">${esc(title)}</h1>${sub ? `<p class="sub">${esc(sub)}</p>` : ""}</div>
+      <button class="btn icon-btn ghost" data-close aria-label="Close"><svg viewBox="0 0 24 24"><path d="M6 6l12 12M18 6 6 18"/></svg></button></div>
+    <div class="preview-wrap">
+      <div class="stage3d preview-stage" id="stage3d-preview" tabindex="0" role="img" aria-label="You in 3D, wearing this outfit. Drag sideways to turn him, or use the angle buttons."><div class="stage-note" role="status"></div></div>
+      <div class="angle-pills" role="group" aria-label="Turn him">${MIRROR_ANGLES.map(([deg, label]) => `<button class="chip" data-mangle="${deg}" aria-pressed="false">${label}</button>`).join("")}</div>
+    </div>
+    <div class="pieces mini">${wornList(o).map((w) => pieceTile(w.item)).join("")}${(o.extras || []).map(pieceTile).join("")}</div>
+    ${actions ? `<div class="row" style="margin-top:14px">${actions}</div>` : ""}`;
+  $("#sheet").hidden = false;
+  mountMirror();
+  paintStageNote();
+}
+// The sheet closed (or shows something else): the stage goes back to Today's mirror.
+function endPreview() {
+  const was = !!mirror.preview;
+  mirror.preview = null;
+  const home = view === "today" && $("#stage3d");
+  if (home && mirror.host && !home.contains(mirror.host)) mountMirror();
+  else if (was && !home) mirror.host?.remove();
+  if (was) dressStage();
+}
+function openCalPreview(kind, date) {
+  const s = planner.sugg, plan = dayPlan(date);
+  const o = kind === "idea" ? s?.date === date && s.ideas[s.k] : planIdea(date);
+  if (!o) return closeSheet();
+  const now = localDay();
+  const actions = kind === "idea" ? ideaActions(date, true)
+    : !plan.worn && date <= now && dayDiff(date, now) <= WEAR_BACK ? `<button class="btn primary" data-calworn="${date}">${date === now ? "Wearing it today" : "I wore it"}</button>` : "";
+  previewOnAvatar(o, {
+    title: kind === "idea" ? `Idea ${s.k + 1} of ${s.ideas.length} for ${fmtDay(date)}` : `${plan.worn ? "Worn" : "Planned"} for ${fmtDay(date)}`,
+    sub: [occLabel(kind === "idea" ? s.occ : plan.occasion), plan?.title].filter(Boolean).join(" · "),
+    actions,
+  });
 }
 
 // The left panel: your face from a photo, then Body or Face & hair, and Save body. Every change
@@ -4088,6 +4142,7 @@ function wardTop(types = typeRow()) {
         <button class="chip" aria-pressed="${f.slot === "all"}" data-slot="all">All</button>
         <button class="chip" aria-pressed="${f.slot === "fav"}" data-slot="fav">★ Favourites</button>
         ${washing || f.slot === "wash" ? `<button class="chip" aria-pressed="${f.slot === "wash"}" data-slot="wash">In the wash <span class="muted">${washing}</span></button>` : ""}
+        ${washing && f.slot !== "wash" ? `<button class="chip wash-all" data-act="wash-done">${ICON_BASKET}Laundry done: all back</button>` : ""}
         ${state.items.some((i) => i.disliked) || f.slot === "disliked" ? `<button class="chip" aria-pressed="${f.slot === "disliked"}" data-slot="disliked">Disliked <span class="muted">${state.items.filter((i) => i.disliked).length}</span></button>` : ""}
         ${Object.entries(SLOTS).map(([k, l]) => `<button class="chip" aria-pressed="${f.slot === k}" data-slot="${k}">${l}</button>`).join("")}
       </div>
@@ -4171,12 +4226,22 @@ function fillGrid(grid, list) {
   }
   grid.hidden = !list.length;
 }
-function itemTile(i, src) {
+// A piece in the wardrobe grid: tap it to open it. The basket in its corner puts it in the wash and
+// back in one tap; the badges say if it's in the wash and how often it's been worn.
+const ICON_BASKET = `<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 9h16l-1.6 10.2a2 2 0 0 1-2 1.8H7.6a2 2 0 0 1-2-1.8z"/><path d="M8 9l3-5M16 9l-3-5M9 13v4M12 13v4M15 13v4"/></svg>`;
+const NOT_WASHED = ["watch", "bracelet", "necklace", "ring", "sunglasses", "belt", "bag", "backpack", "wallet", "tie", "umbrella", "accessory", "hat", "training-shoes", "gym-bag", "gym-gear"];
+const washable = (i) => slotOf(i) !== "shoes" && !NOT_WASHED.includes(i.category);
+const wornBadge = (i) => (i.wearCount ? `Worn ${i.wearCount}×` : "");
+function itemTile(i, src, basket = true) {
   const sub = [i.brand, (i.styles || []).slice(0, 1).map(styleLabel)[0]].filter(Boolean).join(" · ") || catLabel(i.category);
-  return `<button class="item" data-item="${i.id}">
-    <div class="pic${i.wash ? " washing" : ""}">${pieceImg(i, "thumb pic-bg", src)}${isFavourite(i) ? `<span class="fav">★ ${starsOf(i)}</span>` : ""}${i.wash ? '<span class="wash-badge">In the wash</span>' : leaving(i) ? `<span class="wash-badge">To ${i.fate.status}</span>` : ""}</div>
-    <div class="meta"><span class="name">${esc(i.name)}</span><span class="info">${swatches(i.colors)} ${esc(sub)}</span></div>
-  </button>`;
+  const badge = i.wash ? "In the wash" : leaving(i) ? `To ${i.fate.status}` : "";
+  return `<div class="item" data-item="${i.id}">
+    <button class="item-open" data-item="${i.id}">
+      <div class="pic${i.wash ? " washing" : ""}">${pieceImg(i, "thumb pic-bg", src)}${isFavourite(i) ? `<span class="fav">★ ${starsOf(i)}</span>` : ""}${badge ? `<span class="wash-badge">${esc(badge)}</span>` : ""}${wornBadge(i) && !i.wash ? `<span class="worn-badge">${wornBadge(i)}</span>` : ""}</div>
+      <div class="meta"><span class="name">${esc(i.name)}</span><span class="info">${swatches(i.colors)} ${esc(sub)}</span>${i.wash && i.wearCount ? `<span class="info">${wornBadge(i)}</span>` : ""}</div>
+    </button>
+    ${basket && (washable(i) || i.wash) ? `<button class="basket" data-basket="${i.id}" aria-pressed="${!!i.wash}" aria-label="${i.wash ? `${esc(i.name)} is in the wash: tap when it's back` : `Put ${esc(i.name)} in the wash`}" title="${i.wash ? "Back from the wash" : "In the wash"}">${ICON_BASKET}</button>` : ""}
+  </div>`;
 }
 function emptyState(title, text, actions) {
   return `<div class="empty"><svg viewBox="0 0 24 24"><path d="M12 3a2 2 0 0 0-2 2h-.5L3 9l1.6 3.2L7 11v10h10V11l2.4 1.2L21 9l-6.5-4H14a2 2 0 0 0-2-2z"/></svg><h2 style="margin:0;color:var(--text)">${title}</h2><p style="margin:0">${text}</p><div class="row" style="justify-content:center">${actions}</div></div>`;
@@ -4242,7 +4307,7 @@ function suitField(i) {
   if (!cands.length) return "";
   return `<div class="field" style="margin-bottom:14px"><label>Part of a suit? Same suit as…</label><div class="chips">${cands.slice(0, 6).map((x) => `<button class="chip" data-suit="${i.id}:${x.id}">${esc(x.name)}</button>`).join("")}</div></div>`;
 }
-const closeSheet = () => ($("#sheet").hidden = true);
+const closeSheet = () => { $("#sheet").hidden = true; endPreview(); };
 function confirmBox(message, okLabel) {
   return new Promise((resolve) => {
     const panel = $(".sheet-panel");
@@ -6321,6 +6386,103 @@ async function planDone(p, worn) {
   if (!e) return;
   await setDay(p.date, worn ? { ...e, worn: new Date().toISOString() } : notesOnly(e));
 }
+// Wearing a day's outfit from the Calendar: today's plan or idea, or a plan of a day before ("I wore
+// it"). It's logged like "Wear this today" (wear count, last worn, the wash), once per day: the same
+// outfit logged again that day doesn't count twice. Returns an undo, or null when it was logged already.
+const WEAR_BACK = 7; // days back a plan can still be logged as worn
+const sameOutfit = (l, ids) => [...(l.itemIds || [])].sort().join() === [...ids].sort().join();
+async function wearDay(date, items, { occasion = "casual", title = "" } = {}) {
+  if (!items.length) return null;
+  const ids = items.map((i) => i.id);
+  if (state.log.some((l) => logKind(l) === "wear" && logDay(l) === date && sameOutfit(l, ids))) return null;
+  const before = items.map((it) => [it, { wearCount: it.wearCount, lastWorn: it.lastWorn, wornSinceWash: it.wornSinceWash, wash: it.wash }]);
+  const washed = await wearOutfit(items, { occasion, feels: Math.round(dayCond(date).feels), source: "calendar", event: title || undefined }, { date });
+  const entry = state.log.at(-1);
+  return {
+    washed,
+    undo: async () => {
+      await dropLog(entry.id);
+      for (const [it, was] of before) {
+        for (const [k, v] of Object.entries(was)) if (v === undefined) delete it[k]; else it[k] = v;
+        await store.put("items", it);
+      }
+      state.outfits = [];
+    },
+  };
+}
+const dayWorn = async (date, entry) => setDay(date, { ...entry, worn: new Date().toISOString(), missed: undefined });
+const calRedraw = (date) => { if (date === localDay()) state.outfits = []; if (view === "plan") { paintDay(date); paintPanel(); } else render(); };
+function wornDayToast(date, r, restore) {
+  const when = date === localDay() ? "today" : fmtDay(date);
+  const names = r.washed.length === 1 ? r.washed[0].name : `${r.washed.length} pieces`;
+  toast(`Logged for ${when}.${r.washed.length ? ` ${names} went in the wash.` : ""}`, { label: "Undo", run: async () => { await r.undo(); await restore(); calRedraw(date); } });
+}
+// The planned outfit of today or a day before was worn.
+async function wearPlanned(date) {
+  const e = dayPlan(date);
+  const items = resolveEntry(e, itemMap()).map((x) => x.item).filter(Boolean);
+  if (!e || !items.length) return;
+  const r = await wearDay(date, items, { occasion: e.occasion, title: e.title });
+  await dayWorn(date, e);
+  calRedraw(date);
+  if (!r) return toast("Already logged for that day");
+  wornDayToast(date, r, () => setDay(date, e));
+}
+// It wasn't: the plan stays in the Calendar, marked not worn, and nothing is counted.
+async function missPlanned(date) {
+  const e = dayPlan(date);
+  if (!e) return;
+  await setDay(date, { ...e, missed: new Date().toISOString() });
+  calRedraw(date);
+}
+// "Wear it today" on a Calendar idea for today: planned and worn in one tap.
+async function wearIdea(date) {
+  const s = planner.sugg, o = s?.date === date && s.ideas[s.k];
+  if (!o || date !== localDay()) return;
+  const was = dayPlan(date);
+  const entry = makeEntry({ date, pieces: o.pieces, coat: o.coat, extras: o.extras, occasion: s.occ, title: dressyEvent(date)?.title || "", notes: was?.notes });
+  const r = await wearDay(date, allPieces(o), { occasion: s.occ, title: entry.title });
+  await dayWorn(date, entry);
+  planner.sugg = null;
+  calRedraw(date);
+  if (!r) return toast("Already logged for today");
+  wornDayToast(date, r, () => setDay(date, was));
+}
+// Plans of the last few days that nobody said were worn (or not): Today asks about the latest.
+function unconfirmedPlan() {
+  const now = localDay();
+  for (let k = 1; k <= 3; k++) {
+    const date = addDays(now, -k), e = dayPlan(date);
+    if (!e || e.worn || e.missed || e.src === "note") continue;
+    if (resolveEntry(e, itemMap()).filter((x) => x.item).length < 2) continue;
+    if (state.log.some((l) => logKind(l) === "wear" && logDay(l) === date)) continue;
+    return { date, e };
+  }
+  return null;
+}
+function planCheckCard() {
+  const u = unconfirmedPlan();
+  if (!u) return "";
+  const pieces = resolveEntry(u.e, itemMap()).map((x) => x.item).filter((p) => p && CORE.includes(roleOf(p)));
+  const when = dayDiff(u.date, localDay()) === 1 ? "yesterday" : fmtDay(u.date);
+  return `<section class="card rate-card">
+    <div class="pieces mini">${pieces.map(pieceTile).join("")}</div>
+    <div class="stack" style="gap:8px">
+      <h2 style="margin:0">Did you wear what you planned for ${esc(when)}?</h2>
+      <span class="muted small">${esc(occLabel(u.e.occasion))}${u.e.title ? ` · ${esc(u.e.title)}` : ""}. Yes counts it as worn, so rotation and wear counts stay right.</span>
+      <div class="row"><button class="btn primary" data-calworn="${u.date}">Yes, I wore it</button><button class="btn" data-calmissed="${u.date}">No</button></div>
+    </div>
+  </section>`;
+}
+// A planned day as an idea (for the 3D avatar): its pieces as they are now.
+function planIdea(date) {
+  const parts = resolveEntry(dayPlan(date), itemMap()).filter((x) => x.item);
+  if (!parts.length) return null;
+  const pieces = {}, extras = [];
+  let coat = null;
+  for (const x of parts) { if (x.role === "coat") coat = x.item; else if (x.role === "extra") extras.push(x.item); else pieces[x.role] = x.item; }
+  return { key: `plan:${date}`, pieces, coat, extras };
+}
 function dayNote(el, v) {
   const date = el.dataset.day;
   clearTimeout(el._t);
@@ -6400,11 +6562,13 @@ function dayPanelHTML(date) {
   ];
   const s = planner.sugg?.date === date ? planner.sugg : null, o = s?.ideas[s.k];
   // The plan: each piece as it is now, a deleted one as "Removed".
+  const canWear = !plan?.worn && parts.some((x) => x.item) && date <= now && dayDiff(date, now) <= WEAR_BACK;
   const planned = parts.length ? `<div class="stack" style="gap:10px">
-      <h3>${plan.worn ? "Planned and worn ✓" : "Planned"}${plan.title ? ` for ${esc(plan.title)}` : ""} <span class="muted small">· ${esc(occLabel(plan.occasion))}</span></h3>
+      <h3>${plan.worn ? "Planned and worn ✓" : plan.missed ? "Planned, not worn" : "Planned"}${plan.title ? ` for ${esc(plan.title)}` : ""} <span class="muted small">· ${esc(occLabel(plan.occasion))}</span></h3>
       <div class="pieces">${parts.map((x) => (x.item ? pieceTile(x.item) : removedTile(x.role))).join("")}</div>
       ${parts.some((x) => !x.item) ? `<p class="why warn">A piece of this plan is no longer in your wardrobe.${past ? "" : " Suggest a new outfit to replace it."}</p>` : ""}
-      ${washNote(parts.map((x) => x.item), date)}</div>` : "";
+      ${washNote(parts.map((x) => x.item), date)}
+      <div class="row">${canWear ? `<button class="btn primary" data-calworn="${date}">${date === now ? "Wearing it today" : "I wore it"}</button>${past && !plan.missed ? `<button class="btn" data-calmissed="${date}">I didn't</button>` : ""}` : ""}${parts.some((x) => x.item) && stageOK() ? `<button class="btn" data-calpreview="plan|${date}">On the avatar</button>` : ""}</div></div>` : "";
   const wore = date <= now ? wornOn(date) : null;
   const wornIds = wore && wore.map((p) => p?.id).sort().join();
   const wornHTML = wore?.length && !(plan?.worn && wornIds === parts.map((x) => x.item?.id).sort().join())
@@ -6420,7 +6584,7 @@ function dayPanelHTML(date) {
       ${o.warn?.length ? `<p class="why warn">Heads up: ${o.warn.map(esc).join(" · ")}</p>` : ""}
       <p class="why">${near.length ? near.map(([p, u]) => `${esc(p.name)} is also ${u.kind === "worn" ? "worn" : "planned"} ${esc(fmtDay(u.date))}`).join(" · ") : `Nothing in it is worn or planned within ${ROTATION_DAYS} days`}</p>
       ${washNote(allPieces(o), date)}
-      <div class="row"><button class="btn primary" data-calplan="${date}">Plan it</button><button class="btn" data-calnext="${date}">Another idea</button><button class="btn ghost" data-calcancel="${date}">Cancel</button></div>
+      <div class="row">${ideaActions(date)}${stageOK() ? `<button class="btn" data-calpreview="idea|${date}">On the avatar</button>` : ""}<button class="btn ghost" data-calcancel="${date}">Cancel</button></div>
     </div>` : s ? `<p class="muted" style="margin:0">Nothing you own makes an outfit for this day yet.</p>` : "";
   return `
     <div><h2>${esc(longDay(date))}</h2>${date === now ? `<p class="muted small" style="margin:2px 0 0">Today</p>` : ""}</div>
@@ -6431,6 +6595,8 @@ function dayPanelHTML(date) {
     ${past || o ? "" : `<div class="row"><button class="btn primary" data-calsuggest="${date}">${parts.length ? "Suggest another outfit" : "Suggest an outfit for this day"}</button>${parts.length ? `<button class="btn ghost danger" data-calclear="${date}">Clear the plan</button>` : ""}</div>`}
     <label class="field cal-note"><span>Notes</span><textarea class="input" data-input="daynote" data-day="${date}" rows="2" placeholder="${past ? "How it went" : "Dinner with Luca, pack the umbrella…"}">${esc(plan?.notes || "")}</textarea></label>`;
 }
+// The buttons under a Calendar idea (also in its 3D preview): today it can be worn straight away.
+const ideaActions = (date, inSheet = false) => `${date === localDay() ? `<button class="btn primary" data-calwear="${date}">Wear it today</button>` : ""}<button class="btn${date === localDay() ? "" : " primary"}" data-calplan="${date}">Plan it</button><button class="btn" data-calnext="${date}"${inSheet ? ' data-preview="1"' : ""}>Another idea</button>`;
 function renderPlan() {
   const now = localDay();
   planner.month ||= now.slice(0, 7);
@@ -8220,12 +8386,19 @@ function renderSettings() {
           : state.serverKeys.products ? `Paused: ${esc(productsDown)} Discover shows drawings until it works again.`
           : "Off: Discover shows drawings, and Google Lens in Add is off. For real product photos and Google Lens, sign up for free at serpapi.com, copy your API key and add it to the Worker as the SERPAPI_KEY secret: Cloudflare > Workers & Pages > smart-wardrobe > Settings > Variables and Secrets > Add, type Secret (see the README, “Product photos”)."}</span></div>
       </section>
+      <section class="card stack" id="backup">
+        <h2 style="margin:0">Backup</h2>
+        <p class="muted small" style="margin:0">One file with every piece and its photos, your fragrances, what you wore, liked and rated, Must-Buy, events, the Calendar's plans, your 3D body and the settings on this screen (never your AI keys). Keep it as a copy, or use it to move your wardrobe to another phone, computer or the wall screen.</p>
+        <div class="row">
+          <button class="btn primary" data-act="export">Export wardrobe backup</button>
+          <button class="btn" data-act="import">Import wardrobe backup</button>
+        </div>
+        ${s.lastBackup ? `<p class="muted small" style="margin:0">Last backup from this device: ${esc(new Date(s.lastBackup).toLocaleDateString(undefined, { weekday: "short", day: "numeric", month: "short" }))}.</p>` : ""}
+      </section>
       <section class="card stack">
         <h2 style="margin:0">Data</h2>
         <div class="row">
           <button class="btn" data-act="seed">Load sample wardrobe</button>
-          <button class="btn" data-act="export">Export backup</button>
-          <button class="btn" data-act="import">Import backup</button>
           <button class="btn ghost danger" data-act="wipe">Erase everything</button>
         </div>
         <p class="muted small" style="margin:0">${syncLine()}</p>
@@ -8379,18 +8552,258 @@ async function fitAll() {
   render();
 }
 
+/* ---------- Backup: the whole wardrobe in one file ----------
+   Settings > Backup. One .json file holds every piece with its photos (the cut-outs and the
+   original photos, as base64 only inside the file), the fragrances, the wear log (with likes,
+   skips and ratings), Must-Buy, events, the Calendar (planned days, calendar links), the 3D
+   mirror's body and the settings that aren't secret: never an API key. It moves the wardrobe
+   between devices that don't share one (a phone, a PC, the kiosk) or keeps a copy of it.
+   Importing either adds the backup to the wardrobe here (a piece changed here since the backup
+   was made keeps its changes) or replaces the wardrobe with it. Photos go back into IndexedDB as
+   Blobs, and with sync on they reach every device like any other change. */
+const BACKUP_VERSION = 3;
+// The settings that travel with a backup (the AI keys, the usage count and device-only state don't).
+const BACKUP_SETTINGS = ["city", "lat", "lon", "unit", "theme", "region", "gender", "age", "touches", "scents", "aiProvider", "geminiModel",
+  "autoCutout", "aiAuto", "autoWash", "washAfter", "washBack", "mirrorMode", "hairFinish", "brandsApart"];
+const backupName = (day = localDay()) => `smart-wardrobe-backup-${day}.json`;
+const fmtMB = (bytes) => (bytes >= 1e6 ? `${(bytes / 1e6).toFixed(1)} MB` : `${Math.max(1, Math.round(bytes / 1e3))} KB`);
+// The file, built piece by piece: each piece becomes its own small part, so a wardrobe of 30 MB of
+// photos is never one 30 MB text in memory.
+async function backupBlob(progress = () => {}) {
+  const settings = Object.fromEntries(BACKUP_SETTINGS.filter((k) => state.settings[k] !== undefined).map((k) => [k, state.settings[k]]));
+  const head = {
+    app: "smart-wardrobe", version: BACKUP_VERSION, exportedAt: new Date().toISOString(),
+    counts: { items: state.items.length, scents: state.scents.length, wears: state.log.filter((l) => logKind(l) === "wear").length, days: Object.keys(state.days || {}).length },
+    settings, avatar: state.avatar, calendar: state.calendar, days: state.days, plan: state.plan, audit: state.audit,
+    log: state.log, wants: state.wants, events: state.events,
+  };
+  const parts = [JSON.stringify(head).slice(0, -1)]; // without its closing brace: the pieces follow
+  const total = state.items.length + state.scents.length;
+  let done = 0;
+  for (const [name, list] of [["items", state.items], ["scents", state.scents]]) {
+    parts.push(`,"${name}":[`);
+    for (const [k, rec] of list.entries()) {
+      const out = await walkBlobs(rec, (b) => (b instanceof Blob ? blobToDataURL(b) : b));
+      parts.push(new Blob([(k ? "," : "") + JSON.stringify(out)]));
+      progress(++done, total);
+    }
+    parts.push("]");
+  }
+  parts.push("}");
+  return new Blob(parts, { type: "application/json" });
+}
+let backupBusy = false;
 async function exportBackup() {
-  const items = [];
-  for (const i of state.items) items.push({
-    ...i,
-    photos: await Promise.all((i.photos || []).map(blobToDataURL)),
-    originals: i.originals ? await Promise.all(i.originals.map(blobToDataURL)) : undefined,
+  if (backupBusy) return;
+  backupBusy = true;
+  try {
+    let shown = 0;
+    const blob = await backupBlob((n, total) => { if (n === total || Date.now() - shown > 400) { shown = Date.now(); toast(`Making the backup… ${n} of ${total}`); } });
+    const href = URL.createObjectURL(blob);
+    Object.assign(document.createElement("a"), { href, download: backupName() }).click();
+    setTimeout(() => URL.revokeObjectURL(href), 60e3);
+    toast(`Backup saved: ${state.items.length} piece${state.items.length === 1 ? "" : "s"} with their photos, ${fmtMB(blob.size)}`);
+    state.settings.lastBackup = new Date().toISOString();
+    await saveSettings();
+    if (view === "settings") render();
+  } catch (e) {
+    toast(`Couldn't make the backup (${e.message || e})`);
+  } finally { backupBusy = false; }
+}
+// A photo inside a backup ("data:image/webp;base64,…") back as a Blob. Anything else is left as it is.
+function dataURLBlob(u) {
+  if (typeof u !== "string") return u;
+  const m = /^data:([^;,]*)((?:;[^;,]*)*?)(;base64)?,/.exec(u);
+  if (!m) return u;
+  const body = u.slice(m[0].length);
+  const bin = m[3] ? atob(body) : decodeURIComponent(body);
+  const bytes = new Uint8Array(bin.length);
+  for (let i = 0; i < bin.length; i++) bytes[i] = bin.charCodeAt(i);
+  return new Blob([bytes], { type: m[1] || "application/octet-stream" });
+}
+const photoList = (arr) => (Array.isArray(arr) ? arr.map(dataURLBlob).filter((b) => b instanceof Blob || (typeof b === "string" && b)) : undefined);
+// What a backup file holds, for the question before it's imported. null: not a backup of this app.
+function backupSummary(data) {
+  if (!data || typeof data !== "object" || !Array.isArray(data.items) || (data.app && data.app !== "smart-wardrobe")) return null;
+  const wears = (data.log || []).filter((l) => logKind(l) === "wear").length;
+  const days = Object.keys(data.days || {}).length;
+  const when = data.exportedAt && !Number.isNaN(Date.parse(data.exportedAt)) ? new Date(data.exportedAt).toLocaleDateString(undefined, { day: "numeric", month: "long", year: "numeric" }) : "";
+  const n = (k, one, many = `${one}s`) => `${k} ${k === 1 ? one : many}`;
+  return {
+    when,
+    text: [n(data.items.length, "piece"), data.scents?.length && n(data.scents.length, "fragrance"), wears && n(wears, "outfit") + " worn", days && n(days, "planned day"), data.avatar?.body && "your 3D body"].filter(Boolean).join(", "),
+  };
+}
+// Is the piece here the same as the backup's copy? Its fields, and its photos by size (a photo's
+// bytes from the base64 text's length), so nothing is written, or sent to the other devices, for nothing.
+const stableJSON = (v) => JSON.stringify(v, (k, x) => (x && typeof x === "object" && !Array.isArray(x) ? Object.fromEntries(Object.keys(x).sort().map((key) => [key, x[key]])) : x));
+const PHOTO_KEYS = ["photos", "originals"];
+const photoBytes = (p) => {
+  if (p instanceof Blob) return p.size;
+  const m = typeof p === "string" && /^data:[^,]*;base64,/.exec(p);
+  if (!m) return String(p);
+  const b = p.length - m[0].length;
+  return (b * 3) / 4 - (p.endsWith("==") ? 2 : p.endsWith("=") ? 1 : 0);
+};
+function sameRecord(here, backup) {
+  const bare = (r) => stableJSON(Object.fromEntries(Object.entries(r).filter(([k, v]) => !PHOTO_KEYS.includes(k) && v !== undefined)));
+  return bare(here) === bare(backup) && PHOTO_KEYS.every((k) => JSON.stringify((here[k] || []).map(photoBytes)) === JSON.stringify((backup[k] || []).map(photoBytes)));
+}
+// The same log entry twice (a backup imported twice, or one without ids from an old version).
+const logSig = (l) => `${logKind(l)}|${l.at || l.date || ""}|${[...(l.itemIds || [])].sort().join(",")}|${l.wearId || ""}`;
+
+// Put a backup into the wardrobe. `replace`: erase this wardrobe first (on every device sharing
+// it), so it becomes exactly the backup; otherwise the backup is added: new pieces and entries come
+// in, and of a piece both have, the one changed last wins (this device's if it was changed after
+// the backup was made). Returns what it did, for the toast.
+async function restoreBackup(data, { replace = false, progress = () => {} } = {}) {
+  if (!backupSummary(data)) throw new Error("That file isn't a Smart Wardrobe backup");
+  const madeAt = data.exportedAt || "";
+  const r = { added: 0, updated: 0, same: 0, kept: 0, scents: 0, log: 0, days: 0 };
+  if (replace) {
+    for (const s of ["items", "log", "wants", "events", "scents"]) await store.clear(s);
+    for (const t of [...thumbs.keys()]) dropThumb(t);
+    state.items = []; state.log = []; state.wants = []; state.events = []; state.scents = [];
+  }
+  const hereAt = (key) => sync.meta[key] || "";
+  const existing = new Map((await store.all("items")).map((i) => [i.id, i]));
+  for (const [k, raw0] of data.items.entries()) {
+    progress(k + 1, data.items.length);
+    if (!raw0?.id) continue;
+    const here = existing.get(raw0.id);
+    if (here && sameRecord(here, raw0)) { r.same++; continue; } // nothing to change
+    if (here && madeAt && hereAt(`items/${raw0.id}`) > madeAt) { r.kept++; continue; } // changed here after the backup
+    const i = { ...raw0, photos: photoList(raw0.photos) || [] };
+    if (raw0.originals) i.originals = photoList(raw0.originals);
+    // Older versions gave sample pieces random ids: keep the backup's copy, not a second one.
+    for (const dup of [...existing.values()].filter((x) => i.seedKey && seedBase(x.seedKey) === seedBase(i.seedKey) && x.id !== i.id)) {
+      await store.del("items", dup.id);
+      existing.delete(dup.id);
+    }
+    if (here) revokeGarmentURLs(i.id, i);
+    await store.put("items", i);
+    existing.set(i.id, i);
+    if (here) r.updated++; else r.added++;
+  }
+  const scentsHere = new Map((await store.all("scents")).map((x) => [x.id, x]));
+  for (const sc of data.scents || []) {
+    const here = sc?.id && scentsHere.get(sc.id);
+    if (!sc?.id || (here && (sameRecord(here, sc) || (madeAt && hereAt(`scents/${sc.id}`) > madeAt)))) continue;
+    await store.put("scents", { ...sc, photos: photoList(sc.photos) || [] });
+    r.scents++;
+  }
+  // Wear-log entries keep their ids (ratings point at them, so answered rating cards don't come
+  // back); one whose id is taken here by a different entry gets a new id; one already here is skipped.
+  const logs = new Map((await store.all("log")).map((l) => [l.id, l]));
+  const sigs = new Set([...logs.values()].map(logSig));
+  for (const l0 of data.log || []) {
+    if (!l0 || typeof l0 !== "object") continue;
+    const l = { ...l0 };
+    const here = l.id != null && logs.get(l.id);
+    if (here && here.at === l.at) continue; // the same entry
+    if (sigs.has(logSig(l))) continue;
+    if (here) delete l.id;
+    await store.put("log", l);
+    sigs.add(logSig(l));
+    r.log++;
+  }
+  if (data.wishlist?.length) { state.wishlist = data.wishlist; await moveWishlist(); }
+  const wants = new Set((await store.all("wants")).map((w) => w.id)), events = new Set((await store.all("events")).map((e) => e.id));
+  for (const w of data.wants || []) if (w?.id && !wants.has(w.id)) await store.put("wants", w);
+  for (const e of data.events || []) if (e?.id && !events.has(e.id)) await store.put("events", e);
+  // The shared records: replaced, or merged (links added, the later plan of a day wins).
+  if (data.calendar?.links) {
+    const mine = replace ? SHARED_KV.calendar() : state.calendar || SHARED_KV.calendar();
+    state.calendar = { links: [...(mine.links || []), ...data.calendar.links.filter((l) => l?.url && !(mine.links || []).some((x) => x.url === l.url))], occ: { ...data.calendar.occ, ...mine.occ } };
+    await saveCalendar();
+    state.cal.at = 0;
+  }
+  if (replace || (data.days && typeof data.days === "object")) {
+    const days = replace ? {} : { ...state.days };
+    for (const [d, e] of Object.entries(data.days && typeof data.days === "object" ? data.days : {})) {
+      if (!e || typeof e !== "object") continue;
+      if (!days[d] || String(e.at || "") > String(days[d].at || "")) { days[d] = e; r.days++; }
+    }
+    state.days = days;
+    await saveDays();
+  }
+  if (data.avatar?.body && (replace || !state.avatar || String(data.avatar.at || "") > String(state.avatar.at || ""))) {
+    state.avatar = data.avatar;
+    mirror.draft = null;
+    await store.put("kv", state.avatar, "avatar");
+  }
+  if (replace ? state.plan || data.plan : !state.plan && data.plan) { state.plan = data.plan || null; await savePlan(); }
+  if (data.audit && (replace || !state.audit)) { state.audit = data.audit; await saveAudit(); }
+  // Settings: a replace takes the backup's; adding only fills in what this device hasn't set (the city, your age).
+  const s = data.settings && typeof data.settings === "object" ? data.settings : {};
+  for (const k of BACKUP_SETTINGS) {
+    if (!(k in s)) continue;
+    if (replace || (["city", "lat", "lon"].includes(k) ? state.settings.lat == null : k === "age" ? !state.settings.age : false)) state.settings[k] = s[k];
+  }
+  await saveSettings();
+  applyTheme();
+  await loadAll();
+  await dropDuplicateSamples();
+  wardTiles.clear();
+  sweepURLs();
+  warmThumbs();
+  Object.assign(state, { outfits: [], anchor: null });
+  tasteMemo = null; wearsMemo = null; shopMemo = null;
+  return r;
+}
+// Settings > Import wardrobe backup: pick the file, see what's in it, then add it or replace.
+async function importBackup() {
+  const input = Object.assign(document.createElement("input"), { type: "file", accept: "application/json,.json" });
+  input.onchange = async () => {
+    const file = input.files[0];
+    if (!file) return;
+    let data;
+    try {
+      toast("Reading the backup…");
+      data = JSON.parse(await file.text());
+    } catch { return toast("That file couldn't be read: it isn't a backup from this app"); }
+    const sum = backupSummary(data);
+    if (!sum) return toast("That file isn't a Smart Wardrobe backup");
+    const how = await backupChoice(sum, file.size);
+    if (!how) return;
+    if (how === "replace" && !(await confirmBox(sync.status === "on" ? "Replace everything with the backup? Every device sharing this wardrobe gets the backup instead of what it has now." : "Replace everything on this device with the backup?", "Replace"))) return;
+    try {
+      let shown = 0;
+      const r = await restoreBackup(data, {
+        replace: how === "replace",
+        progress: (n, total) => { if (n === total || Date.now() - shown > 400) { shown = Date.now(); toast(`Importing… ${n} of ${total} pieces`); } },
+      });
+      const pieces = how === "replace" ? `${r.added} piece${r.added === 1 ? "" : "s"}` : [r.added && `${r.added} new`, r.updated && `${r.updated} updated`, r.kept && `${r.kept} kept as changed here`].filter(Boolean).join(", ") || "no pieces";
+      toast(`Imported: ${pieces}${r.scents ? `, ${r.scents} fragrance${r.scents === 1 ? "" : "s"}` : ""}${r.log ? `, ${r.log} log entr${r.log === 1 ? "y" : "ies"}` : ""}${r.days ? `, ${r.days} planned day${r.days === 1 ? "" : "s"}` : ""}`);
+      render();
+    } catch (e) {
+      toast(e.message ? `Import stopped: ${e.message}` : "That file couldn't be imported");
+      await loadAll().catch(() => {});
+      render();
+    }
+  };
+  input.click();
+}
+// Add to the wardrobe here, or replace it? (A sheet with the backup's contents.)
+function backupChoice(sum, size) {
+  return new Promise((resolve) => {
+    const panel = $(".sheet-panel");
+    panel.innerHTML = `<div class="stack" style="max-width:620px;margin:0 auto">
+      <h2 style="margin:0">Import this backup?</h2>
+      <p style="margin:0">${sum.when ? `Made on ${esc(sum.when)}: ` : ""}${esc(sum.text)} <span class="muted small">(${fmtMB(size)})</span></p>
+      <div class="stack" style="gap:8px">
+        <button class="btn primary" id="bk-merge">Add to this wardrobe</button>
+        <span class="muted small">New pieces, outfits and plans are added. A piece that's in both keeps the latest changes, so nothing you changed here since the backup is lost.</span>
+        <button class="btn" id="bk-replace">Replace this wardrobe</button>
+        <span class="muted small">Everything here is erased first, so the wardrobe becomes exactly the backup${sync.status === "on" ? ", on every device that shares it" : ""}.</span>
+      </div>
+      <div class="row"><button class="btn ghost" id="bk-no">Cancel</button></div></div>`;
+    $("#sheet").hidden = false;
+    const done = (v) => (e) => { e.stopPropagation(); closeSheet(); resolve(v); };
+    $("#bk-merge").onclick = done("merge");
+    $("#bk-replace").onclick = done("replace");
+    $("#bk-no").onclick = done(null);
   });
-  const scents = [];
-  for (const sc of state.scents) scents.push({ ...sc, photos: await Promise.all((sc.photos || []).map(blobToDataURL)) });
-  const blob = new Blob([JSON.stringify({ version: 2, exportedAt: new Date().toISOString(), items, scents, log: state.log, wants: state.wants, events: state.events, calendar: state.calendar, days: state.days })], { type: "application/json" });
-  const a = Object.assign(document.createElement("a"), { href: URL.createObjectURL(blob), download: `wardrobe-backup-${today()}.json` });
-  a.click();
 }
 const seedBase = (k) => String(k || "").replace(/\.jpg$/, ""); // v1 sample keys kept the extension
 
@@ -8426,44 +8839,6 @@ async function dropDuplicateSamples() {
     state.outfits = [];
   }
   return removed.size;
-}
-
-async function importBackup() {
-  const input = Object.assign(document.createElement("input"), { type: "file", accept: "application/json" });
-  input.onchange = async () => {
-    try {
-      const data = JSON.parse(await input.files[0].text());
-      const toBlobs = (arr) => Promise.all((arr || []).map(async (u) => (await fetch(u)).blob()));
-      for (const i of data.items || []) {
-        i.photos = await toBlobs(i.photos);
-        if (i.originals) i.originals = await toBlobs(i.originals);
-        // Older versions gave sample pieces random ids: keep the backup's copy, not a second one.
-        for (const dup of (await store.all("items")).filter((x) => i.seedKey && seedBase(x.seedKey) === seedBase(i.seedKey) && x.id !== i.id)) {
-          await store.del("items", dup.id);
-        }
-        await store.put("items", i);
-      }
-      for (const sc of data.scents || []) if (sc?.id) { sc.photos = await toBlobs(sc.photos); await store.put("scents", sc); }
-      // Wear-log entries keep their ids (ratings point at them, so answered rating cards don't come
-      // back); one whose id is taken here by a different entry gets a new id.
-      const logs = new Map((await store.all("log")).map((l) => [l.id, l]));
-      for (const l of data.log || []) {
-        const here = l.id != null && logs.get(l.id);
-        if (here && here.at !== l.at) delete l.id;
-        await store.put("log", l);
-      }
-      if (data.wishlist?.length) { state.wishlist = data.wishlist; await moveWishlist(); }
-      for (const w of data.wants || []) if (w?.id && !state.wants.some((x) => x.id === w.id)) { state.wants.push(w); await store.put("wants", w); }
-      for (const e of data.events || []) if (e?.id && !state.events.some((x) => x.id === e.id)) { state.events.push(e); await store.put("events", e); }
-      if (data.calendar?.links) { state.calendar = data.calendar; await saveCalendar(); state.cal.at = 0; }
-      if (data.days && typeof data.days === "object") { state.days = { ...state.days, ...data.days }; await saveDays(); }
-      await loadAll();
-      state.outfits = [];
-      toast(`Imported ${data.items?.length || 0} pieces${data.scents?.length ? ` and ${data.scents.length} fragrances` : ""}`);
-      render();
-    } catch { toast("That file couldn't be imported"); }
-  };
-  input.click();
 }
 
 // What each outfit in a stylist answer still breaks of the fashion bible's important rules.
@@ -8532,6 +8907,12 @@ async function onTap(e) {
   // Mirror (Today)
   // The stage changes first, in this same frame; then the panel is drawn again.
   if (ds.mlook != null) { mirror.pick = +ds.mlook; dressStage(); return remountMirror(); }
+  if (ds.tryon != null) { // "On the avatar" on an idea card: the mirror above wears it
+    mirror.pick = +ds.tryon;
+    dressStage();
+    remountMirror();
+    return $("#mirror")?.scrollIntoView({ behavior: "smooth", block: "start" });
+  }
   if (ds.mpiece) {
     const o = mirrorIdea();
     if (!o) return;
@@ -8553,8 +8934,12 @@ async function onTap(e) {
   if (ds.calday) return pickDay(ds.calday);
   if (ds.calmonth) { planner.month = addMonths(planner.month || localDay().slice(0, 7), +ds.calmonth); return render(); }
   if (ds.calsuggest) { planner.sugg = suggestDay(ds.calsuggest); return paintPanel(); }
-  if (ds.calnext) return nextIdea(ds.calnext);
-  if (ds.calplan) return planDay(ds.calplan);
+  if (ds.calnext) { nextIdea(ds.calnext); if (ds.preview) openCalPreview("idea", ds.calnext); return; }
+  if (ds.calplan) { if (mirror.preview) closeSheet(); return planDay(ds.calplan); }
+  if (ds.calwear) { if (mirror.preview) closeSheet(); return wearIdea(ds.calwear); }
+  if (ds.calworn) { if (mirror.preview) closeSheet(); return wearPlanned(ds.calworn); }
+  if (ds.calmissed) return missPlanned(ds.calmissed);
+  if (ds.calpreview) { const [kind, date] = ds.calpreview.split("|"); return openCalPreview(kind, date); }
   if (ds.calcancel) { planner.sugg = null; return paintPanel(); }
   if (ds.calclear) return clearDay(ds.calclear);
   if (ds.calocc) {
@@ -8634,6 +9019,14 @@ async function onTap(e) {
     await store.put("wants", w);
     if (ds.boughtback) toast(`Noted: you sent the ${w.title.toLowerCase()} back`);
     return render();
+  }
+  if (ds.basket) { // the basket on a wardrobe tile: into the wash, or back
+    const it = state.items.find((i) => i.id === ds.basket);
+    if (!it) return;
+    const on = !it.wash;
+    await setWash([it], on);
+    toast(on ? `${it.name} is in the wash` : `${it.name} is back`, { label: "Undo", run: async () => { await setWash([it], !on); refilter(); } });
+    return refilter();
   }
   if (ds.washdays != null) { state.settings.washBack = +ds.washdays; await saveSettings(); return render(); }
   if (ds.wash) {
@@ -8866,7 +9259,7 @@ async function onTap(e) {
     if (!out) return;
     const matches = pairingsFor(it);
     out.innerHTML = matches.length
-      ? `<h2>Goes well with</h2><div class="grid">${matches.map((m) => itemTile(m)).join("")}</div>`
+      ? `<h2>Goes well with</h2><div class="grid">${matches.map((m) => itemTile(m, undefined, false)).join("")}</div>`
       : `<p class="muted">Add pieces from other categories (bottoms, shoes, jackets) to see pairings.</p>`;
     if (aiReady()) {
       out.insertAdjacentHTML("beforeend", `<div id="pair-ai" class="ai-answer" style="margin-top:14px"></div>`);
@@ -9152,7 +9545,7 @@ window.addEventListener("error", (e) => { if (e.error) failed(e.error, "the app"
 
 document.addEventListener("keydown", (e) => {
   // The 3D mirror: the arrow keys turn him a quarter at a time.
-  if (e.target.id === "stage3d" && ["ArrowLeft", "ArrowRight"].includes(e.key) && mirror.stage) {
+  if (["stage3d", "stage3d-preview"].includes(e.target.id) && ["ArrowLeft", "ArrowRight"].includes(e.key) && mirror.stage) {
     e.preventDefault();
     mirror.angle = (Math.round(mirror.angle / 90) * 90 + (e.key === "ArrowRight" ? 90 : 270)) % 360;
     mirror.stage.snapTo(mirror.angle);
