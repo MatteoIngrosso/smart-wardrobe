@@ -1171,7 +1171,7 @@ function garmentTopology(D, S, sub, length) {
 /* ---------- height field: how far the cloth stands off the body ---------- */
 
 function baseHeights(D, S, B, env, patch, asset, fitKey) {
-  const spec = patch.spec, sub = patch.sub, fit = FIT[fitKey || asset.fit] ?? 1;
+  const spec = patch.spec, fit = FIT[fitKey || asset.fit] ?? 1;
   const off = (SLOT_OFFSET_MM[spec.slot] ?? 8) * MM;
   const h = new Float32Array(D.m), hmin = new Float32Array(D.m);
   const { P } = B, Ns = B.Dir;
@@ -1645,7 +1645,7 @@ function topTargets(D, S, B, g, worn) {
   let yLo = Infinity;
   for (const v of g.patch.region) if (D.armW[v] < 0.3) yLo = Math.min(yLo, P[v * 3 + 1]);
   yLo -= 2 * dy;
-  const yHi = yTop + 2 * dy, NR = Math.ceil((yHi - yLo) / dy) + 1, rowY = (r) => yLo + r * dy;
+  const yHi = yTop + 2 * dy, NR = Math.ceil((yHi - yLo) / dy) + 1;
   const rows = Array.from({ length: NR }, () => []);
   const add = (x, y, z) => { if (y < yLo || y > yHi) return; const r = Math.round((y - yLo) / dy); for (let k = r - 1; k <= r + 1; k++) if (k >= 0 && k < NR) rows[k].push([x, z]); };
   for (let c = 0; c < m; c++) {
@@ -2083,8 +2083,6 @@ class GarmentMesh {
     this.stage = stage; this.slot = slot; this.prep = prepared; this.tuck = tuck;
     this.name = name || prepared.asset.name || '';
     this.fitKey = fitOf(prepared.asset, this.name);
-    const { D, S } = stage;
-    const asset = prepared.asset;
     this.sub = SPECS[prepared.sub].slot === 'shoes' ? shoeShell(prepared.asset, this.name, prepared.sub) : prepared.sub;
     this.spec = SPECS[this.sub];
     this.patch = stage.topology(this.sub, tuck ? `${prepared.length || 'full'}@${tuck}` : prepared.length);
@@ -2555,7 +2553,7 @@ function photoShoe(gm, foot) {
     weld.push(a, b, c, c, b, d);
   }
   const soleIdx = listS.map((i) => i - nUpper);
-  const ringU = new Float32Array(NR), ringY = new Float32Array(NR), ringX = new Float32Array(NR);
+  const ringY = new Float32Array(NR), ringX = new Float32Array(NR);
   for (let k = 0; k < NR; k++) { const ph = (k / NR) * 2 * Math.PI; ringX[k] = Math.sin(ph); ringY[k] = -Math.cos(ph); }
   return {
     count: nUpper + nSole, nUpper, foot,
@@ -2620,7 +2618,6 @@ function photoShoe(gm, foot) {
       }
       // round in plan: a half circle at the heel, a longer curve at the toe
       const capAt = (u) => Math.max(0.03, Math.sqrt(Math.max(0, 1 - (1 - Math.min(1, u / 0.12)) ** 2)) * Math.sqrt(Math.max(0, 1 - (1 - Math.min(1, (1 - u) / 0.2)) ** 2)));
-      const put = (i, a, l, y) => { const o = i * 3; pos[o] = ank[0] + dx * a + ex_ * l; pos[o + 1] = y; pos[o + 2] = ank[2] + dz * a + ez * l; };
       // the upper (welded, for the normals), then copied to its two halves
       const W = new Float32Array(NS * NR * 3), T = new Float32Array(NS * NR);
       for (let j = 0; j < NS; j++) {
@@ -2703,32 +2700,6 @@ function photoShoe(gm, foot) {
   };
 }
 
-function convexHull2(pts) {
-  const P = pts.slice().sort((a, b) => a[0] - b[0] || a[1] - b[1]);
-  const cr = (o, a, b) => (a[0] - o[0]) * (b[1] - o[1]) - (a[1] - o[1]) * (b[0] - o[0]);
-  const lo = [], up = [];
-  for (const p of P) { while (lo.length >= 2 && cr(lo[lo.length - 2], lo[lo.length - 1], p) <= 0) lo.pop(); lo.push(p); }
-  for (let i = P.length - 1; i >= 0; i--) { const p = P[i]; while (up.length >= 2 && cr(up[up.length - 2], up[up.length - 1], p) <= 0) up.pop(); up.push(p); }
-  return lo.slice(0, -1).concat(up.slice(0, -1));
-}
-// K points around a closed polygon, by angle from its centre (counter-clockwise seen from above).
-function resampleLoop(poly, K, cx, cz) {
-  const out = [];
-  for (let k = 0; k < K; k++) {
-    const a = (k / K) * Math.PI * 2, dx = Math.cos(a), dz = -Math.sin(a);
-    let best = 0;
-    for (let i = 0; i < poly.length; i++) {
-      const p = poly[i], q = poly[(i + 1) % poly.length];
-      const px = p[0] - cx, pz = p[1] - cz, ex = q[0] - p[0], ez = q[1] - p[1];
-      const den = dx * ez - dz * ex; if (Math.abs(den) < 1e-12) continue;
-      const t = (px * ez - pz * ex) / den, u = (px * dz - pz * dx) / den;
-      if (t > 0 && u >= -1e-6 && u <= 1 + 1e-6) best = Math.max(best, t);
-    }
-    out.push([cx + dx * best, cz + dz * best]);
-  }
-  return out;
-}
-
 /* =====================================================================================
    Textures
    ===================================================================================== */
@@ -2792,10 +2763,16 @@ export async function createStage(container, { onAngle, onReady, mode = 'avatar'
   }, true);
   backTex.generateMipmaps = false; backTex.minFilter = THREE.LinearFilter; // (drawn about 1:1: no mipmaps to build)
   scene.background = backTex;
-  const pmrem = new THREE.PMREMGenerator(renderer);
-  const envTex = pmrem.fromScene(new RoomEnvironment(), 0.04).texture;
-  pmrem.dispose();
-  scene.environment = envTex;
+  // the environment light is a render target (made again if the GPU context is lost: see onRestored)
+  let envTex = null;
+  const makeEnvironment = () => {
+    envTex?.dispose();
+    const pmrem = new THREE.PMREMGenerator(renderer);
+    envTex = pmrem.fromScene(new RoomEnvironment(), 0.04).texture;
+    pmrem.dispose();
+    scene.environment = envTex;
+  };
+  makeEnvironment();
   scene.environmentIntensity = 0.42;
 
   // three-point soft lighting; the lights stay with the camera while the man turns
@@ -3117,16 +3094,20 @@ diffuseColor.rgb *= mix(1.0, 0.42, smoothstep(0.0, 0.42, vEyeUp));`)
     return entry.promise;
   }
 
-  const slotToken = {};
+  // Each slot counts its requests: a piece whose textures are still loading when a newer piece (or
+  // nothing) is asked for the same slot is dropped when it arrives, so tapping quickly between
+  // looks never leaves an older, slower piece on top of the one picked last.
+  const loadRequestId = {};
   async function setGarment(slot, asset, { visible = true, name } = {}) {
     if (!SLOTS.includes(slot)) throw new Error('avatar-stage: unknown slot ' + slot);
-    const token = (slotToken[slot] = (slotToken[slot] || 0) + 1);
+    if (st.disposed) return;
+    const token = (loadRequestId[slot] = (loadRequestId[slot] || 0) + 1);
     if (!asset) { putOn(slot, null, visible); return; }
     const nm = name ?? asset.name;
     const k = `${asset.garmentId}:${asset.updatedAt || 0}`;
     const entry = st.prepCache.get(k);
     const prep = entry && entry.ready ? entry.value : await prepare(asset);
-    if (slotToken[slot] !== token || st.disposed) return;
+    if (loadRequestId[slot] !== token || st.disposed) return;
     putOn(slot, prep, visible, nm);
   }
   function putOn(slot, prep, visible, name) {
@@ -3338,6 +3319,8 @@ diffuseColor.rgb *= mix(1.0, 0.42, smoothstep(0.0, 0.42, vEyeUp));`)
   function invalidate() { if (!st.raf && !st.disposed) st.raf = requestAnimationFrame(tick); }
   function tick(now) {
     st.raf = 0;
+    if (st.lost || st.disposed) return; // (drawn again once the GPU context is back: onRestored)
+    if (st.sizeStale) resize(); // (the canvas was hidden when it last changed size)
     let more = false;
     if (st.preview) { st.preview = false; if (st.bodyTimer) previewBody(); }
     if (st.snap) {
@@ -3366,20 +3349,56 @@ diffuseColor.rgb *= mix(1.0, 0.42, smoothstep(0.0, 0.42, vEyeUp));`)
     st.lastFrameMs = performance.now() - t0;
   }
 
+  // The canvas follows its container. While the container has no size (the mirror is on another
+  // screen, or still being laid out) the last size is kept, so the picture is never squeezed to a
+  // few pixels and stretched back; the size is taken again as soon as it shows, in the next frame.
   function resize() {
-    const w = Math.max(1, container.clientWidth), h = Math.max(1, container.clientHeight);
+    const w = container.clientWidth, h = container.clientHeight;
+    if (w < 2 || h < 2) { st.sizeStale = true; return; }
+    st.sizeStale = false;
+    const ratio = Math.min(window.devicePixelRatio || 1, 1.5); // (the window may have moved to another screen)
+    if (renderer.getPixelRatio() !== ratio) renderer.setPixelRatio(ratio);
     renderer.setSize(w, h, false);
     camera.aspect = w / h;
     if (st.B) frame(); else camera.updateProjectionMatrix();
     invalidate();
   }
-  const ro = typeof ResizeObserver !== 'undefined' ? new ResizeObserver(() => resize()) : null;
+  // one resize per frame, however many size changes a layout brings
+  let sizeRaf = 0;
+  const onResize = () => { if (!sizeRaf && !st.disposed) sizeRaf = requestAnimationFrame(() => { sizeRaf = 0; resize(); }); };
+  const ro = typeof ResizeObserver !== 'undefined' ? new ResizeObserver(onResize) : null;
   ro?.observe(container);
+  if (!ro) window.addEventListener('resize', onResize);
+
+  // The GPU context can go away (a kiosk display that sleeps, a GPU reset, too many tabs) and come
+  // back. three.js stops drawing while it's lost and rebuilds its own GPU state when it's back;
+  // the textures and meshes are uploaded again from their copies in memory on the next draw. The
+  // environment light lives in a render target, which comes back empty, so it is made again; then
+  // the size is taken again and the scene is drawn once more, instead of staying black.
+  const loseExt = renderer.getContext()?.getExtension?.('WEBGL_lose_context') || null; // (for tests: debug.loseContext)
+  function onLost(e) {
+    e.preventDefault(); // (tells the browser the page handles it, so the context may be restored)
+    st.lost = true;
+    cancelAnimationFrame(st.raf); st.raf = 0;
+  }
+  function onRestored() {
+    st.lost = false;
+    renderer.setClearColor(BACKDROP, 1);
+    makeEnvironment();
+    for (const g of Object.values(st.worn)) if (g) for (const m of g.prep.materials) m.needsUpdate = true;
+    st.sizeStale = true;
+    resize();
+    invalidate();
+  }
+  canvas.addEventListener('webglcontextlost', onLost);
+  canvas.addEventListener('webglcontextrestored', onRestored);
 
   function dispose() {
     st.disposed = true;
-    cancelAnimationFrame(st.raf); clearTimeout(st.bodyTimer);
+    cancelAnimationFrame(st.raf); cancelAnimationFrame(sizeRaf); clearTimeout(st.bodyTimer);
     ro?.disconnect();
+    if (!ro) window.removeEventListener('resize', onResize);
+    canvas.removeEventListener('webglcontextlost', onLost); canvas.removeEventListener('webglcontextrestored', onRestored);
     canvas.removeEventListener('pointerdown', onDown); canvas.removeEventListener('pointermove', onMove);
     canvas.removeEventListener('pointerup', onUp); canvas.removeEventListener('pointercancel', onUp);
     for (const s of SLOTS) if (st.worn[s]) st.worn[s].dispose();
@@ -3406,6 +3425,10 @@ diffuseColor.rgb *= mix(1.0, 0.42, smoothstep(0.0, 0.42, vEyeUp));`)
       get buildMs() { return st.buildMs; },
       triangles() { let n = 0; scene.traverse((o) => { if (o.isMesh && o.visible && o.geometry.index) n += o.geometry.index.count / 3; }); return n; },
       setAngleNow(a) { st.snap = null; st.vel = 0; setAngle(a); render(); },
+      // the GPU context taken away and given back on purpose (WEBGL_lose_context), as a sleeping display does
+      get contextLost() { return !!st.lost; },
+      loseContext() { if (!loseExt) return false; loseExt.loseContext(); return true; },
+      restoreContext() { loseExt?.restoreContext(); },
       // resolves once the current hairstyle's photo is loaded and on the head
       async hairReady() { const style = st.cfg?.hairStyle; if (HAIR_FILES.has(style)) await loadHairAsset(style); await null; },
     },

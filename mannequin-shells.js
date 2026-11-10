@@ -460,7 +460,6 @@ function smoothCentres(runs) {
   return out;
 }
 
-function flipWinding(part) { for (let i = 0; i < part.idx.length; i += 3) { const t = part.idx[i + 1]; part.idx[i + 1] = part.idx[i + 2]; part.idx[i + 2] = t; } }
 const dist = (a, b) => Math.hypot(a[0] - b[0], a[1] - b[1], a[2] - b[2]);
 // Distance of vertex v from the arm's bones (shoulder-elbow-wrist) and how far along them it is.
 function chain(P, v, a, b, c, L1, L2) {
@@ -496,7 +495,7 @@ const cross = (a, b) => [a[1] * b[2] - a[2] * b[1], a[2] * b[0] - a[0] * b[2], a
 // depth), fading into the neck under the jaw. In place, on the drawn copy only (B.J and the shells
 // don't use it).
 export function eggHead(P, N, D, R, J) {
-  let x1 = 0, z0 = Infinity, z1 = -Infinity, n = 0;
+  let z0 = Infinity, z1 = -Infinity, n = 0;
   const yTop = J.headTop[1], yChin = J.neck3[1] - 0.02 * (yTop - J.neck3[1]);
   for (let c = 0; c < D.m; c++) if (D.region[c] === R.HEAD) { z0 = Math.min(z0, P[c * 3 + 2]); z1 = Math.max(z1, P[c * 3 + 2]); n++; }
   if (!n) return;
