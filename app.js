@@ -8634,6 +8634,21 @@ function backupSummary(data) {
     text: [n(data.items.length, "piece"), data.scents?.length && n(data.scents.length, "fragrance"), wears && n(wears, "outfit") + " worn", days && n(days, "planned day"), data.avatar?.body && "your 3D body"].filter(Boolean).join(", "),
   };
 }
+// Is the piece here the same as the backup's copy? Its fields, and its photos by size (a photo's
+// bytes from the base64 text's length), so nothing is written, or sent to the other devices, for nothing.
+const stableJSON = (v) => JSON.stringify(v, (k, x) => (x && typeof x === "object" && !Array.isArray(x) ? Object.fromEntries(Object.keys(x).sort().map((key) => [key, x[key]])) : x));
+const PHOTO_KEYS = ["photos", "originals"];
+const photoBytes = (p) => {
+  if (p instanceof Blob) return p.size;
+  const m = typeof p === "string" && /^data:[^,]*;base64,/.exec(p);
+  if (!m) return String(p);
+  const b = p.length - m[0].length;
+  return (b * 3) / 4 - (p.endsWith("==") ? 2 : p.endsWith("=") ? 1 : 0);
+};
+function sameRecord(here, backup) {
+  const bare = (r) => stableJSON(Object.fromEntries(Object.entries(r).filter(([k, v]) => !PHOTO_KEYS.includes(k) && v !== undefined)));
+  return bare(here) === bare(backup) && PHOTO_KEYS.every((k) => JSON.stringify((here[k] || []).map(photoBytes)) === JSON.stringify((backup[k] || []).map(photoBytes)));
+}
 // The same log entry twice (a backup imported twice, or one without ids from an old version).
 const logSig = (l) => `${logKind(l)}|${l.at || l.date || ""}|${[...(l.itemIds || [])].sort().join(",")}|${l.wearId || ""}`;
 
@@ -8644,7 +8659,7 @@ const logSig = (l) => `${logKind(l)}|${l.at || l.date || ""}|${[...(l.itemIds ||
 async function restoreBackup(data, { replace = false, progress = () => {} } = {}) {
   if (!backupSummary(data)) throw new Error("That file isn't a Smart Wardrobe backup");
   const madeAt = data.exportedAt || "";
-  const r = { added: 0, updated: 0, kept: 0, scents: 0, log: 0, days: 0 };
+  const r = { added: 0, updated: 0, same: 0, kept: 0, scents: 0, log: 0, days: 0 };
   if (replace) {
     for (const s of ["items", "log", "wants", "events", "scents"]) await store.clear(s);
     for (const t of [...thumbs.keys()]) dropThumb(t);
@@ -8655,10 +8670,11 @@ async function restoreBackup(data, { replace = false, progress = () => {} } = {}
   for (const [k, raw0] of data.items.entries()) {
     progress(k + 1, data.items.length);
     if (!raw0?.id) continue;
+    const here = existing.get(raw0.id);
+    if (here && sameRecord(here, raw0)) { r.same++; continue; } // nothing to change
+    if (here && madeAt && hereAt(`items/${raw0.id}`) > madeAt) { r.kept++; continue; } // changed here after the backup
     const i = { ...raw0, photos: photoList(raw0.photos) || [] };
     if (raw0.originals) i.originals = photoList(raw0.originals);
-    const here = existing.get(i.id);
-    if (here && madeAt && hereAt(`items/${i.id}`) > madeAt) { r.kept++; continue; } // changed here after the backup
     // Older versions gave sample pieces random ids: keep the backup's copy, not a second one.
     for (const dup of [...existing.values()].filter((x) => i.seedKey && seedBase(x.seedKey) === seedBase(i.seedKey) && x.id !== i.id)) {
       await store.del("items", dup.id);
@@ -8669,9 +8685,10 @@ async function restoreBackup(data, { replace = false, progress = () => {} } = {}
     existing.set(i.id, i);
     if (here) r.updated++; else r.added++;
   }
-  const scentsHere = new Set((await store.all("scents")).map((x) => x.id));
+  const scentsHere = new Map((await store.all("scents")).map((x) => [x.id, x]));
   for (const sc of data.scents || []) {
-    if (!sc?.id || (scentsHere.has(sc.id) && madeAt && hereAt(`scents/${sc.id}`) > madeAt)) continue;
+    const here = sc?.id && scentsHere.get(sc.id);
+    if (!sc?.id || (here && (sameRecord(here, sc) || (madeAt && hereAt(`scents/${sc.id}`) > madeAt)))) continue;
     await store.put("scents", { ...sc, photos: photoList(sc.photos) || [] });
     r.scents++;
   }
