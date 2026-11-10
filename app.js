@@ -733,6 +733,7 @@ function syncLine() {
    Helpers
    ====================================================================== */
 const $ = (sel, root = document) => root.querySelector(sel);
+const inputValue = (name) => ($(`[data-input="${name}"]`)?.value || "").trim(); // "" when the field isn't on the screen
 const esc = (s) => String(s ?? "").replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
 const uid = () => (crypto.randomUUID ? crypto.randomUUID() : Date.now().toString(36) + Math.random().toString(36).slice(2));
 const today = () => new Date().toISOString().slice(0, 10);
@@ -772,10 +773,15 @@ function guessFit(item) {
 }
 
 /* ---------- photo URLs and thumbnails ---------- */
-// An <img> shows a photo Blob through an object URL, made once per Blob. A URL keeps its Blob in
-// memory until it's revoked, so the URLs of photos that are gone are revoked: revokeGarmentURLs when
-// a piece is deleted or changed (here or on another device), sweepURLs for everything else no longer
-// used (a draft's in-between turns, a deleted fragrance…) when you move to another screen.
+// Photos are Blobs in IndexedDB, loaded with their records before anything is drawn (loadAll), so a
+// screen never waits for a photo: an <img> shows a Blob through an object URL, made once per Blob
+// by photoURL and handed out again on every later draw (the same photo is never turned into a
+// second URL). A URL keeps its Blob in memory until it's revoked, so the URLs of photos that are
+// gone are revoked: revokeGarmentURLs when a piece is deleted or its photos change (here or on
+// another device), sweepURLs for everything else no longer used (a draft's in-between turns, a
+// deleted fragrance…) once another screen is drawn. The 3D mirror never gets a URL: it reads the
+// Blobs themselves (garment-baker.js, avatar-stage.js make and revoke their own, briefly).
+// BlobUrlManager (below) is the same thing by piece and side, for code that thinks in pieces.
 const urlCache = new Map(); // Blob → object URL
 function photoURL(blob) {
   if (!blob) return "";
@@ -797,6 +803,8 @@ function revokeGarmentURLs(id, next = null) {
   if (!next || thumbs.get(id)?.sig !== photoSig(next.photos?.[0])) dropThumb(id);
   wardTiles.delete(id);
 }
+// Runs after a screen is drawn: a URL that no record, draft or camera holds, and that no <img> on
+// the page shows any more, is revoked.
 function sweepURLs() {
   const live = new Set();
   const add = (b) => b instanceof Blob && live.add(b);
@@ -807,8 +815,25 @@ function sweepURLs() {
   scentDraft?.photos?.forEach(add);
   cam.shots.forEach(add);
   pendingShots.forEach(add);
-  for (const b of [...urlCache.keys()]) if (!live.has(b)) revokeURL(b);
+  add(state.disc.try.shown?.photo); // "Try a piece" from a photo
+  const shown = new Set(); // what the page shows right now, whatever holds it
+  for (const img of document.images) if (img.src.startsWith("blob:")) shown.add(img.src);
+  for (const [b, u] of [...urlCache]) if (!live.has(b) && !shown.has(u)) revokeURL(b);
 }
+// The photo URLs by piece and side, for code that thinks in pieces rather than Blobs:
+//   BlobUrlManager.url(item, "front" | "back" | "thumb")   the URL to show (made once, reused)
+//   BlobUrlManager.release(id, next)                        the piece is deleted, or replaced by `next`
+//   BlobUrlManager.sweep()                                   drop what nothing shows any more
+const BlobUrlManager = {
+  url(item, side = "front") {
+    if (side === "thumb") return thumbURL(item);
+    return photoURL(item?.photos?.[side === "back" ? 1 : 0]);
+  },
+  forBlob: photoURL,
+  release: revokeGarmentURLs,
+  sweep: sweepURLs,
+  get count() { return urlCache.size; },
+};
 
 // Grids and lists show a small copy of each piece's first photo, made once in the background and
 // kept on this device ("thumbs"), so a wardrobe of 100 pieces doesn't decode 100 full-size photos.
@@ -827,7 +852,7 @@ function thumbURL(item) {
   return photoURL(p);
 }
 // An <img> of a piece for grids and lists: its thumbnail, swapped in when it's ready.
-const pieceImg = (item, cls = "pic-bg", src = thumbURL(item)) => `<img${cls ? ` class="${cls}"` : ""} src="${src}" data-thumb="${esc(item.id)}" loading="lazy" decoding="async" alt="">`;
+const pieceImg = (item, cls = "pic-bg", src = BlobUrlManager.url(item, "thumb")) => `<img${cls ? ` class="${cls}"` : ""} src="${src}" data-thumb="${esc(item.id)}" loading="lazy" decoding="async" alt="">`;
 function queueThumb(id) {
   thumbQueue.add(id);
   if (!thumbsBusy) { thumbsBusy = true; setTimeout(makeThumbs, 50); }
@@ -879,6 +904,7 @@ let toastTimer, toastAction = null;
 // `action`: an optional button in the toast, e.g. { label: "Undo", run() {…} }.
 function toast(msg, action) {
   const t = $("#toast");
+  if (!t) return;
   t.innerHTML = esc(msg) + (action ? `<button class="toast-act" data-toast="1">${esc(action.label)}</button>` : "");
   toastAction = action?.run || null;
   t.hidden = false;
@@ -3352,9 +3378,9 @@ function go(v) {
   if (v !== "add" && scentDraft && !scentDraft.id && !scentDraft.name.trim() && !scentDraft.photos.length) scentDraft = null; // started, nothing in it
   view = v;
   document.querySelectorAll(".tab").forEach((b) => (b.dataset.view === v ? b.setAttribute("aria-current", "page") : b.removeAttribute("aria-current")));
-  sweepURLs();
   render();
   main.scrollTop = 0;
+  sweepURLs(); // (after the draw: what the new screen shows stays)
 }
 function render() {
   ({ today: renderToday, plan: renderPlan, wardrobe: renderWardrobe, add: renderAdd, shop: renderShop, settings: renderSettings })[view]();
@@ -3725,7 +3751,7 @@ function bakePiece(item) {
     mirror.assets.set(item.id, { photo, asset });
     return asset;
   })().catch((e) => { console.warn("Mirror: couldn't bake", item.name, e); if (mirror.stage === stage) mirror.noBake.add(item.id); return null; })
-    .finally(() => { mirror.pending.delete(item.id); dressStage(); });
+    .finally(() => { if (mirror.pending.get(item.id) === p) mirror.pending.delete(item.id); dressStage(); }); // (only its own entry: the look may have been switched and the piece asked again)
   mirror.pending.set(item.id, p);
   return p;
 }
@@ -3748,7 +3774,8 @@ function dressStage() {
     if ((now?.id ?? null) === id) {
       if (id && now.on !== on) { st.setVisible(slot, on); now.on = on; }
     } else {
-      st.setGarment(slot, asset || null, { visible: on, name: w?.item.name || "" }); // the name says the fit ("straight", "baggy"…)
+      st.setGarment(slot, asset || null, { visible: on, name: w?.item.name || "" }) // the name says the fit ("straight", "baggy"…)
+        .catch((e) => { console.warn("Mirror: couldn't put on", w?.item.name, e); if (mirror.worn[slot]?.id === id) mirror.worn[slot] = null; });
       mirror.worn[slot] = id ? { id, on } : null;
     }
     if (w && !asset && !mirror.noBake.has(w.item.id) && !mirror.pending.has(w.item.id)) bakePiece(w.item);
@@ -4730,12 +4757,13 @@ const tagInput = Object.assign(document.createElement("input"), { type: "file", 
 document.body.append(tagInput);
 const tryInput = Object.assign(document.createElement("input"), { type: "file", accept: "image/*", capture: "environment", hidden: true });
 document.body.append(tryInput);
-tryInput.onchange = () => { const f = tryInput.files[0]; tryInput.value = ""; if (f) tryPhoto(f); };
+tryInput.onchange = () => { const f = tryInput.files[0]; tryInput.value = ""; if (f) tryPhoto(f).catch((e) => failed(e, "reading the photo")); };
 // Google Lens from the start of Add: the photo becomes the new piece's and is searched at once.
 // Inside a piece without photos it joins the piece.
 const lensInput = Object.assign(document.createElement("input"), { type: "file", accept: "image/*", capture: "environment", hidden: true });
 document.body.append(lensInput);
-lensInput.onchange = async () => {
+lensInput.onchange = () => lensPicked().catch((e) => failed(e, "reading the photo"));
+async function lensPicked() {
   const f = lensInput.files[0];
   lensInput.value = "";
   if (!f) return;
@@ -4747,14 +4775,14 @@ lensInput.onchange = async () => {
     preparePhoto(p, draft);
   } else startDraft([blob]); // sets the new draft at once, then removes the background and recognises it
   lensSearch(draft, blob);
-};
+}
 tagInput.onchange = () => {
   const f = tagInput.files[0];
   tagInput.value = "";
   if (!f) return;
   // From the start of Add, the label makes a new piece; inside a piece, it fills in what's missing.
   if (!draft || (!draft.photos.length && !draft.id && !draft.fromLabel)) { draft = { ...newDraft(), fromLabel: true }; go("add"); }
-  scanTag(draft, f);
+  scanTag(draft, f).catch((e) => failed(e, "reading the label"));
 };
 
 // Codes are read on the device: by the browser where it can (Android, Mac: QR codes and
@@ -5275,8 +5303,8 @@ async function handleFiles(files, fromCamera) {
   queue = groups.slice(1);
   await startDraft(await Promise.all(groups[0].map((f) => resizeImage(f))));
 }
-camInput.onchange = () => { handleFiles(camInput.files, true); camInput.value = ""; };
-galInput.onchange = () => { handleFiles(galInput.files, false); galInput.value = ""; };
+camInput.onchange = () => { handleFiles(camInput.files, true).catch((e) => failed(e, "reading the photo")); camInput.value = ""; };
+galInput.onchange = () => { handleFiles(galInput.files, false).catch((e) => failed(e, "reading the photos")); galInput.value = ""; };
 
 /* ---------- In-app camera: front, then back ---------- */
 // Uses the tablet's camera inside the app (needs https or localhost). If it isn't available,
@@ -7613,15 +7641,16 @@ const scentCam = Object.assign(document.createElement("input"), { type: "file", 
 const scentGal = Object.assign(document.createElement("input"), { type: "file", accept: "image/*", hidden: true });
 document.body.append(scentCam, scentGal);
 for (const input of [scentCam, scentGal]) {
-  input.onchange = async () => {
-    const f = input.files[0];
-    input.value = "";
-    const d = scentDraft;
-    if (!f || !d) return;
-    d.photos.push(await resizeImage(f));
-    rerenderScent(d);
-    if (d.photos.length === 1 && !d.name.trim()) lookupScent(d, true); // the bottle says what it is
-  };
+  input.onchange = () => scentPicked(input).catch((e) => failed(e, "reading the photo"));
+}
+async function scentPicked(input) {
+  const f = input.files[0];
+  input.value = "";
+  const d = scentDraft;
+  if (!f || !d) return;
+  d.photos.push(await resizeImage(f));
+  rerenderScent(d);
+  if (d.photos.length === 1 && !d.name.trim()) lookupScent(d, true); // the bottle says what it is
 }
 function renderScentAdd() {
   const d = scentDraft;
@@ -8484,7 +8513,10 @@ async function ask(question, targetId = "ai-answer") {
   }
 }
 
-document.addEventListener("click", async (e) => {
+// Every tap in the app goes through onTap. What goes wrong in one is shown (a toast) and logged,
+// never swallowed as a silent, unhandled rejection that leaves a button looking dead.
+document.addEventListener("click", (e) => { onTap(e).catch((err) => failed(err, "that tap")); });
+async function onTap(e) {
   const t = e.target.closest("button, a, [data-close], img[data-photo]");
   if (!t) return;
   const ds = t.dataset;
@@ -8606,12 +8638,14 @@ document.addEventListener("click", async (e) => {
   if (ds.washdays != null) { state.settings.washBack = +ds.washdays; await saveSettings(); return render(); }
   if (ds.wash) {
     const it = state.items.find((i) => i.id === ds.wash);
+    if (!it) return;
     await setWash([it], !it.wash);
     toast(it.wash ? `${it.name} is in the wash` : `${it.name} is back`);
     openItem(it.id);
     return render();
   }
   if (ds.plan != null) {
+    if (!state.outfits[+ds.plan]) return render();
     await planOutfit(state.outfits[+ds.plan]);
     toast("Planned. It'll be first on Today tomorrow morning.");
     return render();
@@ -8668,10 +8702,11 @@ document.addEventListener("click", async (e) => {
   }
   if (ds.toggle) { state.settings[ds.toggle] = !state.settings[ds.toggle]; await saveSettings(); return render(); }
   if (ds.provider) { state.settings.aiProvider = ds.provider; await saveSettings(); return render(); }
-  if (ds.rate != null) { const o = state.outfits[+ds.rate]; o.rating = !o.rating; return render(); }
+  if (ds.rate != null) { const o = state.outfits[+ds.rate]; if (o) o.rating = !o.rating; return render(); }
   if (ds.stars) return rate(...ds.stars.split("|"));
   if (ds.dislike) {
     const it = state.items.find((i) => i.id === ds.dislike);
+    if (!it) return;
     if (it.disliked) delete it.disliked; else it.disliked = true;
     await store.put("items", it);
     tasteMemo = null;
@@ -8690,13 +8725,14 @@ document.addEventListener("click", async (e) => {
   if (ds.swap) {
     const [i, role] = ds.swap.split(":");
     const o = state.outfits[+i];
+    if (!o) return render();
     o.swapping = o.swapping === role ? null : role;
     o.swapCat = "all";
     return render();
   }
   if (ds.swapcat) {
     const [i, c] = ds.swapcat.split(":");
-    state.outfits[+i].swapCat = c;
+    if (state.outfits[+i]) state.outfits[+i].swapCat = c;
     return render();
   }
   if (ds.swapto != null) {
@@ -8704,10 +8740,11 @@ document.addEventListener("click", async (e) => {
     await swapPiece(+i, role, id);
     return render();
   }
-  if (ds.skip != null) { state.outfits[+ds.skip].asking = !ds.cancel; return render(); }
+  if (ds.skip != null) { const o = state.outfits[+ds.skip]; if (o) o.asking = !ds.cancel; return render(); }
   if (ds.skipwhy) {
     const [i, reason] = ds.skipwhy.split(":");
     const o = state.outfits[+i];
+    if (!o) return render();
     await addLog({ kind: "skip", reason, itemIds: Object.values(o.pieces).filter(Boolean).map((p) => p.id), ...outfitContext() });
     if (o.planned) await planDone(o.planned, false);
     replaceOutfit(+i);
@@ -8716,6 +8753,7 @@ document.addEventListener("click", async (e) => {
   }
   if (ds.wear != null) {
     const o = state.outfits[+ds.wear];
+    if (!o) return render();
     const sc = outfitScent(o);
     const washed = await wearOutfit(ds.mirror ? mirrorWorn(o) : allPieces(o), { source: o.planned ? "plan" : "idea", ...(sc && { scentIds: [sc.id] }) });
     if (sc) await countScentWear(sc);
@@ -8733,13 +8771,15 @@ document.addEventListener("click", async (e) => {
   }
   if (ds.wearItem) {
     const it = state.items.find((i) => i.id === ds.wearItem);
+    if (!it) return;
     wornToast(`Logged ${it.name}.`, await wearOutfit([it]));
     state.outfits = [];
     return openItem(it.id);
   }
   if (ds.suit) {
     const [a, b] = ds.suit.split(":").map((id) => state.items.find((i) => i.id === id));
-    if (a && b) { await linkSuit(a, b); toast(`The ${a.name} and the ${b.name} are now one suit`); }
+    if (!a) return;
+    if (b) { await linkSuit(a, b); toast(`The ${a.name} and the ${b.name} are now one suit`); }
     state.outfits = [];
     openItem(a.id);
     return render();
@@ -8756,6 +8796,7 @@ document.addEventListener("click", async (e) => {
   }
   if (ds.unsuit) {
     const it = state.items.find((i) => i.id === ds.unsuit);
+    if (!it) return;
     await unlinkSuit(it);
     state.outfits = [];
     openItem(it.id);
@@ -8763,6 +8804,7 @@ document.addEventListener("click", async (e) => {
   }
   if (ds.lookat) {
     const it = state.items.find((i) => i.id === ds.lookat);
+    if (!it) return;
     t.disabled = true;
     t.textContent = "Looking…";
     try { await lookAt(it); await autoLinkSuits(); } catch (e) { toast(e.message || "Couldn't look at the photo"); }
@@ -8773,6 +8815,7 @@ document.addEventListener("click", async (e) => {
   }
   if (ds.everyday) {
     const it = state.items.find((i) => i.id === ds.everyday);
+    if (!it) return;
     if (it.everyday) delete it.everyday; else it.everyday = true;
     await store.put("items", it);
     state.outfits = [];
@@ -8783,6 +8826,7 @@ document.addEventListener("click", async (e) => {
   if (ds.setfit) {
     const [id, fit] = ds.setfit.split(":");
     const it = state.items.find((i) => i.id === id);
+    if (!it) return;
     it.fit = it.fit === fit ? "" : fit;
     await store.put("items", it);
     state.outfits = [];
@@ -8791,6 +8835,7 @@ document.addEventListener("click", async (e) => {
   }
   if (ds.edit) {
     const it = state.items.find((i) => i.id === ds.edit);
+    if (!it) return;
     draft = {
       ...newDraft(), ...it,
       photos: (it.photos || []).map((p, k) => (it.originals?.[k]
@@ -8806,6 +8851,7 @@ document.addEventListener("click", async (e) => {
   }
   if (ds.del) {
     const it = state.items.find((i) => i.id === ds.del);
+    if (!it) return;
     if (!(await confirmBox(`Delete “${it.name}” from your wardrobe?`, "Delete"))) return openItem(it.id);
     await store.del("items", it.id);
     state.items = state.items.filter((i) => i.id !== it.id);
@@ -8815,7 +8861,9 @@ document.addEventListener("click", async (e) => {
   }
   if (ds.pair) {
     const it = state.items.find((i) => i.id === ds.pair);
+    if (!it) return;
     const out = $("#pair-answer");
+    if (!out) return;
     const matches = pairingsFor(it);
     out.innerHTML = matches.length
       ? `<h2>Goes well with</h2><div class="grid">${matches.map((m) => itemTile(m)).join("")}</div>`
@@ -9044,24 +9092,25 @@ document.addEventListener("click", async (e) => {
     }
     case "ask": return ask($('[data-input="ask"]')?.value);
     case "savekey":
-      state.settings.apiKey = $('[data-input="apikey"]').value.trim(); anthropicClient = null;
+      state.settings.apiKey = inputValue("apikey"); anthropicClient = null;
       await saveSettings(); toast(state.settings.apiKey ? "Claude key saved on this device" : "Claude key removed"); return render();
     case "savegemini":
-      state.settings.geminiKey = $('[data-input="geminikey"]').value.trim();
-      state.settings.geminiModel = $('[data-input="geminimodel"]').value.trim() || "gemini-flash-latest";
+      state.settings.geminiKey = inputValue("geminikey");
+      state.settings.geminiModel = inputValue("geminimodel") || "gemini-flash-latest";
       await saveSettings(); toast(state.settings.geminiKey ? "Gemini key saved on this device" : "Gemini key removed"); return render();
     case "savemodel":
-      state.settings.geminiModel = $('[data-input="geminimodel"]').value.trim() || "gemini-flash-latest";
+      state.settings.geminiModel = inputValue("geminimodel") || "gemini-flash-latest";
       await saveSettings(); toast("Model saved"); return render();
     case "forget-key":
       if (state.settings.aiProvider === "claude") { state.settings.apiKey = ""; anthropicClient = null; } else state.settings.geminiKey = "";
       await saveSettings(); toast("Key removed from this device"); return render();
     case "city": {
-      const q = $('[data-input="city"]').value.trim();
-      if (!q) return;
+      const q = inputValue("city");
       const box = $("#city-results");
+      if (!q || !box) return;
       box.innerHTML = `<div class="spinner"></div>`;
       const { results, offline } = await searchCity(q);
+      if (!box.isConnected) return; // (the screen changed meanwhile)
       box.innerHTML = results.map((r) => `<button class="chip" data-city='${esc(JSON.stringify([r.latitude, r.longitude, r.name]))}'>${esc([r.name, r.admin1, r.country_code].filter(Boolean).join(", "))}</button>`).join("") +
         (offline
           ? `<p class="muted small" style="margin:4px 0 0;flex-basis:100%">${results.length ? "No internet here, so this is the built-in list of " + CITIES.length + " cities. Until live weather can load, the app uses their usual temperatures for the month." : `No internet here, and “${esc(q)}” isn't in the built-in list of ${CITIES.length} cities. Try the nearest big city, or set the temperature with the slider on the Today screen.`}</p>`
@@ -9086,7 +9135,20 @@ document.addEventListener("click", async (e) => {
       toast("Wardrobe erased");
       return render();
   }
-});
+}
+// Something went wrong that nothing caught (a tap, a photo being read, a promise nobody waited
+// for): say so once, briefly, and log it, so a kiosk with no console still shows what happened.
+let failedAt = 0;
+function failed(err, what = "something") {
+  if (err?.name === "AbortError") return; // a request cancelled on purpose
+  console.error(`Smart Wardrobe: ${what} failed`, err);
+  if (Date.now() - failedAt < 4000) return; // (one message at a time)
+  failedAt = Date.now();
+  const why = String(err?.message || err || "").slice(0, 120);
+  toast(why ? `Something went wrong with ${what}: ${why}` : `Something went wrong with ${what}.`);
+}
+window.addEventListener("unhandledrejection", (e) => { e.preventDefault(); failed(e.reason, "a background task"); });
+window.addEventListener("error", (e) => { if (e.error) failed(e.error, "the app"); });
 
 document.addEventListener("keydown", (e) => {
   // The 3D mirror: the arrow keys turn him a quarter at a time.
@@ -9153,7 +9215,7 @@ document.addEventListener("input", (e) => {
 });
 document.addEventListener("keydown", (e) => {
   if (e.key === "Enter" && e.target.dataset.input === "ask") ask(e.target.value);
-  if (e.key === "Enter" && e.target.dataset.input === "city") $('[data-act="city"]').click();
+  if (e.key === "Enter" && e.target.dataset.input === "city") $('[data-act="city"]')?.click();
   if (e.key === "Enter" && e.target.dataset.input === "cal") addCalendar(e.target.value);
   if (e.key === "Enter" && ["trytext", "trybrand"].includes(e.target.dataset.input)) tryIt();
   if (e.key === "Enter" && e.target.dataset.input === "tripq") lookupTrip(e.target.value);
@@ -9171,13 +9233,18 @@ await loadBible();
 loadWeather().then(() => { if (view === "today") { state.outfits = []; render(); } });
 // Calendar events: now, when the app comes back to the front, and every half hour.
 async function refreshCalendar() {
-  const moved = await loadCalendar();
-  const was = state.event?.key;
-  if (state.event && !dayEvents().today.concat(dayEvents().tomorrow).some((e) => e.key === was)) state.event = null; // over, or deleted
-  autoPickEvent();
-  if (moved || state.event?.key !== was) {
-    if (state.event?.key !== was) state.outfits = [];
-    if ((view === "today" || view === "plan") && !document.activeElement?.matches("input, textarea")) render();
+  try {
+    const moved = await loadCalendar();
+    const was = state.event?.key;
+    if (state.event && !dayEvents().today.concat(dayEvents().tomorrow).some((e) => e.key === was)) state.event = null; // over, or deleted
+    autoPickEvent();
+    if (moved || state.event?.key !== was) {
+      if (state.event?.key !== was) state.outfits = [];
+      if ((view === "today" || view === "plan") && !document.activeElement?.matches("input, textarea")) render();
+    }
+  } catch (e) {
+    state.cal.loading = false;
+    console.warn("Calendar:", e); // (the next check, in half an hour or on return, tries again)
   }
 }
 refreshCalendar();
