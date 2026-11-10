@@ -1629,8 +1629,28 @@ export function synthBack(src, w, h, fabric, tile, o = {}) {
 
   // 2. The fabric's tone: the plain cells (not the ones next to a print: its soft edge and shadow),
   // everything else filled in from around them, then blurred so no front seam survives.
-  const rgb4 = new Float32Array(n4 * 3), a4 = new Float32Array(n4), plain = new Uint8Array(n4);
-  for (let c = 0; c < n4; c++) plain[c] = all[c] >= 4 && (pattern || ok[c] >= all[c] * 0.6) ? 1 : 0;
+  const rgb4 = new Float32Array(n4 * 3), a4 = new Float32Array(n4), plain = new Uint8Array(n4), own = new Uint8Array(n4);
+  // What stays as photographed: a pattern, and on bottoms any big part in another colour (a waistband,
+  // stripes along the hems: they run all the way round; a small logo or label doesn't).
+  if (pattern) { for (let c = 0; c < n4; c++) own[c] = all[c] >= 4 ? 1 : 0; }
+  else if (kind === "bottoms" && farCells) {
+    const farMap = new Uint8Array(n4);
+    for (let c = 0; c < n4; c++) farMap[c] = all[c] >= 4 && ok[c] < all[c] * 0.6 ? 1 : 0;
+    const { lab: labels, sizes } = components(farMap, w4, h4, true), big = new Uint8Array(n4);
+    const xMin = new Int32Array(sizes.length).fill(w4), xMax = new Int32Array(sizes.length).fill(-1);
+    for (let c = 0; c < n4; c++) { const l = labels[c]; if (l) { const x = c % w4; if (x < xMin[l]) xMin[l] = x; if (x > xMax[l]) xMax[l] = x; } }
+    // big, wide, or part of a band that crosses the garment (a waistband under its drawstring)
+    const band = new Uint8Array(sizes.length);
+    for (let y = 0; y < h4; y++) {
+      let a = 0, f = 0;
+      for (let x = 0; x < w4; x++) { const c = y * w4 + x; if (all[c] >= 4) { a++; if (farMap[c]) f++; } }
+      if (a > 8 && f >= a * 0.45) for (let x = 0; x < w4; x++) { const l = labels[y * w4 + x]; if (l) band[l] = 1; }
+    }
+    for (let c = 0; c < n4; c++) { const l = labels[c]; if (l && (band[l] || sizes[l] >= cells * 0.04 || xMax[l] - xMin[l] >= w4 * 0.2)) big[c] = 1; }
+    const grown = dilate(big, w4, h4, 1);
+    for (let c = 0; c < n4; c++) own[c] = grown[c] && all[c] >= 4 ? 1 : 0;
+  }
+  for (let c = 0; c < n4; c++) plain[c] = all[c] >= 4 && (own[c] || ok[c] >= all[c] * 0.6) ? 1 : 0;
   for (let y = 0; y < h4; y++) for (let x = 0; x < w4; x++) {
     const c = y * w4 + x;
     if (!plain[c]) continue;
@@ -1641,13 +1661,18 @@ export function synthBack(src, w, h, fabric, tile, o = {}) {
       const d = yy * w4 + xx;
       if (all[d] >= 4 && !plain[d]) { near = true; break; }
     }
-    if (near) continue;
+    if (near || (own[c] && !pattern)) continue; // (what stays as photographed isn't the fabric's tone)
     a4[c] = 1;
-    const s3 = pattern ? sumAll : sum, k = 1 / (pattern ? all[c] : ok[c]);
+    const s3 = own[c] || !ok[c] ? sumAll : sum, k = 1 / (own[c] || !ok[c] ? all[c] : ok[c]);
     rgb4[c * 3] = s3[c * 3] * k; rgb4[c * 3 + 1] = s3[c * 3 + 1] * k; rgb4[c * 3 + 2] = s3[c * 3 + 2] * k;
   }
-  const low = boxBlur3(pullPush(rgb4, a4, w4, h4, F), w4, h4, kind === "bottoms" ? 2 : 3, 2);
-  const keep = kind === "bottoms" ? 1 : 0.8; // bottoms keep their whole wash; a top's tone a little evened
+  // Two scales: the broad wash whole, and only a part of what's finer (the ghost of a zip, a pocket,
+  // a row of print that was filled in): bottoms keep more of it, their fading is theirs.
+  const fine = boxBlur3(pullPush(rgb4, a4, w4, h4, F), w4, h4, kind === "bottoms" ? 2 : 3, 2);
+  const broad = boxBlur3(fine, w4, h4, Math.max(4, Math.round(w4 / 14)), 2), gain = kind === "bottoms" ? 0.6 : 0.3;
+  const low = new Float32Array(fine.length);
+  for (let i = 0; i < low.length; i++) low[i] = broad[i] + (fine[i] - broad[i]) * gain;
+  const keep = kind === "bottoms" ? 1 : 0.85; // a top's tone a little evened towards its colour
 
   // 3. The outline as seen from behind; a top's open front closed and its neckline raised.
   let alpha = null, neck = null, edgeTop = null;
@@ -1690,6 +1715,22 @@ export function synthBack(src, w, h, fabric, tile, o = {}) {
           if (alpha[y * w + x] >= 250) continue;
           if (edgeTop && edgeTop[x] >= 0 ? y >= edgeTop[x] : y > top[x]) alpha[y * w + x] = 255;
         }
+      }
+    } else {
+      // bottoms: the back's waistband runs straight across (no open button, no dip at the fly), and
+      // nothing gapes above where the legs part
+      const top = new Int32Array(w).fill(h);
+      for (let x = 0; x < w; x++) for (let y = 0; y < h; y++) if (alpha[y * w + x] >= 128) { top[x] = y; break; }
+      const xa = Math.round(w * 0.2), xb = Math.round(w * 0.8), lim = Math.round(h * 0.12);
+      if (top[xa] < lim && top[xb] < lim) for (let x = xa; x <= xb; x++) {
+        const yB = Math.ceil(top[xa] + ((top[xb] - top[xa]) * (x - xa)) / Math.max(1, xb - xa));
+        if (top[x] > yB && top[x] - yB < h * 0.2) { for (let y = yB; y < top[x] + 2 && y < h; y++) alpha[y * w + x] = 255; top[x] = yB; }
+      }
+      const yC = Math.round((1 - (o.crotchV && o.crotchV > 0.2 ? o.crotchV : 0.72)) * h) - Math.round(h * 0.02);
+      for (let y = 0; y < yC; y++) {
+        let l = -1, r = -1;
+        for (let x = 0; x < w; x++) if (alpha[y * w + x] >= 128) { if (l < 0) l = x; r = x; }
+        for (let x = l; l >= 0 && x <= r; x++) if (alpha[y * w + x] < 250 && y > top[x]) alpha[y * w + x] = 255;
       }
     }
   }
@@ -1767,10 +1808,20 @@ export function synthBack(src, w, h, fabric, tile, o = {}) {
   }
 
   // 5. The back: tone, grain, shading. Where a pattern stays, the front's own pixels.
-  const out = new Float32Array(n * 3), hf = tile.hf, t3 = [0, 0, 0], trim = kind === "top" && fabric.trim ? fabric.trim : null;
+  // The grain: as strong as the fabric's own (the tile's), but drawn fresh for every pixel: a tile
+  // repeated over a whole plain back shows whatever crease or seam it happens to hold.
+  const hfIn = tile.hf, sd = [0, 0, 0];
+  for (let c = 0; c < 3; c++) {
+    const abs = [];
+    for (let i = c; i < hfIn.length; i += 3 * 37) abs.push(Math.abs(hfIn[i]));
+    sd[c] = Math.min(9, median(abs) * 1.48);
+  }
+  const hash = (x, y) => { let t = (Math.imul(x, 374761393) + Math.imul(y, 668265263)) | 0; t = Math.imul(t ^ (t >>> 13), 1274126177); return ((t ^ (t >>> 16)) >>> 0) / 4294967296 - 0.5; };
+  const hf = [0, 0, 0];
+  const out = new Float32Array(n * 3), t3 = [0, 0, 0], trim = kind === "top" && fabric.trim ? fabric.trim : null;
   const trimY = h * 0.94, row = { l: 0, r: w - 1 };
   for (let y = 0; y < h; y++) {
-    const v = 1 - y / (h - 1), trow = (y & 255) << 8;
+    const v = 1 - y / (h - 1);
     // the cloth turns away at its sides: by the outline when there is one, else by the panel's edges
     let runs = null;
     if (alpha) {
@@ -1789,9 +1840,10 @@ export function synthBack(src, w, h, fabric, tile, o = {}) {
       bilinear(low, w4, h4, (x + 0.5) / q - 0.5, (y + 0.5) / q - 0.5, t3, 0);
       const j = y * w + (w - 1 - x);
       let r, gg, b;
-      if (pattern && (!inside || inside[j]) && !(edgeTop && edgeTop[x] >= 0 && alphaIn && alphaIn[j] < 250)) { r = src[j * 3]; gg = src[j * 3 + 1]; b = src[j * 3 + 2]; }
+      if (own[((y / q) | 0) * w4 + ((x / q) | 0)] && (!inside || inside[j]) && !(alphaIn && alphaIn[j] < 250)) { r = src[j * 3]; gg = src[j * 3 + 1]; b = src[j * 3 + 2]; }
       else {
-        const t = (trow | (x & 255)) * 3;
+        const t = 0, nz = 2.2 * hash(x, y) + 1.6 * hash((x >> 1) + 7919, y >> 1) + 1.2 * hash((x >> 2) + 104729, (y >> 2) + 31);
+        hf[0] = nz * sd[0]; hf[1] = nz * sd[1]; hf[2] = nz * sd[2];
         if (trim && y >= trimY - 6) {
           const m = Math.min(1, (y - trimY + 6) / 6);
           r = t3[0] + (trim[0] - t3[0]) * m; gg = t3[1] + (trim[1] - t3[1]) * m; b = t3[2] + (trim[2] - t3[2]) * m;
