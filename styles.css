@@ -136,10 +136,18 @@ input[type=range] { width: 100%; height: 44px; accent-color: var(--accent); }
 /* ---------- wardrobe grid ---------- */
 .grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(190px, 1fr)); gap: 32px; }
 .item {
-  border: 0; padding: 0; text-align: left; background: var(--surface); border-radius: var(--radius); overflow: hidden;
+  position: relative; background: var(--surface); border-radius: var(--radius); overflow: hidden;
   border: 1px solid var(--line); display: flex; flex-direction: column;
 }
-.item:active { transform: scale(.98); }
+.item-open { border: 0; padding: 0; margin: 0; text-align: left; background: none; color: inherit; font: inherit; display: flex; flex-direction: column; width: 100%; flex: 1; }
+.item:has(.item-open:active) { transform: scale(.98); }
+/* The basket on a tile: in the wash and back, one tap (a 44 px target over the photo's top left). */
+.basket { position: absolute; top: 6px; left: 6px; width: 44px; height: 44px; border-radius: 50%; border: 0; display: grid; place-items: center;
+          background: rgba(0,0,0,.45); color: #fff; }
+.basket svg { width: 22px; height: 22px; fill: none; stroke: currentColor; stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round; }
+.basket[aria-pressed="true"] { background: var(--accent); color: var(--accent-ink); }
+.worn-badge { position: absolute; right: 10px; bottom: 10px; background: rgba(0,0,0,.5); color: #fff; border-radius: 999px; padding: 3px 9px; font-size: 12px; }
+.chip.wash-all svg { width: 18px; height: 18px; fill: none; stroke: currentColor; stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round; }
 /* Filtering hides tiles instead of drawing the grid again (see fillGrid in app.js). */
 .grid[hidden], .grid > .item[hidden] { display: none; }
 /* Tiles off the screen aren't laid out or painted until they scroll near (their last size is kept). */
@@ -590,6 +598,9 @@ details summary { cursor: pointer; }
 .stage-note.is-error { bottom: auto; top: 50%; transform: translate(-50%, -50%); background: rgba(20, 20, 19, .82); border: 1px solid #2c2a27; border-radius: 16px; padding: 16px 18px; }
 .stage-pill { padding: 8px 16px; border-radius: 999px; background: rgba(20, 20, 19, .78); border: 1px solid #3a3833; font-size: 14px; letter-spacing: .02em; }
 .angle-pills { display: flex; flex-wrap: wrap; justify-content: center; gap: 6px; }
+/* "On the avatar" (Calendar ideas and plans): the same stage, in a sheet. */
+.preview-wrap { --studio: #141413; display: grid; gap: 8px; justify-items: center; margin-bottom: 16px; }
+.preview-stage { height: min(62vh, 640px); }
 .angle-pills .chip { min-height: 44px; padding: 0 16px; font-size: 14px; }
 
 .m-looks { display: grid; gap: 8px; }
