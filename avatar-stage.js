@@ -11,6 +11,7 @@
 //   stage.setVisible(slot, visible)        a ~170 ms fade that starts in the same frame
 //   stage.snapTo(deg)                      0 front, 90 his right side, 180 back, 270 his left side
 //   stage.setHairFinish('real' | 'sculpted')   the photographed hair, or a smooth matte sculpted volume
+//   stage.pause(); stage.resume()          stop drawing altogether (0% GPU), and start again
 //   stage.angle; stage.resize(); stage.dispose(); stage.debug
 //
 // How the clothes are made: every garment is a patch of the body surface (clipped along smooth
@@ -3316,7 +3317,11 @@ diffuseColor.rgb *= mix(1.0, 0.42, smoothstep(0.0, 0.42, vEyeUp));`)
   canvas.addEventListener('pointercancel', onUp);
 
   // ---------- render on demand ----------
-  function invalidate() { if (!st.raf && !st.disposed) st.raf = requestAnimationFrame(tick); }
+  // pause(): nothing is drawn (the ambient screen, kiosk.js) until resume(), which draws the
+  // current state in the next frame; what changed meanwhile (a piece put on, the body) shows then.
+  function invalidate() { if (!st.raf && !st.disposed && !st.paused) st.raf = requestAnimationFrame(tick); }
+  function pause() { st.paused = true; cancelAnimationFrame(st.raf); st.raf = 0; }
+  function resume() { st.paused = false; invalidate(); }
   function tick(now) {
     st.raf = 0;
     if (st.lost || st.disposed) return; // (drawn again once the GPU context is back: onRestored)
@@ -3415,8 +3420,9 @@ diffuseColor.rgb *= mix(1.0, 0.42, smoothstep(0.0, 0.42, vEyeUp));`)
 
   st.renderer = renderer;
   const stage = {
-    setBody, prepare, setGarment, setVisible, snapTo, resize, dispose, mode, setHairFinish,
+    setBody, prepare, setGarment, setVisible, snapTo, resize, dispose, mode, setHairFinish, pause, resume,
     get hairFinish() { return st.hairFinish; },
+    get paused() { return !!st.paused; },
     get angle() { return wrapAngle(st.angle); },
     debug: {
       renderer, scene, camera, avatar, body: bodyMesh, head: hairGroup, state: st,
