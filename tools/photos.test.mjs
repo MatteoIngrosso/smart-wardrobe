@@ -20,7 +20,7 @@ const ROOT = join(dirname(fileURLToPath(import.meta.url)), "..");
 
 // A copy of the app with every top-level function and constant of app.js on window.__t (as audit-sim.mjs does).
 const dir = mkdtempSync(join(tmpdir(), "wardrobe-photos-"));
-for (const f of ["index.html", "app.js", "stylist.js", "label.js", "calendar.js", "cutout-editor.js", "avatar-config.js", "avatar-stage.js", "garment-baker.js", "mannequin-shells.js", "face-photo.js", "styles.css", "fashion-bible.json", "manifest.webmanifest", "icon.svg"])
+for (const f of ["index.html", "app.js", "stylist.js", "label.js", "calendar.js", "cutout-editor.js", "avatar-config.js", "avatar-stage.js", "garment-baker.js", "mannequin-shells.js", "face-photo.js", "kiosk.js", "styles.css", "kiosk.css", "fashion-bible.json", "manifest.webmanifest", "icon.svg"])
   if (existsSync(join(ROOT, f))) cpSync(join(ROOT, f), join(dir, f));
 for (const d of ["sample", "vendor", "avatar"]) if (existsSync(join(ROOT, d))) cpSync(join(ROOT, d), join(dir, d), { recursive: true });
 const src = readFileSync(join(ROOT, "app.js"), "utf8");
