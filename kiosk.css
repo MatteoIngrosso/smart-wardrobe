@@ -1,0 +1,71 @@
+/* The wall screen's layer (kiosk.js): touch rules for a wall-mounted touch screen, the ambient
+   screen and the diagnostics. Loaded after styles.css, so a rule here wins over the same rule there. */
+
+/* ---------- rows that scroll sideways: drag them, no scrollbars ---------- */
+/* Touch drags them natively; kiosk.js lets a mouse drag them too. The swipe stays inside the row
+   (no going back a page, no pulling the screen with it). */
+.scroller, .photo-strip, .gallery, .seg, .ready-wrap, .cam-thumbs, .angle-pills {
+  scrollbar-width: none; overscroll-behavior-x: contain; -webkit-overflow-scrolling: touch;
+}
+:is(.scroller, .photo-strip, .gallery, .seg, .ready-wrap, .cam-thumbs, .angle-pills)::-webkit-scrollbar { display: none; }
+.drag-scrolling { scroll-snap-type: none !important; cursor: grabbing; }
+.drag-scrolling * { cursor: grabbing !important; }
+
+/* ---------- 48 × 48 px at least for everything you tap in a sheet, the camera and the cut-out editor ---------- */
+:is(.sheet-panel, .cam, .cutfix, .kdiag) :is(.btn, .chip, .star, .swatch, .toggle) { min-height: 48px; min-width: 48px; }
+.sheet-panel .seg button, .sheet-panel .mb-tabs button { min-height: 48px; }
+.sheet-panel .swap-btn { width: 48px; height: 48px; }
+.sheet-panel .linkish, .sheet-panel .toast-act { min-height: 48px; display: inline-flex; align-items: center; }
+.toast-act { min-height: 48px; padding: 0 10px; }
+/* the little × on a photo: the same 32 px circle, inside a 48 px tap area (the strip makes room for it) */
+.photo-strip { padding: 14px 14px 0 0; }
+.photo-strip .x { width: 48px; height: 48px; top: -14px; right: -14px; background: none; isolation: isolate; z-index: 1; }
+.photo-strip .x::before { content: ""; position: absolute; inset: 8px; z-index: -1; border-radius: 50%; background: #000c; }
+
+/* ---------- the ambient screen ---------- */
+/* True black (an OLED pixel that's off), the app underneath isn't painted at all, and the block
+   with the clock glides to a new spot every minute (a transition: no script runs while it moves). */
+.kiosk-asleep :is(#nav, #main, #sheet, #toast, .cutfix, .kdiag) { visibility: hidden; }
+.ambient-screen {
+  position: fixed; inset: 0; z-index: 100; background: #000; color: #bdbdbd; overflow: hidden;
+  cursor: none; touch-action: none; -webkit-user-select: none; user-select: none; -webkit-touch-callout: none;
+  font-weight: 300;
+}
+.ambient-screen[hidden] { display: none; }
+.ambient-screen.waking { opacity: 0; } /* gone at once; it only keeps the tap that woke the app */
+.amb-block { position: absolute; left: 0; top: 0; display: grid; gap: 10px; width: max-content; max-width: min(620px, calc(100vw - 32px)); will-change: transform; }
+.amb-time { font-size: clamp(76px, 15vmin, 176px); font-weight: 200; line-height: .95; letter-spacing: -.045em; color: #e2e2e2; font-variant-numeric: tabular-nums; }
+.amb-date { font-size: clamp(18px, 2.6vmin, 26px); color: #8c8c8c; margin-top: -2px; }
+.amb-more { display: grid; gap: 14px; margin-top: 10px; }
+.amb-more:empty { display: none; }
+.amb-wx { display: flex; align-items: center; gap: 12px; font-size: clamp(17px, 2.3vmin, 24px); color: #a8a8a8; flex-wrap: wrap; }
+.amb-wx b { font-weight: 300; font-size: 1.5em; color: #d6d6d6; letter-spacing: -.02em; }
+.amb-wx svg { width: 1.6em; height: 1.6em; stroke-width: 1.4; color: #cfcfcf; flex: none; }
+.amb-next { font-size: clamp(16px, 2.1vmin, 21px); color: #9a9a9a; }
+.amb-fit { display: grid; gap: 10px; }
+.amb-label { font-size: 13px; font-weight: 500; letter-spacing: .1em; text-transform: uppercase; color: #777; }
+.amb-pics { display: flex; gap: 10px; }
+.amb-pics img {
+  width: clamp(66px, 10vmin, 104px); aspect-ratio: 3 / 4; object-fit: contain; border-radius: 12px;
+  background: radial-gradient(120% 90% at 50% 35%, #3a3a3a 0%, #262626 100%); /* dark pieces stay visible, nothing bright */
+}
+.amb-names { font-size: 15px; color: #7d7d7d; max-width: 560px; line-height: 1.35; }
+
+/* ---------- the diagnostics (tap a page title 5 times) ---------- */
+.kdiag { position: fixed; inset: 0; z-index: 95; display: grid; justify-items: end; }
+.kdiag-backdrop { position: absolute; inset: 0; background: rgba(0, 0, 0, .5); }
+.kdiag-panel {
+  position: relative; width: min(480px, 100%); height: 100%; overflow-y: auto; overscroll-behavior: contain;
+  background: var(--bg); border-left: 1px solid var(--line); display: grid; align-content: start; gap: 16px;
+  padding: max(16px, env(safe-area-inset-top)) 20px max(20px, env(safe-area-inset-bottom));
+}
+.kdiag-head { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
+.kdiag-head h2 { margin: 0; }
+.kdiag-list { margin: 0; display: grid; gap: 2px; }
+.kdiag-list div { display: grid; gap: 2px; padding: 10px 12px; border-radius: 12px; background: var(--surface); }
+.kdiag-list dt { font-size: 12px; font-weight: 500; letter-spacing: .06em; text-transform: uppercase; color: var(--muted); }
+.kdiag-list dd { margin: 0; font-size: 15px; line-height: 1.35; overflow-wrap: anywhere; -webkit-user-select: text; user-select: text; font-variant-numeric: tabular-nums; }
+.kdiag-actions { display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 10px; }
+.kdiag-actions .btn { white-space: normal; text-align: center; line-height: 1.2; padding: 8px 16px; }
+.kdiag-note { margin: 0; min-height: 1.5em; }
+@media (max-width: 520px) { .kdiag-panel { border-left: 0; } }

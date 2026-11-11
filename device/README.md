@@ -45,11 +45,17 @@ The same setup also works on an x86_64 mini-PC with a touch monitor running Debi
 4. The Pi now starts straight into the app. Type the app password once on the on-screen keyboard (or a USB keyboard): it stays logged in for a year.
 
 ## 4. On the wall
-Mount it near a socket with good Wi-Fi, and leave a little air behind the Pi for the fan. The screen turns off after 5 minutes without a touch, and the next touch wakes it.
+Mount it near a socket with good Wi-Fi, and leave a little air behind the Pi for the fan. After 3 minutes without a touch the app shows its ambient screen: a black screen with the clock, the weather and today's outfit, which moves a little every minute so nothing burns in, while the 3D mirror stops drawing. A tap brings the app back as it was. After 30 minutes the screen turns off, and the next touch wakes it.
+
+## Ambient screen and diagnostics
+- **Ambient screen**: how soon it comes (or Off) is in the app, **Settings > Wall screen**, and **Show it now** previews it. When the screen itself turns off is `BLANK_MINUTES` below.
+- **Diagnostics**: tap the page title (for example "Good morning" on Today) 5 times quickly. It shows the graphics chip and whether it really draws (if it says "the processor", set `GPU_BOOST=1` and restart), frames per second, the 3D mirror's use of graphics memory, the storage used and the offline cache. **Test the 3D speed** turns the avatar once: 50–60 frames a second is smooth. **Force refresh offline cache** loads the newest version of the app from the server (use it if an update doesn't show), **Reset avatar camera** turns him back to the front.
+- **Touch**: chip rows and photo strips scroll by dragging. Some touch screens on a mini-PC act like a mouse; dragging works with those too.
+- **On the iPad**: the ambient screen works the same. Set **Settings > Display & Brightness > Auto-Lock** to Never while it's on the wall and plugged in, or the iPad switches its screen off by itself.
 
 ## Changing settings
 Settings live in `~/.config/wardrobe-kiosk/kiosk.conf` on the Pi (over SSH: `nano ~/.config/wardrobe-kiosk/kiosk.conf`), then `sudo reboot`:
-- `BLANK_MINUTES`: minutes before the screen turns off (0 = never)
+- `BLANK_MINUTES`: minutes before the screen turns off (0 = never; 30 by default, the app's ambient screen comes before that)
 - `ROTATION`: `normal`, `90`, `180` or `270` if the picture is the wrong way round
 - `NIGHTLY_RESTART_HOUR`: the hour the browser restarts every night to stay fresh
 - `GPU_BOOST`: `1` (default) makes Chromium draw with the graphics chip, so the 3D mirror runs smoothly. Set `0` if the screen flickers or shows stripes
@@ -65,5 +71,5 @@ Any x86_64 mini-PC with Debian or Ubuntu (with a desktop) and a touch monitor wo
 
 ## Files
 - `install.sh`: run once on the Pi (64-bit ARM) or a mini-PC (x86_64). Checks the computer, installs Chromium and the screen tools from the system's own packages, turns on auto login, and starts the kiosk at login instead of the desktop. Safe to run again, also while the kiosk is running. `bash install.sh --lint` also installs `shellcheck` (from the system's packages) and checks both scripts first.
-- `kiosk.sh`: installed as `~/.local/bin/wardrobe-kiosk`. Works on Wayland (the Pi) and X11. Waits for Wi-Fi, opens the app full screen (no address bar, no pinch zoom, no swipe-back, no "Restore pages?" after a power cut, no "Chromium is out of date" or translate bars), uses the graphics chip for the 3D mirror, turns the screen off when idle, starts the on-screen keyboard and reopens the browser 2 seconds after it closes or crashes. Only one runs at a time.
+- `kiosk.sh`: installed as `~/.local/bin/wardrobe-kiosk`. Works on Wayland (the Pi) and X11. Waits for Wi-Fi, opens the app full screen (telling it it's the wall screen with `?kiosk=1`) (no address bar, no pinch zoom, no swipe-back, no "Restore pages?" after a power cut, no "Chromium is out of date" or translate bars), uses the graphics chip for the 3D mirror, turns the screen off when idle, starts the on-screen keyboard and reopens the browser 2 seconds after it closes or crashes. Only one runs at a time.
 - `kiosk.conf`: the default settings above.

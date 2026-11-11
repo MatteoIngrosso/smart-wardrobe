@@ -9,6 +9,7 @@ import * as Style from "./stylist.js";
 import * as Label from "./label.js";
 import { editCutout, workingCopy, basicCutout, frameCutout, WORK_MAX } from "./cutout-editor.js";
 import * as Avatar from "./avatar-config.js";
+import { startKiosk } from "./kiosk.js";
 
 /* ======================================================================
    Reference data
@@ -8363,6 +8364,7 @@ function renderSettings() {
         <p class="muted small" style="margin:0">This month: ${u.requests} AI request${u.requests === 1 ? "" : "s"} · ${(u.input + u.output).toLocaleString()} tokens (${u.input.toLocaleString()} in, ${u.output.toLocaleString()} out)</p>
       </section>
       ${mirrorCard()}
+      ${kiosk?.card() || ""}
       <section class="card stack">
         <h2 style="margin:0">Fashion bible</h2>
         ${(() => {
@@ -9616,6 +9618,62 @@ document.addEventListener("keydown", (e) => {
 });
 
 /* ======================================================================
+   Wall screen (kiosk.js): the ambient screen when nobody touches the screen, rows a mouse can
+   drag, and the diagnostics (tap a page title 5 times)
+   ====================================================================== */
+// What the ambient screen shows: the weather now, the next event today, and today's outfit: the
+// one worn today, else the one planned in the Calendar, else Today's best idea.
+const AMBIENT_ORDER = ["outer", "mid", "base", "bottom", "shoes"];
+function ambientInfo() {
+  const w = state.weather, day = localDay();
+  const weather = w && {
+    icon: w.typical ? "" : wxIcon(w.code),
+    temp: fmtTemp(w.temp),
+    text: w.typical ? `Usual ${MONTH()} weather` : WMO(w.code),
+    detail: [`${fmtTemp(w.min)}–${fmtTemp(w.max)}`, !w.typical && w.rainChance != null && `rain ${w.rainChance}%`].filter(Boolean).join(" · "),
+  };
+  const next = dayEvents().today.find((e) => !e.allDay && e.start > Date.now());
+  const worn = (wornOn(day) || []).filter(Boolean);
+  const plan = dayPlan(day), planned = resolveEntry(plan, itemMap()).map((x) => x.item).filter(Boolean);
+  if (!worn.length && !planned.length && !state.outfits.length && state.items.length) { autoPickEvent(); generateOutfits(); }
+  const idea = state.outfits[0];
+  const [label, pieces] = worn.length ? ["Wearing today", worn]
+    : planned.length ? [plan.worn ? "Wearing today" : "Planned for today", planned]
+    : idea ? [idea.planned ? "Planned for today" : "Today's idea", allPieces(idea)] : ["", []];
+  const shown = pieces.filter((p) => AMBIENT_ORDER.includes(roleOf(p)))
+    .sort((a, b) => AMBIENT_ORDER.indexOf(roleOf(a)) - AMBIENT_ORDER.indexOf(roleOf(b))).slice(0, 6);
+  return {
+    weather,
+    next: next ? `${fmtTime(next.start)} ${next.title}` : "",
+    outfit: { label, pieces: shown.map((p) => ({ name: p.name, src: thumbURL(p) })) },
+  };
+}
+let kiosk = null;
+const startWallScreen = () => {
+  kiosk = startKiosk({
+    settings: state.settings,
+    saveSettings,
+    stage: () => mirror.stage,
+    ambient: ambientInfo,
+    refreshWeather: () => loadWeather(),
+    resetCamera() {
+      mirror.angle = 0;
+      paintAngles();
+      if (!mirror.stage) return false;
+      mirror.stage.resize();
+      mirror.stage.snapTo(0);
+      return true;
+    },
+    // Asleep past midnight: a new day, so new ideas (and the date on Today).
+    woke(since) {
+      if (new Date(since).toLocaleDateString("sv") === localDay()) return;
+      state.outfits = [];
+      if ((view === "today" || view === "plan") && $("#sheet").hidden) render();
+    },
+  });
+};
+
+/* ======================================================================
    Boot
    ====================================================================== */
 await loadAll();
@@ -9649,6 +9707,7 @@ previewSample.then((f) => {
   if (view !== "add" && !document.activeElement?.matches("input, textarea")) render();
 });
 go("today");
+try { startWallScreen(); } catch (e) { console.error("Wall screen:", e); } // never in the way of the app
 syncLoop();
 setTimeout(lookupWardrobeBrands, 3000);
 setTimeout(warmThumbs, 2500);
