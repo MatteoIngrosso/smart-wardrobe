@@ -252,6 +252,12 @@ Choose the provider in Settings and paste a key; it stays on that device. Online
 
 Settings shows how many requests and tokens were used this month.
 
+### The wall screen: ambient screen, touch, diagnostics (on the device, no AI)
+`kiosk.js` and `kiosk.css` add what a wall-mounted touch screen needs, on every device:
+- **Ambient screen.** When nobody touches the screen for a while (**Settings > Wall screen**: Off, 1, 3, 5 or 10 minutes, kept on this device; 3 by default on a tablet or the wall screen, off on phones and computers with a mouse), a true-black screen takes over with a large clock, the date, the weather now, the next event today and today's outfit: the one worn today, else the one planned in the Calendar, else Today's best idea, as small photos with their names. The 3D mirror stops drawing (`stage.pause()`: not one frame, 0% GPU) and the app underneath isn't painted. The block glides to a new spot every minute (a CSS transition, no script running meanwhile) so nothing burns into an OLED or LCD panel; the time is redrawn once a minute and the weather read again every 15. A tap or a key brings the app back at once, as it was (a few milliseconds; the 3D mirror draws its next frame straight away); that first tap only wakes it and presses nothing. Not while the camera is filming. If the offline cache reloads the app for a new deploy while it's showing, it comes back on the ambient screen.
+- **Touch.** Rows that scroll sideways (chips, photo strips, the gallery, the report table) have no scrollbars and keep the swipe to themselves; a mouse can drag them too (with a little glide), for touch screens that Linux reports as a mouse. Everything you tap in a sheet, the camera, the cut-out editor and the diagnostics is at least 48 × 48 px (the × on a photo keeps its 32 px circle inside a 48 px tap area).
+- **Diagnostics.** Tap a page title (or the logo) 5 times: the graphics chip (`WEBGL_debug_renderer_info`) and whether it really draws (a software fallback such as SwiftShader or llvmpipe is called out), frames per second of the screen and of the 3D mirror, the mirror's meshes, textures and shaders in graphics memory (`renderer.info`), the last 3D frame, storage used on the device (`navigator.storage.estimate()`), the offline cache's version and files, the screen and the browser. **Test the 3D speed** turns him once drawing every frame (50–60 a second means the graphics chip draws), **Reset avatar camera** faces him front and frames him again, **Force refresh offline cache** empties the cache, removes the service worker and loads the newest app from the server, **Show the ambient screen** previews it.
+
 ## Files
 - `index.html`, `styles.css`, `app.js`: the whole app
 - `avatar-config.js`: the shared contracts of the 3D mirror (the body settings, the five garment slots, the baked garment format) and the options of the body panel
@@ -271,6 +277,7 @@ Settings shows how many requests and tokens were used this month.
 - `sample/`: resized copies of your photos (`*.jpg`), their cut-outs (`cut/*.webp`) and `seed.js`, which holds the catalogue data for them
 - `manifest.webmanifest`, `icon.svg`, `apple-touch-icon.png`: let you install the app on the home screen (the PNG is the icon iPhone and iPad use)
 - `sw.js`, `sw-register.js`: the offline cache of the app's files, one per deploy (see "Offline cache" under "Putting it online")
+- `kiosk.js`, `kiosk.css`: the wall screen's layer on every device: the ambient screen, mouse-dragged rows, 48 px tap targets, the diagnostics (see "The wall screen")
 - `device/`: the wall screen, a Raspberry Pi (or an x86_64 mini-PC) with a touch screen that opens the app full screen (parts, build steps and setup scripts in `device/README.md`; never served)
 - `tools/build_preview.py`: builds a one-page copy in `dist/` for the Claude preview
 - `stylist.js`, `fashion-bible.json`: the fashion bible inside the app. The rules, tips and weights of the Python model below; every outfit idea is scored by them and the AI stylist must follow them (see `fashion-model/README.md`, "In the app")
@@ -283,6 +290,7 @@ Settings shows how many requests and tokens were used this month.
 - `tools/cutout.test.mjs`: checks the cut-out pixels in `cutout-editor.js`: the colour cut-out, the tight box, the edge clean-up, the frame (`node --test tools/cutout.test.mjs`)
 - `tools/cutout-editor.e2e.mjs`: the cut-out pipeline and the editor in headless Chromium, plus the 3D mirror's baker on re-framed cut-outs (`node tools/cutout-editor.e2e.mjs`; needs Playwright)
 - `tools/integration.test.mjs`: how the files work together: the offline cache's rules (`sw.js` run in Node), the app on every screen without errors with every photo URL resolving, and the 3D stage's loading order, hidden-size and lost-GPU-context recovery in headless Chromium (`node --test tools/integration.test.mjs`; needs Playwright)
+- `tools/kiosk.e2e.mjs`: checks the wall screen layer in headless Chromium at the iPad Air 13" size: idle to the ambient screen and back (wake time, no click-through, the 3D mirror paused), the diagnostics, 48 px tap targets in sheets and the cut-out editor, mouse-dragged rows (`node --test tools/kiosk.e2e.mjs`; needs Playwright)
 - `tools/audit-sim.mjs`: runs the app headless on a backup (Settings > Backup > Export wardrobe backup) and checks the outfit ideas against the fixing plan's thresholds: rotation over 21 days, the weather, tailoring, laundry and the words on screen (`node tools/audit-sim.mjs backup.json`; `--shots <dir>` for screenshots, `--eval <file.js>` to run code in the app)
 
 ## How changes are made

@@ -10,7 +10,7 @@ set -euo pipefail
 CONF_DIR="$HOME/.config/wardrobe-kiosk"
 CONF="$CONF_DIR/kiosk.conf"
 URL="https://smart-wardrobe.matteo08-ingrosso.workers.dev"
-BLANK_MINUTES=5
+BLANK_MINUTES=30
 ROTATION=normal
 NIGHTLY_RESTART_HOUR=4
 GPU_BOOST=1
@@ -139,10 +139,14 @@ if [ -n "$NIGHTLY_RESTART_HOUR" ]; then
   ) 9>&- &
 fi
 
+# The app learns it runs on the wall screen: its ambient screen is on by default, and the
+# diagnostics (tap a page title 5 times) say so.
+case "$URL" in *\?*) OPEN_URL="$URL&kiosk=1" ;; *) OPEN_URL="$URL?kiosk=1" ;; esac
+
 # shellcheck disable=SC2054 # the commas belong to --disable-features
 FLAGS=(
   --user-data-dir="$PROFILE"
-  --kiosk "$URL"
+  --kiosk "$OPEN_URL"
   --noerrdialogs --disable-infobars --no-first-run --no-default-browser-check
   --disable-session-crashed-bubble --hide-crash-restore-bubble
   # No pinch zoom, no swipe back, no translate bar or casting prompts.
