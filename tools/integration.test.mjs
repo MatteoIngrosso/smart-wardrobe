@@ -156,7 +156,7 @@ test("sw.js: the page is asked from the network and kept; the kept page stands i
    ====================================================================== */
 const { chromium } = createRequire(import.meta.url)("playwright");
 const dir = mkdtempSync(join(tmpdir(), "wardrobe-integration-"));
-for (const f of ["index.html", "app.js", "stylist.js", "label.js", "calendar.js", "cutout-editor.js", "avatar-config.js", "avatar-stage.js", "garment-baker.js", "mannequin-shells.js", "face-photo.js", "styles.css", "fashion-bible.json", "manifest.webmanifest", "icon.svg"])
+for (const f of ["index.html", "app.js", "stylist.js", "label.js", "calendar.js", "cutout-editor.js", "avatar-config.js", "avatar-stage.js", "garment-baker.js", "mannequin-shells.js", "face-photo.js", "kiosk.js", "styles.css", "kiosk.css", "fashion-bible.json", "manifest.webmanifest", "icon.svg"])
   if (existsSync(join(ROOT, f))) cpSync(join(ROOT, f), join(dir, f));
 for (const d of ["sample", "vendor", "avatar"]) if (existsSync(join(ROOT, d))) cpSync(join(ROOT, d), join(dir, d), { recursive: true });
 const src = readFileSync(join(ROOT, "app.js"), "utf8");

@@ -352,7 +352,7 @@ export function startKiosk(app) {
   // Turn him once, drawing every frame, and count the frames: 50-60 means the graphics chip draws.
   async function speedTest(btn) {
     const st = app.stage();
-    if (!st?.debug || !document.getElementById("stage3d")) { note = "Open Today first: the test turns the 3D mirror once."; return paintDiag(); }
+    if (!st?.debug || !document.querySelector("#stage3d, #stage3d-preview")) { note = "Open Today first: the test turns the 3D mirror once."; return paintDiag(); }
     btn.disabled = true;
     note = "Turning him once…";
     paintDiag();
