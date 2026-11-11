@@ -94,6 +94,51 @@ export function cleanCutMeta(m) {
   return out;
 }
 
+/* The size a piece gets on the rest mesh (decimetres: the top of the shoulders is at 6.45, the
+   waistband near 2.0, the hip joint 1.07, the crotch near -0.6, the ankle near -7.5) from its photo's
+   own proportions (asset.shape, measured by the baker) and the wearer's Scale and Vertical offset
+   (asset.adjust). Pure, and the same for the avatar's patches and the mannequin's shells. */
+export const REST = { top: 6.45, waist: 2.02, hipY: 1.07, legLen: 8.62, waistFlat: 3.61, drape: 1.05 };
+// half the chest of a top laid flat, by fit
+const FLAT_CHEST = { slim: 4.5, regular: 4.7, straight: 4.7, tapered: 4.7, relaxed: 4.9, oversized: 5.2, baggy: 5.2, wide: 5.2, cropped: 4.7 };
+const clampN = (v, lo, hi) => Math.max(lo, Math.min(hi, v));
+/**
+ * A top. `hem`: the height of its hem; `width`: how much of the body's girth its photo spans, so a
+ * chest print keeps its own shape instead of being squeezed onto the silhouette.
+ * @param {{shape?: {ratio:number, how?:string}, adjust?: {scale?:number, offsetY?:number}}} asset
+ * @param {{hem:number, fit?:string, long?:boolean}} o  hem: this kind of top's own hem
+ */
+export function topSize(asset, { hem, fit = "regular", long = false } = {}) {
+  const sh = asset?.shape, adj = cleanCutMeta(asset?.adjust), chest = FLAT_CHEST[fit] ?? 4.7;
+  let h = hem, from = "kind";
+  // only a tee laid flat with its sleeves out ("run") shows a width to measure its length by
+  if (sh?.ratio > 0 && sh.how === "run" && !long) { h = clampN(REST.top - (sh.ratio * chest) / REST.drape, Math.max(-0.4, hem - 1.1), hem + 1.1); from = "photo"; }
+  h = REST.top - (REST.top - h) * adj.scale;
+  const width = clampN(sh?.ratio > 0 ? (REST.top - h) / sh.ratio : (chest / REST.drape) * adj.scale, 2.6, 5.6);
+  h = Math.round(clampN(h + adj.offsetY / 10, -0.55, 4.4) * 50) / 50; // 2 mm steps: few cuts to keep
+  return { hem: h, width: Math.round(width * 100) / 100, from, changed: Math.abs(h - hem) > 0.011 };
+}
+/**
+ * Bottoms. `leg`: where the legs end (0 the hip joint, 0.48 the knee, 1 the ankle), so shorts stay
+ * short and trousers reach the ankle; `waist`: the waistband's height.
+ * @param {{leg?:number, waist?:number, short?:boolean}} o  this kind's own leg end and waistband
+ */
+export function bottomsSize(asset, { leg = 1, waist = REST.waist, short = false } = {}) {
+  const sh = asset?.shape, adj = cleanCutMeta(asset?.adjust), t0 = short ? 0.5 : leg;
+  let t = t0, from = "kind";
+  if (sh?.ratio > 0) {
+    // the photo's length for its waistband, on this waist
+    const tp = (REST.hipY - (waist - sh.ratio * REST.waistFlat)) / REST.legLen;
+    // (long legs reach the ankle whatever the photo's angle; short ones keep their own length)
+    t = short ? clampN(tp, 0.26, 0.66) : tp >= 0.74 ? leg : clampN(tp, 0.6, leg);
+    from = "photo";
+  }
+  // Scale is the legs' length from the waistband; the offset moves the waistband and the hems alike
+  const len = (waist - (REST.hipY - t * REST.legLen)) * adj.scale, w = Math.round(clampN(waist + adj.offsetY / 10, 1.5, 2.9) * 50) / 50;
+  const tt = Math.round(clampN((REST.hipY - (w - len)) / REST.legLen, 0.2, Math.max(leg, short ? 0.95 : leg)) * 100) / 100;
+  return { leg: tt, waist: w, from, changed: Math.abs(tt - t0) > 0.005 || Math.abs(w - waist) > 0.011 };
+}
+
 /* Framing of the baked panels, so the baker and the stage agree.
    - Tops (tee, hoodie, sweater, bomber, jacket_open): the torso only, no sleeves and no hood.
      x: side seam to side seam; y: the top of the shoulders (where the shoulder seam meets the

@@ -25,7 +25,7 @@
 
 import * as THREE from './vendor/three/three.module.min.js';
 import { RoomEnvironment } from './vendor/three/addons/RoomEnvironment.js';
-import { SLOTS, SLOT_OFFSET_MM, FACE_FRAME, cleanBody } from './avatar-config.js';
+import { SLOTS, SLOT_OFFSET_MM, FACE_FRAME, cleanBody, topSize, bottomsSize } from './avatar-config.js';
 import { ShellGarment, eggHead } from './mannequin-shells.js';
 
 const DATA = new URL('./avatar/', import.meta.url);
@@ -1086,16 +1086,17 @@ function garmentFields(D, S, spec, sub, length) {
     return F;
   }
   if (spec.slot === 'bottoms') {
-    const legEnd = length === 'short' ? 0.5 : spec.leg;
-    F.waist = f((c, x, y, z) => (legS(c) > 0.99 ? -1 : y - (spec.waist + 0.1 * sstep(0.2, -0.6, z - S.rowVal(S.zc, y)))));
+    const L = parseLength(length), legEnd = L.l ?? (L.base === 'short' ? 0.5 : spec.leg), waistY = L.w ?? spec.waist;
+    F._legEnd = legEnd; F._waistY = waistY;
+    F.waist = f((c, x, y, z) => (legS(c) > 0.99 ? -1 : y - (waistY + 0.1 * sstep(0.2, -0.6, z - S.rowVal(S.zc, y)))));
     F.legHem = f((c) => { const s = legS(c); return s * (S.legT[c] - legEnd) * S.legLen - (1 - s) * 1; });
     F.arms = f((c) => armW[c] - 0.3);
     F.front = f((c, x, y, z) => { const s = legS(c); return s * Math.cos(S.legPhi[c]) * -1 + (1 - s) * -(z - S.rowVal(S.zc, y)); }); // <0 front
     return F;
   }
   // tops (a top worn under a jacket is cut shorter: see tuckFor)
-  const [base, tuck] = String(length || 'full').split('@');
-  const hem0 = topHem(spec, sub, base), hemY = tuck ? Math.max(hem0, +tuck) : hem0;
+  const L = parseLength(length);
+  const hem0 = L.h ?? topHem(spec, sub, L.base), hemY = L.tuck != null ? Math.max(hem0, L.tuck) : hem0;
   const neck = spec.neck === 'jacket' ? [6.12, 6.43, 6.6] : spec.neck === 'hood' ? [6.2, 6.5, 6.66] : spec.neck === 'tank' ? [5.95, 6.42, 6.5] : [6.24, 6.52, 6.66];
   const neckY = (c) => { const k = Math.cos(S.thetaN[c]); return k >= 0 ? mix(neck[1], neck[0], k * k) : mix(neck[1], neck[2], k * k); };
   F.hem = f((c, x, y) => { const s = armS(c); return (1 - s) * (hemY - y) - s * 1; });
@@ -1118,6 +1119,29 @@ function garmentFields(D, S, spec, sub, length) {
 const openAt = (spec, y) => (spec.zip ? spec.open : spec.open + 0.22 * sstep(5.5, 6.4, y) - 0.05 * sstep(4.5, 2.5, y));
 // the hem of a top on the rest mesh, by its length
 const topHem = (spec, sub, length) => (length === 'cropped' ? 1.95 : length === 'long' && (sub === 'jacket_open' || sub === 'puffer') ? 0.18 : spec.hem);
+
+// A patch's length key: the kind's own length ("full", "short", "cropped", "long"), "@<y>" when a top
+// is cut shorter (under a jacket, or tucked in), then what the photo and the wearer make of it (see
+// topSize and bottomsSize): "|h=<hem>" for tops, "|l=<leg end>" and "|w=<waistband>" for bottoms.
+function parseLength(length) {
+  const [head, ...rest] = String(length || 'full').split('|'), [base, tuck] = head.split('@');
+  const o = { base: base || 'full', tuck: tuck ? +tuck : null };
+  for (const kv of rest) { const [k, v] = kv.split('='); if (v !== '' && Number.isFinite(+v)) o[k] = +v; }
+  return o;
+}
+// The size of one worn piece (and the key of its cut): its photo's proportions and the wearer's tweak.
+function sizeOf(asset, sub, name) {
+  const spec = SPECS[sub], base = asset.length || 'full', fit = fitOf(asset, name);
+  if (!spec || spec.slot === 'shoes') return { key: base, base };
+  if (spec.slot === 'bottoms') {
+    const z = bottomsSize(asset, { leg: spec.leg, waist: spec.waist, short: base === 'short' });
+    return { ...z, base, key: z.changed ? `${base}|l=${z.leg}|w=${z.waist}` : base };
+  }
+  const z = topSize(asset, { hem: topHem(spec, sub, base), fit, long: base === 'long' });
+  return { ...z, base, key: `${base}${z.changed ? `|h=${z.hem}` : ''}`, hem: z.changed ? z.hem : topHem(spec, sub, base) };
+}
+// "full|h=0.74" cut at 1.2 → "full@1.20|h=0.74"
+const cutKey = (key, tuck) => { if (!tuck) return key; const i = key.indexOf('|'); return i < 0 ? `${key}@${tuck}` : `${key.slice(0, i)}@${tuck}${key.slice(i)}`; };
 
 const G_FRONT = 0, G_BACK = 1, G_FABRIC = 2, G_TRIM = 3;
 
@@ -1146,6 +1170,7 @@ function garmentTopology(D, S, sub, length) {
   }
   const patch = buildPatch(D.m, D.index, fields, cover, split, groupOf, spec.slot !== 'shoes');
   patch.names = names; patch.spec = spec; patch.sub = sub; patch.length = length; patch.hemY = F._hemY; patch.hem0 = F._hem0 ?? F._hemY;
+  patch.waistY = F._waistY; patch.legEnd = F._legEnd;
   // the body vertices the garment touches, and a ring around them (for smoothing the height field)
   const touched = new Uint8Array(D.m);
   for (let k = 0; k < patch.wIdx.length; k++) touched[patch.wIdx[k]] = 1;
@@ -1187,7 +1212,7 @@ function baseHeights(D, S, B, env, patch, asset, fitKey) {
     }
   } else if (spec.slot === 'bottoms') {
     const torso = env.torso, taperT = spec.taper / fit;
-    const startRow = Math.round(S.rowOf(spec.waist - 0.2));
+    const startRow = Math.round(S.rowOf((patch.waistY ?? spec.waist) - 0.2));
     const hang = hangDown(torso.hull, TB, S.rows, startRow, 0, S.rowDy * B.s, 0.5 / fit);
     const legs = env.legs.map((L) => ({ ...L, hang: hangDown(L.hull, LB, LROWS, Math.round(((0.16 - LT0) / (LT1 - LT0)) * (LROWS - 1)), LROWS - 1, ((LT1 - LT0) / (LROWS - 1)) * S.legLen * B.s, taperT * 4) }));
     const extra = spec.loose * fit * B.s;
@@ -2077,6 +2102,46 @@ function clothSolve(gm, B, G0, inner) {
   return X;
 }
 
+// How far round the torso a point is from the centre front, along the cloth: per row of the rest
+// mesh, the length of the body's convex outline (cloth doesn't follow a hollow) from azimuth 0 (the
+// centre front) to th (π = the centre back). Left and right alike.
+function torsoArcs(D, S) {
+  const rows = S.rows, AB = 32, byRow = Array.from({ length: rows }, () => []);
+  for (let c = 0; c < D.m; c++) {
+    if (!S.torsoish[c] || D.armW[c] > 0.5) continue;
+    const x = D.rest[c * 3], z = D.rest[c * 3 + 2], r = Math.round((D.rest[c * 3 + 1] - S.rowY0) / S.rowDy);
+    for (let k = r - 1; k <= r + 1; k++) if (k >= 0 && k < rows) byRow[k].push([x, z], [-x, z]);
+  }
+  const arc = new Float32Array(rows * (AB + 1)), ok = new Uint8Array(rows);
+  for (let r = 0; r < rows; r++) {
+    const Rb = byRow[r].length >= 12 ? radialBins(byRow[r], 0, S.zc[r]) : null;
+    if (!Rb) continue;
+    ok[r] = 1;
+    let px = 0, pz = radiusAt(Rb, 0), sum = 0;
+    for (let b = 1; b <= AB; b++) {
+      const a = (b / AB) * Math.PI, rad = (radiusAt(Rb, a) + radiusAt(Rb, -a)) / 2, qx = Math.sin(a) * rad, qz = Math.cos(a) * rad;
+      sum += Math.hypot(qx - px, qz - pz); arc[r * (AB + 1) + b] = sum; px = qx; pz = qz;
+    }
+  }
+  // rows with too few points take their neighbour's; then a little smoothing from row to row
+  for (let r = 0; r < rows; r++) if (!ok[r]) {
+    let k = 1; while (k < rows && !(ok[r - k] || ok[r + k])) k++;
+    const from = ok[r - k] ? r - k : r + k;
+    if (from >= 0 && from < rows && ok[from]) for (let b = 0; b <= AB; b++) arc[r * (AB + 1) + b] = arc[from * (AB + 1) + b];
+  }
+  for (let pass = 0; pass < 2; pass++) {
+    const prev = Float32Array.from(arc);
+    for (let r = 1; r < rows - 1; r++) for (let b = 0; b <= AB; b++) arc[r * (AB + 1) + b] = (prev[(r - 1) * (AB + 1) + b] + 2 * prev[r * (AB + 1) + b] + prev[(r + 1) * (AB + 1) + b]) / 4;
+  }
+  const at = (y, th) => {
+    const rf = S.rowOf(y), r0 = Math.floor(rf), r1 = Math.min(rows - 1, r0 + 1), tr = rf - r0;
+    const bf = clamp(th / Math.PI, 0, 1) * AB, b0 = Math.min(AB - 1, Math.floor(bf)), tb = bf - b0;
+    const row = (r) => arc[r * (AB + 1) + b0] * (1 - tb) + arc[r * (AB + 1) + b0 + 1] * tb;
+    return row(r0) * (1 - tr) + row(r1) * tr;
+  };
+  return { at, rows, AB, arc };
+}
+
 /* ---------- a worn garment: geometry built from its patch ---------- */
 
 class GarmentMesh {
@@ -2086,7 +2151,8 @@ class GarmentMesh {
     this.fitKey = fitOf(prepared.asset, this.name);
     this.sub = SPECS[prepared.sub].slot === 'shoes' ? shoeShell(prepared.asset, this.name, prepared.sub) : prepared.sub;
     this.spec = SPECS[this.sub];
-    this.patch = stage.topology(this.sub, tuck ? `${prepared.length || 'full'}@${tuck}` : prepared.length);
+    this.size = prepared.size || { key: prepared.length || 'full' };
+    this.patch = stage.topology(this.sub, cutKey(this.size.key, tuck));
     const p = this.patch;
     // render vertices: one per (welded vertex, group); bands per boundary edge (6 vertices)
     const key = new Map(), rv = [], rg = [], idxByGroup = [[], [], [], []];
@@ -2154,6 +2220,7 @@ class GarmentMesh {
     const p = this.patch, { S } = this.stage, spec = this.spec;
     const uv = this.geo.attributes.uv.array, rest = this.geo.attributes.aRest.array, rib = this.geo.attributes.aRib.array;
     const hemY = p.hem0 ?? p.hemY, top = 6.45;
+    const arcs = S.arcs || (S.arcs = torsoArcs(this.stage.D, S)), Wp = this.size.width || 4.48;
     let yLo = Infinity, yHi = -Infinity;
     for (let v = 0; v < p.nv; v++) { const y = p.restP[v * 3 + 1]; if (y < yLo) yLo = y; if (y > yHi) yHi = y; }
     const uvOf = (w, g) => {
@@ -2172,13 +2239,15 @@ class GarmentMesh {
         const v = y >= ySeamR ? mix(vc, 1, clamp((y - ySeamR) / (yHi - ySeamR), 0, 1)) : mix(0, vc, clamp((y - yH) / (ySeamR - yH), 0, 1));
         return [g === G_FRONT ? u : 1 - u, v];
       }
-      const hw = Math.max(0.4, S.rowVal(S.halfW, y));
+      // Across: by the distance along the cloth from the centre front (back), not by x: the photo was
+      // taken of the piece laid flat, so its width is a width of cloth. Its own width (see topSize)
+      // spans that much of the body's girth, and a chest print keeps the shape it has in the photo.
       const v = clamp((y - hemY) / (top - hemY), 0, 1);
-      let u;
-      if (spec.open && g === G_FRONT) {
-        const gO = openAt(spec, y);
-        u = x < 0 ? 0.5 * clamp((x + hw) / Math.max(0.1, hw - gO), 0, 1) : 0.5 + 0.5 * clamp((x - gO) / Math.max(0.1, hw - gO), 0, 1);
-      } else u = 0.5 + 0.5 * clamp(x / hw, -1, 1);
+      const th = Math.abs(Math.atan2(x, z - S.rowVal(S.zc, y)));
+      let a = g === G_BACK ? arcs.at(y, Math.PI) - arcs.at(y, th) : arcs.at(y, th);
+      // an open jacket: each half of the photo starts at its edge of the opening
+      if (spec.open && g === G_FRONT) a = Math.max(0, a - openAt(spec, y));
+      const u = clamp(0.5 + (Math.sign(x) * a) / Wp, 0, 1);
       return [g === G_FRONT ? u : 1 - u, v];
     };
     for (let i = 0; i < this.rv.length; i++) {
@@ -2889,8 +2958,13 @@ diffuseColor.rgb *= mix(1.0, 0.42, smoothstep(0.0, 0.42, vEyeUp));`)
   for (const s of SLOTS) st.slotState[s] = { visible: true, opacity: 1 };
   st.topology = (sub, length) => {
     const k = sub + ':' + (length || 'full');
-    if (!st.topoCache.has(k)) st.topoCache.set(k, garmentTopology(D, S, sub, length));
-    return st.topoCache.get(k);
+    let t = st.topoCache.get(k);
+    if (t) st.topoCache.delete(k); // (kept in order of use)
+    else t = garmentTopology(D, S, sub, length);
+    st.topoCache.set(k, t);
+    // every size a slider passes through is a cut of its own: keep the latest
+    if (st.topoCache.size > 28) st.topoCache.delete(st.topoCache.keys().next().value);
+    return t;
   };
 
   function applyBodyGeometry() {
