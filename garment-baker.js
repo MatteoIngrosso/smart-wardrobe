@@ -263,8 +263,17 @@ function withItem(a, item) {
 const adjustOf = (item) => { const m = cleanCutMeta(item?.cutoutMeta); return m.scale !== 1 || m.offsetY !== 0 ? { scale: m.scale, offsetY: m.offsetY } : undefined; };
 const sameAdjust = (a, b) => (a?.scale ?? 1) === (b?.scale ?? 1) && (a?.offsetY ?? 0) === (b?.offsetY ?? 0);
 const isDenim = (item) => item?.category === "jeans" || /\b(jeans?|denim)\b/i.test(item?.name || "");
-/** The baked piece as this item wears it now (fit, length, scale and offset), without baking. */
-export const withFit = (asset, item) => (asset && item ? withItem(asset, item) : asset);
+/** The baked piece as this item wears it now (fit, length, Scale and Vertical offset): a copy, nothing
+ *  baked or stored. */
+export function withFit(asset, item) {
+  if (!asset || !item) return asset;
+  const fit = item.fit || undefined, length = lengthOf(item), adjust = adjustOf(item);
+  if (asset.fit === fit && asset.length === length && sameAdjust(asset.adjust, adjust)) return asset;
+  const b = { ...asset, fit, length, adjust };
+  if (!fit) delete b.fit;
+  if (!adjust) delete b.adjust;
+  return b;
+}
 
 /** A baked piece without checking its photos: memory first, then IndexedDB. Null if never baked. */
 export async function peekBaked(garmentId) {

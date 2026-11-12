@@ -112,10 +112,11 @@ export function topSize(asset, { hem, fit = "regular", long = false } = {}) {
   const sh = asset?.shape, adj = cleanCutMeta(asset?.adjust), chest = FLAT_CHEST[fit] ?? 4.7;
   let h = hem, from = "kind";
   // only a tee laid flat with its sleeves out ("run") shows a width to measure its length by
-  if (sh?.ratio > 0 && sh.how === "run" && !long) { h = clampN(REST.top - (sh.ratio * chest) / REST.drape, Math.max(-0.4, hem - 1.1), hem + 1.1); from = "photo"; }
+  // (never past the top of the legs: below about 0.05 the cloth would have to part round them)
+  if (sh?.ratio > 0 && sh.how === "run" && !long) { h = clampN(REST.top - (sh.ratio * chest) / REST.drape, Math.max(0.05, hem - 0.4), hem + 1.1); from = "photo"; }
   h = REST.top - (REST.top - h) * adj.scale;
   const width = clampN(sh?.ratio > 0 ? (REST.top - h) / sh.ratio : (chest / REST.drape) * adj.scale, 2.6, 5.6);
-  h = Math.round(clampN(h + adj.offsetY / 10, -0.55, 4.4) * 50) / 50; // 2 mm steps: few cuts to keep
+  h = Math.round(clampN(h + adj.offsetY / 10, Math.min(hem, 0.05), 4.4) * 50) / 50; // 2 mm steps: few cuts to keep
   return { hem: h, width: Math.round(width * 100) / 100, from, changed: Math.abs(h - hem) > 0.011 };
 }
 /**

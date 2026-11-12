@@ -1261,7 +1261,7 @@ async function makeCut(raw, rot) {
   const t = turnCanvas(bmp, rot);
   const f = await frameGeo(t.c);
   const toOrig = turnGeo(bmp.width, bmp.height, quarterOf(rot)).m;
-  return { blob: f.blob, geo: f.m.multiply(t.m).multiply(toOrig.inverse()) };
+  return { blob: f.blob, geo: f.m.multiply(t.m).multiply(toOrig.inverse()), meta: f.meta };
 }
 const geoList = (m) => m && [m.a, m.b, m.c, m.d, m.e, m.f].map((v) => Math.round(v * 1e5) / 1e5);
 
@@ -3692,6 +3692,30 @@ const mirror = {
 const MIRROR_ROLES = ["outer", "mid", "base", "bottom", "shoes"];
 const ROLE_WORD = { coat: "Coat", outer: "Jacket", mid: "Layer", base: "Top", bottom: "Bottoms", shoes: "Shoes" };
 const MIRROR_ANGLES = [[0, "Front"], [90, "Right side"], [180, "Back"], [270, "Left side"]];
+// Scale and Vertical offset: how one piece sits on the 3D mirror (longer or shorter, higher or lower),
+// kept on the piece as cutoutMeta (avatar-config.js), so every device shows it the same. Not shoes.
+const cutOffText = (v) => (v === 0 ? "As measured" : `${v > 0 ? "+" : "−"}${Math.abs(v)} cm`);
+function mirrorFitField(i) {
+  const sub = Avatar.subTypeOf(i);
+  if (!sub || sub === "sneakers" || sub === "boots") return "";
+  const m = Avatar.cleanCutMeta(i.cutoutMeta), pct = Math.round(m.scale * 100), off = m.offsetY;
+  return `<div class="field cut-fit"><label>On the 3D mirror</label>
+    <div class="field mb-field"><label for="cf-scale">Scale <b id="cf-scale-v">${pct}%</b></label><input id="cf-scale" type="range" min="${Math.round(Avatar.CUT_SCALE[0] * 100)}" max="${Math.round(Avatar.CUT_SCALE[1] * 100)}" step="1" value="${pct}" data-input="cf-scale" data-cutfit="${i.id}"></div>
+    <div class="field mb-field"><label for="cf-off">Vertical offset <b id="cf-off-v">${cutOffText(off)}</b></label><input id="cf-off" type="range" min="${Avatar.CUT_OFFSET[0]}" max="${Avatar.CUT_OFFSET[1]}" step="0.5" value="${off}" data-input="cf-off" data-cutfit="${i.id}"></div>
+    <div class="row"><span class="muted small">How this piece sits on you in 3D: Scale makes it longer or shorter, the offset moves it up or down.</span>${pct !== 100 || off !== 0 ? `<button class="chip" data-cutreset="${i.id}">Reset</button>` : ""}</div></div>`;
+}
+// A slider moved (save: let go of it): the number beside it now, the piece and the mirror on release.
+async function cutFitInput(el, save) {
+  const it = state.items.find((i) => i.id === el.dataset.cutfit);
+  if (!it) return;
+  const k = el.dataset.input, v = +el.value, lab = document.getElementById(`${k}-v`);
+  if (lab) lab.textContent = k === "cf-scale" ? `${v}%` : cutOffText(v);
+  if (!save) return;
+  it.cutoutMeta = Avatar.cleanCutMeta({ ...(it.cutoutMeta || {}), ...(k === "cf-scale" ? { scale: v / 100 } : { offsetY: v }) });
+  await store.put("items", it);
+  dressStage();
+}
+
 // The mirror's look (Avatar | Mannequin, next to the angle buttons), kept on this device like the
 // other settings: the mannequin wears each piece as a shell of its own cut-out photos.
 const MIRROR_MODES = [["avatar", "Avatar"], ["mannequin", "Mannequin"]];
@@ -3704,6 +3728,15 @@ async function setHairFinish(f) {
   state.settings.hairFinish = f === "sculpted" ? "sculpted" : "real";
   document.querySelectorAll("[data-hfin]").forEach((x) => x.setAttribute("aria-pressed", x.dataset.hfin === hairFinish()));
   mirror.stage?.setHairFinish?.(hairFinish());
+  await saveSettings();
+}
+
+// "Tuck base top" on the mirror: the top next to the skin goes into the bottoms' waistband (this device)
+const mirrorTuck = () => !!state.settings.mirrorTuck;
+async function setMirrorTuck(on) {
+  state.settings.mirrorTuck = !!on;
+  document.querySelectorAll("[data-mtuck]").forEach((x) => x.setAttribute("aria-pressed", mirrorTuck()));
+  mirror.stage?.setTuck?.(mirrorTuck());
   await saveSettings();
 }
 
@@ -3743,8 +3776,11 @@ function slotsFor(o) {
 }
 const bakedAsset = (item) => {
   const a = mirror.assets.get(item.id);
-  return a && a.photo === item.photos?.[0] ? a.asset : null; // a new photo bakes the piece again
+  if (!a || a.photo !== item.photos?.[0]) return null; // a new photo bakes the piece again
+  return mirror.baker?.withFit ? mirror.baker.withFit(a.asset, item) : a.asset; // (its fit, Scale and offset as they are now)
 };
+// What changes how a worn piece sits without baking it again: put on again when it changes.
+const sitKey = (item) => `${item.category}|${item.fit || ""}|${item.cutoutMeta?.scale ?? 1}|${item.cutoutMeta?.offsetY ?? 0}`;
 // Bake a piece (the first time only; then it comes from IndexedDB) and get it ready on the stage.
 function bakePiece(item) {
   if (bakedAsset(item)) return Promise.resolve(bakedAsset(item));
@@ -3784,13 +3820,13 @@ function dressStage() {
   const want = slotsFor(mirrorIdea());
   for (const slot of Avatar.SLOTS) {
     const w = want[slot], asset = w && bakedAsset(w.item);
-    const now = mirror.worn[slot], id = asset ? w.item.id : null, on = !!w?.on;
-    if ((now?.id ?? null) === id) {
+    const now = mirror.worn[slot], id = asset ? w.item.id : null, on = !!w?.on, sk = id ? sitKey(w.item) : "";
+    if ((now?.id ?? null) === id && (!id || now.sk === sk)) {
       if (id && now.on !== on) { st.setVisible(slot, on); now.on = on; }
     } else {
       st.setGarment(slot, asset || null, { visible: on, name: w?.item.name || "" }) // the name says the fit ("straight", "baggy"…)
         .catch((e) => { console.warn("Mirror: couldn't put on", w?.item.name, e); if (mirror.worn[slot]?.id === id) mirror.worn[slot] = null; });
-      mirror.worn[slot] = id ? { id, on } : null;
+      mirror.worn[slot] = id ? { id, on, sk } : null;
     }
     if (w && !asset && !mirror.noBake.has(w.item.id) && !mirror.pending.has(w.item.id)) bakePiece(w.item);
   }
@@ -3805,7 +3841,7 @@ function startStage() {
       const [{ createStage }, baker] = await Promise.all([import("./avatar-stage.js"), import("./garment-baker.js")]);
       mirror.baker = baker;
       const mode = mirrorMode();
-      mirror.stage = await createStage(mirror.host, { mode, hairFinish: hairFinish(), onAngle: (deg) => { mirror.angle = deg; paintAngles(); } });
+      mirror.stage = await createStage(mirror.host, { mode, hairFinish: hairFinish(), tuck: mirrorTuck(), onAngle: (deg) => { mirror.angle = deg; paintAngles(); } });
       mirror.stage.setBody(bodyDraft());
       if (mirror.angle) mirror.stage.snapTo(mirror.angle);
       dressStage();
@@ -4002,7 +4038,7 @@ function mirrorHTML() {
         <div class="stage-note" role="status"></div>
       </div>
       <div class="angle-pills" role="group" aria-label="Turn him">${MIRROR_ANGLES.map(([deg, label]) => `<button class="chip" data-mangle="${deg}" aria-pressed="false">${label}</button>`).join("")}</div>
-      <div class="angle-pills" role="group" aria-label="Look">${MIRROR_MODES.map(([m, label]) => `<button class="chip" data-mmode="${m}" aria-pressed="${m === mirrorMode()}">${label}</button>`).join("")}</div>
+      <div class="angle-pills" role="group" aria-label="Look">${MIRROR_MODES.map(([m, label]) => `<button class="chip" data-mmode="${m}" aria-pressed="${m === mirrorMode()}">${label}</button>`).join("")}<button class="chip" data-mtuck="1" aria-pressed="${mirrorTuck()}" title="The top under everything goes into the waistband">Tuck base top</button></div>
     </div>
     <aside class="mirror-side mirror-looks" aria-label="Today's ideas">
       <h2>Today's ideas</h2>
@@ -4279,6 +4315,7 @@ function openItem(id, showOriginal = false) {
       ${i.link && /^https?:\/\//.test(i.link) ? `<div><b>Shop</b><a href="${esc(i.link)}" target="_blank" rel="noopener">Product page ↗</a>${i.reference ? ` · ref ${esc(i.reference)}` : ""}</div>` : ""}
     </div>
     ${fitsFor(i).length ? `<div class="field" style="margin-bottom:14px"><label>Fit</label><div class="chips">${fitsFor(i).map((f) => `<button class="chip" aria-pressed="${i.fit === f}" data-setfit="${i.id}:${f}">${FITS[f].label}</button>`).join("")}</div></div>` : ""}
+    ${mirrorFitField(i)}
     ${EVERYDAY_AS[i.category] ? `<div class="field" style="margin-bottom:14px"><label>Everyday too</label><div class="row"><button class="chip" data-everyday="${i.id}" aria-pressed="${!!i.everyday}">${i.everyday ? "On" : "Off"}</button><span class="muted small">${i.everyday ? "Also in your Everyday outfit ideas, not just at the gym." : "Only at the gym, unless everything else is in the wash. Turn it on to wear it every day too."}</span></div></div>` : ""}
     ${suitField(i)}
     ${i.look || (aiReady() && i.photos?.length) ? `<div class="field" style="margin-bottom:14px"><label>What the AI sees in the photo</label>
@@ -4620,7 +4657,7 @@ const rerenderAdd = (d) => { if (draft === d && view === "add") render(); };
 
 async function applyRotation(p) {
   p.orig = await rotateImage(p.src, p.rot, false);
-  if (p.raw) { const c = await makeCut(p.raw, p.rot); p.cut = c.blob; p.geo = c.geo; }
+  if (p.raw) { const c = await makeCut(p.raw, p.rot); p.cut = c.blob; p.geo = c.geo; p.meta = c.meta; }
   else if (p.cutSrc) { p.cut = await rotateImage(p.cutSrc, p.rot, true); p.geo = null; }
 }
 // Cut the background out and stand the piece upright.
@@ -5457,6 +5494,10 @@ async function saveDraft(next = false) {
     cutGeo: anyCut && d.photos.some((p) => p.useCut && p.geo) ? d.photos.map((p) => (p.useCut && p.cut ? geoList(p.geo) : null) || null) : undefined,
     aiChecked: existing?.aiChecked || d.photos.some((p) => p.aiChecked) || undefined,
   };
+  // the front cut-out's own proportions (never stretched to the frame), and the wearer's Scale and
+  // Vertical offset for the 3D mirror kept as they were
+  const m0 = d.photos[0]?.useCut && d.photos[0]?.meta;
+  if (m0 || existing?.cutoutMeta) item.cutoutMeta = Avatar.cleanCutMeta({ ...(existing?.cutoutMeta || {}), ...(m0 || {}) });
   if (d.look) applyLook(item, d.look);
   // Added from Must-Buy's Bought, or the only piece you bought in this type that isn't in yet.
   const sameType = !existing && !d.want ? pendingBuys(true).filter((w) => w.cat === item.category) : [];
@@ -8488,6 +8529,7 @@ async function cutAll() {
         const r = await removeBackground(p);
         const rot = await uprightAngle(r.blob, kindOf(it.category));
         const c = await makeCut(r.raw, rot);
+        if (!cuts.length && c.meta) it.cutoutMeta = Avatar.cleanCutMeta({ ...(it.cutoutMeta || {}), ...c.meta });
         cuts.push(c.blob);
         geos.push(geoList(c.geo));
         originals.push(await rotateImage(p, rot, false));
@@ -8566,7 +8608,7 @@ async function fitAll() {
 const BACKUP_VERSION = 3;
 // The settings that travel with a backup (the AI keys, the usage count and device-only state don't).
 const BACKUP_SETTINGS = ["city", "lat", "lon", "unit", "theme", "region", "gender", "age", "touches", "scents", "aiProvider", "geminiModel",
-  "autoCutout", "aiAuto", "autoWash", "washAfter", "washBack", "mirrorMode", "hairFinish", "brandsApart"];
+  "autoCutout", "aiAuto", "autoWash", "washAfter", "washBack", "mirrorMode", "hairFinish", "mirrorTuck", "brandsApart"];
 const backupName = (day = localDay()) => `smart-wardrobe-backup-${day}.json`;
 const fmtMB = (bytes) => (bytes >= 1e6 ? `${(bytes / 1e6).toFixed(1)} MB` : `${Math.max(1, Math.round(bytes / 1e3))} KB`);
 // The file, built piece by piece: each piece becomes its own small part, so a wardrobe of 30 MB of
@@ -8932,6 +8974,7 @@ async function onTap(e) {
   if (ds.mangle != null) { mirror.angle = +ds.mangle; mirror.stage?.snapTo(mirror.angle); return paintAngles(); }
   if (ds.mmode) return setMirrorMode(ds.mmode);
   if (ds.hfin) return setHairFinish(ds.hfin);
+  if (ds.mtuck) return setMirrorTuck(!mirrorTuck());
   // Calendar: a day, the month, and planning (each redraws only that day and the panel)
   if (ds.calday) return pickDay(ds.calday);
   if (ds.calmonth) { planner.month = addMonths(planner.month || localDay().slice(0, 7), +ds.calmonth); return render(); }
@@ -9205,6 +9248,15 @@ async function onTap(e) {
     try { await lookAt(it); await autoLinkSuits(); } catch (e) { toast(e.message || "Couldn't look at the photo"); }
     state.outfits = [];
     tasteMemo = null;
+    openItem(it.id);
+    return render();
+  }
+  if (ds.cutreset) {
+    const it = state.items.find((i) => i.id === ds.cutreset);
+    if (!it) return;
+    it.cutoutMeta = Avatar.cleanCutMeta({ ...(it.cutoutMeta || {}), scale: 1, offsetY: 0 });
+    await store.put("items", it);
+    dressStage();
     openItem(it.id);
     return render();
   }
@@ -9559,6 +9611,7 @@ document.addEventListener("keydown", (e) => {
 // a body slider let go: build the exact body and refit the clothes now (not ~250 ms later)
 document.addEventListener("change", (e) => {
   if (e.target.dataset?.input?.startsWith("mb-")) bodyChanged();
+  if (e.target.dataset?.cutfit) cutFitInput(e.target, true).catch((err) => console.warn("Scale/offset:", err));
 });
 document.addEventListener("input", (e) => {
   const k = e.target.dataset.input;
@@ -9570,6 +9623,7 @@ document.addEventListener("input", (e) => {
     return;
   }
   if (k.startsWith("mb-")) return bodyInput(k.slice(3), v);
+  if (k === "cf-scale" || k === "cf-off") return cutFitInput(e.target, false);
   if (k === "trytext" || k === "trybrand") { state.disc.try[k === "trytext" ? "text" : "brand"] = v; return; }
   if (k === "tripq") { state.disc.tripq = v; return; }
   if (scentDraft && k.startsWith("sc-")) return scentTyped(scentDraft, k.slice(3), v);
