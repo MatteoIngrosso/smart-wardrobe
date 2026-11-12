@@ -1757,6 +1757,7 @@ export function synthBack(src, w, h, fabric, tile, o = {}) {
   };
   // a stitched seam: a dark groove with a light ridge beside it
   const line = (xa, ya, xb, yb, amt = 0.1, rad = 1.3 * px) => {
+    rad = Math.max(0.8, rad); // (a small cut-out still shows its seams)
     const len = Math.hypot(xb - xa, yb - ya), steps = Math.max(1, Math.ceil(len / 0.7)), nx = -(yb - ya) / (len || 1), ny = (xb - xa) / (len || 1);
     for (let k = 0; k <= steps; k++) {
       const t = k / steps, x = xa + (xb - xa) * t, y = ya + (yb - ya) * t;
