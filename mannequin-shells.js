@@ -265,8 +265,10 @@ function halfShell(Rg, ys, a, b, ch, pieces, vOf, tileD, lim, cap) {
 // cut: { front: Texture (with alpha), back: Texture|null } — the garment's crop of each photo (tops:
 // shoulder line to hem, side seam to side seam; bottoms: waistband to hems).
 export class ShellGarment {
-  constructor({ slot, sub, spec, cut, fabric, tile, tileCm, roughness, R }) {
-    this.slot = slot; this.sub = sub; this.spec = spec; this.R = R;
+  // size: what the photo and the wearer make of the piece (avatar-config.js: bottomsSize);
+  // adjust: the wearer's own { scale, offsetY (cm, + higher) }
+  constructor({ slot, sub, spec, cut, fabric, tile, tileCm, roughness, R, size = null, adjust = null }) {
+    this.slot = slot; this.sub = sub; this.spec = spec; this.R = R; this.size = size; this.adjust = adjust;
     this.group = new THREE.Group(); this.group.name = 'shell:' + slot;
     this.own = []; // textures this piece made (the plain back)
     const color = fabric || '#777777';
@@ -289,6 +291,8 @@ export class ShellGarment {
       mesh.customDepthMaterial = depth;
       mesh.frustumCulled = false; // (no shadow map since round 8: castShadow stays off)
       mesh.renderOrder = ORDER[slot] ?? 1; mesh.name = ['front', 'back', 'fabric'][i];
+      // concentric shells never fight for the same depth: each layer out is drawn a step nearer
+      m.polygonOffset = true; m.polygonOffsetFactor = -0.6 * (ORDER[slot] ?? 1); m.polygonOffsetUnits = -1.5 * (ORDER[slot] ?? 1);
       this.group.add(mesh);
       return mesh;
     });
@@ -298,9 +302,10 @@ export class ShellGarment {
 
   // Build the shell round the body as it is now (every time the body changes).
   // hemMin: the lowest a top may hang (under a jacket: just below its hem, like the avatar's tops)
-  update(B, D, { hemMin = -Infinity } = {}) {
+  // tuckY: the top of the waistband this top is tucked into (it goes inside it and ends just under)
+  update(B, D, { hemMin = -Infinity, tuckY = null } = {}) {
     const ch = CHANNEL[this.slot] ?? 0.2;
-    const parts = !this.front ? [[], [], []] : this.spec.slot === 'bottoms' ? this.bottoms(B, D, ch) : this.top(B, D, ch, hemMin);
+    const parts = !this.front ? [[], [], []] : this.spec.slot === 'bottoms' ? this.bottoms(B, D, ch) : this.top(B, D, ch, hemMin, tuckY);
     this.meshes.forEach((mesh, i) => {
       mesh.geometry.dispose();
       mesh.geometry = parts[i] && parts[i].length ? merge(parts[i]) : new THREE.BufferGeometry();
@@ -308,7 +313,7 @@ export class ShellGarment {
     this.info = parts.info;
   }
 
-  top(B, D, ch, hemMin) {
+  top(B, D, ch, hemMin, tuckY = null) {
     const { R, spans } = this, J = B.J, s = B.s, sh = B.height / 17.8;
     const imgF = this.front.image, imgB = this.back.image, aspF = imgF.height / imgF.width, aspB = imgB.height / imgB.width;
     // the photo's top edge at the base of the neck; its width matched to the chest
@@ -324,11 +329,14 @@ export class ShellGarment {
     const Rg = blendRings(R1, R2, (y) => sstep(ySh - 0.45 * s, ySh, y));
     // the cloth lies on the shoulders: the channel narrows from the armpit up to the neck (every layer
     // alike, so they stay in order)
-    Rg.chK = (y) => mix(1, 0.3, sstep(yArm, yTop, y));
+    // (tucked in: it narrows to the waist too, inside the waistband's own channel)
+    Rg.chK = (y) => mix(1, 0.3, sstep(yArm, yTop, y)) * (tuckY == null ? 1 : mix(0.3, 1, sstep(tuckY, tuckY + 0.9 * s, y)));
+    if (tuckY != null) hemMin = Math.max(hemMin, tuckY - 0.25 * s);
     const Lc = arcTable(Rg, yChest, ch, -Math.PI / 2, Math.PI / 2).L;
     const cw = fullSpan(rowAt(spans.f, 0.75)) || [0, 1];
     const [lo, hi] = (TOP_LEN[this.sub] || [5.8, 6.8]).map((x) => x * sh);
-    const len = clamp((Lc / Math.max(0.2, cw[1] - cw[0])) * aspF, lo, hi), W = len / aspF, WB = len / aspB;
+    // (the wearer's Scale sizes the whole photo; the Vertical offset lifts or drops its hem)
+    const adj = this.adjust || {}, len = Math.max(2 * sh, clamp((Lc / Math.max(0.2, cw[1] - cw[0])) * aspF, lo, hi) * (adj.scale || 1) - ((adj.offsetY || 0) / 10) * s), W = len / aspF, WB = len / aspB;
     // the photo runs down the body's surface (over the chest and the shoulder blades, not straight
     // down), so it isn't stretched where the body slopes: its length is measured along the front and
     // back centre lines (their mean), row by row
@@ -394,9 +402,15 @@ export class ShellGarment {
     const { R, spans } = this, J = B.J, s = B.s;
     const imgF = this.front.image, imgB = this.back.image, aspF = imgF.height / imgF.width, aspB = imgB.height / imgB.width;
     // the waistband round the high hip; the hems on the shoes; the legs part at the body's crotch
-    const yWaist = mix(J.pelvis[1], J.waist[1], 0.45), yAnkle = Math.max(J.ankleL[1], J.ankleR[1]);
+    const z = this.size || {}, legFull = this.spec.leg ?? 1;
+    const yWaist = mix(J.pelvis[1], J.waist[1], 0.45) + ((z.waist ?? this.spec.waist ?? 2.02) - (this.spec.waist ?? 2.02)) * s, yAnkle = Math.max(J.ankleL[1], J.ankleR[1]);
     let yCrotch = Infinity; for (let c = 0; c < D.m; c++) if (D.region[c] === R.TORSO && Math.abs(B.P[c * 3]) < 0.25 * s) yCrotch = Math.min(yCrotch, B.P[c * 3 + 1]);
-    const leggings = this.sub === 'leggings', yHemWant = yAnkle + (leggings ? 0.1 : 0.35) * s;
+    // The hems: full-length legs on the shoes; shorter ones where the photo's own length for its
+    // waistband puts them (z.leg: 0 the hip joint, 1 the ankle), so shorts stay short.
+    const leggings = this.sub === 'leggings', yFull = yAnkle + (leggings ? 0.1 : 0.35) * s;
+    const L1 = dist(J.hipL, J.kneeL), L2 = dist(J.kneeL, J.ankleL), tK = L1 / (L1 + L2);
+    const yLeg = (t) => (t <= tK ? mix(J.hipL[1], J.kneeL[1], t / tK) : mix(J.kneeL[1], J.ankleL[1], (t - tK) / (1 - tK)));
+    const yHemWant = z.leg != null && z.leg < legFull - 0.01 ? Math.max(yFull, yLeg(z.leg)) : yFull;
     const len = yWaist - yHemWant, W = len / aspF, WB = len / aspB, vOf = (y) => 1 - (yWaist - y) / len;
     const hips = (c) => D.region[c] === R.TORSO || D.region[c] === R.THIGH;
     const Rg = rings(B, D, hips, yCrotch - 0.2 * s, yWaist + 0.2 * s);

@@ -598,6 +598,10 @@ details summary { cursor: pointer; }
 .stage-note.is-error { bottom: auto; top: 50%; transform: translate(-50%, -50%); background: rgba(20, 20, 19, .82); border: 1px solid #2c2a27; border-radius: 16px; padding: 16px 18px; }
 .stage-pill { padding: 8px 16px; border-radius: 999px; background: rgba(20, 20, 19, .78); border: 1px solid #3a3833; font-size: 14px; letter-spacing: .02em; }
 .angle-pills { display: flex; flex-wrap: wrap; justify-content: center; gap: 6px; }
+/* Scale and Vertical offset of one piece on the 3D mirror, on its sheet */
+.cut-fit { margin-bottom: 14px; gap: 2px; }
+.cut-fit > .mb-field { margin: 0; }
+.cut-fit .row { gap: 8px; align-items: center; }
 /* "On the avatar" (Calendar ideas and plans): the same stage, in a sheet. */
 .preview-wrap { --studio: #141413; display: grid; gap: 8px; justify-items: center; margin-bottom: 16px; }
 .preview-stage { height: min(62vh, 640px); }

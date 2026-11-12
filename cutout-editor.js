@@ -722,7 +722,10 @@ export function frameFit(bw, bh) {
  * FRAME_W x FRAME_H frame inside FRAME_MARGIN, edges defringed, saved as WebP (q 0.88; a browser
  * that can't write WebP from a canvas, like older Safari, gives a PNG). `m` maps each pixel of `src` (a Blob, bitmap
  * or canvas) to where it lands in the frame. Same size, margins and centring for every piece, so
- * cards, thumbnails and the 3D mirror's panels all start from the same framing.
+ * cards, thumbnails and the 3D mirror's panels all start from the same framing. The piece is never
+ * stretched to the frame: `meta` keeps its own proportions (aspectRatio = height / width of the
+ * trimmed piece) and where it was in `src` (trimBounds = [x, y, w, h] as fractions of src), which the
+ * piece keeps as its cutoutMeta (avatar-config.js).
  */
 export async function frameCutout(src) {
   const own = src instanceof Blob;
@@ -733,8 +736,10 @@ export async function frameCutout(src) {
   if (own) bmp.close?.();
   try {
     const box = alphaBox(rctx.getImageData(0, 0, sw, sh).data, sw, sh);
-    if (!box) return { blob: own ? src : await encode(rc, "image/png"), m: new DOMMatrix() };
+    if (!box) return { blob: own ? src : await encode(rc, "image/png"), m: new DOMMatrix(), meta: null };
     const bw = box.x1 - box.x0 + 1, bh = box.y1 - box.y0 + 1;
+    const r4 = (v) => Math.round(v * 10000) / 10000;
+    const meta = { aspectRatio: Math.round((bh / bw) * 1000) / 1000, trimBounds: [r4(box.x0 / sw), r4(box.y0 / sh), r4(bw / sw), r4(bh / sh)] };
     const { s, dx, dy } = frameFit(bw, bh);
     const c = canvas(FRAME_W, FRAME_H), ctx = c.getContext("2d", { willReadFrequently: true });
     ctx.imageSmoothingQuality = "high";
@@ -744,7 +749,7 @@ export async function frameCutout(src) {
     ctx.putImageData(img, 0, 0);
     const blob = await encode(c, CUT_TYPE, CUT_QUALITY);
     c.width = c.height = 0;
-    return { blob, m: new DOMMatrix().translate(dx, dy).scale(s).translate(-box.x0, -box.y0) };
+    return { blob, m: new DOMMatrix().translate(dx, dy).scale(s).translate(-box.x0, -box.y0), meta };
   } finally {
     rc.width = rc.height = 0;
   }

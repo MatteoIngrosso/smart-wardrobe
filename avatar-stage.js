@@ -12,6 +12,7 @@
 //   stage.snapTo(deg)                      0 front, 90 his right side, 180 back, 270 his left side
 //   stage.setHairFinish('real' | 'sculpted')   the photographed hair, or a smooth matte sculpted volume
 //   stage.pause(); stage.resume()          stop drawing altogether (0% GPU), and start again
+//   stage.setTuck(true | false)                "Tuck base top": the top goes into the bottoms' waistband
 //   stage.angle; stage.resize(); stage.dispose(); stage.debug
 //
 // How the clothes are made: every garment is a patch of the body surface (clipped along smooth
@@ -25,7 +26,7 @@
 
 import * as THREE from './vendor/three/three.module.min.js';
 import { RoomEnvironment } from './vendor/three/addons/RoomEnvironment.js';
-import { SLOTS, SLOT_OFFSET_MM, FACE_FRAME, cleanBody } from './avatar-config.js';
+import { SLOTS, SLOT_OFFSET_MM, FACE_FRAME, cleanBody, topSize, bottomsSize } from './avatar-config.js';
 import { ShellGarment, eggHead } from './mannequin-shells.js';
 
 const DATA = new URL('./avatar/', import.meta.url);
@@ -1086,16 +1087,17 @@ function garmentFields(D, S, spec, sub, length) {
     return F;
   }
   if (spec.slot === 'bottoms') {
-    const legEnd = length === 'short' ? 0.5 : spec.leg;
-    F.waist = f((c, x, y, z) => (legS(c) > 0.99 ? -1 : y - (spec.waist + 0.1 * sstep(0.2, -0.6, z - S.rowVal(S.zc, y)))));
+    const L = parseLength(length), legEnd = L.l ?? (L.base === 'short' ? 0.5 : spec.leg), waistY = L.w ?? spec.waist;
+    F._legEnd = legEnd; F._waistY = waistY;
+    F.waist = f((c, x, y, z) => (legS(c) > 0.99 ? -1 : y - (waistY + 0.1 * sstep(0.2, -0.6, z - S.rowVal(S.zc, y)))));
     F.legHem = f((c) => { const s = legS(c); return s * (S.legT[c] - legEnd) * S.legLen - (1 - s) * 1; });
     F.arms = f((c) => armW[c] - 0.3);
     F.front = f((c, x, y, z) => { const s = legS(c); return s * Math.cos(S.legPhi[c]) * -1 + (1 - s) * -(z - S.rowVal(S.zc, y)); }); // <0 front
     return F;
   }
   // tops (a top worn under a jacket is cut shorter: see tuckFor)
-  const [base, tuck] = String(length || 'full').split('@');
-  const hem0 = topHem(spec, sub, base), hemY = tuck ? Math.max(hem0, +tuck) : hem0;
+  const L = parseLength(length);
+  const hem0 = L.h ?? topHem(spec, sub, L.base), hemY = L.tuck != null ? Math.max(hem0, L.tuck) : hem0;
   const neck = spec.neck === 'jacket' ? [6.12, 6.43, 6.6] : spec.neck === 'hood' ? [6.2, 6.5, 6.66] : spec.neck === 'tank' ? [5.95, 6.42, 6.5] : [6.24, 6.52, 6.66];
   const neckY = (c) => { const k = Math.cos(S.thetaN[c]); return k >= 0 ? mix(neck[1], neck[0], k * k) : mix(neck[1], neck[2], k * k); };
   F.hem = f((c, x, y) => { const s = armS(c); return (1 - s) * (hemY - y) - s * 1; });
@@ -1118,6 +1120,29 @@ function garmentFields(D, S, spec, sub, length) {
 const openAt = (spec, y) => (spec.zip ? spec.open : spec.open + 0.22 * sstep(5.5, 6.4, y) - 0.05 * sstep(4.5, 2.5, y));
 // the hem of a top on the rest mesh, by its length
 const topHem = (spec, sub, length) => (length === 'cropped' ? 1.95 : length === 'long' && (sub === 'jacket_open' || sub === 'puffer') ? 0.18 : spec.hem);
+
+// A patch's length key: the kind's own length ("full", "short", "cropped", "long"), "@<y>" when a top
+// is cut shorter (under a jacket, or tucked in), then what the photo and the wearer make of it (see
+// topSize and bottomsSize): "|h=<hem>" for tops, "|l=<leg end>" and "|w=<waistband>" for bottoms.
+function parseLength(length) {
+  const [head, ...rest] = String(length || 'full').split('|'), [base, tuck] = head.split('@');
+  const o = { base: base || 'full', tuck: tuck ? +tuck : null };
+  for (const kv of rest) { const [k, v] = kv.split('='); if (v !== '' && Number.isFinite(+v)) o[k] = +v; }
+  return o;
+}
+// The size of one worn piece (and the key of its cut): its photo's proportions and the wearer's tweak.
+function sizeOf(asset, sub, name) {
+  const spec = SPECS[sub], base = asset.length || 'full', fit = fitOf(asset, name);
+  if (!spec || spec.slot === 'shoes') return { key: base, base };
+  if (spec.slot === 'bottoms') {
+    const z = bottomsSize(asset, { leg: spec.leg, waist: spec.waist, short: base === 'short' });
+    return { ...z, base, key: z.changed ? `${base}|l=${z.leg}|w=${z.waist}` : base };
+  }
+  const z = topSize(asset, { hem: topHem(spec, sub, base), fit, long: base === 'long' });
+  return { ...z, base, key: `${base}${z.changed ? `|h=${z.hem}` : ''}`, hem: z.changed ? z.hem : topHem(spec, sub, base) };
+}
+// "full|h=0.74" cut at 1.2 → "full@1.20|h=0.74"
+const cutKey = (key, tuck) => { if (!tuck) return key; const i = key.indexOf('|'); return i < 0 ? `${key}@${tuck}` : `${key.slice(0, i)}@${tuck}${key.slice(i)}`; };
 
 const G_FRONT = 0, G_BACK = 1, G_FABRIC = 2, G_TRIM = 3;
 
@@ -1146,6 +1171,7 @@ function garmentTopology(D, S, sub, length) {
   }
   const patch = buildPatch(D.m, D.index, fields, cover, split, groupOf, spec.slot !== 'shoes');
   patch.names = names; patch.spec = spec; patch.sub = sub; patch.length = length; patch.hemY = F._hemY; patch.hem0 = F._hem0 ?? F._hemY;
+  patch.waistY = F._waistY; patch.legEnd = F._legEnd;
   // the body vertices the garment touches, and a ring around them (for smoothing the height field)
   const touched = new Uint8Array(D.m);
   for (let k = 0; k < patch.wIdx.length; k++) touched[patch.wIdx[k]] = 1;
@@ -1187,7 +1213,7 @@ function baseHeights(D, S, B, env, patch, asset, fitKey) {
     }
   } else if (spec.slot === 'bottoms') {
     const torso = env.torso, taperT = spec.taper / fit;
-    const startRow = Math.round(S.rowOf(spec.waist - 0.2));
+    const startRow = Math.round(S.rowOf((patch.waistY ?? spec.waist) - 0.2));
     const hang = hangDown(torso.hull, TB, S.rows, startRow, 0, S.rowDy * B.s, 0.5 / fit);
     const legs = env.legs.map((L) => ({ ...L, hang: hangDown(L.hull, LB, LROWS, Math.round(((0.16 - LT0) / (LT1 - LT0)) * (LROWS - 1)), LROWS - 1, ((LT1 - LT0) / (LROWS - 1)) * S.legLen * B.s, taperT * 4) }));
     const extra = spec.loose * fit * B.s;
@@ -1656,8 +1682,9 @@ function topTargets(D, S, B, g, worn) {
   }
   const rowsIn = Array.from({ length: NR }, () => []);
   const addIn = (x, y, z) => { if (y < yLo || y > yHi) return; const r = Math.round((y - yLo) / dy); for (let k = r - 1; k <= r + 1; k++) if (k >= 0 && k < NR) rowsIn[k].push([x, z]); };
+  const tk = !!g.tucked; // tucked in: it goes inside the waistband, held close at the waist
   for (const slot of ORDER.slice(1, ORDER.indexOf(spec.slot))) {
-    const gi = worn[slot]; if (!gi || !gi.G) continue;
+    const gi = worn[slot]; if (!gi || !gi.G || (tk && slot === 'bottoms')) continue;
     const Gi = gi.G, aw = gi.patch.armW;
     for (let v = 0; v < gi.patch.nv; v++) if (aw[v] < 0.04) addIn(Gi[v * 3], Gi[v * 3 + 1], Gi[v * 3 + 2]);
   }
@@ -1698,13 +1725,17 @@ function topTargets(D, S, B, g, worn) {
     for (let r = 1; r < NR - 1; r++) for (let b = 0; b < PB; b++) ring[r][b] = Math.max(prev[r][b], (prev[r - 1][b] + 2 * prev[r][b] + prev[r + 1][b]) / 4);
   }
   for (let r = 0; r < NR; r++) ring[r] = hullRadii(ring[r], PB, new Float32Array(PB));
-  const band = spec.rib || spec.hemPull || 0;
+  const band = tk ? TUCK_IN + 0.05 : spec.rib || spec.hemPull || 0;
   const hemTop = band ? yOf(g.patch.hemY + band * 0.9) : -Infinity, hemBot = yOf(g.patch.hemY);
   const place = (x, y, z, T, o) => {
     const f = clamp((y - yLo) / dy, 0, NR - 1), r0 = Math.floor(f), t = f - r0, r1 = Math.min(NR - 1, r0 + 1);
     const c = mix(zc[r0], zc[r1], t), a = Math.atan2(x, z - c);
     let Rr = mix(radiusAt(ring[r0], a), radiusAt(ring[r1], a), t);
-    if (spec.ribPull && band) {
+    if (tk) {
+      // the waistband holds it to the body; above it the cloth eases out over a hand's width
+      const Rt = mix(radiusAt(tight[r0], a), radiusAt(tight[r1], a), t);
+      Rr = mix(Rr, Rt, 0.92 * sstep(0.9, -0.05, (y - hemTop) / s));
+    } else if (spec.ribPull && band) {
       // the band (a rib, an elastic hem) holds the cloth close; above it the cloth bags out and rolls
       const Rt = mix(radiusAt(tight[r0], a), radiusAt(tight[r1], a), t);
       const zz = (y - hemTop) / s;
@@ -1728,6 +1759,8 @@ function topTargets(D, S, B, g, worn) {
 const sampleRow = (a, f) => { const r = clamp(Math.floor(f), 0, a.length - 1), t = f - r; return a[r] * (1 - t) + a[Math.min(r + 1, a.length - 1)] * t; };
 
 // The order of the layers: an outer piece stays outside the pieces it overlaps.
+// A tucked top is cut this far below the top of the waistband (decimetres): out of sight inside it.
+const TUCK_IN = 0.3;
 const GAP = { 'top>bottoms': 0.05, 'layer>top': 0.05, 'layer>bottoms': 0.08, 'jacket>layer': 0.06, 'jacket>top': 0.07, 'jacket>bottoms': 0.11, 'bottoms>shoes': 0.05 };
 const ORDER = ['shoes', 'bottoms', 'top', 'layer', 'jacket'];
 
@@ -1829,6 +1862,7 @@ function clothSolve(gm, B, G0, inner) {
   for (let v = 0; v < nv; v++) {
     if (fRib >= 0 && p.vf[v * p.nf + fRib] <= 0.005) band[v] = 1;
     if (fCuff >= 0 && p.vf[v * p.nf + fCuff] <= 0.005) band[v] = 1;
+    if (gm.tucked && p.armW[v] < 0.3 && p.restP[v * 3 + 1] <= p.hemY + TUCK_IN + 0.1) band[v] = 1; // held by the waistband
   }
   // the axis the piece hangs along: up the torso, down the arm (shoulder to wrist) on the sleeves
   const J = B.J, armAx = (x) => norm3(sub3(x >= 0 ? J.wristL : J.wristR, x >= 0 ? J.shoulderL : J.shoulderR));
@@ -2077,16 +2111,57 @@ function clothSolve(gm, B, G0, inner) {
   return X;
 }
 
+// How far round the torso a point is from the centre front, along the cloth: per row of the rest
+// mesh, the length of the body's convex outline (cloth doesn't follow a hollow) from azimuth 0 (the
+// centre front) to th (π = the centre back). Left and right alike.
+function torsoArcs(D, S) {
+  const rows = S.rows, AB = 32, byRow = Array.from({ length: rows }, () => []);
+  for (let c = 0; c < D.m; c++) {
+    if (!S.torsoish[c] || D.armW[c] > 0.5) continue;
+    const x = D.rest[c * 3], z = D.rest[c * 3 + 2], r = Math.round((D.rest[c * 3 + 1] - S.rowY0) / S.rowDy);
+    for (let k = r - 1; k <= r + 1; k++) if (k >= 0 && k < rows) byRow[k].push([x, z], [-x, z]);
+  }
+  const arc = new Float32Array(rows * (AB + 1)), ok = new Uint8Array(rows);
+  for (let r = 0; r < rows; r++) {
+    const Rb = byRow[r].length >= 12 ? radialBins(byRow[r], 0, S.zc[r]) : null;
+    if (!Rb) continue;
+    ok[r] = 1;
+    let px = 0, pz = radiusAt(Rb, 0), sum = 0;
+    for (let b = 1; b <= AB; b++) {
+      const a = (b / AB) * Math.PI, rad = (radiusAt(Rb, a) + radiusAt(Rb, -a)) / 2, qx = Math.sin(a) * rad, qz = Math.cos(a) * rad;
+      sum += Math.hypot(qx - px, qz - pz); arc[r * (AB + 1) + b] = sum; px = qx; pz = qz;
+    }
+  }
+  // rows with too few points take their neighbour's; then a little smoothing from row to row
+  for (let r = 0; r < rows; r++) if (!ok[r]) {
+    let k = 1; while (k < rows && !(ok[r - k] || ok[r + k])) k++;
+    const from = ok[r - k] ? r - k : r + k;
+    if (from >= 0 && from < rows && ok[from]) for (let b = 0; b <= AB; b++) arc[r * (AB + 1) + b] = arc[from * (AB + 1) + b];
+  }
+  for (let pass = 0; pass < 2; pass++) {
+    const prev = Float32Array.from(arc);
+    for (let r = 1; r < rows - 1; r++) for (let b = 0; b <= AB; b++) arc[r * (AB + 1) + b] = (prev[(r - 1) * (AB + 1) + b] + 2 * prev[r * (AB + 1) + b] + prev[(r + 1) * (AB + 1) + b]) / 4;
+  }
+  const at = (y, th) => {
+    const rf = S.rowOf(y), r0 = Math.floor(rf), r1 = Math.min(rows - 1, r0 + 1), tr = rf - r0;
+    const bf = clamp(th / Math.PI, 0, 1) * AB, b0 = Math.min(AB - 1, Math.floor(bf)), tb = bf - b0;
+    const row = (r) => arc[r * (AB + 1) + b0] * (1 - tb) + arc[r * (AB + 1) + b0 + 1] * tb;
+    return row(r0) * (1 - tr) + row(r1) * tr;
+  };
+  return { at, rows, AB, arc };
+}
+
 /* ---------- a worn garment: geometry built from its patch ---------- */
 
 class GarmentMesh {
-  constructor(stage, slot, prepared, name, tuck = null) {
-    this.stage = stage; this.slot = slot; this.prep = prepared; this.tuck = tuck;
+  constructor(stage, slot, prepared, name, tuck = null, tucked = false) {
+    this.stage = stage; this.slot = slot; this.prep = prepared; this.tuck = tuck; this.tucked = !!tucked;
     this.name = name || prepared.asset.name || '';
     this.fitKey = fitOf(prepared.asset, this.name);
     this.sub = SPECS[prepared.sub].slot === 'shoes' ? shoeShell(prepared.asset, this.name, prepared.sub) : prepared.sub;
     this.spec = SPECS[this.sub];
-    this.patch = stage.topology(this.sub, tuck ? `${prepared.length || 'full'}@${tuck}` : prepared.length);
+    this.size = prepared.size || { key: prepared.length || 'full' };
+    this.patch = stage.topology(this.sub, cutKey(this.size.key, tuck));
     const p = this.patch;
     // render vertices: one per (welded vertex, group); bands per boundary edge (6 vertices)
     const key = new Map(), rv = [], rg = [], idxByGroup = [[], [], [], []];
@@ -2154,6 +2229,7 @@ class GarmentMesh {
     const p = this.patch, { S } = this.stage, spec = this.spec;
     const uv = this.geo.attributes.uv.array, rest = this.geo.attributes.aRest.array, rib = this.geo.attributes.aRib.array;
     const hemY = p.hem0 ?? p.hemY, top = 6.45;
+    const arcs = S.arcs || (S.arcs = torsoArcs(this.stage.D, S)), Wp = this.size.width || 4.48;
     let yLo = Infinity, yHi = -Infinity;
     for (let v = 0; v < p.nv; v++) { const y = p.restP[v * 3 + 1]; if (y < yLo) yLo = y; if (y > yHi) yHi = y; }
     const uvOf = (w, g) => {
@@ -2172,13 +2248,15 @@ class GarmentMesh {
         const v = y >= ySeamR ? mix(vc, 1, clamp((y - ySeamR) / (yHi - ySeamR), 0, 1)) : mix(0, vc, clamp((y - yH) / (ySeamR - yH), 0, 1));
         return [g === G_FRONT ? u : 1 - u, v];
       }
-      const hw = Math.max(0.4, S.rowVal(S.halfW, y));
+      // Across: by the distance along the cloth from the centre front (back), not by x: the photo was
+      // taken of the piece laid flat, so its width is a width of cloth. Its own width (see topSize)
+      // spans that much of the body's girth, and a chest print keeps the shape it has in the photo.
       const v = clamp((y - hemY) / (top - hemY), 0, 1);
-      let u;
-      if (spec.open && g === G_FRONT) {
-        const gO = openAt(spec, y);
-        u = x < 0 ? 0.5 * clamp((x + hw) / Math.max(0.1, hw - gO), 0, 1) : 0.5 + 0.5 * clamp((x - gO) / Math.max(0.1, hw - gO), 0, 1);
-      } else u = 0.5 + 0.5 * clamp(x / hw, -1, 1);
+      const th = Math.abs(Math.atan2(x, z - S.rowVal(S.zc, y)));
+      let a = g === G_BACK ? arcs.at(y, Math.PI) - arcs.at(y, th) : arcs.at(y, th);
+      // an open jacket: each half of the photo starts at its edge of the opening
+      if (spec.open && g === G_FRONT) a = Math.max(0, a - openAt(spec, y));
+      const u = clamp(0.5 + (Math.sign(x) * a) / Wp, 0, 1);
       return [g === G_FRONT ? u : 1 - u, v];
     };
     for (let i = 0; i < this.rv.length; i++) {
@@ -2742,7 +2820,7 @@ function canvasTexture(w, h, draw, srgb = true) {
  *   mode 'mannequin': a faceless grey mannequin, each piece a curved shell of its cut-out photos
  *   (mannequin-shells.js; prepare() then also takes the asset's cutFront / cutBack PNGs)
  */
-export async function createStage(container, { onAngle, onReady, mode = 'avatar', hairFinish = 'real' } = {}) {
+export async function createStage(container, { onAngle, onReady, mode = 'avatar', hairFinish = 'real', tuck = false } = {}) {
   const mannequin = mode === 'mannequin';
   const renderer = new THREE.WebGLRenderer({ antialias: true, alpha: false, powerPreference: 'high-performance', preserveDrawingBuffer: false });
   renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, 1.5)); // (2-3x retina costs 1.8-4x the pixels for little visible gain)
@@ -2889,8 +2967,13 @@ diffuseColor.rgb *= mix(1.0, 0.42, smoothstep(0.0, 0.42, vEyeUp));`)
   for (const s of SLOTS) st.slotState[s] = { visible: true, opacity: 1 };
   st.topology = (sub, length) => {
     const k = sub + ':' + (length || 'full');
-    if (!st.topoCache.has(k)) st.topoCache.set(k, garmentTopology(D, S, sub, length));
-    return st.topoCache.get(k);
+    let t = st.topoCache.get(k);
+    if (t) st.topoCache.delete(k); // (kept in order of use)
+    else t = garmentTopology(D, S, sub, length);
+    st.topoCache.set(k, t);
+    // every size a slider passes through is a cut of its own: keep the latest
+    if (st.topoCache.size > 28) st.topoCache.delete(st.topoCache.keys().next().value);
+    return t;
   };
 
   function applyBodyGeometry() {
@@ -2969,7 +3052,7 @@ diffuseColor.rgb *= mix(1.0, 0.42, smoothstep(0.0, 0.42, vEyeUp));`)
       const h = Float32Array.from(heightsFor(slot));
       const reg = g.patch.region, s = B.s;
       for (const inner of ORDER.slice(0, ORDER.indexOf(slot))) {
-        const gi = st.worn[inner]; if (!gi) continue;
+        const gi = st.worn[inner]; if (!gi || (g.tucked && inner === 'bottoms')) continue;
         const gap = (GAP[`${slot}>${inner}`] ?? 0.05) * s, hi = finals[inner], inR = gi.patch.inRegion;
         for (const v of reg) if (inR[v] && hi[v] + gap > h[v]) h[v] = hi[v] + gap;
       }
@@ -2986,25 +3069,38 @@ diffuseColor.rgb *= mix(1.0, 0.42, smoothstep(0.0, 0.42, vEyeUp));`)
       // the layers it hangs over (already in place): their points, normals and the gap to keep
       const inner = [];
       for (const s2 of ORDER.slice(1, ORDER.indexOf(slot))) {
-        const gi = st.worn[s2]; if (!gi?.G || !gi.Nf) continue;
+        const gi = st.worn[s2]; if (!gi?.G || !gi.Nf || (g.tucked && s2 === 'bottoms')) continue;
         inner.push({ G: gi.G, N: gi.Nf, aw: gi.patch.armW, gap: (0.5 * ((gi.spec.thick ?? 0.03) + (g.spec.thick ?? 0.03)) + 0.015) * s });
       }
       // (a hood lies on the back, over the jacket's collar: the hoodie and the jacket keep their shells there)
       g.clothHood = (slot === 'jacket' && !!st.worn.layer?.spec.hood) || (slot === 'layer' && !!g.spec.hood);
-      g.clothKey = [st.bodyId, ...ORDER.slice(0, ORDER.indexOf(slot) + 1).map((s2) => { const gi = st.worn[s2]; return gi ? `${s2}:${(gi.prep.clothId ??= ++clothIds)}:${gi.sub}:${gi.fitKey}:${gi.tuck || ''}` : '-'; })].join('|');
+      g.clothKey = [st.bodyId, ...ORDER.slice(0, ORDER.indexOf(slot) + 1).map((s2) => { const gi = st.worn[s2]; return gi ? `${s2}:${(gi.prep.clothId ??= ++clothIds)}:${gi.sub}:${gi.fitKey}:${gi.tuck || ''}${gi.tucked ? 't' : ''}` : '-'; })].join('|');
       g.update(B, h, null, drape, inner);
     }
     st.finals = finals;
     const hood = st.worn.layer?.extras.find((e) => e.lift !== undefined); if (hood) hood.done = false; // (the jacket may have moved)
     updateHood();
     writeCovers();
+    layerOffsets();
     invalidate();
+  }
+  // Which pieces hide a piece where they cover it. A tucked top goes under the bottoms, not over them.
+  const tuckedNow = () => !!st.worn.top?.tucked;
+  const outerOf = (s) => (!tuckedNow() ? OUTER_OF[s] : s === 'top' ? ['bottoms', 'layer', 'jacket'] : s === 'bottoms' ? ['layer', 'jacket'] : OUTER_OF[s]);
+  // Concentric shells never fight for the same depth: each layer out from the skin is drawn a step
+  // nearer the camera (polygon offset), in the order they are worn (a tucked top under the bottoms).
+  function layerOffsets() {
+    const order = tuckedNow() ? ['shoes', 'top', 'bottoms', 'layer', 'jacket'] : ORDER;
+    order.forEach((slot, rank) => {
+      const g = st.worn[slot]; if (!g) return;
+      for (const m of g.prep.materials) { m.polygonOffset = true; m.polygonOffsetFactor = -0.6 * rank; m.polygonOffsetUnits = -1.5 * rank; }
+    });
   }
   function writeCovers() {
     const depths = {};
     for (const s of SLOTS) if (st.worn[s]) depths[s] = st.worn[s].coverDepth || st.worn[s].patch.coverDepth;
     for (const s of SLOTS) if (st.worn[s]) {
-      const only = {}; for (const o of OUTER_OF[s]) if (depths[o]) only[o] = depths[o];
+      const only = {}; for (const o of outerOf(s)) if (depths[o]) only[o] = depths[o];
       st.worn[s].writeCover(only);
     }
     // the skin
@@ -3024,7 +3120,11 @@ diffuseColor.rgb *= mix(1.0, 0.42, smoothstep(0.0, 0.42, vEyeUp));`)
       u.uCoverOn.value.set(v[0], v[1], v[2], v[3]); u.uCoverOnB.value = v[4];
     };
     set(skinU, SLOTS);
-    for (const s of SLOTS) if (st.worn[s]) for (const m of st.worn[s].prep.materials) set(m.userData.uniforms, OUTER_OF[s]);
+    for (const s of SLOTS) if (st.worn[s]) for (const m of st.worn[s].prep.materials) {
+      set(m.userData.uniforms, outerOf(s));
+      // (a tucked top ends at the waistband's edge itself: nothing of it shows below)
+      m.userData.uniforms.uCoverMargin.value = s === 'top' && tuckedNow() ? 0.03 : 0.22;
+    }
   }
   function updateHood() {
     const g = st.worn.layer; if (!g) return;
@@ -3075,7 +3175,7 @@ diffuseColor.rgb *= mix(1.0, 0.42, smoothstep(0.0, 0.42, vEyeUp));`)
       for (const t of [front, back, normal, roughMap, tile]) if (t) renderer.initTexture(t);
       // the cut of this kind of garment on the body (cached per kind), so putting it on is quick
       await new Promise((r) => setTimeout(r, 0));
-      if (!st.disposed) st.topology(sub, asset.length || 'full');
+      if (!st.disposed) st.topology(sub, sizeOf(asset, sub, asset.name).key);
       // the mannequin's shells: the cut-out photos themselves (with their alpha)
       const cut = mannequin && !isShoe && asset.cutFront ? { front: await blobTexture(asset.cutFront, true), back: await blobTexture(asset.cutBack, true) } : null;
       entry.value = { asset, sub, length: asset.length || 'full', materials: mats, textures: [front, back, normal, nF, nB, roughMap, tile, cut?.front, cut?.back].filter(Boolean), cut, tile };
@@ -3087,7 +3187,7 @@ diffuseColor.rgb *= mix(1.0, 0.42, smoothstep(0.0, 0.42, vEyeUp));`)
     if (st.prepCache.size > 24) {
       for (const [kk, e] of st.prepCache) {
         if (st.prepCache.size <= 20) break;
-        if (Object.values(st.worn).some((g) => g && g.prep === e.value)) continue;
+        if ([...Object.values(st.worn), ...Object.values(st.shells)].some((g) => g && (g.prep.base || g.prep) === e.value)) continue;
         st.prepCache.delete(kk); e.value?.textures.forEach((t) => t.dispose()); e.value?.materials.forEach((m) => m.dispose());
       }
     }
@@ -3109,7 +3209,21 @@ diffuseColor.rgb *= mix(1.0, 0.42, smoothstep(0.0, 0.42, vEyeUp));`)
     const entry = st.prepCache.get(k);
     const prep = entry && entry.ready ? entry.value : await prepare(asset);
     if (loadRequestId[slot] !== token || st.disposed) return;
-    putOn(slot, prep, visible, nm);
+    putOn(slot, wearing(prep, asset, nm), visible, nm);
+  }
+  // A prepared piece as one item wears it: its size follows the item (fit, photo proportions, Scale,
+  // Vertical offset) without preparing its textures again. One object per size, so "the same piece
+  // again" stays cheap to tell.
+  function wearing(prep, asset, name) {
+    const size = sizeOf(asset, prep.sub, name), k = `${size.key}|${size.width ?? ''}|${asset.fit || ''}|${asset.adjust?.scale ?? 1}|${asset.adjust?.offsetY ?? 0}`;
+    const views = prep.views || (prep.views = new Map());
+    let v = views.get(k);
+    if (!v) {
+      if (views.size > 6) views.clear();
+      v = { ...prep, asset, size, length: size.base, base: prep, views: null };
+      views.set(k, v);
+    }
+    return v;
   }
   function putOn(slot, prep, visible, name) {
     if (mannequin && slot !== 'shoes') { putShell(slot, prep, visible); return; }
@@ -3117,7 +3231,7 @@ diffuseColor.rgb *= mix(1.0, 0.42, smoothstep(0.0, 0.42, vEyeUp));`)
     if (old && prep && old.prep === prep && (name ?? old.name) === old.name) { setVisibleNow(slot, visible); return; }
     if (old) { body.remove(old.mesh); old.dispose(); delete st.worn[slot]; }
     if (prep) {
-      const g = new GarmentMesh(st, slot, prep, name, tuckFor(slot, prep));
+      const cut = tuckFor(slot, prep), g = new GarmentMesh(st, slot, prep, name, cut, tuckedIn(slot) && cut != null);
       st.worn[slot] = g;
       body.add(g.mesh);
     }
@@ -3132,7 +3246,7 @@ diffuseColor.rgb *= mix(1.0, 0.42, smoothstep(0.0, 0.42, vEyeUp));`)
     if (old) { body.remove(old.group); old.dispose(); delete st.shells[slot]; }
     if (prep) {
       const a = prep.asset;
-      const g = new ShellGarment({ slot, sub: prep.sub, spec: SPECS[prep.sub], cut: prep.cut, fabric: a.fabricBaseColor, tile: prep.tile, tileCm: a.fabricTileCm, roughness: a.roughness, R });
+      const g = new ShellGarment({ slot, sub: prep.sub, spec: SPECS[prep.sub], cut: prep.cut, fabric: a.fabricBaseColor, tile: prep.tile, tileCm: a.fabricTileCm, roughness: a.roughness, R, size: prep.size, adjust: a.adjust });
       g.prep = prep; st.shells[slot] = g; body.add(g.group);
     }
     setVisibleNow(slot, visible);
@@ -3141,28 +3255,38 @@ diffuseColor.rgb *= mix(1.0, 0.42, smoothstep(0.0, 0.42, vEyeUp));`)
   function refitShells() {
     const j = st.shells.jacket; j?.update(st.B, D);
     const hemMin = j && st.slotState.jacket.visible && j.info ? j.info.yHem - 0.15 * st.B.s : -Infinity;
-    st.shells.bottoms?.update(st.B, D);
-    for (const s of ['top', 'layer']) st.shells[s]?.update(st.B, D, { hemMin });
+    const b = st.shells.bottoms; b?.update(st.B, D);
+    // tucked in: the top goes inside the waistband and ends just under its edge
+    const tuckY = st.tuckTop && b?.info && st.slotState.bottoms.visible ? b.info.yTop : null;
+    st.shells.top?.update(st.B, D, { hemMin, tuckY });
+    st.shells.layer?.update(st.B, D, { hemMin });
     invalidate();
   }
   // Layer lengths: under a jacket that is worn and shown, a top hangs at most ~1.5 cm below the
   // jacket's hem (a hoodie or a tee never sticks out a hand's width under a bomber); the top under a
   // layer ends a little higher than the layer, so it stays hidden. Rest-mesh decimetres.
   const TUCK = { layer: 0.08, top: 0.03 };
+  // "Tuck base top": the top worn next to the skin goes into the bottoms' waistband.
+  const tuckedIn = (slot) => slot === 'top' && !!st.tuckTop && !!st.worn.bottoms && st.slotState.bottoms.visible;
   function tuckFor(slot, prep) {
     if (slot !== 'top' && slot !== 'layer') return null;
-    const j = st.worn.jacket; if (!j || !st.slotState.jacket.visible) return null;
     const sub = prep.sub, spec = SPECS[sub]; if (!spec || spec.slot !== 'top' && spec.slot !== 'layer') return null;
-    const under = slot === 'top' && st.worn.layer && st.slotState.layer.visible;
-    const want = Math.ceil((j.patch.hemY - (under ? TUCK.top : TUCK.layer)) * 50) / 50; // (2 mm steps: few cuts to cache)
-    return want > topHem(spec, sub, prep.length || 'full') + 0.02 ? want.toFixed(2) : null;
+    const hem = prep.size?.hem ?? topHem(spec, sub, prep.length || 'full');
+    let want = -Infinity;
+    const j = st.worn.jacket;
+    if (j && st.slotState.jacket.visible) {
+      const under = slot === 'top' && st.worn.layer && st.slotState.layer.visible;
+      want = Math.ceil((j.patch.hemY - (under ? TUCK.top : TUCK.layer)) * 50) / 50; // (2 mm steps: few cuts to cache)
+    }
+    if (tuckedIn(slot)) want = Math.max(want, Math.round(((st.worn.bottoms.patch.waistY ?? 2.02) - TUCK_IN) * 50) / 50);
+    return want > hem + 0.02 ? want.toFixed(2) : null;
   }
   function retuck() {
     let changed = false;
     for (const slot of ['layer', 'top']) {
       const g = st.worn[slot]; if (!g) continue;
-      const want = tuckFor(slot, g.prep); if (want === g.tuck) continue;
-      const ng = new GarmentMesh(st, slot, g.prep, g.name, want);
+      const want = tuckFor(slot, g.prep), tin = tuckedIn(slot) && want != null; if (want === g.tuck && tin === g.tucked) continue;
+      const ng = new GarmentMesh(st, slot, g.prep, g.name, want, tin);
       body.remove(g.mesh); g.dispose(); st.worn[slot] = ng; body.add(ng.mesh);
       applyOpacity(slot); changed = true;
     }
@@ -3201,8 +3325,16 @@ diffuseColor.rgb *= mix(1.0, 0.42, smoothstep(0.0, 0.42, vEyeUp));`)
   function updateHair() { if (!mannequin) hairKey = buildHead(st, hairGroup, skinU, hairKey); }
   st.onHairLoaded = () => { if (st.disposed) return; hairKey = ''; updateHair(); invalidate(); };
   st.hairFinish = hairFinish === 'sculpted' ? 'sculpted' : 'real';
+  st.tuckTop = !!tuck;
   // 'real': the photographed hair; 'sculpted': the same style as a smooth matte volume
   function setHairFinish(f) { st.hairFinish = f === 'sculpted' ? 'sculpted' : 'real'; updateHair(); invalidate(); }
+  // "Tuck base top": the top goes into the bottoms' waistband (both looks), or hangs over it again.
+  function setTuck(on) {
+    on = !!on; if (st.tuckTop === on) return;
+    st.tuckTop = on;
+    if (mannequin) { if (st.B) refitShells(); return; }
+    if (retuck() && st.B) refitGarments(); else { writeCovers(); layerOffsets(); invalidate(); }
+  }
 
   // ---------- body config ----------
   function applyColors(cfg) {
@@ -3420,7 +3552,7 @@ diffuseColor.rgb *= mix(1.0, 0.42, smoothstep(0.0, 0.42, vEyeUp));`)
 
   st.renderer = renderer;
   const stage = {
-    setBody, prepare, setGarment, setVisible, snapTo, resize, dispose, mode, setHairFinish, pause, resume,
+    setBody, prepare, setGarment, setVisible, snapTo, resize, dispose, mode, setHairFinish, setTuck, pause, resume,
     get hairFinish() { return st.hairFinish; },
     get paused() { return !!st.paused; },
     get angle() { return wrapAngle(st.angle); },
