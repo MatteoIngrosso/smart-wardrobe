@@ -162,7 +162,7 @@ if [ "$SESSION" = wayland ]; then
 else
   FLAGS+=(--ozone-platform=x11)
 fi
-# The lookbook stage at 60 FPS: draw with the graphics chip even where Chromium plays it safe.
+# The 3D mirror at 60 FPS: draw with the graphics chip even where Chromium plays it safe.
 if [ "$GPU_BOOST" = 1 ]; then
   FLAGS+=(--ignore-gpu-blocklist --enable-gpu-rasterization --enable-zero-copy
     --enable-webgl --enable-accelerated-2d-canvas)
