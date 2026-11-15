@@ -697,3 +697,26 @@ details summary { cursor: pointer; }
 /* Six tabs on a narrow phone: smaller labels so they fit. */
 @media (max-width: 420px) { .tab { font-size: 11px; letter-spacing: 0; } .tab.add { flex-basis: 60px; } }
 @media (max-width: 600px) { .cal-nav h2 { font-size: 19px; } .cal-nav .icon-btn { width: 48px; height: 48px; } }
+
+/* Fit check: the outfit next to the photo of it worn, and the worn lookbook */
+.fc-log { gap: 12px; align-items: center; margin-top: 10px; }
+.fc-log .muted { flex: 1; min-width: 180px; }
+.fc-compare { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1.3fr); gap: 16px; align-items: start; margin: 14px 0; }
+@media (max-width: 700px) { .fc-compare { grid-template-columns: 1fr; } }
+.fc-compare figure { margin: 0; display: grid; gap: 8px; }
+.fc-worn img { width: 100%; max-height: 62vh; object-fit: contain; border-radius: var(--radius); background: var(--surface-2); }
+.fc-planned { background: var(--surface-2); border-radius: var(--radius); padding: 12px; }
+.fc-stack { display: flex; flex-direction: column; align-items: center; gap: 4px; }
+.fc-stack .fc-piece img { height: clamp(70px, 11vh, 130px); width: auto; max-width: 100%; aspect-ratio: 3/4; object-fit: contain; }
+.fc-extras { display: flex; flex-wrap: wrap; justify-content: center; gap: 6px; }
+.fc-piece.small img { height: 56px; width: auto; aspect-ratio: 3/4; object-fit: contain; }
+.fc-tags .chip.fc-off[aria-pressed="true"] { background: color-mix(in srgb, var(--warn) 18%, var(--surface-2)); border-color: var(--warn); color: var(--text); }
+.fc-metrics { margin: 0; padding-left: 20px; display: grid; gap: 4px; font-size: 15px; }
+.fc-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(160px, 1fr)); gap: 12px; margin-top: 14px; }
+.fc-card { border: 0; padding: 0; background: none; text-align: left; display: grid; gap: 6px; color: inherit; cursor: pointer; }
+.fc-card img { width: 100%; aspect-ratio: 3/4; object-fit: cover; border-radius: var(--radius); background: var(--surface-2); }
+.fc-cap { display: grid; gap: 2px; font-size: 14px; }
+.fc-stars { color: var(--accent); letter-spacing: 1px; font-size: 13px; }
+.fc-day-list { display: flex; gap: 8px; flex-wrap: wrap; }
+.fc-card.small { width: 72px; }
+.fc-card.small img { border-radius: 10px; }
