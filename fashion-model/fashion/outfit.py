@@ -104,13 +104,18 @@ class Piece:
 
     @classmethod
     def from_dict(cls, d):
-        """A piece as the app stores it ({category, colors, fit, styles, tags, warmth, name})
+        """A piece as the app stores it ({category, colors, fit, styles, tags, warmth, name, metal, leather})
         or as the learner writes it ({type, colour, fit, style, tags})."""
         category = d.get("category") or d.get("type")
         tags = list(d.get("tags") or [])
         if category in ALIASES:
             category, implied = ALIASES[category]
             tags += implied
+        # The app's metal and leather tones ("rose gold", "tan") are tags the rules read.
+        if d.get("metal"):
+            tags.append(d["metal"])
+        if d.get("leather"):
+            tags.append(f"{d['leather']} leather")
         colors = d.get("colors") or ([d["colour"]] if d.get("colour") else [])
         styles = d.get("styles") or ([d["style"]] if d.get("style") else [])
         return cls(category, [c for c in colors if c in COLORS], d.get("fit") if d.get("fit") in FITS else "",

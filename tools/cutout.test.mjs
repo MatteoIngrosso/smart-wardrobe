@@ -213,3 +213,15 @@ test("the frame: same size, margins and centring for every piece", () => {
     assert.ok(Math.abs(dx - FRAME_W * FRAME_MARGIN) < 1e-6 || Math.abs(dy - FRAME_H * FRAME_MARGIN) < 1e-6, "touches the margin on one side");
   }
 });
+
+test("a belt, a tie, a watch or a chain keeps its own shape: fitted by its long side, centred, never stretched", () => {
+  const inner = [FRAME_W * (1 - 2 * FRAME_MARGIN), FRAME_H * (1 - 2 * FRAME_MARGIN)];
+  for (const [what, w, h] of [["belt laid flat", 1200, 90], ["tie", 70, 900], ["watch", 300, 420], ["chain", 640, 380], ["ring", 40, 40]]) {
+    const { s, dx, dy } = frameFit(w, h);
+    const W = w * s, H = h * s;
+    assert.ok(Math.abs(W / H - w / h) < 1e-9, `${what}: one scale for both sides`);
+    assert.ok(W <= inner[0] + 1e-6 && H <= inner[1] + 1e-6, `${what}: inside the margins`);
+    assert.ok(Math.abs(W - inner[0]) < 1e-6 || Math.abs(H - inner[1]) < 1e-6, `${what}: its long side fills the frame`);
+    assert.ok(Math.abs(dx - (FRAME_W - W) / 2) < 1e-6 && Math.abs(dy - (FRAME_H - H) / 2) < 1e-6, `${what}: centred`);
+  }
+});

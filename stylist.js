@@ -1,7 +1,7 @@
 /* ======================================================================
    The fashion bible, inside the app
    A copy of the Python model in fashion-model/ (rules.py, outfit.py, model.py,
-   knowledge.py): the same 26 checks, the same weights, the same tip search, so
+   knowledge.py): the same 27 checks, the same weights, the same tip search, so
    the app judges an outfit exactly the way the model does. The rules and tips
    themselves come from fashion-bible.json (python -m fashion export), so
    teaching the model something new needs no change here.
@@ -43,11 +43,11 @@ const sigmoid = (z) => 1 / (1 + Math.exp(-Math.max(-30, Math.min(30, z))));
 let pieces = new WeakMap();
 const words = (text) => (String(text || "").toLowerCase().match(/[a-z0-9]+/g) || []);
 
-// An app item ({category, colors, fit, styles, tags, warmth, name, material}) as the checks see it.
+// An app item ({category, colors, fit, styles, tags, warmth, name, material, metal, leather}) as the checks see it.
 // null for things that aren't clothes the rules know about (underwear, socks, gym bags).
 export function pieceFrom(item) {
   if (!item || !V) return null;
-  const sig = [item.category, item.colors, item.fit, item.styles, item.tags, item.warmth, item.name, item.material].join("\u0001");
+  const sig = [item.category, item.colors, item.fit, item.styles, item.tags, item.warmth, item.name, item.material, item.metal, item.leather].join("\u0001");
   const hit = typeof item === "object" ? pieces.get(item) : null;
   if (hit && hit.sig === sig) return hit.piece;
   const piece = build(item);
@@ -68,6 +68,13 @@ function build(item) {
     for (const x of words(w)) tags.add(x);
   }
   for (const x of [...words(item.name), ...words(item.material)]) tags.add(x);
+  // The metal and leather tones (item.metal "rose gold", item.leather "tan") are tags the rules read,
+  // as Piece.from_dict makes them: "rose gold", "tan leather".
+  for (const t of [item.metal, item.leather && `${item.leather} leather`]) {
+    if (!t) continue;
+    tags.add(String(t).toLowerCase());
+    for (const x of words(t)) tags.add(x);
+  }
   const fs = list.map((s) => V.styles[s]).filter((f) => f !== undefined);
   const base = fs.length ? pyRound(fs.reduce((a, b) => a + b, 0) / fs.length, 1) : 1;
   const fit = V.fits[item.fit] !== undefined ? item.fit : "";
@@ -233,17 +240,23 @@ const CHECKS = {
   },
   belt_matches_shoes(o) {
     const belts = o.find("belt"), s = o.shoes;
-    if (!belts.length || !s || !(["dress-shoes", "boots"].includes(s.category) || s.has("leather", "suede"))) return NONE;
-    const a = V.leather_family[belts[0].colour], b = V.leather_family[s.colour];
-    if (!a || !b) return NONE;
-    const pair = `${cap(belts[0].colour)} belt with ${s.colour} shoes`;
-    return a === b ? [1, pair] : [-1, pair];
+    if (!belts.length || !s || !(["dress-shoes", "boots"].includes(s.category) || s.has("leather", "suede") || leatherOf(s))) return NONE;
+    const b = belts[0], fb = leatherFamily(b), fs = leatherFamily(s);
+    if (!fb || !fs) return NONE;
+    const tb = leatherOf(b) || b.colour, ts = leatherOf(s) || s.colour;
+    const pair = `${cap(tb)} belt with ${ts} shoes`;
+    if (fb !== fs) return [-1, pair];
+    // The same tone (or two colours of one family, as before tones): textbook. Tan with brown: fine.
+    return [tb === ts || (tb in V.leather_family && ts in V.leather_family) ? 1 : 0.7, pair];
   },
   tie_rules(o) {
     if (!o.find("tie").length) return NONE;
     if (!(o.base && o.base.category === "shirt")) return [-1, "A tie needs a collared shirt"];
     if (o.bottom && ["shorts", "joggers", "track-pants"].includes(o.bottom.category)) return [-1, `Tie with ${o.bottom.category}`];
     if (o.mid && ["hoodie", "zip-hoodie", "sweatshirt"].includes(o.mid.category)) return [-1, "Tie under a hoodie"];
+    const tailored = isSuit(o) || o.pieces.some((p) => p.category === "jacket" && (p.has("blazer", "suit") || p.formality >= 3));
+    const cl = clothes(o);
+    if (!tailored && mean(cl.map((p) => p.formality)) < 3) return [-0.6, "A tie wants a blazer or a dressier outfit"];
     return [0.6, null];
   },
   suit_rules(o, ctx) {
@@ -267,9 +280,22 @@ const CHECKS = {
     return [0, null];
   },
   metals(o) {
-    const m = new Set(o.extras.flatMap((p) => ["gold", "silver"].filter((t) => p.tags.has(t))));
-    if (m.size > 1) return [-0.5, "Gold and silver mixed"];
-    return m.size ? [0.2, null] : NONE;
+    const tones = o.extras.map(metalOf).filter(Boolean);
+    if (!tones.length) return NONE;
+    const warm = [...new Set(tones.filter((t) => V.warm_metals.includes(t)))].sort();
+    const cool = [...new Set(tones.filter((t) => !V.warm_metals.includes(t)))].sort();
+    if (warm.length && cool.length) return [-0.6, `${cap(warm[0])} and ${cool[0]} mixed`];
+    if (tones.length < 2) return [0.2, null];
+    return new Set(tones).size === 1 ? [0.6, `All ${tones[0]}`] : [0.3, null];
+  },
+  casual_accents(o) {
+    const acc = o.extras.filter((p) => p.category in V.casual_accents), cl = clothes(o);
+    if (!acc.length || !cl.length) return NONE;
+    const f = mean(cl.map((p) => p.formality));
+    if (f <= 1.5) return [0.5, `A ${V.casual_accents[acc[0].category]} suits a casual look`];
+    const caps = acc.filter((p) => ["cap", "bucket-hat"].includes(p.category));
+    if (caps.length && f >= 2.8) return [-0.7, `A ${V.casual_accents[caps[0].category]} with tailoring`];
+    return [0, null];
   },
   warmth_for_weather(o, ctx) {
     if (ctx.feels == null || !o.tops.length) return NONE;
@@ -315,6 +341,12 @@ const CHECKS = {
 export function wantedWarmth(feels) {
   return feels >= 24 ? 1 : feels >= 19 ? 2.5 : feels >= 14 ? 3.5 : feels >= 8 ? 6 : feels >= 2 ? 8 : 9.5;
 }
+// The leather tone a piece is tagged with (black, brown, tan), its family (brown and tan go together),
+// and the metal tone (gold, rose gold, silver, bronze): rules.py's leather_of, leather_family, metal_of.
+const leatherOf = (p) => V.leather_tones.find(([w]) => p.has(w))?.[1] || null;
+const leatherFamily = (p) => { const t = leatherOf(p); return t ? V.tone_family[t] : V.leather_family[p.colour]; };
+export const metalOf = (p) => V.metal_words.find(([w]) => p.has(w))?.[1] || null;
+export { leatherOf };
 // Jacket and trousers of one suit: both tagged suit, or the same colour and cloth and both dressy.
 export function isSuit(o) {
   const j = o.outer, t = o.bottom;

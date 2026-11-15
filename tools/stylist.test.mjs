@@ -85,7 +85,7 @@ test("the guide has the mandatory rules and the tips for the question", () => {
   S.setBible(bible);
   const g = S.guideText({ question: "how long should my tie be", occasion: "work" });
   assert.match(g, /STYLE GUIDE/);
-  assert.match(g, /A tie needs a collar and long trousers/);
+  assert.match(g, /A tie needs a collar and a dressy outfit/);
   assert.match(g, /tie/i);
   assert.ok(g.length < 3200, `guide is ${g.length} characters`);
   S.setBible(null);
@@ -108,6 +108,44 @@ test("a belt must match the leather shoes", () => {
   assert.ok(S.ruleScore([shoes, item("belt", ["black"])], "belt-shoes") <= -0.5);
   assert.equal(S.ruleScore([shoes, item("belt", ["brown"])], "belt-shoes"), 1);
   assert.equal(S.ruleScore([shoes, item("belt", ["red"])], "belt-shoes"), null, "no leather colour to compare");
+});
+
+test("belt and shoes go by their leather tones when the piece has one", () => {
+  S.setBible(bible);
+  const tan = item("dress-shoes", [], { leather: "tan" }), black = item("sneakers", ["white"], { leather: "black" });
+  assert.equal(S.ruleScore([tan, item("belt", ["brown"], { leather: "brown" })], "belt-shoes"), 0.7, "tan and brown: one family");
+  assert.equal(S.ruleScore([tan, item("belt", [], { leather: "tan" })], "belt-shoes"), 1);
+  assert.equal(S.ruleScore([black, item("belt", [], { leather: "brown" })], "belt-shoes"), -1, "white leather sneakers count by their tone");
+  // the tone wins over the colour: a navy belt of black leather goes with black shoes
+  assert.equal(S.ruleScore([item("dress-shoes", ["black"]), item("belt", ["navy"], { leather: "black" })], "belt-shoes"), 1);
+  assert.equal(S.pieceFrom(item("belt", [], { leather: "tan" })).has("tan leather"), true);
+});
+
+test("one metal on the watch, the jewellery and the buckle", () => {
+  S.setBible(bible);
+  const shirt = item("shirt", ["white"]), jeans = item("jeans", ["denim"]);
+  assert.equal(S.ruleScore([shirt, jeans, item("watch", [], { metal: "gold" }), item("bracelet", [], { metal: "silver" })], "metals"), -0.6);
+  assert.equal(S.ruleScore([shirt, jeans, item("watch", [], { metal: "gold" }), item("belt", ["brown"], { metal: "rose gold" })], "metals"), 0.3);
+  assert.equal(S.ruleScore([shirt, jeans, item("watch", [], { metal: "silver" }), item("necklace", [], { metal: "silver" })], "metals"), 0.6);
+  // from the name too: a steel watch is silver
+  assert.equal(S.metalOf(S.pieceFrom(item("watch", ["black"], { name: "Steel diver watch" }))), "silver");
+});
+
+test("a tie only with a shirt, and only when the outfit is dressy or has a blazer", () => {
+  S.setBible(bible);
+  const tie = item("tie", ["navy"]);
+  assert.equal(S.ruleScore([item("tshirt", ["white"]), item("jeans", ["denim"]), tie], "tie-rules"), -1);
+  assert.equal(S.ruleScore([item("hoodie", ["grey"]), item("shirt", ["white"]), item("trousers", ["grey"]), tie], "tie-rules"), -1);
+  assert.equal(S.ruleScore([item("shirt", ["white"]), item("jeans", ["denim"]), tie], "tie-rules"), -0.6);
+  assert.equal(S.ruleScore([item("jacket", ["navy"], { name: "Navy blazer" }), item("shirt", ["white"]), item("jeans", ["denim"]), tie], "tie-rules"), 0.6);
+  assert.equal(S.ruleScore([item("shirt", ["white"], { styles: ["formal"] }), item("trousers", ["grey"], { styles: ["smart"] }), tie], "tie-rules"), 0.6);
+});
+
+test("a chain or a cap suits a casual outfit, a cap doesn't suit tailoring", () => {
+  S.setBible(bible);
+  assert.equal(S.ruleScore([item("tshirt", ["black"]), item("jeans", ["black"]), item("necklace", [], { metal: "gold" })], "casual-accents"), 0.5);
+  assert.equal(S.ruleScore([item("jacket", ["navy"], { styles: ["smart"], name: "Blazer" }), item("shirt", ["white"], { styles: ["formal"] }), item("trousers", ["grey"], { styles: ["smart"] }), item("cap", ["black"])], "casual-accents"), -0.7);
+  assert.equal(S.ruleScore([item("sweater", ["navy"]), item("trousers", ["grey"]), item("watch", [])], "casual-accents"), null);
 });
 
 test("a blazer and trousers of one suit are a suit, odd trousers are not", () => {

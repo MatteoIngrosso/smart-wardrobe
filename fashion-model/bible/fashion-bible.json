@@ -1,10 +1,10 @@
 {
  "name": "Fashion bible",
  "version": 1,
- "built_at": "2026-10-28T16:07:57+00:00",
+ "built_at": "2026-11-15T11:56:48+00:00",
  "about": "Menswear rules, tips and example outfits, in the Smart Wardrobe app's vocabulary (garment types, colours, styles, fits and occasions as in app.js). Score an outfit with: sigmoid(model.bias + sum(rule.weight * check(rule))).",
  "model": {
-  "bias": -2.141,
+  "bias": -2.136,
   "trained_on": {
    "outfits": 242,
    "rulebook": 42,
@@ -26,7 +26,7 @@
    "params": {
     "limit": 1
    },
-   "weight": 1.389,
+   "weight": 1.388,
    "prior": 1.5,
    "topics": [
     "colour"
@@ -41,7 +41,7 @@
    "params": {
     "limit": 3
    },
-   "weight": 1.107,
+   "weight": 1.108,
    "prior": 0.8,
    "topics": [
     "colour"
@@ -54,7 +54,7 @@
    "why": "Contrast between top and bottom gives the outfit shape; all mid-tones look flat.",
    "check": "light_dark_contrast",
    "params": {},
-   "weight": 0.002,
+   "weight": 0.009,
    "prior": 0.6,
    "topics": [
     "colour"
@@ -195,7 +195,7 @@
      ]
     ]
    },
-   "weight": 0.725,
+   "weight": 0.717,
    "prior": 0.8,
    "topics": [
     "colour"
@@ -235,7 +235,7 @@
      ]
     ]
    },
-   "weight": 1.448,
+   "weight": 1.449,
    "prior": 1.2,
    "topics": [
     "colour"
@@ -250,7 +250,7 @@
    "params": {
     "limit": 1.5
    },
-   "weight": 1.636,
+   "weight": 1.639,
    "prior": 1.5,
    "topics": [
     "occasions",
@@ -264,7 +264,7 @@
    "why": "Being clearly under- or overdressed is the most noticed mistake; aim for the level of the room.",
    "check": "occasion_formality",
    "params": {},
-   "weight": 1.404,
+   "weight": 1.408,
    "prior": 2.0,
    "topics": [
     "occasions"
@@ -277,7 +277,7 @@
    "why": "Each occasion has its own vocabulary: tailoring for work, sportswear for the gym.",
    "check": "occasion_styles",
    "params": {},
-   "weight": 0.685,
+   "weight": 0.679,
    "prior": 0.8,
    "topics": [
     "occasions"
@@ -311,7 +311,7 @@
      ]
     ]
    },
-   "weight": 1.969,
+   "weight": 1.968,
    "prior": 1.8,
    "topics": [
     "occasions",
@@ -326,7 +326,7 @@
    "why": "When every piece shares a style the outfit reads as intentional.",
    "check": "consistent_style",
    "params": {},
-   "weight": 0.076,
+   "weight": 0.068,
    "prior": 0.6,
    "topics": [
     "wardrobe"
@@ -369,7 +369,7 @@
    "why": "One pattern is easy. Two need clearly different scales (fine stripe with a large check), so most days keep it to one.",
    "check": "pattern_mixing",
    "params": {},
-   "weight": 1.185,
+   "weight": 1.198,
    "prior": 0.7,
    "topics": [
     "patterns"
@@ -395,7 +395,7 @@
    "why": "Shoes are read first: dress shoes with joggers or trainers with a tie break the look.",
    "check": "shoe_formality",
    "params": {},
-   "weight": 1.302,
+   "weight": 1.319,
    "prior": 1.6,
    "topics": [
     "shoes",
@@ -406,7 +406,7 @@
   {
    "id": "belt-shoes",
    "title": "Belt matches the shoes",
-   "why": "With leather shoes, the belt is in the same colour family: black with black, brown with brown.",
+   "why": "With leather shoes, the belt is in the same colour family: black with black, brown or tan with brown or tan.",
    "check": "belt_matches_shoes",
    "params": {},
    "weight": 1.397,
@@ -419,11 +419,11 @@
   },
   {
    "id": "tie-rules",
-   "title": "A tie needs a collar and long trousers",
-   "why": "A tie only works with a collared shirt and tailored trousers, never with a hoodie or shorts.",
+   "title": "A tie needs a collar and a dressy outfit",
+   "why": "A tie only works with a collared shirt and tailored trousers, in a smart outfit or under a blazer or suit jacket; never with a hoodie, a T-shirt or shorts.",
    "check": "tie_rules",
    "params": {},
-   "weight": 1.621,
+   "weight": 1.585,
    "prior": 2.0,
    "topics": [
     "accessories",
@@ -451,7 +451,7 @@
    "why": "A puffer or rain shell over tailoring undoes it; an overcoat finishes a smart outfit.",
    "check": "outerwear_match",
    "params": {},
-   "weight": 0.961,
+   "weight": 0.96,
    "prior": 0.9,
    "topics": [
     "outerwear"
@@ -461,13 +461,28 @@
   {
    "id": "metals",
    "title": "One metal for accessories",
-   "why": "Watch, rings and bracelet look tidier all gold or all silver.",
+   "why": "Watch, jewellery and belt buckle look tidier all gold-toned or all silver.",
    "check": "metals",
    "params": {},
    "weight": 0.404,
    "prior": 0.4,
    "topics": [
     "accessories"
+   ],
+   "occasions": []
+  },
+  {
+   "id": "casual-accents",
+   "title": "Chains and caps are casual",
+   "why": "A chain, a cap or a beanie finishes a casual outfit; a cap or bucket hat looks out of place with tailoring.",
+   "check": "casual_accents",
+   "params": {},
+   "weight": 0.618,
+   "prior": 0.6,
+   "topics": [
+    "accessories",
+    "casual",
+    "streetwear"
    ],
    "occasions": []
   },
@@ -491,7 +506,7 @@
    "why": "Shorts below about 17°C look out of season.",
    "check": "shorts_weather",
    "params": {},
-   "weight": 1.397,
+   "weight": 1.396,
    "prior": 1.4,
    "topics": [
     "weather",
@@ -505,7 +520,7 @@
    "why": "On wet days a jacket that sheds water and shoes that don't mind puddles; suede and white trainers suffer.",
    "check": "rain_ready",
    "params": {},
-   "weight": 1.092,
+   "weight": 1.091,
    "prior": 0.8,
    "topics": [
     "weather",
@@ -520,7 +535,7 @@
    "why": "Linen and seersucker for heat, tweed, flannel and corduroy for cold.",
    "check": "fabric_season",
    "params": {},
-   "weight": 1.348,
+   "weight": 1.35,
    "prior": 0.8,
    "topics": [
     "fabrics",
@@ -17831,5 +17846,5 @@
    "source": "How to Wear Jordans: Outfits and Styling Advice (The Sole Supplier)"
   }
  ],
- "prompt": "Menswear rules, most important first:\n- Don't mix gym kit with tailoring.\n- Keep pieces at one level of dressiness.\n- A tie needs a collar and long trousers.\n- Sports clothes for training.\n- Colours that fight.\n- Dress for the occasion.\n- Belt matches the shoes.\n- Shorts only when it's warm.\n- Neutrals first, one accent colour.\n- Fabrics for the season.\n- Shoes at the level of the outfit.\n- Dress for the temperature.\n- One statement piece.\n- Go easy on patterns.\n- Balance volume.\n- Three colours at most.\n- Ready for rain.\n- Denim on denim needs contrast.\n- The coat matches the outfit.\n- Classic colour pairings.\n- Styles that suit the occasion.\n- Suits want shirts and leather shoes.\nTips:\n- Buy fewer, better pieces in natural fabrics; they last longer and look better as they age.\n- Budget for a tailor: shortening sleeves and trousers and taking in a waist costs little and makes clothes look made for you.\n- Keep accessories few and purposeful: a watch, a belt, maybe one bracelet or ring.\n- Fit matters more than brand or price: a cheap piece that fits beats an expensive one that doesn't.\n- Trousers should have little or no break: the hem just touches the shoe. Slim trousers look best with no break at all.\n- Match the width of the tie to the width of the lapels.\n- A capsule wardrobe: a few pieces in neutral colours that all combine gives more outfits than many loud pieces.\n- Core menswear basics: white and navy tees, an oxford shirt, a grey or navy knit, dark jeans, chinos, a navy blazer, an overcoat, white sneakers, brown leather shoes or boots.\n- Rest leather shoes a day between wears and keep cedar shoe trees in them.\n- A jacket collar should rest against the back of your neck without a gap.\n- A jacket must fit in the shoulders: the seam ends where your shoulder ends, with no dent or overhang.\n- The tip of the tie touches the top of the belt buckle.\n- A pocket square should pick up a colour from the tie or shirt, not be the same fabric as the tie.\n- A white or light blue oxford shirt works with suits, chinos and jeans alike.\n- Slim or straight jeans that sit on the hips without sagging work for nearly everyone.\n- When wearing one colour head to toe, vary the textures (knit, cotton, wool) so it doesn't look flat.\n- Earth tones (olive, brown, beige, cream, rust) all mix easily with each other and with navy.\n- Black tie means a black or midnight-navy dinner suit, white dress shirt, black bow tie and black patent or polished shoes."
+ "prompt": "Menswear rules, most important first:\n- Don't mix gym kit with tailoring.\n- Keep pieces at one level of dressiness.\n- A tie needs a collar and a dressy outfit.\n- Sports clothes for training.\n- Colours that fight.\n- Dress for the occasion.\n- Belt matches the shoes.\n- Shorts only when it's warm.\n- Neutrals first, one accent colour.\n- Fabrics for the season.\n- Shoes at the level of the outfit.\n- Dress for the temperature.\n- Go easy on patterns.\n- One statement piece.\n- Balance volume.\n- Three colours at most.\n- Ready for rain.\n- Denim on denim needs contrast.\n- The coat matches the outfit.\n- Classic colour pairings.\n- Styles that suit the occasion.\n- Chains and caps are casual.\n- Suits want shirts and leather shoes.\nTips:\n- Buy fewer, better pieces in natural fabrics; they last longer and look better as they age.\n- Budget for a tailor: shortening sleeves and trousers and taking in a waist costs little and makes clothes look made for you.\n- Keep accessories few and purposeful: a watch, a belt, maybe one bracelet or ring.\n- Fit matters more than brand or price: a cheap piece that fits beats an expensive one that doesn't.\n- Trousers should have little or no break: the hem just touches the shoe. Slim trousers look best with no break at all.\n- Match the width of the tie to the width of the lapels.\n- A capsule wardrobe: a few pieces in neutral colours that all combine gives more outfits than many loud pieces.\n- Core menswear basics: white and navy tees, an oxford shirt, a grey or navy knit, dark jeans, chinos, a navy blazer, an overcoat, white sneakers, brown leather shoes or boots.\n- Rest leather shoes a day between wears and keep cedar shoe trees in them.\n- A jacket collar should rest against the back of your neck without a gap.\n- A jacket must fit in the shoulders: the seam ends where your shoulder ends, with no dent or overhang.\n- The tip of the tie touches the top of the belt buckle.\n- A pocket square should pick up a colour from the tie or shirt, not be the same fabric as the tie.\n- A white or light blue oxford shirt works with suits, chinos and jeans alike.\n- Slim or straight jeans that sit on the hips without sagging work for nearly everyone.\n- When wearing one colour head to toe, vary the textures (knit, cotton, wool) so it doesn't look flat.\n- Earth tones (olive, brown, beige, cream, rust) all mix easily with each other and with navy."
 }

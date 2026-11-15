@@ -13,7 +13,7 @@ from . import APP_BIBLE, BIBLE
 from .knowledge import load_examples, load_learned, load_rulebook, merged_tips
 from .model import Model, accuracy, cross_validated, example_rows, features
 from .outfit import Context, Outfit
-from .rules import LEATHER_FAMILY, SOFT_NEUTRALS
+from .rules import CASUAL_ACCENTS, LEATHER_FAMILY, LEATHER_TONES, METAL_WORDS, SOFT_NEUTRALS, TONE_FAMILY, WARM_METALS
 from . import vocab
 from .vocab import OCCASIONS, TOPICS
 
@@ -84,6 +84,11 @@ def app_vocab():
         "statement_tags": sorted(vocab.STATEMENT_TAGS),
         "soft_neutrals": sorted(SOFT_NEUTRALS),
         "leather_family": dict(LEATHER_FAMILY),
+        "leather_tones": [list(x) for x in LEATHER_TONES],
+        "tone_family": dict(TONE_FAMILY),
+        "metal_words": [list(x) for x in METAL_WORDS],
+        "warm_metals": sorted(WARM_METALS),
+        "casual_accents": dict(CASUAL_ACCENTS),
     }
 
 

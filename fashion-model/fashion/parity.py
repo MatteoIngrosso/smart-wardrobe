@@ -42,6 +42,14 @@ OUTFITS = [
     "tshirt navy +logo, hoodie white +logo, jeans black, sneakers white, cap black +statement",
     "sweater grey smart, trousers charcoal formal, boots brown outdoor",
     "jacket navy formal +blazer, tshirt white, jeans black baggy streetwear, sneakers red streetwear sporty",
+    # accessories: leather and metal tones, a tie without a blazer, chains and caps
+    "shirt white, trousers grey smart, dress-shoes +tan-leather, belt +brown-leather +silver, watch +silver",
+    "shirt light blue, trousers navy, dress-shoes black, belt navy +black-leather +gold, watch +rose-gold, ring +silver",
+    "shirt white, jeans denim, sneakers white +black-leather, belt +brown-leather, tie navy",
+    "jacket grey smart +blazer, shirt white, trousers grey smart, dress-shoes +black-leather, belt +black-leather +steel, tie burgundy, watch +steel",
+    "tshirt black, jeans black slim, sneakers white, necklace +gold, cap black, watch +gold, earrings +gold",
+    "jacket navy smart +blazer, shirt white formal, trousers grey smart, dress-shoes black, bucket-hat black, glasses black",
+    "hoodie grey, joggers grey, sneakers white, beanie black, bracelet +bronze, necklace +brass",
 ]
 SEARCHES = [
     ("how long should my tie be", None), ("what to wear with a navy blazer", "smart"), ("white sneakers", None),

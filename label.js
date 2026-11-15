@@ -112,7 +112,7 @@ const IT_WORDS = [
   [/gonna/, "skirt"], [/stivali|stivaletti|anfibi/, "boots"], [/scarpe da ginnastica|\bsneakers?\b/, "sneakers"], [/mocassini|scarpe/, "shoes"],
   [/berretto|cuffia/, "beanie"], [/cappellino/, "cap"], [/cappello/, "hat"], [/cintura|cinture/, "belt"], [/zaino/, "backpack"],
   [/borsa|marsupio/, "bag"], [/portafoglio/, "wallet"], [/sciarpa/, "scarf"], [/guanti/, "gloves"], [/calzini|calze/, "socks"],
-  [/occhiali da sole/, "sunglasses"], [/collana|catenina/, "necklace"], [/bracciale/, "bracelet"], [/anello/, "ring"],
+  [/occhiali da sole/, "sunglasses"], [/occhiali da vista|occhiali graduati/, "glasses"], [/collana|catenina/, "necklace"], [/bracciale/, "bracelet"], [/orecchini|orecchino/, "earrings"], [/anello/, "ring"],
   [/\bnero|\bnera|\bneri|\bnere/, "black"], [/\bbianc[oaih]+/, "white"], [/grigio|grigia|grigi/, "grey"], [/azzurr[oaie]/, "light blue"],
   [/blu navy|blu scuro/, "navy"], [/\bblu\b/, "blue"], [/verde oliva/, "olive"], [/\bverd[ei]\b/, "green"], [/marrone|marroni|cioccolato/, "brown"],
   [/\bross[oaie]\b/, "red"], [/\brosa\b/, "pink"], [/\bgiall[oaie]\b/, "yellow"], [/arancione/, "orange"], [/\bviola\b/, "purple"],

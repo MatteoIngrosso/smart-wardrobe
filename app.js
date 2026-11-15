@@ -44,7 +44,9 @@ const CATS = [
   { id: "bracelet", label: "Bracelet", slot: "acc", warmth: 1, styles: [] },
   { id: "necklace", label: "Necklace", slot: "acc", warmth: 1, styles: [] },
   { id: "ring", label: "Ring", slot: "acc", warmth: 1, styles: [] },
+  { id: "earrings", label: "Earrings", slot: "acc", warmth: 1, styles: [] },
   { id: "sunglasses", label: "Sunglasses", slot: "acc", warmth: 1, styles: [] },
+  { id: "glasses", label: "Glasses", slot: "acc", warmth: 1, styles: [] },
   { id: "belt", label: "Belt", slot: "acc", warmth: 1, styles: ["smart casual"] },
   { id: "bag", label: "Bag", slot: "acc", warmth: 1, styles: [] },
   { id: "backpack", label: "Backpack", slot: "acc", warmth: 1, styles: ["casual"] },
@@ -362,7 +364,7 @@ async function loadAll() {
   Object.assign(sync, (await raw.get("kv", SYNC_STATE)) || {});
   sync.dirty = new Set(sync.dirty);
   for (const it of state.items) {
-    if (!it.styles) { it.styles = guessStyles(it); it.formality = formalityOf(it.styles); }
+    if (!it.styles) { it.styles = guessStyles(it); it.formality = formalityOf(it.styles, it.category); }
     if (!it.fit) it.fit = guessFit(it);
   }
 }
@@ -749,10 +751,20 @@ const roleOf = (item) => CAT[item.category]?.role || slotOf(item);
 const catLabel = (id) => CAT[id]?.label || id;
 const styleLabel = (s) => STYLES[s]?.label || s;
 const cap = (s) => s.charAt(0).toUpperCase() + s.slice(1);
+const sameList = (a = [], b = []) => a.length === b.length && [...a].sort().join("\u0001") === [...b].sort().join("\u0001");
 const fmtTemp = (c) => (state.settings.unit === "F" ? `${Math.round(c * 9 / 5 + 32)}°F` : `${Math.round(c)}°`);
-const formalityOf = (styles = []) => {
+// How dressy a piece is (1 casual ... 4 formal), from its styles. A type that has no styles of its own
+// (a watch, glasses) gets its usual level; you can still change it on the piece's page ("How dressy").
+// Types with styles get theirs from them: a tie 3.5, dress shoes 4, a hoodie or joggers 1.
+// The same as a level from 1 (casual or sport) to 5 (formal or suit), as the piece's page shows it:
+// a T-shirt or hoodie 1, a smart-casual shirt 3, a tie 5. Picking a level sets `formality`.
+const DRESS_LEVELS = ["", "Casual / sport", "Neat casual", "Smart casual", "Smart", "Formal / suit"];
+const LEVEL_FORMALITY = [0, 1, 1.5, 2, 3, 4];
+const pieceLevel = (it) => { const f = it?.formality; return f == null ? null : f < 1.25 ? 1 : f < 1.75 ? 2 : f < 2.5 ? 3 : f < 3.5 ? 4 : 5; };
+const FORMALITY_DEFAULT = { watch: 2.5, bracelet: 2, necklace: 1.5, ring: 2, earrings: 1.5, glasses: 2.5, sunglasses: 1.5, bag: 2, wallet: 2, gloves: 2, umbrella: 2 };
+const formalityOf = (styles = [], category = "") => {
   const fs = styles.map((s) => STYLES[s]?.f).filter(Boolean);
-  return fs.length ? Math.round((fs.reduce((a, b) => a + b, 0) / fs.length) * 10) / 10 : 1;
+  return fs.length ? Math.round((fs.reduce((a, b) => a + b, 0) / fs.length) * 10) / 10 : FORMALITY_DEFAULT[category] ?? 1;
 };
 
 // Offline style recognition: brand knowledge first, then the type of garment and its tags.
@@ -1046,9 +1058,11 @@ async function readPhoto(blob) {
     px.push(toLab(data[i], data[i + 1], data[i + 2]));
     wt.push(data[i + 3] / 255);
   }
-  return { colors: photoColours(px, wt), shape: cutout ? outlineShape(data, w, h) : null };
+  const groups = photoGroups(px, wt);
+  return { colors: groupColours(groups), groups, shape: cutout ? outlineShape(data, w, h) : null };
 }
-function photoColours(px, wt) {
+// The colour groups of the garment's pixels: [{ lab, share }], the biggest first.
+function photoGroups(px, wt) {
   const K = Math.min(4, px.length);
   if (!K) return [];
   // Start from the lightness quartiles, so the same photo always gives the same colours.
@@ -1068,10 +1082,80 @@ function photoColours(px, wt) {
     }
     C = sum.map((s, k) => (s[3] ? [s[0] / s[3], s[1] / s[3], s[2] / s[3]] : C[k]));
   }
+  const total = sum.reduce((a, s) => a + s[3], 0) || 1;
+  return sum.map((s, k) => ({ lab: C[k], share: s[3] / total })).filter((g) => g.share > 0).sort((a, b) => b.share - a.share);
+}
+// The groups named after PHOTO_TONES: the main colour, and another when it covers 30% of the piece.
+function groupColours(groups) {
   const share = {};
-  let total = 0;
-  sum.forEach((s, k) => { if (!s[3]) return; const n = toneName(C[k]); share[n] = (share[n] || 0) + s[3]; total += s[3]; });
-  return Object.entries(share).sort((a, b) => b[1] - a[1]).filter(([, n], i) => i === 0 || n / total >= 0.3).slice(0, 3).map(([n]) => n);
+  for (const g of groups) { const n = toneName(g.lab); share[n] = (share[n] || 0) + g.share; }
+  return Object.entries(share).sort((a, b) => b[1] - a[1]).filter(([, n], i) => i === 0 || n >= 0.3).slice(0, 3).map(([n]) => n);
+}
+const photoColours = (px, wt) => groupColours(photoGroups(px, wt));
+
+/* ---------- Metal and leather tones (on the device, no tokens) ----------
+   item.metal ("gold", "silver", "rose gold", "bronze") for jewellery, watches and belt buckles, and
+   item.leather ("black", "brown" = brown or cognac, "tan") for belts, shoes, bags and watch straps.
+   The fashion bible's rules read them: the belt's leather like the shoes', one metal on the watch,
+   the jewellery and the buckle. The words of the name, tags and material decide first ("rose gold
+   chain", "cognac leather belt"), then the colours, then the photo's colour groups. They are a guess
+   and can be changed on the piece's page; "" means looked at, nothing found. */
+const METAL_CATS = ["necklace", "bracelet", "ring", "earrings", "watch", "belt"];
+const LEATHER_CATS = ["belt", "dress-shoes", "boots", "sneakers", "bag", "backpack", "watch"];
+const SURE_LEATHER = ["belt", "dress-shoes", "boots"]; // leather unless the words say otherwise
+const METAL_TONES = [["gold", "Gold"], ["silver", "Silver"], ["rose gold", "Rose gold"], ["bronze", "Bronze"]];
+const LEATHER_TONES = [["black", "Black leather"], ["brown", "Brown / cognac"], ["tan", "Tan"]];
+const METAL_WORD = [[/rose[ -]?gold/, "rose gold"], [/white gold|silver|steel|stainless|platinum|titanium|chrome|sterling/, "silver"], [/\bgold(en)?\b|gilded|\bbrass\b/, "gold"], [/bronze|copper/, "bronze"]];
+const LEATHER_WORD = [[/\bblack\b|\bnero\b/, "black"], [/cognac|brown|chocolate|chestnut|mahogany|burgundy|oxblood|espresso|dark tan/, "brown"], [/\btan\b|camel|caramel|natural|honey|wheat|sand|cuoio/, "tan"]];
+const LEATHER_COLOUR = { black: "black", charcoal: "black", brown: "brown", burgundy: "brown", tan: "tan", camel: "tan", beige: "tan", cream: "tan" };
+// From one colour group (CIELAB) of a photo: polished metal is light; silver has no colour of its own.
+function metalTone([L, a, b]) {
+  if (L < 40) return null;
+  if (Math.hypot(a, b) < 7) return L >= 52 ? "silver" : null;
+  if (a >= 9 && b < a * 1.6 && L >= 50) return "rose gold";
+  if (b >= 14 && a < 9 && L >= 50) return "gold";
+  if (b >= 12 && L < 62) return "bronze";
+  return null;
+}
+function leatherTone([L, a, b]) {
+  if (L < 24 && Math.hypot(a, b) < 12) return "black";
+  if (a > 3 && b > 6 && L < 48) return "brown";
+  if (b > 12 && L >= 48 && L < 75) return "tan";
+  return null;
+}
+// The tones a piece is missing, as { metal, leather } (only the ones it can have and doesn't have yet).
+// `groups`: the photo's colour groups (readPhoto), if it was read.
+function guessTones(it, groups = null) {
+  const out = {}, words = `${it.name || ""} ${(it.tags || []).join(" ")} ${it.material || ""}`.toLowerCase();
+  if (METAL_CATS.includes(it.category) && it.metal === undefined) {
+    const w = METAL_WORD.find(([re]) => re.test(words))?.[1];
+    // a belt's buckle is a small part of the photo; jewellery and watches are mostly metal
+    const min = it.category === "belt" ? 0.03 : 0.12;
+    const g = !w && groups?.find((x) => x.share >= min && metalTone(x.lab));
+    out.metal = w || (g ? metalTone(g.lab) : "");
+  }
+  if (LEATHER_CATS.includes(it.category) && it.leather === undefined) {
+    const says = /leather|suede|nubuck|pelle|cognac/.test(words), not = /rubber|silicone|nylon|canvas|fabric|mesh|knit|plastic|webbing|elastic|braided/.test(words);
+    if (!(says || SURE_LEATHER.includes(it.category)) || (not && !says)) out.leather = "";
+    else {
+      const w = LEATHER_WORD.find(([re]) => re.test(words))?.[1];
+      const c = (it.colors || []).map((x) => LEATHER_COLOUR[x]).find(Boolean);
+      const g = groups?.[0] && groups[0].share >= 0.35 ? leatherTone(groups[0].lab) : null;
+      out.leather = w || c || g || "";
+    }
+  }
+  return out;
+}
+// Pieces saved before the tones existed: guessed once, a few at a time, from their words and photo.
+async function backfillTones() {
+  for (const it of state.items) {
+    if (!(METAL_CATS.includes(it.category) && it.metal === undefined) && !(LEATHER_CATS.includes(it.category) && it.leather === undefined)) continue;
+    const p = it.photos?.[0];
+    const groups = p instanceof Blob ? (await readPhoto(p).catch(() => null))?.groups : null;
+    Object.assign(it, guessTones(it, groups));
+    await store.put("items", it);
+    await new Promise((r) => setTimeout(r, 0));
+  }
 }
 // The garment's colours, main first (names from COLORS).
 async function detectColors(blob) { return (await readPhoto(blob)).colors; }
@@ -1129,6 +1213,7 @@ async function removeBackground(blob) {
 // left-right symmetry gives the axis, then the ends decide which way is up (legs go down;
 // a hood, collar or neckline goes up). `kind` is "top", "bottom" or "" when not known yet.
 async function uprightAngle(blob, kind = "") {
+  if (kind === "flat") return 0;
   const bmp = await createImageBitmap(blob);
   const N = 120, fit = 84 / Math.max(bmp.width, bmp.height);
   const cv = Object.assign(document.createElement("canvas"), { width: N, height: N });
@@ -1224,7 +1309,11 @@ async function uprightAngle(blob, kind = "") {
   return pick ? pick.deg : 0;
 }
 
+// Belts, ties, watches, jewellery and glasses have no "up" to find: they stay as photographed (and
+// frameCutout keeps their own proportions, fitted by the long side, like every piece).
+const FLAT_CATS = ["belt", "tie", "watch", "necklace", "bracelet", "ring", "earrings", "glasses", "sunglasses"];
 const kindOf = (category) => {
+  if (FLAT_CATS.includes(category)) return "flat";
   const slot = CAT[category]?.slot;
   return slot === "bottom" ? "bottom" : ["base", "mid", "outer"].includes(slot) ? "top" : "";
 };
@@ -2417,10 +2506,16 @@ function extrasFor(pieces, cond, occ, used) {
     needs.push([["sunglasses"], ""]);
   }
   if (occ.id === "gym") needs.push([["gym-bag", "backpack"], ""]);
-  needs.push([["watch"], ""]);
+  // The belt first (it follows the shoes' leather), then the watch (its metal like the buckle's).
   const bottom = pieces.bottom?.category;
   if (smart && ["trousers", "jeans"].includes(bottom)) needs.push([["belt"], ""]);
+  needs.push([["watch"], ""]);
   if (occ.target >= 2.9 && pieces.base?.category === "shirt") needs.push([["tie"], ""]);
+  // A casual day may get a chain, or a cap in mild weather: sometimes, not on every idea.
+  if (occ.target <= 2.1 && occ.id !== "gym") {
+    if (rand() < 0.5) needs.push([["necklace"], "", true]);
+    if (feels >= 8 && feels < 22 && !wet && rand() < 0.35) needs.push([["cap", "bucket-hat"], "", true]);
+  }
 
   const cols = Object.values(pieces).filter(Boolean).map((p) => p.colors?.[0]).filter(Boolean);
   const accent = cols.find((c) => !COLORS[c]?.neutral);
@@ -2431,14 +2526,26 @@ function extrasFor(pieces, cond, occ, used) {
   const clothes = Object.values(pieces).filter(Boolean);
   const broken = ctx && new Set(Style.judge(clothes, ctx).violations.map((v) => v.rule.id));
   const adds = (i) => ctx && Style.judge([...clothes, ...extras, i], ctx).violations.some((v) => !broken.has(v.rule.id));
-  for (const [cats, reason] of needs) {
+  // How a candidate sits with the fashion bible's accessory rules (null: the rule doesn't apply).
+  const rule = (id, i) => (Style.ready() ? Style.ruleScore([...clothes, ...extras, i], id) : null);
+  for (const [cats, reason, optional] of needs) {
     let options = suggestable().filter((i) => cats.includes(i.category) && !adds(i));
-    // A belt in the same colour family as the leather shoes (black with black, brown with brown).
+    // A belt in the same colour family as the leather shoes (black with black, brown or tan with brown or tan).
     if (cats[0] === "belt" && pieces.shoes && Style.ready()) options = options.filter((i) => !((Style.ruleScore([pieces.shoes, i], "belt-shoes") ?? 0) <= -0.5));
+    // One metal: no gold watch with a silver buckle or chain.
+    options = options.filter((i) => !((rule("metals", i) ?? 0) < 0));
+    // A tie only with a collared shirt in a dressy outfit or under a blazer; a chain or a cap only
+    // where the bible says it suits the look.
+    if (cats[0] === "tie") options = options.filter((i) => (rule("tie-rules", i) ?? -1) > 0);
+    if (optional) options = options.filter((i) => (rule("casual-accents", i) ?? -1) > 0);
+    else options = options.filter((i) => !((rule("casual-accents", i) ?? 0) < 0));
     if (!options.length) continue;
     const score = (i) => {
       const c = i.colors?.[0];
       let s = COLORS[c]?.neutral || !c ? 1 : c === accent ? 1.5 : accent ? -1.5 : 0.5;
+      // the textbook pairings first: the belt in the shoes' own tone, every metal the same
+      if (cats[0] === "belt" && pieces.shoes && Style.ready()) s += (Style.ruleScore([pieces.shoes, i], "belt-shoes") ?? 0) * 0.8;
+      s += Math.max(0, rule("metals", i) ?? 0) * 0.8;
       if ((i.styles || []).some((st) => occ.likes.includes(st))) s += 0.7;
       const d = daysSince(i.lastWorn);
       if (d <= 1) s -= 1.5;
@@ -3123,8 +3230,8 @@ const BUY_KINDS = [
   [/sneakers?|trainers?|runners|shoes/, "sneakers", "shoe"],
   [/beanie/, "beanie", "beanie"], [/beret/, "beret", "beanie"], [/bucket hat/, "bucket-hat", "cap"],
   [/\bcaps?\b/, "cap", "cap"], [/\bhats?\b|fedora/, "hat", "cap"],
-  [/watch/, "watch", "watch"], [/sunglasses|shades/, "sunglasses", "glasses"],
-  [/bracelet/, "bracelet", "jewel"], [/necklace|chain/, "necklace", "jewel"], [/\brings?\b/, "ring", "jewel"],
+  [/watch/, "watch", "watch"], [/sunglasses|shades/, "sunglasses", "glasses"], [/\bglasses\b|eyeglasses|spectacles/, "glasses", "glasses"],
+  [/bracelet/, "bracelet", "jewel"], [/necklace|chain/, "necklace", "jewel"], [/earrings?|studs?\b|hoops?\b/, "earrings", "jewel"], [/\brings?\b/, "ring", "jewel"],
   [/belt/, "belt", "belt"], [/backpack/, "backpack", "bag"], [/\bbags?\b|tote/, "bag", "bag"],
   [/wallet|cardholder/, "wallet", "wallet"], [/scarf|scarves/, "scarf", "scarf"], [/gloves/, "gloves", "hanger"],
   [/\bties?\b/, "tie", "tie"], [/umbrella/, "umbrella", "umbrella"],
@@ -3186,6 +3293,14 @@ function buyRow(b, { label = "To buy", shops = 4, extra = "" } = {}) {
 const wishBtn = (b) => verdictHTML(b);
 
 const pieceTile = (p) => `<button class="piece" data-item="${p.id}">${pieceImg(p)}<span>${esc(p.name)}</span></button>`;
+// An accessory in its slot (Belt, Watch, Jewelry…), for the Calendar's plans and ideas.
+const accTile = (p) => `<button class="piece acc-piece" data-item="${p.id}">${pieceImg(p)}<span><small class="acc-slot">${esc(accGroupOf(p) ? accLabel(p) : catLabel(p.category))}</small>${esc(p.name)}</span></button>`;
+// The coat and the accessories of a plan or an idea, the accessories in slot order.
+function extraTiles(coat, extras) {
+  const order = ACC_GROUPS.map((g) => g[0]);
+  const rank = (p) => { const k = order.indexOf(accGroupOf(p)); return k < 0 ? order.length : k; };
+  return [...(coat ? [pieceTile(coat)] : []), ...[...extras].filter(Boolean).sort((a, b) => rank(a) - rank(b)).map(accTile)].join("");
+}
 // Advice that isn't an outfit: each line with photos of the pieces it mentions; buys get their own row.
 function tipsHTML(lines, refs, named) {
   const out = [];
@@ -4127,12 +4242,23 @@ async function rebakePieces() {
 }
 
 /* ---------- Wardrobe ---------- */
+// Accessories, by kind: the wardrobe's sub-filters, the Calendar's slots and the outfit cards' labels.
+// Hats and the gym bag are in here too (they keep their own sections as well).
+const ACC_GROUPS = [
+  ["belt", "Belt", ["belt"]], ["tie", "Tie", ["tie"]], ["jewelry", "Jewelry", ["necklace", "bracelet", "ring", "earrings"]],
+  ["watch", "Watch", ["watch"]], ["hat", "Hat", ["cap", "beanie", "beret", "bucket-hat", "hat"]],
+  ["bag", "Bag", ["bag", "backpack", "gym-bag"]], ["eyewear", "Eyewear", ["sunglasses", "glasses"]],
+];
+const ACC_GROUP = Object.fromEntries(ACC_GROUPS.flatMap(([g, , cats]) => cats.map((c) => [c, g])));
+// The kind of accessory a piece is (belt, jewelry…), "other" for the rest of Accessories, or null.
+const accGroupOf = (it) => ACC_GROUP[it?.category] || (slotOf(it) === "acc" ? "other" : null);
+const accLabel = (it) => ACC_GROUPS.find((g) => g[0] === accGroupOf(it))?.[1] || catLabel(it.category);
 function filteredItems() {
   const { q, slot, cat, color, style, sort } = state.filters;
   const ql = q.trim().toLowerCase();
   const list = state.items.filter((i) =>
-    (slot === "all" || (slot === "fav" ? isFavourite(i) : slot === "wash" ? i.wash : slot === "disliked" ? i.disliked : slotOf(i) === slot)) &&
-    (cat === "all" || i.category === cat) &&
+    (slot === "all" || (slot === "fav" ? isFavourite(i) : slot === "wash" ? i.wash : slot === "disliked" ? i.disliked : slot === "acc" ? !!accGroupOf(i) : slotOf(i) === slot)) &&
+    (cat === "all" || (cat.startsWith("acc:") ? accGroupOf(i) === cat.slice(4) : i.category === cat)) &&
     (color === "all" || (i.colors || []).includes(color)) &&
     (style === "all" || (i.styles || []).includes(style)) &&
     (!ql || [i.name, i.brand, catLabel(i.category), FITS[i.fit]?.label, ...(i.tags || []), ...(i.colors || []), ...(i.styles || [])].join(" ").toLowerCase().includes(ql)));
@@ -4155,9 +4281,15 @@ function renderWardrobe() {
     : emptyState("No clothes yet", "Snap a photo of each piece to start your catalogue.", `<button class="btn primary" data-go="add">Add clothes</button><button class="btn" data-act="seed">Load sample wardrobe</button>`)}`;
   refreshGrid();
 }
-// Inside a section (e.g. Accessories): one chip per type you own, e.g. Watches, Bracelets.
+// Inside a section: one chip per type you own, e.g. Jeans, Trousers. Accessories have a chip for
+// each kind (Belt, Tie, Jewelry, Watch, Hat, Bag, Eyewear), owned or not.
 function typeRow() {
   const f = state.filters;
+  if (f.slot === "acc") {
+    const n = (g) => state.items.filter((i) => accGroupOf(i) === g).length;
+    const groups = [...ACC_GROUPS.map(([g, l]) => [g, l]), ...(n("other") ? [["other", "Other"]] : [])];
+    return `<div class="chips scroller" data-row="types"><button class="chip" aria-pressed="${f.cat === "all"}" data-catf="all">All accessories</button>${groups.map(([g, l]) => `<button class="chip" aria-pressed="${f.cat === `acc:${g}`}" data-catf="acc:${g}">${l} <span class="muted">${n(g)}</span></button>`).join("")}</div>`;
+  }
   const types = CATS.filter((c) => c.slot === f.slot && state.items.some((i) => i.category === c.id));
   return types.length > 1 ? `<div class="chips scroller" data-row="types"><button class="chip" aria-pressed="${f.cat === "all"}" data-catf="all">All ${esc(SLOTS[f.slot].toLowerCase())}</button>${types.map((c) => `<button class="chip" aria-pressed="${f.cat === c.id}" data-catf="${c.id}">${c.label} <span class="muted">${state.items.filter((i) => i.category === c.id).length}</span></button>`).join("")}</div>` : "";
 }
@@ -4181,7 +4313,7 @@ function wardTop(types = typeRow()) {
         ${washing || f.slot === "wash" ? `<button class="chip" aria-pressed="${f.slot === "wash"}" data-slot="wash">In the wash <span class="muted">${washing}</span></button>` : ""}
         ${washing && f.slot !== "wash" ? `<button class="chip wash-all" data-act="wash-done">${ICON_BASKET}Laundry done: all back</button>` : ""}
         ${state.items.some((i) => i.disliked) || f.slot === "disliked" ? `<button class="chip" aria-pressed="${f.slot === "disliked"}" data-slot="disliked">Disliked <span class="muted">${state.items.filter((i) => i.disliked).length}</span></button>` : ""}
-        ${Object.entries(SLOTS).map(([k, l]) => `<button class="chip" aria-pressed="${f.slot === k}" data-slot="${k}">${l}</button>`).join("")}
+        ${Object.entries(SLOTS).filter(([k]) => k !== "head" || f.slot === "head").map(([k, l]) => `<button class="chip" aria-pressed="${f.slot === k}" data-slot="${k}">${l}</button>`).join("")}
       </div>
       ${types}
       ${usedStyles.length > 1 ? `<div class="chips scroller"><button class="chip" aria-pressed="${f.style === "all"}" data-style="all">Any style</button>${usedStyles.map((s) => `<button class="chip" aria-pressed="${f.style === s}" data-style="${esc(s)}">${styleLabel(s)}</button>`).join("")}</div>` : ""}
@@ -4266,7 +4398,7 @@ function fillGrid(grid, list) {
 // A piece in the wardrobe grid: tap it to open it. The basket in its corner puts it in the wash and
 // back in one tap; the badges say if it's in the wash and how often it's been worn.
 const ICON_BASKET = `<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 9h16l-1.6 10.2a2 2 0 0 1-2 1.8H7.6a2 2 0 0 1-2-1.8z"/><path d="M8 9l3-5M16 9l-3-5M9 13v4M12 13v4M15 13v4"/></svg>`;
-const NOT_WASHED = ["watch", "bracelet", "necklace", "ring", "sunglasses", "belt", "bag", "backpack", "wallet", "tie", "umbrella", "accessory", "hat", "training-shoes", "gym-bag", "gym-gear"];
+const NOT_WASHED = ["watch", "bracelet", "necklace", "ring", "earrings", "sunglasses", "glasses", "belt", "bag", "backpack", "wallet", "tie", "umbrella", "accessory", "hat", "training-shoes", "gym-bag", "gym-gear"];
 const washable = (i) => slotOf(i) !== "shoes" && !NOT_WASHED.includes(i.category);
 const wornBadge = (i) => (i.wearCount ? `Worn ${i.wearCount}×` : "");
 function itemTile(i, src, basket = true) {
@@ -4315,6 +4447,7 @@ function openItem(id, showOriginal = false) {
       ${i.link && /^https?:\/\//.test(i.link) ? `<div><b>Shop</b><a href="${esc(i.link)}" target="_blank" rel="noopener">Product page ↗</a>${i.reference ? ` · ref ${esc(i.reference)}` : ""}</div>` : ""}
     </div>
     ${fitsFor(i).length ? `<div class="field" style="margin-bottom:14px"><label>Fit</label><div class="chips">${fitsFor(i).map((f) => `<button class="chip" aria-pressed="${i.fit === f}" data-setfit="${i.id}:${f}">${FITS[f].label}</button>`).join("")}</div></div>` : ""}
+    ${toneFields(i)}
     ${mirrorFitField(i)}
     ${EVERYDAY_AS[i.category] ? `<div class="field" style="margin-bottom:14px"><label>Everyday too</label><div class="row"><button class="chip" data-everyday="${i.id}" aria-pressed="${!!i.everyday}">${i.everyday ? "On" : "Off"}</button><span class="muted small">${i.everyday ? "Also in your Everyday outfit ideas, not just at the gym." : "Only at the gym, unless everything else is in the wash. Turn it on to wear it every day too."}</span></div></div>` : ""}
     ${suitField(i)}
@@ -4333,6 +4466,14 @@ function openItem(id, showOriginal = false) {
     </div>
     <div class="ai-answer" id="pair-answer" style="margin-top:16px"></div>`;
   $("#sheet").hidden = false;
+}
+// Metal and leather tones (guessed from the words and the photo, see guessTones) and how dressy it is.
+function toneFields(i) {
+  const row = (label, hint, key, list, value) => `<div class="field" style="margin-bottom:14px"><label>${label}${hint ? ` <span style="text-transform:none;font-weight:400">(${hint})</span>` : ""}</label><div class="chips">${list.map(([v, l]) => `<button class="chip" aria-pressed="${value === v}" data-${key}="${i.id}|${esc(v)}">${l}</button>`).join("")}</div></div>`;
+  const metal = METAL_CATS.includes(i.category) ? row(i.category === "belt" ? "Buckle metal" : i.category === "watch" ? "Watch metal" : "Metal", "a guess, tap to change", "setmetal", METAL_TONES, i.metal) : "";
+  const leather = LEATHER_CATS.includes(i.category) ? row(i.category === "watch" ? "Strap leather" : "Leather", i.leather === undefined ? "" : "a guess, tap to change", "setleather", [...LEATHER_TONES, ["", "Not leather"]], i.leather ?? null) : "";
+  const dressy = slotOf(i) === "under" ? "" : row("How dressy", "1 casual or sport … 5 formal or suit", "setform", [1, 2, 3, 4, 5].map((n) => [n, `${n} ${DRESS_LEVELS[n]}`]), pieceLevel(i));
+  return metal + leather + dressy;
 }
 // A jacket or trousers: which piece it makes a suit with, or the ones it could.
 function suitField(i) {
@@ -4676,6 +4817,7 @@ async function preparePhoto(p, d, cut = state.settings.autoCutout) {
       const seen = await readPhoto(shown(p)).catch(() => null);
       if (seen && !d.keepColors) d.colors = seen.colors;
       d.shape = seen?.shape || null;
+      d.groups = seen?.groups || null; // for the metal and leather tones, when it's saved
     }
   } catch {
     if (draft === d && view === "add") toast("Couldn't separate the garment from the background");
@@ -5483,7 +5625,9 @@ async function saveDraft(next = false) {
   const item = {
     ...(existing || { id: uid(), createdAt: new Date().toISOString(), wearCount: 0, lastWorn: null, favorite: false }),
     name: d.name.trim() || autoName(d) || "Untitled piece",
-    category: d.category, colors: d.colors, brand: d.brand.trim(), styles, formality: formalityOf(styles),
+    category: d.category, colors: d.colors, brand: d.brand.trim(), styles,
+    // the styles decide, unless they're as they were: then a level set on the piece's page stays
+    formality: existing && existing.category === d.category && existing.formality != null && sameList(existing.styles, styles) ? existing.formality : formalityOf(styles, d.category),
     warmth: +d.warmth, tags, notes: d.notes.trim(),
     fit: (fitsFor(d).includes(d.fit) ? d.fit : "") || guessFit({ category: d.category, tags }),
     price: parseFloat(String(d.price ?? "").replace(",", ".")) || undefined, currency: d.currency || undefined,
@@ -5499,6 +5643,8 @@ async function saveDraft(next = false) {
   const m0 = d.photos[0]?.useCut && d.photos[0]?.meta;
   if (m0 || existing?.cutoutMeta) item.cutoutMeta = Avatar.cleanCutMeta({ ...(existing?.cutoutMeta || {}), ...(m0 || {}) });
   if (d.look) applyLook(item, d.look);
+  // Metal and leather tones (gold, tan…) from the words and the photo, if the piece has none yet.
+  Object.assign(item, guessTones(item, d.groups));
   // Added from Must-Buy's Bought, or the only piece you bought in this type that isn't in yet.
   const sameType = !existing && !d.want ? pendingBuys(true).filter((w) => w.cat === item.category) : [];
   // Colours from the photo when nothing set them (no AI, the detection was still running…). No tokens.
@@ -5542,8 +5688,8 @@ const CAT_ICON = {
   tshirt: "tee", polo: "tee", shirt: "shirt", sweatshirt: "hoodie", hoodie: "hoodie", "zip-hoodie": "hoodie", sweater: "knit",
   overshirt: "jacket", jacket: "jacket", rain: "jacket", coat: "coat", puffer: "coat", jeans: "trousers", trousers: "trousers",
   joggers: "trousers", shorts: "shorts", skirt: "skirt", sneakers: "shoe", "dress-shoes": "shoe", boots: "boot",
-  cap: "cap", hat: "cap", "bucket-hat": "cap", beanie: "beanie", beret: "beanie", watch: "watch", sunglasses: "glasses",
-  bracelet: "jewel", necklace: "jewel", ring: "jewel", belt: "belt", bag: "bag", backpack: "bag", wallet: "wallet",
+  cap: "cap", hat: "cap", "bucket-hat": "cap", beanie: "beanie", beret: "beanie", watch: "watch", sunglasses: "glasses", glasses: "glasses",
+  bracelet: "jewel", necklace: "jewel", ring: "jewel", earrings: "jewel", belt: "belt", bag: "bag", backpack: "bag", wallet: "wallet",
   scarf: "scarf", tie: "tie", umbrella: "umbrella", socks: "socks", underwear: "underwear",
   "gym-top": "tee", "tank-top": "tee", "long-sleeve-top": "tee", "sports-bra": "tee", "gym-hoodie": "hoodie", "track-jacket": "jacket",
   "gym-shorts": "shorts", leggings: "trousers", "track-pants": "trousers", "training-shoes": "shoe", "gym-bag": "bag", "gym-gear": "dumbbell",
@@ -6607,7 +6753,8 @@ function dayPanelHTML(date) {
   const canWear = !plan?.worn && parts.some((x) => x.item) && date <= now && dayDiff(date, now) <= WEAR_BACK;
   const planned = parts.length ? `<div class="stack" style="gap:10px">
       <h3>${plan.worn ? "Planned and worn ✓" : plan.missed ? "Planned, not worn" : "Planned"}${plan.title ? ` for ${esc(plan.title)}` : ""} <span class="muted small">· ${esc(occLabel(plan.occasion))}</span></h3>
-      <div class="pieces">${parts.map((x) => (x.item ? pieceTile(x.item) : removedTile(x.role))).join("")}</div>
+      <div class="pieces">${parts.filter((x) => x.role !== "extra").map((x) => (x.item ? pieceTile(x.item) : removedTile(x.role))).join("")}</div>
+      ${parts.some((x) => x.role === "extra") ? `<div class="pieces extras" aria-label="Accessories">${extraTiles(null, parts.filter((x) => x.role === "extra" && x.item).map((x) => x.item))}${parts.filter((x) => x.role === "extra" && !x.item).map(() => removedTile()).join("")}</div>` : ""}
       ${parts.some((x) => !x.item) ? `<p class="why warn">A piece of this plan is no longer in your wardrobe.${past ? "" : " Suggest a new outfit to replace it."}</p>` : ""}
       ${washNote(parts.map((x) => x.item), date)}
       <div class="row">${canWear ? `<button class="btn primary" data-calworn="${date}">${date === now ? "Wearing it today" : "I wore it"}</button>${past && !plan.missed ? `<button class="btn" data-calmissed="${date}">I didn't</button>` : ""}` : ""}${parts.some((x) => x.item) && stageOK() ? `<button class="btn" data-calpreview="plan|${date}">On the avatar</button>` : ""}</div></div>` : "";
@@ -6621,7 +6768,7 @@ function dayPanelHTML(date) {
   const idea = o ? `<div class="cal-idea stack" style="gap:10px">
       <div class="row" style="justify-content:space-between"><h3 style="margin:0">Idea ${s.k + 1} of ${s.ideas.length} · ${esc(occLabel(s.occ))}</h3>${levelBadge(o)}</div>
       <div class="pieces">${order.filter((r) => o.pieces[r]).map((r) => pieceTile(o.pieces[r])).join("")}</div>
-      ${o.coat || o.extras?.length ? `<div class="pieces extras">${[o.coat, ...(o.extras || [])].filter(Boolean).map(pieceTile).join("")}</div>` : ""}
+      ${o.coat || o.extras?.length ? `<div class="pieces extras" aria-label="Coat and accessories">${extraTiles(o.coat, o.extras || [])}</div>` : ""}
       ${o.reasons.length ? `<p class="why">${o.reasons.map(esc).join(" · ")}</p>` : ""}
       ${o.warn?.length ? `<p class="why warn">Heads up: ${o.warn.map(esc).join(" · ")}</p>` : ""}
       <p class="why">${near.length ? near.map(([p, u]) => `${esc(p.name)} is also ${u.kind === "worn" ? "worn" : "planned"} ${esc(fmtDay(u.date))}`).join(" · ") : `Nothing in it is worn or planned within ${ROTATION_DAYS} days`}</p>
@@ -8489,7 +8636,7 @@ async function loadSeed() {
     if (!originals.length) return toast("Open the app through a web server to load samples");
     const useCuts = cuts.length === originals.length;
     const fields = {
-      seedVersion: SEED_VERSION, styles: s.styles, formality: formalityOf(s.styles),
+      seedVersion: SEED_VERSION, styles: s.styles, formality: formalityOf(s.styles, s.category),
       ...(useCuts ? { photos: cuts, originals } : { photos: originals }),
     };
     if (existing) {
@@ -8560,7 +8707,7 @@ async function recogniseAll() {
         if (it.cutGeo?.[k]) it.cutGeo[k] = null; // the hand editor cuts this one again from the original
       }
       const st = (r.styles || []).filter((s) => STYLES[s]);
-      if (st.length) { it.styles = st.slice(0, 3); it.formality = formalityOf(it.styles); }
+      if (st.length) { it.styles = st.slice(0, 3); it.formality = formalityOf(it.styles, it.category); }
       if (!it.fit && fitsFor(it).includes(r.fit)) it.fit = r.fit;
       applyLook(it, lookFrom(r));
       it.aiChecked = true; // never pay for the same photo twice
@@ -9270,6 +9417,18 @@ async function onTap(e) {
     openItem(it.id);
     return render();
   }
+  if (ds.setmetal || ds.setleather || ds.setform) {
+    const [id, v] = (ds.setmetal || ds.setleather || ds.setform).split("|");
+    const it = state.items.find((i) => i.id === id);
+    if (!it) return;
+    if (ds.setmetal) it.metal = it.metal === v ? "" : v;
+    else if (ds.setleather) it.leather = it.leather === v && v ? "" : v;
+    else it.formality = LEVEL_FORMALITY[+v];
+    await store.put("items", it);
+    state.outfits = [];
+    openItem(it.id);
+    return;
+  }
   if (ds.setfit) {
     const [id, fit] = ds.setfit.split(":");
     const it = state.items.find((i) => i.id === id);
@@ -9735,6 +9894,7 @@ await washBack();
 await moveWishlist();
 applyTheme();
 await loadBible();
+setTimeout(() => backfillTones().catch(() => {}), 3000);
 loadWeather().then(() => { if (view === "today") { state.outfits = []; render(); } });
 // Calendar events: now, when the app comes back to the front, and every half hour.
 async function refreshCalendar() {
