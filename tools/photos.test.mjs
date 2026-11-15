@@ -1,6 +1,6 @@
 // Run with:  node --test tools/photos.test.mjs
 // Checks, in headless Chromium on the sample wardrobe, how app.js keeps and shows photos:
-// - a device on the old database (version 4) upgrades, and photos kept as base64 text become Blobs
+// - a device on the old database (version 4) upgrades to version 6, and photos kept as base64 text become Blobs
 // - colours and the outline guess read from the cut-outs on the device, against the samples' labels
 // - thumbnails: one small copy per piece, used by the wardrobe grid
 // - filtering and searching the grid reuse its tiles (nothing rebuilt) and stay fast with 130 pieces
@@ -20,7 +20,7 @@ const ROOT = join(dirname(fileURLToPath(import.meta.url)), "..");
 
 // A copy of the app with every top-level function and constant of app.js on window.__t (as audit-sim.mjs does).
 const dir = mkdtempSync(join(tmpdir(), "wardrobe-photos-"));
-for (const f of ["index.html", "app.js", "stylist.js", "label.js", "calendar.js", "cutout-editor.js", "avatar-config.js", "avatar-stage.js", "garment-baker.js", "mannequin-shells.js", "face-photo.js", "kiosk.js", "styles.css", "kiosk.css", "fashion-bible.json", "manifest.webmanifest", "icon.svg"])
+for (const f of ["index.html", "app.js", "stylist.js", "stylist-brain.js", "label.js", "calendar.js", "cutout-editor.js", "avatar-config.js", "avatar-stage.js", "garment-baker.js", "mannequin-shells.js", "face-photo.js", "kiosk.js", "styles.css", "kiosk.css", "fashion-bible.json", "manifest.webmanifest", "icon.svg"])
   if (existsSync(join(ROOT, f))) cpSync(join(ROOT, f), join(dir, f));
 for (const d of ["sample", "vendor", "avatar"]) if (existsSync(join(ROOT, d))) cpSync(join(ROOT, d), join(dir, d), { recursive: true });
 const src = readFileSync(join(ROOT, "app.js"), "utf8");
@@ -78,8 +78,9 @@ test("a device on database version 4 upgrades; base64 photos become Blobs", asyn
     const kept = await raw.get("items", "old-1");
     return { version: db.version, stores: [...db.objectStoreNames], inMemory: it?.photos[0] instanceof Blob, onDisk: kept?.photos[0] instanceof Blob, type: kept?.photos[0]?.type };
   });
-  assert.equal(r.version, 5);
+  assert.equal(r.version, 6);
   assert.ok(r.stores.includes("thumbs"), "the thumbs store is made");
+  assert.ok(r.stores.includes("fit_checks"), "the fit_checks store is made (version 6)");
   assert.ok(r.inMemory && r.onDisk, "the data: photo is a Blob in memory and in IndexedDB");
   assert.equal(r.type, "image/webp");
 });

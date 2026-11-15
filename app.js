@@ -6,6 +6,7 @@
 import { parseICS, eventsBetween, guessOccasion, titleKey, monthGrid, addDays, addMonths, dayDiff, getForecast, dayWeather, wxIcon, FORECAST_TTL,
   makeEntry, entryIds, resolveEntry, pruneDays, nearbyCost, nearestUse, ROTATION_DAYS } from "./calendar.js";
 import * as Style from "./stylist.js";
+import * as Brain from "./stylist-brain.js";
 import * as Label from "./label.js";
 import { editCutout, workingCopy, basicCutout, frameCutout, WORK_MAX } from "./cutout-editor.js";
 import * as Avatar from "./avatar-config.js";
@@ -226,12 +227,13 @@ const SEED_VERSION = 3;
    Storage (IndexedDB)
    ====================================================================== */
 const db = await new Promise((resolve, reject) => {
-  const req = indexedDB.open("smart-wardrobe", 5);
+  const req = indexedDB.open("smart-wardrobe", 6);
   req.onupgradeneeded = () => {
     const d = req.result;
     // Version 2 adds "wants": Must-Buy, and suggestions you said no to. Version 3: "events". Version 4: "scents".
     // Version 5: "thumbs", a small copy of each piece's first photo for grids and lists (this device only, see thumbURL).
-    for (const [name, opts] of [["items", { keyPath: "id" }], ["log", { keyPath: "id", autoIncrement: true }], ["kv"], ["wants", { keyPath: "id" }], ["events", { keyPath: "id" }], ["scents", { keyPath: "id" }], ["thumbs", { keyPath: "id" }]]) {
+    // Version 6: "fit_checks", photos of outfits as worn, with stars and tags (see Fit check).
+    for (const [name, opts] of [["items", { keyPath: "id" }], ["log", { keyPath: "id", autoIncrement: true }], ["kv"], ["wants", { keyPath: "id" }], ["events", { keyPath: "id" }], ["scents", { keyPath: "id" }], ["thumbs", { keyPath: "id" }], ["fit_checks", { keyPath: "id" }]]) {
       if (!d.objectStoreNames.contains(name)) d.createObjectStore(name, opts);
     }
   };
@@ -304,6 +306,8 @@ const state = {
   audit: null, // shared: the last full audit { at, items, summary, ideas }
   events: [], // shared: events you're dressing for (see Events)
   scents: [], // shared: the fragrance cabinet (see Wardrobe > Fragrances)
+  fitChecks: [], // shared: photos of outfits as worn, with stars and tags (see Fit check)
+  brain: null, // shared: what the fit checks taught (see stylist-brain.js)
   wardSide: "clothes", // Wardrobe shows "clothes" or "scents"
   scentFilter: "all",
   scentUI: {}, // per outfit or event ("t:<outfit key>", "e:<event id>"): {open, pick} (pick "" = no scent)
@@ -352,9 +356,11 @@ async function loadAll() {
   }
   state.events = (await store.all("events")) || [];
   state.scents = (await store.all("scents")) || [];
+  state.fitChecks = ((await raw.all("fit_checks")) || []).sort((a, b) => String(a.at).localeCompare(String(b.at)));
   for (const t of (await raw.all("thumbs")) || []) thumbs.set(t.id, t);
   await blobPhotos();
   Object.assign(state.settings, (await store.get("kv", "settings")) || {});
+  mirrorAIUrl();
   for (const [k, empty] of Object.entries(SHARED_KV)) state[k] = (await store.get("kv", k)) ?? empty();
   state.cal = { ...state.cal, ...((await raw.get("kv", "calEvents")) || {}), loading: false };
   state.usage = (await store.get("kv", "usage")) || state.usage;
@@ -389,6 +395,14 @@ const saveWishlist = () => store.put("kv", state.wishlist, "wishlist");
 const saveCalendar = () => store.put("kv", state.calendar, "calendar");
 const savePlan = () => store.put("kv", state.plan, "plan");
 const saveAudit = () => store.put("kv", state.audit, "audit");
+const saveBrain = () => store.put("kv", state.brain, "brain");
+// Settings > Fit check > Local AI server URL, also kept where StylistBrain reads it (localStorage).
+function mirrorAIUrl() {
+  try {
+    if (state.settings.localAIUrl) localStorage.setItem(Brain.AI_URL_KEY, state.settings.localAIUrl);
+    else localStorage.removeItem(Brain.AI_URL_KEY);
+  } catch { /* storage blocked: the URL still works from settings */ }
+}
 
 /* ======================================================================
    Sync: one shared wardrobe for every device (server.py)
@@ -415,9 +429,14 @@ const sync = {
 };
 const SYNC_STATE = "sync";
 // Shared values kept under "kv", and what each is when there's nothing yet.
-const SHARED_KV = { wishlist: () => [], calendar: () => ({ links: [], occ: {} }), plan: () => null, days: () => ({}), audit: () => null, avatar: () => null };
+const SHARED_KV = { wishlist: () => [], calendar: () => ({ links: [], occ: {} }), plan: () => null, days: () => ({}), audit: () => null, avatar: () => null, brain: () => Brain.emptyBrain() };
+// Fit checks travel as shared kv records "fit:<id>" (photo as a {$blob} like a piece's), so the
+// sync server needs nothing new; on the device they live in their own store, "fit_checks".
+const FIT_KV = "fit:";
+const localOf = (col, id) => (col === "kv" && id.startsWith(FIT_KV) ? ["fit_checks", id.slice(FIT_KV.length)] : [col, id]);
 function syncKey(s, k) {
   if (["items", "log", "wants", "events", "scents"].includes(s)) return `${s}/${k}`;
+  if (s === "fit_checks") return `kv/${FIT_KV}${k}`;
   return s === "kv" && Object.hasOwn(SHARED_KV, k) ? `kv/${k}` : null;
 }
 const splitKey = (key) => { const i = key.indexOf("/"); return [key.slice(0, i), key.slice(i + 1)]; };
@@ -521,7 +540,7 @@ async function pushNow() {
     const records = [];
     for (const key of [...sync.dirty].slice(0, 20)) {
       const [col, id] = splitKey(key);
-      const v = await raw.get(col, id);
+      const v = await raw.get(...localOf(col, id));
       const updatedAt = sync.meta[key];
       records.push(v === undefined
         ? { col, id, updatedAt, deleted: true, data: sync.tombs[key] ? { seedKey: sync.tombs[key] } : null }
@@ -582,6 +601,15 @@ async function applyRecords(records) {
       if (rec.deleted) { await raw.del(rec.col, rec.id); if (at >= 0) list.splice(at, 1); }
       else { await raw.put(rec.col, rec.data); if (at >= 0) list[at] = rec.data; else list.push(rec.data); }
       if (rec.col === "events" && (rec.data?.date || list[at]?.date) === localDay()) state.outfits = []; // a plan for today
+    } else if (rec.col === "kv" && rec.id.startsWith(FIT_KV)) {
+      const id = rec.id.slice(FIT_KV.length);
+      const at = state.fitChecks.findIndex((x) => x.id === id);
+      if (rec.deleted || !rec.data) { await raw.del("fit_checks", id); if (at >= 0) state.fitChecks.splice(at, 1); }
+      else {
+        const fc = await unpackBlobs(rec.data);
+        await raw.put("fit_checks", fc);
+        if (at >= 0) state.fitChecks[at] = fc; else state.fitChecks.push(fc);
+      }
     } else if (rec.col === "kv" && Object.hasOwn(SHARED_KV, rec.id)) {
       const todayWas = rec.id === "days" && JSON.stringify(state.days?.[localDay()] ?? null);
       state[rec.id] = (rec.deleted ? null : rec.data) ?? SHARED_KV[rec.id]();
@@ -591,13 +619,25 @@ async function applyRecords(records) {
       if (rec.id === "plan") state.outfits = [];
       if (rec.id === "audit") state.disc.feedMemo = null;
       if (rec.id === "avatar") mirror.draft = null; // a body saved on another device
+      if (rec.id === "brain") { tasteMemo = null; state.outfits = []; }
     } else continue;
     sync.meta[key] = rec.updatedAt;
     sync.dirty.delete(key);
     changed = true;
   }
   if (newSet) state.outfits = [];
+  if (changed) await keepFitSummaries();
   return changed;
+}
+// A fit check saved here while another device saved its own: the brain from there doesn't have
+// ours yet, so add it back (it goes to the others with the next push).
+async function keepFitSummaries() {
+  const lost = state.fitChecks.filter((fc) => sync.dirty.has(syncKey("fit_checks", fc.id)) && !state.brain?.checks?.[fc.id]);
+  if (!lost.length) return;
+  state.brain = { ...Brain.emptyBrain(), ...state.brain, checks: { ...state.brain?.checks } };
+  for (const fc of lost) state.brain.checks[fc.id] = Brain.summarize(fc);
+  tasteMemo = null;
+  await saveBrain();
 }
 
 // The first time a device meets the server: keep the server's copy of anything both
@@ -636,6 +676,16 @@ async function joinServer() {
   for (const w of state.wants) if (!onServer.has(`wants/${w.id}`)) await syncTouch(`wants/${w.id}`, false);
   for (const e of state.events) if (!onServer.has(`events/${e.id}`)) await syncTouch(`events/${e.id}`, false);
   for (const sc of state.scents) if (!onServer.has(`scents/${sc.id}`)) await syncTouch(`scents/${sc.id}`, false);
+  for (const fc of state.fitChecks) if (!onServer.has(syncKey("fit_checks", fc.id))) await syncTouch(syncKey("fit_checks", fc.id), false);
+  // Fit checks summed up on this device before it joined go to the others too.
+  const sb = onServer.get("kv/brain");
+  const theirBrain = sb && !sb.deleted && sb.data?.checks ? sb.data : null;
+  if (Object.keys(state.brain?.checks || {}).some((id) => !theirBrain?.checks?.[id])) {
+    state.brain = { ...Brain.emptyBrain(), checks: { ...(theirBrain?.checks || {}), ...state.brain.checks } };
+    await raw.put("kv", state.brain, "brain");
+    if (sb) sync.meta["kv/brain"] = sb.updatedAt;
+    await syncTouch("kv/brain", false);
+  }
   const sw = onServer.get("kv/wishlist");
   const theirs = sw && !sw.deleted ? sw.data || [] : [];
   const mine = state.wishlist.filter((w) => !theirs.some((t) => t.title === w.title));
@@ -829,6 +879,8 @@ function sweepURLs() {
   cam.shots.forEach(add);
   pendingShots.forEach(add);
   add(state.disc.try.shown?.photo); // "Try a piece" from a photo
+  for (const fc of state.fitChecks) { add(fc.photo); add(fc.thumb); }
+  add(fitDraft?.photo); add(fitDraft?.thumb);
   const shown = new Set(); // what the page shows right now, whatever holds it
   for (const img of document.images) if (img.src.startsWith("blob:")) shown.add(img.src);
   for (const [b, u] of [...urlCache]) if (!live.has(b) && !shown.has(u)) revokeURL(b);
@@ -2315,10 +2367,11 @@ let tasteMemo = null;
 
 function taste() {
   const stars = state.items.reduce((a, i) => a + (starsOf(i) || 0) * 3 + (i.disliked ? 1 : 0), 0);
-  const sig = `${state.log.length}|${state.items.length}|${today()}|${state.log.at(-1)?.id}|${stars}`;
+  const brainSig = Object.entries(state.brain?.checks || {}).map(([id, c]) => `${id}:${c.stars}:${(c.tags || []).join("+")}`).join();
+  const sig = `${state.log.length}|${state.items.length}|${today()}|${state.log.at(-1)?.id}|${stars}|${brainSig}`;
   if (tasteMemo?.sig === sig) return tasteMemo.t;
   const byId = new Map(state.items.map((i) => [i.id, i]));
-  const t = { pairs: {}, items: {}, colours: {}, fits: {}, styles: {}, stars: {}, traits: {}, traitN: {}, offset: 0, blocked: new Set(), counts: { wear: 0, like: 0, skip: 0, swap: 0, rate: 0, rated: 0, disliked: 0 }, comfortN: 0 };
+  const t = { pairs: {}, items: {}, colours: {}, fits: {}, styles: {}, stars: {}, traits: {}, traitN: {}, offset: 0, blocked: new Set(), counts: { wear: 0, like: 0, skip: 0, swap: 0, rate: 0, rated: 0, disliked: 0, fits: 0 }, comfortN: 0, boxy: {}, needsBelt: {}, loose: {} };
   const add = (map, k, v) => (map[k] = (map[k] || 0) + v);
   // Your stars on pieces: the piece itself, and a little of what it is (colour, type, fit, style),
   // averaged as if 3 neutral pieces agreed, so one 1-star red shirt doesn't put you off red.
@@ -2393,6 +2446,12 @@ function taste() {
   }
   // A few outfits shouldn't swing it: start from the rule of thumb (as if 3 outfits agreed with it).
   t.offset = warmW ? clamp(warmSum / (warmW + 3), -3, 3) : 0;
+  // Fit checks (StylistBrain): their pairs (accessories too) on top of the stars they also left in the
+  // log, the tops you found boxy, the bottoms that needed a belt or didn't fit.
+  const learnt = Brain.learn(state.brain, byId);
+  for (const [k, v] of Object.entries(learnt.pairs)) add(t.pairs, k, v);
+  Object.assign(t, { boxy: learnt.boxy, needsBelt: learnt.needsBelt, loose: learnt.loose });
+  t.counts.fits = learnt.n;
   tasteMemo = { sig, t };
   return t;
 }
@@ -2421,6 +2480,11 @@ function tasteScore(o, occ, t) {
   // Top and bottom: colours and fits you go for
   const hero = heroOf(o);
   let colourLiked = false;
+  // A top you found boxy or long on a fit check: not with roomy bottoms again, slimmer ones instead.
+  const boxy = hero && (t.boxy?.[hero.id] || 0);
+  if (boxy && o.bottom) { const v = fitVol(o.bottom); s += v >= 1 ? -1.5 * Math.min(1, boxy) : v != null && v <= 0 ? 0.4 * Math.min(1, boxy) : 0; }
+  // Bottoms that were too loose or too tight come up a little less.
+  if (o.bottom && t.loose?.[o.bottom.id]) s -= 0.5 * Math.min(1, t.loose[o.bottom.id]);
   if (hero && o.bottom) {
     const c = t.colours[`${hero.colors?.[0]}|${o.bottom.colors?.[0]}`];
     if (c) { s += Math.tanh(c / 2); colourLiked = c >= 1.5; }
@@ -2507,8 +2571,14 @@ function extrasFor(pieces, cond, occ, used) {
   }
   if (occ.id === "gym") needs.push([["gym-bag", "backpack"], ""]);
   // The belt first (it follows the shoes' leather), then the watch (its metal like the buckle's).
-  const bottom = pieces.bottom?.category;
-  if (smart && ["trousers", "jeans"].includes(bottom)) needs.push([["belt"], ""]);
+  // Fit checks: bottoms that "needed a belt" always get one, and a top you found boxy goes tucked in
+  // with a belt.
+  const bottom = pieces.bottom?.category, t = taste();
+  const hero = heroOf(pieces), boxy = hero && pieces.bottom && (t.boxy?.[hero.id] || 0) >= 0.3;
+  const beltNeeded = pieces.bottom && (t.needsBelt?.[pieces.bottom.id] || 0) >= 0.3;
+  if (beltNeeded) needs.push([["belt"], `A belt: the ${pieces.bottom.name} needed one on your fit check`]);
+  else if (boxy && occ.id !== "gym") needs.push([["belt"], `Tuck the ${hero.name} in and add a belt: you found it boxy`]);
+  else if (smart && ["trousers", "jeans"].includes(bottom)) needs.push([["belt"], ""]);
   needs.push([["watch"], ""]);
   if (occ.target >= 2.9 && pieces.base?.category === "shirt") needs.push([["tie"], ""]);
   // A casual day may get a chain, or a cap in mild weather: sometimes, not on every idea.
@@ -2547,6 +2617,8 @@ function extrasFor(pieces, cond, occ, used) {
       if (cats[0] === "belt" && pieces.shoes && Style.ready()) s += (Style.ruleScore([pieces.shoes, i], "belt-shoes") ?? 0) * 0.8;
       s += Math.max(0, rule("metals", i) ?? 0) * 0.8;
       if ((i.styles || []).some((st) => occ.likes.includes(st))) s += 0.7;
+      // What fit checks said about this accessory with these clothes (the belt with the shoes…)
+      for (const x of clothes) { const a = t.pairs[pairKey(i.id, x.id)]; if (a) s += Math.tanh(a / 2) * 1.2; }
       const d = daysSince(i.lastWorn);
       if (d <= 1) s -= 1.5;
       if (isFavourite(i)) s += 0.4;
@@ -2558,6 +2630,7 @@ function extrasFor(pieces, cond, occ, used) {
     extras.push(best);
     if (reason) why.push(reason);
   }
+  if (boxy && !beltNeeded && !extras.some((x) => x.category === "belt") && occ.id !== "gym") why.push(`Tuck the ${hero.name} in: you found it boxy`);
   return { extras, extrasWhy: why };
 }
 
@@ -4154,6 +4227,7 @@ function mirrorHTML() {
       </div>
       <div class="angle-pills" role="group" aria-label="Turn him">${MIRROR_ANGLES.map(([deg, label]) => `<button class="chip" data-mangle="${deg}" aria-pressed="false">${label}</button>`).join("")}</div>
       <div class="angle-pills" role="group" aria-label="Look">${MIRROR_MODES.map(([m, label]) => `<button class="chip" data-mmode="${m}" aria-pressed="${m === mirrorMode()}">${label}</button>`).join("")}<button class="chip" data-mtuck="1" aria-pressed="${mirrorTuck()}" title="The top under everything goes into the waistband">Tuck base top</button></div>
+      ${o ? `<div class="row fc-log"><button class="btn" data-fitlog="today">${ICON_CAMERA}Log fit check</button><span class="muted small">A photo of this outfit on you: say how it fit, and the ideas learn from it.</span></div>` : ""}
     </div>
     <aside class="mirror-side mirror-looks" aria-label="Today's ideas">
       <h2>Today's ideas</h2>
@@ -6781,8 +6855,20 @@ function dayPanelHTML(date) {
     ${events.length ? `<ul class="cal-events">${events.join("")}</ul>` : ""}
     ${past ? "" : `<div class="chips scroller" role="group" aria-label="Dress for">${OCCASIONS.map((x) => `<button class="chip" aria-pressed="${occ === x.id}" data-calocc="${date}|${x.id}">${esc(x.label)}</button>`).join("")}</div>`}
     ${wornHTML}${planned}${evPlans}${idea}
+    ${fitDayHTML(date, parts, wore, o)}
     ${past || o ? "" : `<div class="row"><button class="btn primary" data-calsuggest="${date}">${parts.length ? "Suggest another outfit" : "Suggest an outfit for this day"}</button>${parts.length ? `<button class="btn ghost danger" data-calclear="${date}">Clear the plan</button>` : ""}</div>`}
     <label class="field cal-note"><span>Notes</span><textarea class="input" data-input="daynote" data-day="${date}" rows="2" placeholder="${past ? "How it went" : "Dinner with Luca, pack the umbrella…"}">${esc(plan?.notes || "")}</textarea></label>`;
+}
+// A day you wore (or are wearing) an outfit: its fit checks, and a button to log one.
+function fitDayHTML(date, parts, wore, idea) {
+  if (date > localDay()) return "";
+  const mine = state.fitChecks.filter((x) => x.date === date);
+  const has = parts.some((x) => x.item) || wore?.some(Boolean) || !!idea;
+  if (!has && !mine.length) return "";
+  return `<div class="stack fc-day" style="gap:8px">
+      ${mine.length ? `<div class="fc-day-list">${mine.map((x) => `<button class="fc-card small" data-fcopen="${esc(x.id)}"><img src="${photoURL(x.thumb || x.photo)}" loading="lazy" decoding="async" alt=""><span class="fc-stars" aria-label="${x.stars} stars">${"★".repeat(x.stars)}</span></button>`).join("")}</div>` : ""}
+      ${has ? `<div class="row"><button class="btn" data-fitlog="day|${date}">${ICON_CAMERA}Log fit check</button></div>` : ""}
+    </div>`;
 }
 // The buttons under a Calendar idea (also in its 3D preview): today it can be worn straight away.
 const ideaActions = (date, inSheet = false) => `${date === localDay() ? `<button class="btn primary" data-calwear="${date}">Wear it today</button>` : ""}<button class="btn${date === localDay() ? "" : " primary"}" data-calplan="${date}">Plan it</button><button class="btn" data-calnext="${date}"${inSheet ? ' data-preview="1"' : ""}>Another idea</button>`;
@@ -6794,7 +6880,8 @@ function renderPlan() {
   const title = new Date(`${planner.month}-01T12:00`).toLocaleDateString(undefined, { month: "long", year: "numeric" });
   const week = grid.slice(0, 7).map((d) => new Date(`${d.date}T12:00`).toLocaleDateString(undefined, { weekday: "short" }));
   main.innerHTML = `
-    <div class="head"><div><h1>Calendar</h1><p class="sub">Plan what to wear. The next two weeks show the forecast: tap a day for an outfit that suits it.</p></div></div>
+    <div class="head"><div><h1>Calendar</h1><p class="sub">Plan what to wear. The next two weeks show the forecast: tap a day for an outfit that suits it.</p></div>
+      <button class="btn" data-fitgallery="1">${ICON_CAMERA}Fit checks${state.fitChecks.length ? ` <span class="muted">${state.fitChecks.length}</span>` : ""}</button></div>
     <div class="cal-wrap">
       <section class="card cal-month">
         <div class="row cal-nav"><button class="btn ghost icon-btn" data-calmonth="-1" aria-label="Previous month"><svg viewBox="0 0 24 24"><path d="M15 5l-7 7 7 7"/></svg></button>
@@ -6806,6 +6893,271 @@ function renderPlan() {
       <section class="card cal-day" id="cal-day" aria-live="polite">${dayPanelHTML(planner.sel)}</section>
     </div>`;
   setTimeout(loadForecast, 0);
+}
+
+/* ---------- Fit check: a photo of the outfit as you actually wore it ----------
+   "Log fit check" on Today's mirror and on a Calendar day opens the camera. The photo is made at most
+   1280 px (WebP; JPEG where the browser can't make WebP, like Safari) and kept in IndexedDB
+   ("fit_checks") with the outfit (piece ids by slot, accessories), the occasion, your stars and tags
+   and a few metrics read from the photo on the device. Every device gets it (a shared kv record per
+   check, the photo like a piece's) and it travels in the backup. Its stars also count as an outfit
+   rating, and stylist-brain.js turns its tags into what the ideas learn (see taste()).
+   Calendar > Fit checks shows them all, with a 5-star filter and "Wear again". */
+const FIT_MAX = 1280, FIT_THUMB = 420;
+const fitInput = Object.assign(document.createElement("input"), { type: "file", accept: "image/*", capture: "environment", hidden: true });
+document.body.append(fitInput);
+let fitDraft = null; // the check being reviewed: { outfit, photo, thumb, metrics, stars, tags, saving }
+const fitUI = { filter: "all" };
+
+// The outfit a fit check is about: Today's mirror (without the pieces taken off), or a Calendar day
+// (its plan, else what was logged as worn, else the idea on screen).
+function fitOutfit(src) {
+  const out = { date: localDay(), occasion: state.occasion, slots: {}, coat: null, extras: [], feels: null };
+  const put = (p) => {
+    if (!p) return;
+    const r = roleOf(p);
+    if (CORE.includes(r) && !out.slots[r]) out.slots[r] = p.id;
+    else if (p.id !== out.coat && !out.extras.includes(p.id)) out.extras.push(p.id);
+  };
+  if (src === "today") {
+    const o = mirrorIdea();
+    if (!o) return null;
+    const off = mirrorOff(o);
+    for (const r of CORE) if (o.pieces[r] && !off.includes(r)) out.slots[r] = o.pieces[r].id;
+    if (o.coat && !off.includes("coat")) out.coat = o.coat.id;
+    out.extras = (o.extras || []).map((x) => x.id);
+    out.feels = Math.round(conditions().feels);
+    return out;
+  }
+  const date = src.replace(/^day\|/, "");
+  Object.assign(out, { date, occasion: dayPlan(date)?.occasion || dayOcc(date) });
+  const parts = resolveEntry(dayPlan(date), itemMap()).filter((x) => x.item);
+  if (parts.length) for (const x of parts) { if (x.role === "coat") out.coat = x.item.id; else if (x.role === "extra") put(x.item); else out.slots[x.role] = x.item.id; }
+  else if (wornOn(date)?.some(Boolean)) wornOn(date).forEach(put);
+  else {
+    const s = planner.sugg?.date === date ? planner.sugg : null, o = s?.ideas[s.k];
+    if (o) { for (const r of CORE) if (o.pieces[r]) out.slots[r] = o.pieces[r].id; out.coat = o.coat?.id || null; out.extras = (o.extras || []).map((x) => x.id); out.occasion = s.occ; }
+  }
+  out.feels = date === localDay() ? Math.round(conditions().feels) : fcDay(date) ? Math.round(dayCond(date).feels) : null;
+  return out;
+}
+function startFitCheck(src) {
+  const outfit = fitOutfit(src);
+  if (!outfit || !Object.keys(outfit.slots).length) return toast("A fit check needs an outfit: plan one or log what you wore first");
+  fitInput.value = "";
+  fitInput._outfit = outfit;
+  fitInput.click();
+}
+fitInput.addEventListener("change", () => {
+  const f = fitInput.files?.[0];
+  if (f) openFitReview(fitInput._outfit, f).catch((err) => failed(err, "the fit check photo"));
+});
+
+// The photo, at most `max` px on its long side: WebP, or JPEG where the browser can't make WebP.
+async function fitPhoto(file, max = FIT_MAX, q = 0.85) {
+  const bmp = await createImageBitmap(file);
+  const s = Math.min(1, max / Math.max(bmp.width, bmp.height));
+  const c = newCanvas(Math.max(1, Math.round(bmp.width * s)), Math.max(1, Math.round(bmp.height * s)));
+  const ctx = c.getContext("2d");
+  ctx.imageSmoothingQuality = "high";
+  ctx.drawImage(bmp, 0, 0, c.width, c.height);
+  bmp.close?.();
+  const webp = await canvasBlob(c, "image/webp", q);
+  return webp?.type === "image/webp" ? webp : canvasBlob(c, "image/jpeg", q);
+}
+// How the photo reads, on the device: contrast, the palette and how well it hangs together (the
+// fashion bible's colour rules), and where the outfit splits top from bottom.
+async function fitMetrics(blob) {
+  const bmp = await createImageBitmap(blob);
+  const s = 240 / Math.max(bmp.width, bmp.height);
+  const w = Math.max(8, Math.round(bmp.width * s)), h = Math.max(8, Math.round(bmp.height * s));
+  const ctx = newCanvas(w, h).getContext("2d", { willReadFrequently: true });
+  ctx.drawImage(bmp, 0, 0, w, h);
+  bmp.close?.();
+  const data = ctx.getImageData(0, 0, w, h).data;
+  const m = Brain.analysePixels(data, w, h);
+  // The palette leaves out the head (about the top eighth of the person), so skin and hair don't count.
+  const from = m.top >= 0 ? (m.top + Math.round((m.bottom - m.top) * 0.13)) * w : 0;
+  const px = [], wt = [];
+  for (let k = from; k < w * h; k += 2) if (m.fg[k]) { const i = k * 4; px.push(toLab(data[i], data[i + 1], data[i + 2])); wt.push(1); }
+  const share = {};
+  for (const g of photoGroups(px, wt)) { const n = toneName(g.lab); share[n] = (share[n] || 0) + g.share; }
+  const palette = Object.entries(share).sort((a, b) => b[1] - a[1]).filter(([, v]) => v >= 0.12).slice(0, 4).map(([n]) => n);
+  return { contrast: m.contrast, waist: m.waist, palette, cohesion: paletteCohesion(palette), guessed: m.guessed };
+}
+// 0..1: how well the colours go together, by the fashion bible's colour checks.
+function paletteCohesion(names) {
+  if (!Style.ready() || !names.length) return null;
+  const cats = ["tshirt", "trousers", "jacket", "sneakers"];
+  const items = names.map((c, k) => ({ id: `fit-colour-${k}`, name: c, category: cats[k] || "tshirt", colors: [c], styles: [] }));
+  const accent = Style.ruleScore(items, "accent-colours") ?? 0.5, clash = Style.ruleScore(items, "clashing-pairs"), classic = Style.ruleScore(items, "classic-pairs"), count = Style.ruleScore(items, "colour-count");
+  const v = 0.55 + accent * 0.25 + (clash ?? 0) * 0.35 + (classic ? 0.15 : 0) + Math.min(0, count ?? 0) * 0.2;
+  return Math.round(clamp(v, 0, 1) * 100) / 100;
+}
+// The outfit as data for a local AI server: the pieces by slot, with what they are.
+function fitOutfitData(outfit) {
+  const byId = itemMap(), desc = (id) => { const p = byId.get(id); return p && { id, name: p.name, category: p.category, colors: p.colors || [], fit: p.fit || "", metal: p.metal || "", leather: p.leather || "" }; };
+  return { date: outfit.date, occasion: outfit.occasion, slots: Object.fromEntries(Object.entries(outfit.slots).map(([r, id]) => [r, desc(id)])), coat: outfit.coat && desc(outfit.coat), extras: outfit.extras.map(desc).filter(Boolean) };
+}
+async function openFitReview(outfit, file) {
+  toast("Reading the photo…");
+  const photo = await fitPhoto(file);
+  fitDraft = { outfit, photo, thumb: await fitPhoto(photo, FIT_THUMB, 0.8), metrics: null, stars: 0, tags: [], saving: false };
+  showFitReview();
+  const d = fitDraft;
+  const m = await Brain.analyzeWithExternalAI(photo, fitOutfitData(outfit), { local: () => fitMetrics(photo) });
+  if (fitDraft !== d) return;
+  d.metrics = m;
+  for (const t of m.aiTags || []) if (!d.tags.includes(t)) d.tags.push(t); // what the AI server saw, ready to untick
+  paintFitReview();
+}
+// Pieces of a fit check, top to bottom: headwear, jacket, layer, top, bottoms, shoes, then the rest.
+function fitPieces(fc, byId = itemMap()) {
+  const s = fc.slots || fc.itemIds || {};
+  const ex = (fc.extras || []).map((id) => byId.get(id)).filter(Boolean);
+  const head = ex.filter((p) => slotOf(p) === "head");
+  return {
+    column: [...head, ...[fc.coat, s.outer, s.mid, s.base, s.bottom, s.shoes].map((id) => id && byId.get(id)).filter(Boolean)],
+    extras: ex.filter((p) => slotOf(p) !== "head"),
+    missing: [fc.coat, ...Object.values(s), ...(fc.extras || [])].filter((id) => id && !byId.has(id)).length,
+  };
+}
+function fitStackHTML(fc) {
+  const { column, extras } = fitPieces(fc);
+  return `<div class="fc-stack">${column.map((p) => `<span class="fc-piece" title="${esc(p.name)}">${pieceImg(p, "")}</span>`).join("")}</div>
+    ${extras.length ? `<div class="fc-extras" aria-label="Accessories">${extras.map((p) => `<span class="fc-piece small" title="${esc(p.name)}">${pieceImg(p, "")}</span>`).join("")}</div>` : ""}`;
+}
+const fitStars = (n, key) => `<div class="stars" role="group" aria-label="How did this actually fit and feel?">${[1, 2, 3, 4, 5].map((k) => `<button class="star" aria-pressed="${k <= n}" aria-label="${k} star${k > 1 ? "s" : ""}: ${STAR_WORDS[k]}" data-fcstar="${key}|${k}">${k <= n ? "★" : "☆"}</button>`).join("")}<span class="muted small">${n ? STAR_WORDS[n] : "1 hate it · 5 love it"}</span></div>`;
+const fitMetricsHTML = (m) => (m ? `<ul class="fc-metrics">${Brain.metricLines(m).map((l) => `<li>${esc(l)}</li>`).join("")}</ul>
+    <p class="muted small" style="margin:0">${m.source === "local AI server" ? "Estimates from your local AI server and this device" : "Estimates worked out on this device from the photo"}${m.guessed ? ", from the middle of the photo (the background was hard to tell apart)" : ""}.${m.aiError ? ` ${esc(m.aiError)}, so these come from this device.` : ""}</p>`
+  : `<p class="muted small fc-reading" style="margin:0">Reading the photo…</p>`);
+function fitReviewHTML() {
+  const d = fitDraft;
+  return `<div class="detail-head">
+      <div><h1 style="font-size:28px">Fit check</h1><p class="sub">${esc(longDay(d.outfit.date))} · ${esc(occLabel(d.outfit.occasion))}</p></div>
+      <button class="btn icon-btn ghost" data-close aria-label="Close"><svg viewBox="0 0 24 24"><path d="M6 6l12 12M18 6 6 18"/></svg></button>
+    </div>
+    <div class="fc-compare">
+      <figure class="fc-planned"><figcaption class="muted small">The outfit</figcaption>${fitStackHTML(d.outfit)}</figure>
+      <figure class="fc-worn"><figcaption class="muted small">As worn</figcaption><img src="${photoURL(d.photo)}" alt="Your fit check photo"></figure>
+    </div>
+    <div class="stack fc-form" style="gap:12px">
+      <h3 style="margin:0">How did this actually fit and feel?</h3>
+      ${fitStars(d.stars, "draft")}
+      <div class="chips fc-tags" role="group" aria-label="What stood out">${Brain.TAGS.map((t) => `<button class="chip${t.good ? "" : " fc-off"}" aria-pressed="${d.tags.includes(t.id)}" data-fctag="${t.id}">${esc(t.label)}</button>`).join("")}</div>
+      <div class="fc-metrics-box">${fitMetricsHTML(d.metrics)}</div>
+      <div class="row"><button class="btn primary" data-fcsave="1"${d.stars && !d.saving ? "" : " disabled"}>Save fit check</button><button class="btn" data-fcretake="1">Another photo</button></div>
+      ${d.stars ? "" : `<p class="muted small" style="margin:0">Give it stars to save it.</p>`}
+    </div>`;
+}
+function showFitReview() {
+  $(".sheet-panel").innerHTML = fitReviewHTML();
+  $("#sheet").hidden = false;
+}
+function paintFitReview() {
+  if (!fitDraft || $("#sheet").hidden || !$(".sheet-panel .fc-compare")) return;
+  const form = $(".sheet-panel .fc-form");
+  const tmp = document.createElement("div");
+  tmp.innerHTML = fitReviewHTML();
+  form.replaceWith(tmp.querySelector(".fc-form"));
+}
+async function saveFitCheck() {
+  const d = fitDraft;
+  if (!d?.stars || d.saving) return;
+  d.saving = true;
+  const id = uid(), at = d.outfit.date === localDay() ? new Date().toISOString() : new Date(`${d.outfit.date}T20:00`).toISOString();
+  const metrics = d.metrics ? Object.fromEntries(["contrast", "cohesion", "waist", "palette", "source", "notes"].filter((k) => d.metrics[k] != null).map((k) => [k, d.metrics[k]])) : null;
+  const fc = {
+    id, date: d.outfit.date, at, occasion: d.outfit.occasion,
+    itemIds: { ...d.outfit.slots }, coat: d.outfit.coat || null, extras: [...d.outfit.extras],
+    stars: d.stars, tags: [...d.tags], metrics, photo: d.photo, thumb: d.thumb,
+  };
+  // The stars count as an outfit rating too (with the clothes and the accessories), and "Too warm" or
+  // "Too cold" teaches how warm you like to dress, like a skip for the weather does.
+  const comfort = d.tags.includes("warm") ? "warm" : d.tags.includes("cold") ? "cold" : undefined;
+  const ids = [...new Set([...Object.values(fc.itemIds), fc.coat, ...fc.extras].filter(Boolean))];
+  const log = await addLog({ kind: "rate", stars: d.stars, itemIds: ids, occasion: fc.occasion, ...(d.outfit.feels != null && { feels: d.outfit.feels }), ...(comfort && { reason: comfort }), source: "fitcheck", fitId: id, date: fc.date, at });
+  fc.logId = log.id;
+  await store.put("fit_checks", fc);
+  state.fitChecks.push(fc);
+  state.brain = { ...Brain.emptyBrain(), ...state.brain, checks: { ...state.brain?.checks, [id]: Brain.summarize(fc) } };
+  await saveBrain();
+  tasteMemo = null;
+  state.outfits = [];
+  fitDraft = null;
+  closeSheet();
+  toast(`Fit check saved: ${d.stars} star${d.stars === 1 ? "" : "s"}. The ideas learn from it.`);
+  render();
+}
+async function deleteFitCheck(id) {
+  const fc = state.fitChecks.find((x) => x.id === id);
+  if (!fc || !(await confirmBox("Delete this fit check and its photo? What it taught the ideas goes too.", "Delete"))) return openFitGallery();
+  await store.del("fit_checks", id);
+  state.fitChecks = state.fitChecks.filter((x) => x !== fc);
+  if (fc.logId && state.log.some((l) => l.id === fc.logId)) await dropLog(fc.logId);
+  const { [id]: _, ...rest } = state.brain?.checks || {};
+  state.brain = { ...Brain.emptyBrain(), ...state.brain, checks: rest };
+  await saveBrain();
+  tasteMemo = null;
+  state.outfits = [];
+  toast("Fit check deleted");
+  openFitGallery();
+}
+
+// Calendar > Fit checks: every worn photo, newest first, with a 5-star filter.
+function fitGalleryHTML() {
+  const list = state.fitChecks.filter((x) => fitUI.filter !== "5" || x.stars === 5).sort((a, b) => String(b.at).localeCompare(String(a.at)));
+  return `<div class="detail-head">
+      <div><h1 style="font-size:28px">Fit checks</h1><p class="sub">${state.fitChecks.length ? `${state.fitChecks.length} outfit${state.fitChecks.length === 1 ? "" : "s"} as you wore them` : "Your worn lookbook"}</p></div>
+      <button class="btn icon-btn ghost" data-close aria-label="Close"><svg viewBox="0 0 24 24"><path d="M6 6l12 12M18 6 6 18"/></svg></button>
+    </div>
+    <div class="chips" role="group" aria-label="Show">${[["all", "All"], ["5", "★★★★★ only"]].map(([k, l]) => `<button class="chip" aria-pressed="${fitUI.filter === k}" data-fcfilter="${k}">${l}</button>`).join("")}</div>
+    ${list.length ? `<div class="fc-grid">${list.map((x) => `<button class="fc-card" data-fcopen="${esc(x.id)}">
+        <img src="${photoURL(x.thumb || x.photo)}" loading="lazy" decoding="async" alt="">
+        <span class="fc-cap"><b>${esc(fmtDay(x.date))}</b><span class="fc-stars" aria-label="${x.stars} stars">${"★".repeat(x.stars)}${"☆".repeat(5 - x.stars)}</span><span class="muted small">${esc(occLabel(x.occasion))}</span></span>
+      </button>`).join("")}</div>`
+    : `<p class="muted">${state.fitChecks.length ? "No 5-star fit checks yet." : "No fit checks yet. Tap Log fit check on Today or on a day in the Calendar, take a photo of the outfit on you, and say how it fit."}</p>`}`;
+}
+function openFitGallery() {
+  $(".sheet-panel").innerHTML = fitGalleryHTML();
+  $("#sheet").hidden = false;
+}
+function openFitCheck(id) {
+  const fc = state.fitChecks.find((x) => x.id === id);
+  if (!fc) return openFitGallery();
+  const byId = itemMap(), { column, extras, missing } = fitPieces(fc, byId);
+  const tomorrow = addDays(localDay(), 1);
+  $(".sheet-panel").innerHTML = `<div class="detail-head">
+      <div><h1 style="font-size:28px">${esc(longDay(fc.date))}</h1><p class="sub">${esc(occLabel(fc.occasion))} · ${"★".repeat(fc.stars)}${"☆".repeat(5 - fc.stars)}</p></div>
+      <button class="btn icon-btn ghost" data-close aria-label="Close"><svg viewBox="0 0 24 24"><path d="M6 6l12 12M18 6 6 18"/></svg></button>
+    </div>
+    <div class="fc-compare">
+      <figure class="fc-worn"><img src="${photoURL(fc.photo)}" alt="The outfit as worn"></figure>
+      <div class="stack" style="gap:12px">
+        <div class="pieces mini">${[...column, ...extras].map((p) => pieceTile(p)).join("")}${missing ? removedTile() : ""}</div>
+        ${fc.tags?.length ? `<div class="chips">${fc.tags.map((t) => `<span class="chip" aria-pressed="true">${esc(Brain.tagLabel(t))}</span>`).join("")}</div>` : ""}
+        ${fc.metrics ? fitMetricsHTML(fc.metrics) : ""}
+        <div class="field"><label for="fc-date">Wear it again on</label><input id="fc-date" class="input" type="date" min="${localDay()}" value="${tomorrow}" style="max-width:12rem"></div>
+        <div class="row"><button class="btn primary" data-fcwear="${esc(fc.id)}"${column.length ? "" : " disabled"}>Wear again</button><button class="btn" data-fcback="1">All fit checks</button><button class="btn ghost danger" data-fcdel="${esc(fc.id)}">Delete</button></div>
+      </div>
+    </div>`;
+  $("#sheet").hidden = false;
+}
+// "Wear again": the outfit goes on the day you pick, like a plan made in the Calendar.
+async function wearFitAgain(id) {
+  const fc = state.fitChecks.find((x) => x.id === id);
+  const date = $("#fc-date")?.value || addDays(localDay(), 1);
+  if (!fc || !/^\d{4}-\d{2}-\d{2}$/.test(date)) return;
+  const byId = itemMap(), get = (pid) => byId.get(pid) || null;
+  const pieces = Object.fromEntries(Object.entries(fc.itemIds || {}).map(([r, pid]) => [r, get(pid)]).filter(([, p]) => p));
+  if (!Object.keys(pieces).length) return toast("The pieces of this outfit are no longer in your wardrobe");
+  await setDay(date, makeEntry({ date, pieces, coat: fc.coat && get(fc.coat), extras: (fc.extras || []).map(get).filter(Boolean), occasion: fc.occasion || "casual", title: "From a fit check", notes: dayPlan(date)?.notes, src: "fitcheck" }));
+  if (date === localDay()) state.outfits = [];
+  closeSheet();
+  planner.sel = date;
+  planner.month = date.slice(0, 7);
+  toast(`Planned for ${fmtDay(date)}`);
+  if (view === "plan") render(); else go("plan");
 }
 
 /* ---- The closet audit (For you) ----
@@ -8564,6 +8916,11 @@ function renderSettings() {
       </section>
       ${tasteCard()}
       <section class="card stack">
+        <h2 style="margin:0">Fit check</h2>
+        <p class="muted small" style="margin:0">Fit checks read the photo on this device (contrast, colours, where the outfit splits). If you run an AI model of your own on your network, its address here gets the photo and the outfit too, and its answer is added (no paid service; with no answer in 15 seconds the device's reading is used). Leave it empty to keep everything on the device.</p>
+        <div class="field"><label for="local-ai">Local AI server URL</label><input id="local-ai" class="input" type="url" inputmode="url" placeholder="https://my-pc.local:8080/fit-check" data-input="localai" value="${esc(s.localAIUrl || "")}"><span id="local-ai-hint" class="muted small">${s.localAIUrl ? "Fit checks are sent there first." : "Not set: fit checks stay on the device."} From the hosted app (https) the server needs https too, or the browser blocks it.</span></div>
+      </section>
+      <section class="card stack">
         <h2 style="margin:0">Look</h2>
         <div class="chips">${[["auto", "Match system"], ["dark", "Dark"], ["light", "Light"]].map(([k, l]) => `<button class="chip" aria-pressed="${s.theme === k}" data-theme="${k}">${l}</button>`).join("")}</div>
         <div class="field"><label>Shops</label><div class="chips">${[["it", "Italy"], ["com", "International"]].map(([k, l]) => `<button class="chip" aria-pressed="${s.region === k}" data-region="${k}">${l}</button>`).join("")}</div></div>
@@ -8746,8 +9103,8 @@ async function fitAll() {
 /* ---------- Backup: the whole wardrobe in one file ----------
    Settings > Backup. One .json file holds every piece with its photos (the cut-outs and the
    original photos, as base64 only inside the file), the fragrances, the wear log (with likes,
-   skips and ratings), Must-Buy, events, the Calendar (planned days, calendar links), the 3D
-   mirror's body and the settings that aren't secret: never an API key. It moves the wardrobe
+   skips and ratings), Must-Buy, events, the Calendar (planned days, calendar links), the fit checks
+   (with their photos) and what they taught, the 3D mirror's body and the settings that aren't secret: never an API key. It moves the wardrobe
    between devices that don't share one (a phone, a PC, the kiosk) or keeps a copy of it.
    Importing either adds the backup to the wardrobe here (a piece changed here since the backup
    was made keeps its changes) or replaces the wardrobe with it. Photos go back into IndexedDB as
@@ -8755,7 +9112,7 @@ async function fitAll() {
 const BACKUP_VERSION = 3;
 // The settings that travel with a backup (the AI keys, the usage count and device-only state don't).
 const BACKUP_SETTINGS = ["city", "lat", "lon", "unit", "theme", "region", "gender", "age", "touches", "scents", "aiProvider", "geminiModel",
-  "autoCutout", "aiAuto", "autoWash", "washAfter", "washBack", "mirrorMode", "hairFinish", "mirrorTuck", "brandsApart"];
+  "autoCutout", "aiAuto", "autoWash", "washAfter", "washBack", "mirrorMode", "hairFinish", "mirrorTuck", "brandsApart", "localAIUrl"];
 const backupName = (day = localDay()) => `smart-wardrobe-backup-${day}.json`;
 const fmtMB = (bytes) => (bytes >= 1e6 ? `${(bytes / 1e6).toFixed(1)} MB` : `${Math.max(1, Math.round(bytes / 1e3))} KB`);
 // The file, built piece by piece: each piece becomes its own small part, so a wardrobe of 30 MB of
@@ -8764,14 +9121,14 @@ async function backupBlob(progress = () => {}) {
   const settings = Object.fromEntries(BACKUP_SETTINGS.filter((k) => state.settings[k] !== undefined).map((k) => [k, state.settings[k]]));
   const head = {
     app: "smart-wardrobe", version: BACKUP_VERSION, exportedAt: new Date().toISOString(),
-    counts: { items: state.items.length, scents: state.scents.length, wears: state.log.filter((l) => logKind(l) === "wear").length, days: Object.keys(state.days || {}).length },
-    settings, avatar: state.avatar, calendar: state.calendar, days: state.days, plan: state.plan, audit: state.audit,
+    counts: { items: state.items.length, scents: state.scents.length, wears: state.log.filter((l) => logKind(l) === "wear").length, days: Object.keys(state.days || {}).length, fitChecks: state.fitChecks.length },
+    settings, avatar: state.avatar, calendar: state.calendar, days: state.days, plan: state.plan, audit: state.audit, brain: state.brain,
     log: state.log, wants: state.wants, events: state.events,
   };
   const parts = [JSON.stringify(head).slice(0, -1)]; // without its closing brace: the pieces follow
-  const total = state.items.length + state.scents.length;
+  const total = state.items.length + state.scents.length + state.fitChecks.length;
   let done = 0;
-  for (const [name, list] of [["items", state.items], ["scents", state.scents]]) {
+  for (const [name, list] of [["items", state.items], ["scents", state.scents], ["fitChecks", state.fitChecks]]) {
     parts.push(`,"${name}":[`);
     for (const [k, rec] of list.entries()) {
       const out = await walkBlobs(rec, (b) => (b instanceof Blob ? blobToDataURL(b) : b));
@@ -8822,7 +9179,7 @@ function backupSummary(data) {
   const n = (k, one, many = `${one}s`) => `${k} ${k === 1 ? one : many}`;
   return {
     when,
-    text: [n(data.items.length, "piece"), data.scents?.length && n(data.scents.length, "fragrance"), wears && n(wears, "outfit") + " worn", days && n(days, "planned day"), data.avatar?.body && "your 3D body"].filter(Boolean).join(", "),
+    text: [n(data.items.length, "piece"), data.scents?.length && n(data.scents.length, "fragrance"), wears && n(wears, "outfit") + " worn", days && n(days, "planned day"), data.fitChecks?.length && n(data.fitChecks.length, "fit check"), data.avatar?.body && "your 3D body"].filter(Boolean).join(", "),
   };
 }
 // Is the piece here the same as the backup's copy? Its fields, and its photos by size (a photo's
@@ -8850,11 +9207,11 @@ const logSig = (l) => `${logKind(l)}|${l.at || l.date || ""}|${[...(l.itemIds ||
 async function restoreBackup(data, { replace = false, progress = () => {} } = {}) {
   if (!backupSummary(data)) throw new Error("That file isn't a Smart Wardrobe backup");
   const madeAt = data.exportedAt || "";
-  const r = { added: 0, updated: 0, same: 0, kept: 0, scents: 0, log: 0, days: 0 };
+  const r = { added: 0, updated: 0, same: 0, kept: 0, scents: 0, log: 0, days: 0, fits: 0 };
   if (replace) {
-    for (const s of ["items", "log", "wants", "events", "scents"]) await store.clear(s);
+    for (const s of ["items", "log", "wants", "events", "scents", "fit_checks"]) await store.clear(s);
     for (const t of [...thumbs.keys()]) dropThumb(t);
-    state.items = []; state.log = []; state.wants = []; state.events = []; state.scents = [];
+    state.items = []; state.log = []; state.wants = []; state.events = []; state.scents = []; state.fitChecks = [];
   }
   const hereAt = (key) => sync.meta[key] || "";
   const existing = new Map((await store.all("items")).map((i) => [i.id, i]));
@@ -8882,6 +9239,21 @@ async function restoreBackup(data, { replace = false, progress = () => {} } = {}
     if (!sc?.id || (here && (sameRecord(here, sc) || (madeAt && hereAt(`scents/${sc.id}`) > madeAt)))) continue;
     await store.put("scents", { ...sc, photos: photoList(sc.photos) || [] });
     r.scents++;
+  }
+  // Fit checks: a new one comes in with its photo; one already here stays as it is.
+  const fitsHere = new Set((await raw.all("fit_checks")).map((x) => x.id));
+  for (const fc of Array.isArray(data.fitChecks) ? data.fitChecks : []) {
+    if (!fc?.id || fitsHere.has(fc.id)) continue;
+    const photo = dataURLBlob(fc.photo);
+    if (!(photo instanceof Blob)) continue;
+    await store.put("fit_checks", { ...fc, photo });
+    r.fits++;
+  }
+  // What they taught: the backup's summaries, plus (adding) the ones only here.
+  if (replace || data.brain?.checks) {
+    const theirs = data.brain?.checks && typeof data.brain.checks === "object" ? data.brain.checks : {};
+    state.brain = { ...Brain.emptyBrain(), checks: replace ? { ...theirs } : { ...theirs, ...(state.brain?.checks || {}) } };
+    await saveBrain();
   }
   // Wear-log entries keep their ids (ratings point at them, so answered rating cards don't come
   // back); one whose id is taken here by a different entry gets a new id; one already here is skipped.
@@ -8965,7 +9337,7 @@ async function importBackup() {
         progress: (n, total) => { if (n === total || Date.now() - shown > 400) { shown = Date.now(); toast(`Importing… ${n} of ${total} pieces`); } },
       });
       const pieces = how === "replace" ? `${r.added} piece${r.added === 1 ? "" : "s"}` : [r.added && `${r.added} new`, r.updated && `${r.updated} updated`, r.kept && `${r.kept} kept as changed here`].filter(Boolean).join(", ") || "no pieces";
-      toast(`Imported: ${pieces}${r.scents ? `, ${r.scents} fragrance${r.scents === 1 ? "" : "s"}` : ""}${r.log ? `, ${r.log} log entr${r.log === 1 ? "y" : "ies"}` : ""}${r.days ? `, ${r.days} planned day${r.days === 1 ? "" : "s"}` : ""}`);
+      toast(`Imported: ${pieces}${r.scents ? `, ${r.scents} fragrance${r.scents === 1 ? "" : "s"}` : ""}${r.log ? `, ${r.log} log entr${r.log === 1 ? "y" : "ies"}` : ""}${r.days ? `, ${r.days} planned day${r.days === 1 ? "" : "s"}` : ""}${r.fits ? `, ${r.fits} fit check${r.fits === 1 ? "" : "s"}` : ""}`);
       render();
     } catch (e) {
       toast(e.message ? `Import stopped: ${e.message}` : "That file couldn't be imported");
@@ -9122,6 +9494,27 @@ async function onTap(e) {
   if (ds.mmode) return setMirrorMode(ds.mmode);
   if (ds.hfin) return setHairFinish(ds.hfin);
   if (ds.mtuck) return setMirrorTuck(!mirrorTuck());
+  // Fit check
+  if (ds.fitlog) return startFitCheck(ds.fitlog);
+  if (ds.fcstar) {
+    const [, n] = ds.fcstar.split("|");
+    if (!fitDraft) return;
+    fitDraft.stars = +n;
+    return paintFitReview();
+  }
+  if (ds.fctag) {
+    if (!fitDraft) return;
+    const id = ds.fctag, on = fitDraft.tags.includes(id);
+    fitDraft.tags = on ? fitDraft.tags.filter((x) => x !== id) : [...fitDraft.tags.filter((x) => x !== Brain.EXCLUSIVE[id]), id];
+    return paintFitReview();
+  }
+  if (ds.fcsave) return saveFitCheck();
+  if (ds.fcretake) { const o = fitDraft?.outfit; fitDraft = null; closeSheet(); if (o) { fitInput.value = ""; fitInput._outfit = o; fitInput.click(); } return; }
+  if (ds.fitgallery || ds.fcback) return openFitGallery();
+  if (ds.fcfilter) { fitUI.filter = ds.fcfilter; return openFitGallery(); }
+  if (ds.fcopen) return openFitCheck(ds.fcopen);
+  if (ds.fcwear) return wearFitAgain(ds.fcwear);
+  if (ds.fcdel) return deleteFitCheck(ds.fcdel);
   // Calendar: a day, the month, and planning (each redraws only that day and the panel)
   if (ds.calday) return pickDay(ds.calday);
   if (ds.calmonth) { planner.month = addMonths(planner.month || localDay().slice(0, 7), +ds.calmonth); return render(); }
@@ -9736,8 +10129,9 @@ async function onTap(e) {
     case "import": return importBackup();
     case "wipe":
       if (!(await confirmBox(sync.status === "on" ? "Erase all clothes, fragrances, photos and history? Every device sharing this wardrobe loses them too." : "Erase all clothes, fragrances, photos and history from this device?", "Erase everything"))) return;
-      await store.clear("items"); await store.clear("log"); await store.clear("wants"); await store.clear("events"); await store.clear("scents");
-      state.items = []; state.log = []; state.wants = []; state.events = []; state.scents = []; state.outfits = [];
+      await store.clear("items"); await store.clear("log"); await store.clear("wants"); await store.clear("events"); await store.clear("scents"); await store.clear("fit_checks");
+      state.items = []; state.log = []; state.wants = []; state.events = []; state.scents = []; state.fitChecks = []; state.outfits = [];
+      state.brain = Brain.emptyBrain(); await saveBrain();
       toast("Wardrobe erased");
       return render();
   }
@@ -9792,6 +10186,17 @@ document.addEventListener("input", (e) => {
     const n = Math.round(+v);
     if (!(n >= 0 && n <= 30) || v === "") return;
     state.settings.washAfter = { ...WASH_DEFAULTS, ...state.settings.washAfter, [k.slice(5)]: n };
+    clearTimeout(e.target._t);
+    e.target._t = setTimeout(saveSettings, 400);
+    return;
+  }
+  if (k === "localai") {
+    const u = Brain.cleanAIUrl(v);
+    const hint = $("#local-ai-hint");
+    if (u === null) { if (hint) hint.textContent = "That isn't a web address (it starts with https:// or http://)."; return; }
+    state.settings.localAIUrl = u;
+    mirrorAIUrl();
+    if (hint) hint.textContent = u ? "Fit checks are sent there first." : "Not set: fit checks stay on the device.";
     clearTimeout(e.target._t);
     e.target._t = setTimeout(saveSettings, 400);
     return;
