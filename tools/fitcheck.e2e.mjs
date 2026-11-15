@@ -1,5 +1,6 @@
 // Fit check and StylistBrain, in the app on iPad-sized pages (Playwright, Chromium):
-// - "Log fit check" on Today's mirror and on a Calendar day takes a photo (a test image here), shows
+// - "Log fit check" on Today's mirror and on a Calendar day takes a photo or picks one from the
+//   gallery (a test image here), shows
 //   it next to the outfit with stars, tags and the metrics read on the device, and saves it
 // - it stays after a reload, goes through a backup and back, and syncs as a shared kv record
 // - a 5-star check lifts its pairs, a 1-star check sinks them; "Needed a belt" puts a belt on the
@@ -109,9 +110,12 @@ const PHOTO = await (async () => {
   await p.close();
   return { name: "fit.jpg", mimeType: "image/jpeg", buffer: Buffer.from(b64, "base64") };
 })();
-// Tap a "Log fit check" button and give it the photo; wait for the review and its metrics.
-async function logFit(page, selector) {
-  const [chooser] = await Promise.all([page.waitForEvent("filechooser"), page.click(selector)]);
+// Tap a "Log fit check" button, pick Take photo or Choose from gallery, and give it the photo; wait
+// for the review and its metrics.
+async function logFit(page, selector, how = "camera") {
+  await page.click(selector);
+  await page.waitForSelector('[data-fcpick="gallery"]');
+  const [chooser] = await Promise.all([page.waitForEvent("filechooser"), page.click(`[data-fcpick="${how}"]`)]);
   await chooser.setFiles(PHOTO);
   await page.waitForSelector(".sheet-panel .fc-worn img");
   await page.waitForSelector(".sheet-panel .fc-metrics li", { timeout: 20000 });
@@ -151,6 +155,10 @@ test.after(async () => { await browser.close(); server.close(); rmSync(dir, { re
 test("Today: Log fit check on the mirror, review with metrics, saved", async () => {
   await page.evaluate(() => window.__t.go("today"));
   await page.waitForSelector('[data-fitlog="today"]', { timeout: 30000 });
+  await page.click('[data-fitlog="today"]');
+  await page.waitForSelector('[data-fcpick="camera"]');
+  if (SHOTS) await page.screenshot({ path: join(SHOTS, "fit-source-1366x1024.png") });
+  await page.click(".sheet-panel [data-close]");
   await logFit(page, '[data-fitlog="today"]');
   // the outfit next to the photo, the stars, the tags, the metrics as sentences
   assert.ok(await page.$$eval(".fc-stack img", (els) => els.length) >= 3);
@@ -305,7 +313,10 @@ test("Calendar: Log fit check on a day, the lookbook, 5-star filter, Wear again 
     return d;
   });
   await p2.waitForSelector(`[data-fitlog="day|${today}"]`);
-  await logFit(p2, `[data-fitlog="day|${today}"]`);
+  // from the gallery this time: that file input doesn't force the camera
+  const inputs = await p2.evaluate(() => ({ cam: window.__t.fitCam.getAttribute("capture"), gal: window.__t.fitGal.hasAttribute("capture") }));
+  assert.deepEqual(inputs, { cam: "environment", gal: false });
+  await logFit(p2, `[data-fitlog="day|${today}"]`, "gallery");
   assert.ok(await p2.$$eval(".fc-extras img", (els) => els.length) === 2, "the belt and the watch beside the outfit");
   await p2.click('[data-fcstar="draft|5"]');
   await p2.click('[data-fctag="accessories"]');

@@ -6896,7 +6896,7 @@ function renderPlan() {
 }
 
 /* ---------- Fit check: a photo of the outfit as you actually wore it ----------
-   "Log fit check" on Today's mirror and on a Calendar day opens the camera. The photo is made at most
+   "Log fit check" on Today's mirror and on a Calendar day: take a photo, or pick one from the gallery. The photo is made at most
    1280 px (WebP; JPEG where the browser can't make WebP, like Safari) and kept in IndexedDB
    ("fit_checks") with the outfit (piece ids by slot, accessories), the occasion, your stars and tags
    and a few metrics read from the photo on the device. Every device gets it (a shared kv record per
@@ -6904,8 +6904,12 @@ function renderPlan() {
    rating, and stylist-brain.js turns its tags into what the ideas learn (see taste()).
    Calendar > Fit checks shows them all, with a 5-star filter and "Wear again". */
 const FIT_MAX = 1280, FIT_THUMB = 420;
-const fitInput = Object.assign(document.createElement("input"), { type: "file", accept: "image/*", capture: "environment", hidden: true });
-document.body.append(fitInput);
+// Two ways in: the camera, or a photo already in the gallery (a mirror selfie taken earlier).
+const fitCam = Object.assign(document.createElement("input"), { type: "file", accept: "image/*", hidden: true });
+fitCam.setAttribute("capture", "environment"); // as an attribute: not every browser has the property
+const fitGal = Object.assign(document.createElement("input"), { type: "file", accept: "image/*", hidden: true });
+document.body.append(fitCam, fitGal);
+let fitOutfitNext = null; // the outfit the next photo is for
 let fitDraft = null; // the check being reviewed: { outfit, photo, thumb, metrics, stars, tags, saving }
 const fitUI = { filter: "all" };
 
@@ -6944,13 +6948,33 @@ function fitOutfit(src) {
 function startFitCheck(src) {
   const outfit = fitOutfit(src);
   if (!outfit || !Object.keys(outfit.slots).length) return toast("A fit check needs an outfit: plan one or log what you wore first");
-  fitInput.value = "";
-  fitInput._outfit = outfit;
-  fitInput.click();
+  fitSource(outfit);
 }
-fitInput.addEventListener("change", () => {
-  const f = fitInput.files?.[0];
-  if (f) openFitReview(fitInput._outfit, f).catch((err) => failed(err, "the fit check photo"));
+// Take a photo now, or pick one from the gallery.
+function fitSource(outfit) {
+  fitOutfitNext = outfit;
+  $(".sheet-panel").innerHTML = `<div class="detail-head">
+      <div><h1 style="font-size:28px">Log fit check</h1><p class="sub">${esc(longDay(outfit.date))} · ${esc(occLabel(outfit.occasion))}</p></div>
+      <button class="btn icon-btn ghost" data-close aria-label="Close"><svg viewBox="0 0 24 24"><path d="M6 6l12 12M18 6 6 18"/></svg></button>
+    </div>
+    <div class="fc-source">
+      <figure class="fc-planned">${fitStackHTML(outfit)}</figure>
+      <div class="stack" style="gap:12px">
+        <p class="muted" style="margin:0">A photo of this outfit on you: a mirror selfie works well, head to shoes.</p>
+        <button class="btn primary big" data-fcpick="camera">${ICON_CAMERA}<span class="big-label">Take photo<small>Opens the camera</small></span></button>
+        <button class="btn big" data-fcpick="gallery">${ICON_GALLERY}<span class="big-label">Choose from gallery<small>A photo you already took</small></span></button>
+      </div>
+    </div>`;
+  $("#sheet").hidden = false;
+}
+function pickFitPhoto(how) {
+  const input = how === "gallery" ? fitGal : fitCam;
+  input.value = "";
+  input.click();
+}
+for (const input of [fitCam, fitGal]) input.addEventListener("change", () => {
+  const f = input.files?.[0];
+  if (f && fitOutfitNext) openFitReview(fitOutfitNext, f).catch((err) => failed(err, "the fit check photo"));
 });
 
 // The photo, at most `max` px on its long side: WebP, or JPEG where the browser can't make WebP.
@@ -9509,7 +9533,8 @@ async function onTap(e) {
     return paintFitReview();
   }
   if (ds.fcsave) return saveFitCheck();
-  if (ds.fcretake) { const o = fitDraft?.outfit; fitDraft = null; closeSheet(); if (o) { fitInput.value = ""; fitInput._outfit = o; fitInput.click(); } return; }
+  if (ds.fcpick) return pickFitPhoto(ds.fcpick);
+  if (ds.fcretake) { const o = fitDraft?.outfit; fitDraft = null; return o ? fitSource(o) : closeSheet(); }
   if (ds.fitgallery || ds.fcback) return openFitGallery();
   if (ds.fcfilter) { fitUI.filter = ds.fcfilter; return openFitGallery(); }
   if (ds.fcopen) return openFitCheck(ds.fcopen);

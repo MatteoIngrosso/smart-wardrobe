@@ -720,3 +720,6 @@ details summary { cursor: pointer; }
 .fc-day-list { display: flex; gap: 8px; flex-wrap: wrap; }
 .fc-card.small { width: 72px; }
 .fc-card.small img { border-radius: 10px; }
+.fc-source { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1.4fr); gap: 16px; align-items: start; margin-top: 14px; }
+@media (max-width: 700px) { .fc-source { grid-template-columns: 1fr; } }
+.fc-source figure { margin: 0; }
