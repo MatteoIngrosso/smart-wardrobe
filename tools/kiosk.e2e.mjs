@@ -2,10 +2,10 @@
 // The wall screen layer (kiosk.js) in headless Chromium, on the sample wardrobe at the iPad Air 13"
 // size (portrait 1024 x 1366, touch). Checks:
 // - after 3 minutes without a touch the ambient screen comes: clock, weather, today's outfit; the
-//   app underneath isn't painted and the lookbook stage moves nothing; the clock block moves every minute
-// - a tap wakes it in well under 50 ms, the tap presses nothing, and the stage moves again
-// - 5 taps on the page title open the diagnostics: graphics chip, frames, the pieces on the stage,
-//   storage, the offline cache; reset the stage view, the speed test and the cache refresh work
+//   app underneath isn't painted and the 3D mirror draws nothing; the clock block moves every minute
+// - a tap wakes it in well under 50 ms, the tap presses nothing, and the 3D mirror draws again
+// - 5 taps on the page title open the diagnostics: graphics chip, frames, the mirror's memory,
+//   storage, the offline cache; reset camera, the speed test and the cache refresh work
 // - everything you tap in the item sheet, the confirm box, the cut-out editor and the diagnostics
 //   is at least 48 x 48 px; rows that scroll sideways show no scrollbar and a mouse can drag them
 // - Settings > Wall screen saves the minutes; a reload while asleep comes back asleep
@@ -25,7 +25,7 @@ const ROOT = join(dirname(fileURLToPath(import.meta.url)), "..");
 // A copy of the app with every top-level function and constant of app.js on window.__t.
 const dir = mkdtempSync(join(tmpdir(), "wardrobe-kiosk-"));
 for (const f of readdirSync(ROOT)) if (/\.(js|css|html|json|webmanifest|svg|png)$/.test(f) && !/^(package|wrangler)/.test(f)) cpSync(join(ROOT, f), join(dir, f));
-for (const d of ["sample", "vendor"]) cpSync(join(ROOT, d), join(dir, d), { recursive: true });
+for (const d of ["sample", "vendor", "avatar"]) cpSync(join(ROOT, d), join(dir, d), { recursive: true });
 const src = readFileSync(join(ROOT, "app.js"), "utf8");
 const DECL = /^(?:async\s+)?function\s+([\w$]+)|^(?:const|let)\s+([\w$]+)\s*=|^import \* as ([\w$]+)/gm;
 const names = [...new Set(Array.from(src.matchAll(DECL), (m) => m[1] || m[2] || m[3]))];
@@ -58,7 +58,7 @@ async function open(ctx) {
     ? r.fulfill({ contentType: "application/json", body: JSON.stringify(WEATHER) }) : r.abort()));
   return page;
 }
-// The sample wardrobe, a city (so the weather shows), Today with the lookbook stage showing.
+// The sample wardrobe, a city (so the weather shows), Today with the 3D mirror running.
 async function ready(page, { mirror = true } = {}) {
   await page.waitForFunction(() => window.__t?.kiosk && window.__t.state.items.length >= 20, null, { timeout: 60000 });
   await page.evaluate(async () => {
@@ -68,12 +68,13 @@ async function ready(page, { mirror = true } = {}) {
     t.state.outfits = [];
     t.go("today");
   });
-  if (mirror) await page.waitForFunction(() => window.__t.mirror.stage?.debug.layers().length >= 2, null, { timeout: 90000 });
-  // the thumbnails made (after 3 idle minutes they long are)
-  await page.waitForFunction(() => !window.__t.thumbsBusy, null, { timeout: 120000 });
+  if (mirror) await page.waitForFunction(() => window.__t.mirror.stage && !window.__t.mirror.loading, null, { timeout: 90000 });
+  // the pieces baked for the mirror and the thumbnails made (after 3 idle minutes they long are)
+  await page.waitForFunction(() => !window.__t.mirror.pending.size && !window.__t.thumbsBusy, null, { timeout: 120000 });
   await page.waitForTimeout(500);
 }
-const frames = (page) => page.evaluate(() => window.__t.mirror.stage?.debug.frames ?? -1);
+const angleNear = (page, deg) => page.waitForFunction((d) => Math.abs(((window.__t.mirror.stage.angle - d + 540) % 360) - 180) < 1, deg, { timeout: 10000 });
+const frames = (page) => page.evaluate(() => window.__t.mirror.stage?.debug.renderer.info.render.frame ?? -1);
 
 const ctx = await browser.newContext(IPAD);
 const page = await open(ctx);
@@ -88,7 +89,7 @@ test("on a big touch screen the ambient screen is on, after 3 minutes", async ()
   assert.ok(r.card, "Settings shows 3 min picked");
 });
 
-test("asleep: clock, weather, today's outfit; nothing of the app painted; the stage moves nothing", async () => {
+test("asleep: clock, weather, today's outfit; nothing of the app painted; the 3D mirror draws nothing", async () => {
   await page.evaluate(() => window.__t.kiosk.sleep());
   const r = await page.evaluate(() => {
     const s = document.querySelector(".ambient-screen"), cs = (sel) => getComputedStyle(document.querySelector(sel));
@@ -113,15 +114,15 @@ test("asleep: clock, weather, today's outfit; nothing of the app painted; the st
   assert.equal(r.main, "hidden"); assert.equal(r.nav, "hidden");
   assert.equal(r.bg, "rgb(0, 0, 0)");
   assert.ok(r.paused, "the stage is paused");
-  // the stage is asked to zoom: while asleep it writes not one frame
+  // the 3D mirror is asked to turn: while asleep it draws not one frame
   const before = await frames(page);
-  await page.evaluate(() => window.__t.mirror.stage.zoomBy(1.3));
+  await page.evaluate(() => window.__t.mirror.stage.snapTo(90));
   await page.waitForTimeout(900);
-  assert.equal(await frames(page), before, "no stage frames while asleep");
+  assert.equal(await frames(page), before, "no 3D frames while asleep");
   await page.screenshot({ path: join(dir, "ambient.png") });
 });
 
-test("a tap wakes it at once, presses nothing, and the stage moves again", async () => {
+test("a tap wakes it at once, presses nothing, and the 3D mirror draws again", async () => {
   const chip = await page.evaluate(() => {
     const t = window.__t; t.state.occasion = "casual";
     const r = document.querySelector('[data-occ="work"]').getBoundingClientRect();
@@ -138,16 +139,15 @@ test("a tap wakes it at once, presses nothing, and the stage moves again", async
   const before = await frames(page);
   await page.touchscreen.tap(chip.x, chip.y); // right on the Work chip
   await page.waitForTimeout(900);
-  const r = await page.evaluate(() => ({ ...window.__wake, occ: window.__t.state.occasion, hidden: document.querySelector(".ambient-screen").hidden, main: getComputedStyle(document.querySelector("#main")).visibility, paused: window.__t.mirror.stage.paused, zoom: window.__t.mirror.stage.debug.state.zoom }));
+  const r = await page.evaluate(() => ({ ...window.__wake, occ: window.__t.state.occasion, hidden: document.querySelector(".ambient-screen").hidden, main: getComputedStyle(document.querySelector("#main")).visibility, paused: window.__t.mirror.stage.paused, angle: window.__t.mirror.stage.angle }));
   console.log(`  woke in ${r.handled.toFixed(1)} ms, next frame after ${r.frame.toFixed(1)} ms`);
   assert.equal(r.asleep, false, "awake during the tap itself");
   assert.equal(r.opacity, "0", "the ambient screen is see-through at once");
   assert.ok(r.handled < 50 && r.frame < 50, `wake ${r.handled} ms, frame ${r.frame} ms`);
   assert.equal(r.occ, "casual", "the tap that woke it didn't press the chip");
   assert.ok(r.hidden); assert.equal(r.main, "visible"); assert.equal(r.paused, false);
-  assert.ok((await frames(page)) > before, "the stage moved again");
-  assert.ok(Math.abs(r.zoom - 1.3) < 0.01, "and shows the zoom asked for while asleep");
-  await page.evaluate(() => window.__t.mirror.stage.reset());
+  assert.ok((await frames(page)) > before, "the 3D mirror drew again");
+  assert.ok(Math.abs(r.angle - 90) < 1, "and finished the turn asked for while asleep");
   await page.touchscreen.tap(chip.x, chip.y);
   await page.waitForTimeout(200);
   assert.equal(await page.evaluate(() => window.__t.state.occasion), "work", "awake, the same tap presses it");
@@ -163,21 +163,21 @@ test("5 taps on the page title open the diagnostics", async () => {
   for (const [k, v] of Object.entries(r)) console.log(`  ${k}: ${v}`);
   assert.ok(r["Graphics chip"].length > 3 && !/…/.test(r["Graphics chip"]));
   assert.match(r["Drawn by"], /processor|graphics chip/);
-  assert.match(r["Frames per second"], /Screen \d+ · stage \d+/);
-  assert.match(r["Lookbook stage"], /\d+ pieces? on the stage · \d+ shown · no WebGL/);
+  assert.match(r["Frames per second"], /Screen \d+ · 3D mirror \d+/);
+  assert.match(r["3D mirror in graphics memory"], /\d+ meshes · \d+ textures · \d+ shaders/);
   assert.match(r["Storage on this device"], /MB|GB/);
   assert.match(r["Offline cache"], /service worker|Nothing cached/);
   assert.match(r["Ambient screen"], /After 3 min/);
 });
 
-test("diagnostics: reset the stage view, stage speed test", async () => {
-  await page.evaluate(async () => { window.__t.setMirrorSide("back"); window.__t.mirror.stage.zoomBy(1.6); });
-  await page.waitForFunction(() => window.__t.mirror.stage.side === "back");
+test("diagnostics: reset camera, 3D speed test", async () => {
+  await page.evaluate(() => window.__t.mirror.stage.snapTo(180));
+  await angleNear(page, 180);
   await page.click('[data-kdiag="camera"]');
-  await page.waitForFunction(() => window.__t.mirror.stage.side === "front" && window.__t.mirror.stage.debug.state.zoom === 1, null, { timeout: 5000 });
-  assert.match(await page.textContent("#kd-note"), /front again/);
+  await angleNear(page, 0); // faces front again
+  assert.match(await page.textContent("#kd-note"), /faces you again/);
   await page.click('[data-kdiag="speed"]');
-  await page.waitForFunction(() => /frames a second while tilting/.test(document.querySelector("#kd-note").textContent), null, { timeout: 15000 });
+  await page.waitForFunction(() => /frames a second while turning/.test(document.querySelector("#kd-note").textContent), null, { timeout: 15000 });
   console.log(`  ${await page.textContent("#kd-note")}`);
 });
 

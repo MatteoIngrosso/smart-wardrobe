@@ -6,10 +6,9 @@
 // - app.js in headless Chromium on the sample wardrobe: no page or console errors on any screen,
 //   every photo on a screen has a URL that still resolves, a "Try a piece" photo keeps its URL
 //   across screens, a photo shown by the page is never revoked, and a failing tap shows a toast;
-// - avatar-stage.js (the lookbook stage) on its own page: a slower photo never overwrites the one
-//   asked for last in the same slot, a hidden container keeps its last layout and fits again when
-//   shown, the column is in order (hat, top, tie, layer, jacket, belt, bottoms, shoes) with the
-//   accessory cards on the sides, and moving it redraws nothing (no canvas, no WebGL).
+// - avatar-stage.js on its own page: a slower piece never overwrites the one asked for last in the
+//   same slot, a hidden container keeps the canvas at its last size, and a lost GPU context comes
+//   back with the scene drawn again.
 // Needs Playwright with Chromium.
 import assert from "node:assert/strict";
 import test from "node:test";
@@ -116,9 +115,9 @@ test("sw.js: a slow network gives way to the kept copy after NET_MS", async () =
 test("sw.js: the heavy files come from the cache once seen, CDN scripts too; everything else is left alone", async () => {
   const sw = startSW({ net: (url, req) => {
     if (url.startsWith("https://cdn.jsdelivr.net/")) return new FakeResponse({ type: "cors", body: "export default 1", headers: { "Content-Type": "text/javascript" } });
-    return file("bytes", url.endsWith(".webp") ? "image/webp" : "text/javascript");
+    return file("bytes", url.endsWith(".bin") ? "application/octet-stream" : "text/javascript");
   } });
-  for (const p of ["/vendor/jsqr.min.js", "/sample/cut/123659645.webp", "/sample/seed.js", "/icon.svg"]) {
+  for (const p of ["/avatar/avatar.bin", "/vendor/three/three.module.min.js", "/sample/seed.js", "/icon.svg"]) {
     await sw.ask(p); await new Promise((r) => setTimeout(r, 0));
     const before = sw.calls.length;
     assert.equal((await sw.ask(p)).body, "bytes", p);
@@ -139,7 +138,7 @@ test("sw.js: the heavy files come from the cache once seen, CDN scripts too; eve
 test("sw.js: without a deploy version (development) nothing is touched", async () => {
   const sw = startSW({ live: false, net: () => file("// dev") });
   assert.equal(await sw.ask("/app.js"), undefined);
-  assert.equal(await sw.ask("/vendor/jsqr.min.js"), undefined);
+  assert.equal(await sw.ask("/avatar/avatar.bin"), undefined);
   assert.equal(await sw.ask("/", { mode: "navigate" }), undefined);
 });
 
@@ -153,19 +152,19 @@ test("sw.js: the page is asked from the network and kept; the kept page stands i
 });
 
 /* ======================================================================
-   The app and the lookbook stage in headless Chromium
+   The app and the 3D stage in headless Chromium
    ====================================================================== */
 const { chromium } = createRequire(import.meta.url)("playwright");
 const dir = mkdtempSync(join(tmpdir(), "wardrobe-integration-"));
-for (const f of ["index.html", "app.js", "stylist.js", "label.js", "calendar.js", "cutout-editor.js", "avatar-config.js", "avatar-stage.js", "kiosk.js", "styles.css", "kiosk.css", "fashion-bible.json", "manifest.webmanifest", "icon.svg"])
+for (const f of ["index.html", "app.js", "stylist.js", "label.js", "calendar.js", "cutout-editor.js", "avatar-config.js", "avatar-stage.js", "garment-baker.js", "mannequin-shells.js", "face-photo.js", "kiosk.js", "styles.css", "kiosk.css", "fashion-bible.json", "manifest.webmanifest", "icon.svg"])
   if (existsSync(join(ROOT, f))) cpSync(join(ROOT, f), join(dir, f));
-for (const d of ["sample", "vendor"]) if (existsSync(join(ROOT, d))) cpSync(join(ROOT, d), join(dir, d), { recursive: true });
+for (const d of ["sample", "vendor", "avatar"]) if (existsSync(join(ROOT, d))) cpSync(join(ROOT, d), join(dir, d), { recursive: true });
 const src = readFileSync(join(ROOT, "app.js"), "utf8");
 const DECL = /^(?:async\s+)?function\s+([\w$]+)|^(?:const|let)\s+([\w$]+)\s*=|^import \* as ([\w$]+)/gm;
 const names = [...new Set(Array.from(src.matchAll(DECL), (m) => m[1] || m[2] || m[3]))];
 writeFileSync(join(dir, "app.js"), `${src}\nwindow.__t = {${names.map((n) => `get ${n}() { return ${n}; }`).join(",")}};\n`);
 writeFileSync(join(dir, "stage.html"), `<!doctype html><title>stage</title><style>html,body{margin:0;height:100%;background:#000}#host{width:480px;height:640px;position:relative}</style>
-<div id="host"></div><script type="module">import { createStage } from "./avatar-stage.js"; window.__s = { createStage };</script>`);
+<div id="host"></div><script type="module">import { createStage } from "./avatar-stage.js"; import * as baker from "./garment-baker.js"; window.__s = { createStage, baker };</script>`);
 
 const TYPES = { ".html": "text/html", ".js": "text/javascript", ".css": "text/css", ".json": "application/json", ".svg": "image/svg+xml", ".png": "image/png", ".jpg": "image/jpeg", ".webp": "image/webp", ".bin": "application/octet-stream", ".webmanifest": "application/manifest+json" };
 const server = createServer((req, res) => {
@@ -204,7 +203,7 @@ test("the sample wardrobe opens on every screen without errors, every photo show
   await page.goto(url);
   await page.waitForFunction(() => window.__t?.state?.items?.length >= 20, null, { timeout: 60000 });
   await page.waitForFunction(() => window.__t.mirror.stage || window.__t.mirror.failed, null, { timeout: 120000 });
-  assert.equal(await page.evaluate(() => window.__t.mirror.failed?.message || ""), "", "the lookbook stage started");
+  assert.equal(await page.evaluate(() => window.__t.mirror.failed?.message || ""), "", "the 3D mirror started");
   for (const v of VIEWS) {
     await page.evaluate((v) => window.__t.go(v), v);
     await page.waitForTimeout(300);
@@ -262,7 +261,6 @@ test("a tap on something that is gone does nothing; an error in a tap shows a to
     const t = window.__t;
     t.go("wardrobe");
     document.body.insertAdjacentHTML("beforeend", `<button id="ghost" data-wash="no-such-piece">x</button><button id="boom" data-act="city">y</button>`);
-    document.getElementById("toast").hidden = true; // (a toast from loading the samples may still be up)
     document.getElementById("ghost").click();
     await new Promise((r) => setTimeout(r, 50));
     const toast = document.getElementById("toast");
@@ -277,123 +275,115 @@ test("a tap on something that is gone does nothing; an error in a tap shows a to
   assert.deepEqual(errors, [], "page errors");
 });
 
-/* ---------- the lookbook stage on its own ---------- */
+/* ---------- the 3D stage on its own ---------- */
 const stagePage = await ctx.newPage();
 const stageErrors = [];
 stagePage.on("pageerror", (e) => stageErrors.push(String(e)));
 
-// Synthetic cut-outs (a filled shape on a transparent photo, with margins) for every slot, as
-// object URLs; `slow` ones are served from a data: URL big enough to decode later.
-const makePhotos = () => stagePage.evaluate(async () => {
-  const shape = (w, h, draw, colour) => {
-    const c = Object.assign(document.createElement("canvas"), { width: w, height: h }), g = c.getContext("2d");
-    g.fillStyle = colour; draw(g, w, h);
-    return new Promise((r) => c.toBlob((b) => r(URL.createObjectURL(b)), "image/png"));
+// Two synthetic tops (a filled shape with a neckline, a coloured block as the print), baked by the
+// garment baker, so the stage gets real BakedGarmentAssets without AI or photos.
+const makeAssets = () => stagePage.evaluate(async () => {
+  const make = (fabric, block) => {
+    const c = Object.assign(document.createElement("canvas"), { width: 640, height: 760 }), g = c.getContext("2d");
+    g.fillStyle = fabric; g.beginPath();
+    g.moveTo(210, 70); g.lineTo(430, 70); g.lineTo(600, 160); g.lineTo(560, 290); g.lineTo(470, 250);
+    g.lineTo(470, 720); g.lineTo(170, 720); g.lineTo(170, 250); g.lineTo(80, 290); g.lineTo(40, 160); g.closePath(); g.fill();
+    g.globalCompositeOperation = "destination-out"; g.beginPath(); g.ellipse(320, 66, 62, 40, 0, 0, Math.PI * 2); g.fill();
+    g.globalCompositeOperation = "source-over"; g.fillStyle = block; g.fillRect(260, 260, 120, 120);
+    return new Promise((r) => c.toBlob(r, "image/png"));
   };
-  const rect = (x, y, w, h) => (g, W, H) => g.fillRect(x * W, y * H, w * W, h * H);
+  const base = { category: "tshirt", fit: "regular", colors: ["white"], styles: ["casual"], warmth: 2, tags: [] };
   const out = {};
-  const kinds = {
-    hat: [600, 400, rect(0.2, 0.3, 0.6, 0.4), "#c33"], top: [768, 1024, rect(0.1, 0.15, 0.8, 0.7), "#eee"], tie: [300, 1024, rect(0.4, 0.05, 0.2, 0.9), "#235"],
-    layer: [768, 1024, rect(0.1, 0.1, 0.8, 0.75), "#585"], jacket: [768, 1024, rect(0.08, 0.08, 0.84, 0.8), "#333"], belt: [1024, 200, rect(0.05, 0.3, 0.9, 0.4), "#521"],
-    bottoms: [768, 1024, rect(0.25, 0.05, 0.5, 0.9), "#346"], shoes: [1024, 512, rect(0.1, 0.3, 0.8, 0.4), "#111"],
-    jewelry: [512, 512, rect(0.3, 0.3, 0.4, 0.4), "#db3"], watch: [512, 512, rect(0.35, 0.2, 0.3, 0.6), "#aaa"], eyewear: [800, 300, rect(0.1, 0.3, 0.8, 0.4), "#222"], bag: [600, 600, rect(0.2, 0.2, 0.6, 0.6), "#742"],
-  };
-  for (const [k, [w, h, draw, col]] of Object.entries(kinds)) out[k] = await shape(w, h, draw, col);
-  out.top2 = await shape(768, 1024, rect(0.1, 0.15, 0.8, 0.7), "#f80");
-  window.__photos = out;
-  return Object.keys(out).length;
+  for (const [id, fabric, block] of [["A", "#e6e6e6", "#ff8a00"], ["B", "#303030", "#16d43a"]]) {
+    const front = await make(fabric, block), back = await make(fabric, "#8a2be2");
+    out[id] = await window.__s.baker.bakeGarment({ ...base, id, name: `Test ${id}` }, { front, back }, { sig: id });
+  }
+  window.__assets = out;
+  return Object.fromEntries(Object.entries(out).map(([k, a]) => [k, !!a && a.slot]));
 });
 
-test("lookbook stage: a slower photo never overwrites the one asked for last in the same slot", async () => {
+test("3D stage: a slower piece never overwrites the one asked for last in the same slot", async () => {
   await stagePage.goto(url + "stage.html");
   await stagePage.waitForFunction(() => !!window.__s, null, { timeout: 30000 });
-  await stagePage.evaluate(() => { window.stage = window.__s.createStage(document.getElementById("host"), {}); });
-  assert.equal(await makePhotos(), 13);
+  await stagePage.evaluate(async () => { window.stage = await window.__s.createStage(document.getElementById("host"), {}); });
+  assert.deepEqual(await makeAssets(), { A: "top", B: "top" });
   const r = await stagePage.evaluate(async () => {
-    const P = window.__photos, stage = window.stage;
-    // a photo that takes a while: the same picture, behind a delay
-    const slow = (u, ms) => new Promise((res) => setTimeout(() => res(u), ms));
-    const pa = stage.set({ top: { id: "A", name: "A", front: await slow(P.top, 0) + "#a" } });
-    const pb = stage.set({ top: { id: "B", name: "B", front: P.top2 } });
+    const { A, B } = window.__assets, stage = window.stage;
+    await stage.prepare(B); // B is ready at once; A still has to decode its textures
+    const pa = stage.setGarment("top", A, { name: "Test A" });
+    const pb = stage.setGarment("top", B, { name: "Test B" });
     await Promise.all([pa, pb]);
-    const worn1 = stage.debug.state.worn.top?.id;
-    // asked for A (new photo, still decoding), then nothing: nothing stays on
-    const pc = stage.set({ top: { id: "C", name: "C", front: P.top + "#c" } });
-    const pd = stage.set({});
-    await Promise.all([pc, pd]);
-    const worn2 = stage.debug.state.worn.top?.id ?? null;
-    return { worn1, worn2 };
+    await new Promise((r) => setTimeout(r, 100));
+    const worn1 = stage.debug.state.worn.top?.prep.asset.garmentId;
+    // and the other way round: the one asked for last wins even when it's the slow one
+    stage.setGarment("top", null);
+    const pb2 = stage.setGarment("top", B, { name: "Test B" });
+    await pb2;
+    const worn2 = stage.debug.state.worn.top?.prep.asset.garmentId;
+    // taken off while loading: nothing goes on
+    stage.setGarment("top", null);
+    const slow = stage.setGarment("top", { ...A, updatedAt: 7 }, { name: "Test A" }); // (a new key: prepared again)
+    stage.setGarment("top", null);
+    await slow;
+    await new Promise((r) => setTimeout(r, 100));
+    const worn3 = stage.debug.state.worn.top ? stage.debug.state.worn.top.prep.asset.garmentId : null;
+    return { worn1, worn2, worn3 };
   });
-  assert.deepEqual(r, { worn1: "B", worn2: null });
+  assert.deepEqual(r, { worn1: "B", worn2: "B", worn3: null });
   assert.deepEqual(stageErrors, []);
 });
 
-test("lookbook stage: the column in order, the cards on the sides, depth back to front", async () => {
+test("3D stage: a hidden container keeps the canvas at its last size; shown again it fits", async () => {
   const r = await stagePage.evaluate(async () => {
-    const P = window.__photos, stage = window.stage;
-    const slots = ["hat", "top", "tie", "layer", "jacket", "belt", "bottoms", "shoes", "jewelry", "watch", "eyewear", "bag"];
-    await stage.set(Object.fromEntries(slots.map((k) => [k, { id: k, name: k, front: P[k] }])));
-    const L = Object.fromEntries(stage.debug.layers().map((l) => [l.slot, l]));
-    const g = (k) => L[k].garment, mid = (k) => g(k).x + g(k).w / 2, host = document.getElementById("host").getBoundingClientRect();
-    return {
-      n: Object.keys(L).length,
-      order: stage.debug.layers().map((l) => l.slot),
-      hatAboveTop: g("hat").y + g("hat").h <= g("top").y + 2,
-      tieOnTop: g("tie").y >= g("top").y && g("tie").y + g("tie").h <= g("top").y + g("top").h + 2 && Math.abs(mid("tie") - mid("top")) < 2,
-      beltAtWaist: g("belt").y < g("bottoms").y + 8 && g("belt").y + g("belt").h > g("bottoms").y - 8,
-      bottomsUnderTop: g("bottoms").y > g("top").y + g("top").h * 0.6,
-      shoesAtBase: g("shoes").y > g("bottoms").y + g("bottoms").h * 0.8 && g("shoes").y + g("shoes").h <= host.bottom,
-      left: ["jewelry", "watch"].every((k) => g(k).x + g(k).w < g("jacket").x),
-      right: ["eyewear", "bag"].every((k) => g(k).x > g("jacket").x + g("jacket").w),
-      pair: document.querySelectorAll('[data-slot="shoes"] img').length,
-      noCanvas: !document.querySelector("#host canvas"),
-    };
-  });
-  assert.equal(r.n, 12, "every slot shows");
-  assert.deepEqual(r.order.filter((s) => ["top", "tie", "layer", "jacket"].includes(s)), ["top", "tie", "layer", "jacket"], "top, tie, layer, jacket from back to front");
-  assert.ok(r.order.indexOf("bottoms") < r.order.indexOf("top") && r.order.indexOf("belt") > r.order.indexOf("bottoms"), "the bottoms behind the top, the belt over them");
-  for (const k of ["hatAboveTop", "tieOnTop", "beltAtWaist", "bottomsUnderTop", "shoesAtBase", "left", "right", "noCanvas"]) assert.ok(r[k], k);
-  assert.equal(r.pair, 2, "shoes photographed from the side show as a pair");
-});
-
-test("lookbook stage: a hidden container keeps its layout; shown again it fits", async () => {
-  const r = await stagePage.evaluate(async () => {
-    const stage = window.stage, host = document.getElementById("host");
+    const stage = window.stage, host = document.getElementById("host"), canvas = stage.debug.renderer.domElement;
     const frames = (n) => new Promise((r) => { const f = () => (n-- > 0 ? requestAnimationFrame(f) : r()); f(); });
-    const top = () => stage.debug.layers().find((l) => l.slot === "top").garment;
     await frames(2);
-    const shown = { ...stage.debug.state.box };
+    const ratio = stage.debug.renderer.getPixelRatio();
+    const shown = { w: canvas.width, h: canvas.height };
     host.style.display = "none";
     await frames(3);
-    const hidden = { W: stage.debug.state.box.W, stale: !!stage.debug.state.sizeStale };
+    const hidden = { w: canvas.width, h: canvas.height, stale: !!stage.debug.state.sizeStale };
     host.style.display = ""; host.style.width = "360px"; host.style.height = "500px";
     await frames(3);
-    const back = { W: stage.debug.state.box.W, H: stage.debug.state.box.H, stale: !!stage.debug.state.sizeStale, inside: top().x >= 0 && top().x + top().w <= 360 };
+    const back = { w: canvas.width, h: canvas.height, want: [Math.floor(360 * ratio), Math.floor(500 * ratio)], stale: !!stage.debug.state.sizeStale };
     host.style.width = "480px"; host.style.height = "640px";
     await frames(3);
     return { shown, hidden, back };
   });
-  assert.equal(r.shown.W, 480);
-  assert.deepEqual(r.hidden, { W: 480, stale: true }, "hidden: the last layout stays, marked stale");
-  assert.deepEqual(r.back, { W: 360, H: 500, stale: false, inside: true }, "shown again: the new size");
+  assert.ok(r.shown.w > 100 && r.shown.h > 100, `drawn at ${r.shown.w}x${r.shown.h}`);
+  assert.deepEqual([r.hidden.w, r.hidden.h, r.hidden.stale], [r.shown.w, r.shown.h, true], "hidden: the last size stays, marked stale");
+  assert.deepEqual([r.back.w, r.back.h, r.back.stale], [...r.back.want, false], "shown again: the new size");
 });
 
-test("lookbook stage: tilting writes one transform per frame and lays nothing out again", async () => {
+test("3D stage: a lost GPU context comes back with the scene drawn again", async () => {
   const r = await stagePage.evaluate(async () => {
-    const stage = window.stage, st = stage.debug.state, root = stage.debug.root;
-    const layouts = st.layouts, frames = st.frames;
-    const box = root.getBoundingClientRect(), x = box.x + box.width / 2, y = box.y + box.height / 2;
-    const ev = (type, dx) => root.dispatchEvent(new PointerEvent(type, { pointerId: 7, bubbles: true, clientX: x + dx, clientY: y, button: 0, pointerType: "mouse", isPrimary: true }));
-    ev("pointerdown", 0);
-    for (let k = 1; k <= 20; k++) { ev("pointermove", k * 8); await new Promise((r) => requestAnimationFrame(r)); }
-    const tilt = st.tilt.y;
-    ev("pointerup", 160);
-    await new Promise((r) => setTimeout(r, 700));
-    return { tilt, wrote: st.frames - frames, layouts: st.layouts - layouts, settled: st.tilt.y, transform: getComputedStyle(root.querySelector(".lb-world")).transform };
+    const stage = window.stage, renderer = stage.debug.renderer, gl = renderer.getContext();
+    const until = (f, ms = 5000) => new Promise((res, rej) => { const t0 = performance.now(); const tick = () => (f() ? res() : performance.now() - t0 > ms ? rej(new Error("timeout")) : setTimeout(tick, 20)); tick(); });
+    // the bright pixels across the middle of the picture (the body, over the dark backdrop)
+    const bright = () => {
+      stage.debug.render();
+      const w = gl.drawingBufferWidth, h = gl.drawingBufferHeight, px = new Uint8Array(w * 4);
+      gl.readPixels(0, (h / 2) | 0, w, 1, gl.RGBA, gl.UNSIGNED_BYTE, px);
+      let n = 0; for (let i = 0; i < w; i++) if (Math.max(px[i * 4], px[i * 4 + 1], px[i * 4 + 2]) > 80) n++;
+      return n / w;
+    };
+    const before = bright();
+    const supported = stage.debug.loseContext();
+    if (!supported) return { supported };
+    await until(() => stage.debug.contextLost);
+    const lost = { flag: stage.debug.contextLost, gl: gl.isContextLost() };
+    stage.debug.restoreContext();
+    await until(() => !stage.debug.contextLost && !gl.isContextLost());
+    await new Promise((r) => setTimeout(r, 200));
+    const after = bright();
+    const env = !!stage.debug.scene.environment;
+    return { supported, before, lost, after, env, triangles: renderer.info.render.triangles };
   });
-  assert.ok(r.tilt > 4 && r.tilt <= 12, `tilted ${r.tilt}°`);
-  assert.ok(r.wrote >= 15 && r.wrote <= 25, `${r.wrote} frames written`);
-  assert.equal(r.layouts, 0, "nothing laid out again while tilting");
-  assert.equal(r.settled, 0, "it settles back when let go");
+  assert.equal(r.supported, true, "WEBGL_lose_context is available here");
+  assert.ok(r.before > 0.05, `the body shows before (${r.before.toFixed(3)} of the middle row is bright)`);
+  assert.deepEqual(r.lost, { flag: true, gl: true });
+  assert.ok(r.after > 0.05 && Math.abs(r.after - r.before) < 0.15, `drawn again after (${r.after.toFixed(3)} bright, was ${r.before.toFixed(3)})`);
+  assert.equal(r.env, true, "the environment light is back");
+  assert.ok(r.triangles > 1000, `${r.triangles} triangles drawn`);
   assert.deepEqual(stageErrors, []);
 });

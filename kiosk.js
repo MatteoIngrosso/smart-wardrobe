@@ -3,15 +3,15 @@
 //
 //   - The ambient screen: after a few minutes nobody touches the screen (3 by default on a touch
 //     screen, Settings > Wall screen), a black screen with a clock, the weather and today's outfit
-//     takes over. The lookbook stage stops (stage.pause(): nothing moves) and the app underneath isn't
+//     takes over. The 3D mirror stops drawing (stage.pause(): 0% GPU) and the app underneath isn't
 //     painted. The clock block glides to a new spot every minute so nothing burns into the panel.
 //     A tap anywhere (or a key) brings the app back at once, as it was; that tap does nothing else.
 //   - Rows that scroll sideways (chips, photo strips, the gallery) can be dragged with a mouse too,
 //     for touch screens that Linux reports as a mouse (they don't scroll by themselves).
 //   - The diagnostics: tap a page title (or the logo) 5 times. The graphics chip and whether it
-//     really draws (not a software fallback), frames per second, the pieces on the lookbook stage,
-//     storage used on the device, the offline cache, and buttons to force a fresh copy of the app,
-//     reset the stage's view and time the stage while it tilts.
+//     really draws (not a software fallback), frames per second, the 3D mirror's meshes and
+//     textures in graphics memory, storage used on the device, the offline cache, and buttons to
+//     force a fresh copy of the app, reset the 3D camera and time the 3D drawing.
 //
 // Nothing here talks to a server. Settings: settings.ambientMinutes (0 = off; unset = the default
 // for this device), kept on this device like the other settings.
@@ -35,11 +35,11 @@ const ICON_X = `<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 6l12 12M
 /**
  * @param {object} app
  *   settings, saveSettings()    the app's settings (this device) and how to save them
- *   stage()                     the lookbook stage, or null (pause, resume, reset, debug)
+ *   stage()                     the 3D mirror's stage, or null (pause, resume, snapTo, debug.renderer)
  *   ambient()                   { weather: {icon, temp, text, detail} | null, next: "19:30 Dinner" | "",
  *                                 outfit: { label, pieces: [{ name, src }] } }
  *   refreshWeather()            a Promise: the weather again (the app keeps it 30 minutes)
- *   resetCamera()               the lookbook stage back to the front, untilted; false if there's none
+ *   resetCamera()               the 3D mirror back to the front, framed again; false if there's none
  *   woke(sinceMs)               the ambient screen was on from sinceMs until now
  */
 export function startKiosk(app) {
@@ -176,7 +176,7 @@ export function startKiosk(app) {
   }
 
   /* ---------------- dragging sideways rows with a mouse ---------------- */
-  const NO_DRAG = "input, textarea, select, canvas, .lookbook, .cutfix-stage, [contenteditable]";
+  const NO_DRAG = "input, textarea, select, canvas, .stage3d, .cutfix-stage, [contenteditable]";
   const sideways = (el) => {
     for (let n = el; n && n !== document.body; n = n.parentElement) {
       if (n.scrollWidth > n.clientWidth + 1 && /auto|scroll/.test(getComputedStyle(n).overflowX)) return n;
@@ -236,11 +236,14 @@ export function startKiosk(app) {
 
   let diagEl = null, diagRaf = 0, diagTimer = 0, gpu = null, note = "", openedAt = 0;
   const fps = { screen: null, stage: null, frames: 0, t0: 0, f0: 0 };
-  const stageFrames = () => safe(() => app.stage()?.debug?.frames) ?? 0;
-  // The graphics chip the browser composites with (it moves the stage's layers).
+  const stageInfo = () => safe(() => app.stage()?.debug?.renderer?.info) || null;
   function readGPU() {
-    const temp = document.createElement("canvas");
-    const gl = temp.getContext("webgl2") || temp.getContext("webgl");
+    const r = safe(() => app.stage()?.debug?.renderer);
+    let gl = safe(() => r?.getContext()), temp = null;
+    if (!gl) {
+      temp = document.createElement("canvas");
+      gl = temp.getContext("webgl2") || temp.getContext("webgl");
+    }
     if (!gl) return { none: true };
     const plain = gl.getParameter(gl.RENDERER) || "";
     // Chrome and Safari give a generic name; the real one comes with WEBGL_debug_renderer_info.
@@ -269,29 +272,27 @@ export function startKiosk(app) {
         <div class="kdiag-head"><h2>Diagnostics</h2><button class="btn ghost icon-btn" data-kdiag="close" aria-label="Close">${ICON_X}</button></div>
         <dl class="kdiag-list">
           ${row("Graphics chip", "gpu")}${row("Drawn by", "accel")}${row("Frames per second", "fps")}
-          ${row("Lookbook stage", "mem")}${row("Last stage frame", "frame")}
+          ${row("3D mirror in graphics memory", "mem")}${row("Last 3D frame", "frame")}
           ${row("Storage on this device", "store")}${row("Offline cache", "sw")}
           ${row("Screen", "screen")}${row("Browser", "browser")}${row("Ambient screen", "amb")}
         </dl>
         <div class="kdiag-actions">
-          <button class="btn" data-kdiag="speed">Test the stage speed</button>
-          <button class="btn" data-kdiag="camera">Reset the stage view</button>
+          <button class="btn" data-kdiag="speed">Test the 3D speed</button>
+          <button class="btn" data-kdiag="camera">Reset avatar camera</button>
           <button class="btn" data-kdiag="refresh">Force refresh offline cache</button>
           <button class="btn" data-kdiag="ambient">Show the ambient screen</button>
         </div>
         <p class="muted small kdiag-note" id="kd-note" role="status"></p>
       </section>`;
     document.body.append(diagEl);
-    // The graphics chip is read once, a moment after the panel shows: making a WebGL context can
-    // take a while on a software renderer, and the tap that opened the panel shouldn't wait for it.
-    if (!gpu) setTimeout(() => { if (diagEl && !gpu) { gpu = readGPU(); paintDiag(); } }, 30);
+    gpu = readGPU();
     note = "";
     fps.screen = fps.stage = null;
-    fps.frames = 0; fps.t0 = performance.now(); fps.f0 = stageFrames();
+    fps.frames = 0; fps.t0 = performance.now(); fps.f0 = stageInfo()?.render.frame ?? 0;
     const loop = (now) => {
       fps.frames++;
       if (now - fps.t0 >= 1000) {
-        const f = stageFrames();
+        const f = stageInfo()?.render.frame ?? 0;
         fps.screen = (fps.frames * 1000) / (now - fps.t0);
         fps.stage = ((f - fps.f0) * 1000) / (now - fps.t0);
         fps.frames = 0; fps.t0 = now; fps.f0 = f;
@@ -302,7 +303,6 @@ export function startKiosk(app) {
     diagRaf = requestAnimationFrame(loop);
     paintDiag(true);
     diagTimer = setInterval(() => paintDiag(true), 5000); // the slower ones (storage, the cache)
-    openedAt = performance.now();
   }
   function closeDiag() {
     if (!diagEl) return;
@@ -314,12 +314,12 @@ export function startKiosk(app) {
   async function paintDiag(slow = false) {
     if (!diagEl) return;
     const g = gpu || {};
-    put("gpu", !gpu ? "Reading…" : g.none ? "Not reported here (no WebGL)" : `${g.renderer}${g.vendor && !g.renderer.includes(g.vendor) ? ` (${g.vendor})` : ""}`);
-    put("accel", !gpu ? "Reading…" : g.none ? "Unknown" : g.soft ? "The processor (software drawing: the graphics chip isn't used, so moving the stage is slower)" : `The graphics chip · ${g.version} · textures up to ${g.maxTex} px`);
-    const st = app.stage(), layers = safe(() => st?.debug?.layers()) || null;
-    put("fps", fps.screen == null ? "Measuring…" : `Screen ${Math.round(fps.screen)} · stage ${Math.round(fps.stage)}${st?.paused ? " (paused)" : fps.stage < 1 ? " (it only moves when touched)" : ""}`);
-    put("mem", layers ? `${layers.length} piece${layers.length === 1 ? "" : "s"} on the stage · ${layers.filter((l) => l.on).length} shown · no WebGL` : "The stage hasn't started (open Today)");
-    put("frame", st?.debug?.frames ? `${st.debug.lastFrameMs.toFixed(2)} ms on the processor · one transform, no redrawing` : "None yet");
+    put("gpu", g.none ? "No WebGL here: the 3D mirror can't run" : `${g.renderer}${g.vendor && !g.renderer.includes(g.vendor) ? ` (${g.vendor})` : ""}`);
+    put("accel", g.none ? "Nothing (no WebGL)" : g.soft ? "The processor (software drawing: the graphics chip isn't used, so the 3D mirror is slow)" : `The graphics chip · ${g.version} · textures up to ${g.maxTex} px`);
+    const st = app.stage(), info = stageInfo();
+    put("fps", fps.screen == null ? "Measuring…" : `Screen ${Math.round(fps.screen)} · 3D mirror ${Math.round(fps.stage)}${st?.paused ? " (paused)" : fps.stage < 1 ? " (it only draws while something moves)" : ""}`);
+    put("mem", info ? `${info.memory.geometries} meshes · ${info.memory.textures} textures · ${info.programs?.length ?? 0} shaders` : "The 3D mirror hasn't started (open Today)");
+    put("frame", info && info.render.frame ? `${st.debug.lastFrameMs.toFixed(1)} ms on the processor · ${info.render.calls} draw calls · ${Math.round(info.render.triangles / 1000)}k triangles` : "None yet");
     const pts = navigator.maxTouchPoints;
     put("screen", `${innerWidth} × ${innerHeight} (${devicePixelRatio}x) · ${innerHeight > innerWidth ? "portrait" : "landscape"} · ${pts ? `touch, ${pts} point${pts > 1 ? "s" : ""} at once` : "no touch"}${matchMedia("(pointer: coarse)").matches ? "" : " · mouse"}`);
     const heap = performance.memory?.usedJSHeapSize;
@@ -349,28 +349,27 @@ export function startKiosk(app) {
     const name = m ? `${{ Edg: "Edge", CriOS: "Chrome", FxiOS: "Firefox" }[m[1]] || m[1]} ${m[2]}` : "Browser";
     return os ? `${name} on ${os}` : name;
   }
-  // Tilt the stage to and fro for 3 seconds, a frame at a time, and count the frames: 50-60 is smooth.
+  // Turn him once, drawing every frame, and count the frames: 50-60 means the graphics chip draws.
   async function speedTest(btn) {
     const st = app.stage();
-    if (!st?.debug || !document.querySelector("#lookbook, #lookbook-preview")) { note = "Open Today first: the test tilts the lookbook stage."; return paintDiag(); }
+    if (!st?.debug || !document.querySelector("#stage3d, #stage3d-preview")) { note = "Open Today first: the test turns the 3D mirror once."; return paintDiag(); }
     btn.disabled = true;
-    note = "Tilting the stage…";
+    note = "Turning him once…";
     paintDiag();
-    const t0 = performance.now(), ms = 3000;
+    const from = st.angle, t0 = performance.now(), ms = 3000;
     let n = 0, cpu = 0;
     await new Promise((done) => {
       const step = (now) => {
         if (!diagEl) return done();
         const t = Math.min(1, (now - t0) / ms);
-        st.debug.tiltNow(Math.sin(t * Math.PI * 4) * 10, Math.cos(t * Math.PI * 2) * 6);
+        st.debug.setAngleNow(from + t * 360);
         cpu += st.debug.lastFrameMs; n++;
         if (t < 1) requestAnimationFrame(step); else done();
       };
       requestAnimationFrame(step);
     });
-    st.reset();
     const secs = (performance.now() - t0) / 1000, rate = n / secs;
-    note = `${Math.round(rate)} frames a second while tilting (${(cpu / n).toFixed(2)} ms each on the processor). ${rate >= 50 ? "Smooth." : rate >= 30 ? "Fine, a little short of smooth." : "Slow: check that the graphics chip is used (GPU_BOOST=1 in kiosk.conf on the wall screen)."}`;
+    note = `${Math.round(rate)} frames a second while turning (${(cpu / n).toFixed(1)} ms each on the processor). ${rate >= 50 ? "Smooth: the graphics chip draws the mirror." : rate >= 30 ? "Fine, a little short of smooth." : "Slow: check that the graphics chip is used (GPU_BOOST=1 in kiosk.conf on the wall screen)."}`;
     btn.disabled = false;
     paintDiag();
   }
@@ -390,13 +389,12 @@ export function startKiosk(app) {
     const b = e.target.closest?.("[data-kdiag], [data-kiosk-idle], [data-kiosk]");
     if (!b) return;
     const ds = b.dataset;
-    // the click of the 5th tap lands on the panel that tap just opened: it presses nothing (by when
-    // the tap happened, so a busy moment that delays its click doesn't let it through)
-    if (ds.kdiag && Math.min(e.timeStamp || Infinity, performance.now()) - openedAt < 450) return;
+    // the click of the 5th tap lands on the panel that tap just opened: it presses nothing
+    if (ds.kdiag && performance.now() - openedAt < 450) return;
     if (ds.kdiag === "close") return closeDiag();
     if (ds.kdiag === "speed") return speedTest(b);
     if (ds.kdiag === "refresh") return forceRefresh(b);
-    if (ds.kdiag === "camera") { note = safe(() => app.resetCamera()) ? "The stage shows the front again, untilted." : "The stage hasn't started (open Today)."; return paintDiag(); }
+    if (ds.kdiag === "camera") { note = safe(() => app.resetCamera()) ? "The 3D mirror faces you again." : "The 3D mirror hasn't started (open Today)."; return paintDiag(); }
     if (ds.kdiag === "ambient" || ds.kiosk === "now") { e.stopPropagation(); return sleep(); }
     if (ds.kioskIdle != null) {
       app.settings.ambientMinutes = +ds.kioskIdle;
@@ -420,7 +418,7 @@ export function startKiosk(app) {
     // Settings > Wall screen
     card: () => `<section class="card stack">
       <h2 style="margin:0">Wall screen</h2>
-      <p class="muted small" style="margin:0">When nobody touches the screen, a dark ambient screen shows the clock, the weather and today's outfit, and the lookbook stage stops. It moves a little every minute so nothing burns into the screen. A tap brings the app back as it was. For this device:</p>
+      <p class="muted small" style="margin:0">When nobody touches the screen, a dark ambient screen shows the clock, the weather and today's outfit, and the 3D mirror stops drawing. It moves a little every minute so nothing burns into the screen. A tap brings the app back as it was. For this device:</p>
       <div class="chips" role="group" aria-label="Ambient screen after">${AMBIENT_CHOICES.map((m) => `<button class="chip" data-kiosk-idle="${m}" aria-pressed="${m === minutes()}">${m ? `${m} min` : "Off"}</button>`).join("")}</div>
       <div class="row" style="justify-content:space-between"><span class="muted small" style="flex:1;min-width:200px">Tap a page title 5 times for the diagnostics: the graphics chip, frames per second, storage and a fresh copy of the app.</span><button class="btn" data-kiosk="now">Show it now</button></div>
     </section>`,

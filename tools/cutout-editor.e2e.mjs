@@ -3,8 +3,8 @@
 // Needs Playwright (require("playwright") with its Chromium). Serves the repo on a free port.
 // Checks: photos come in at 1024 px; every cut-out is a 768x1024 WebP, trimmed and centred, whose
 // matrix puts it back exactly on the photo; the editor keeps 8 undo steps, gives the mask back at
-// the photo's size and frees its canvases; and the lookbook stage shows the garment of a re-framed
-// cut-out in the same place as the old one.
+// the photo's size and frees its canvases; and the 3D mirror's baker sees the same garment in a
+// re-framed cut-out as in the old one.
 import { createServer } from "node:http";
 import { readFile } from "node:fs/promises";
 import { extname, join, dirname, normalize } from "node:path";
@@ -173,40 +173,48 @@ const check = (name, ok, info = "") => { results.push(ok); console.log(`${ok ? "
   await page.click('[data-fx="cancel"]'); await page.click('[data-fx="cancel"]');
 }
 
-// 5. The lookbook stage: an old cut-out and the same one re-framed show the garment in the same place.
+// 5. The 3D mirror's baker: an old cut-out and the same one re-framed bake to the same panels.
 {
   const r = await page.evaluate(async () => {
     const { frameCutout } = await import("/cutout-editor.js");
-    const { createStage } = await import("/avatar-stage.js");
-    const host = Object.assign(document.createElement("div"), { style: "position:fixed;left:0;top:0;width:600px;height:800px" });
-    document.body.append(host);
-    const stage = createStage(host);
+    const { bakeGarment, cutoutPanels } = await import("/garment-baker.js");
     const items = [
-      { slot: "layer", name: "All City hoodie", photo: "123659645" },
-      { slot: "jacket", name: "Tommy Jeans bomber", photo: "125852471" },
-      { slot: "bottoms", name: "Dark blue straight jeans", photo: "2132232964" },
-      { slot: "bottoms", name: "Reebok sweat shorts", photo: "2131955316", short: true },
+      { id: "a", name: "All City hoodie", category: "hoodie", photo: "123659645" },
+      { id: "b", name: "Tommy Jeans bomber", category: "jacket", photo: "125852471" },
+      { id: "c", name: "Dark blue straight jeans", category: "jeans", photo: "2132232964" },
+      { id: "d", name: "Reebok sweat shorts", category: "shorts", photo: "2131955316" },
     ];
+    const pixels = async (blob) => {
+      const b = await createImageBitmap(blob), c = Object.assign(document.createElement("canvas"), { width: b.width, height: b.height });
+      c.getContext("2d").drawImage(b, 0, 0);
+      return { w: b.width, h: b.height, d: c.getContext("2d").getImageData(0, 0, b.width, b.height).data };
+    };
     const out = [];
     for (const it of items) {
       const old = await (await fetch(`/sample/cut/${it.photo}.webp`)).blob();
       const now = (await frameCutout(old)).blob;
-      const where = async (blob) => {
-        const url = URL.createObjectURL(blob);
-        await stage.set({ [it.slot]: { id: it.photo, name: it.name, front: url, short: it.short } });
-        return stage.debug.layers().find((l) => l.slot === it.slot).garment;
-      };
-      const [A, B] = [await where(old), await where(now)];
-      out.push({ name: it.name, A, B });
+      const [A, B] = [await bakeGarment(it, { front: old }), await bakeGarment(it, { front: now })];
+      const [pa, pb] = [await pixels(A.frontChestUV), await pixels(B.frontChestUV)];
+      let diff = 0;
+      for (let i = 0; i < pa.d.length; i += 4) diff += Math.abs(pa.d[i] - pb.d[i]) + Math.abs(pa.d[i + 1] - pb.d[i + 1]) + Math.abs(pa.d[i + 2] - pb.d[i + 2]);
+      const hex = (h) => [1, 3, 5].map((k) => parseInt(h.slice(k, k + 2), 16));
+      const ca = hex(A.fabricBaseColor), cb = hex(B.fabricBaseColor);
+      const [ka, kb] = [await cutoutPanels(it, { front: old }), await cutoutPanels(it, { front: now })];
+      const [qa, qb] = [await createImageBitmap(ka.front), await createImageBitmap(kb.front)];
+      out.push({
+        name: it.name, panelDiff: diff / (pa.d.length / 4) / 3,
+        colourDiff: Math.max(...ca.map((v, k) => Math.abs(v - cb[k]))),
+        crotch: [A.crotchV, B.crotchV],
+        aspect: [qa.width / qa.height, qb.width / qb.height],
+      });
     }
-    stage.dispose(); host.remove();
     return out;
   });
-  // Same place: the garment's centre line and the top it hangs from (to 3 px), the same size (to 3%:
-  // framing cleans the edges, which can trim a hem by a pixel or two of the photo).
   for (const x of r) {
-    const { A, B } = x, place = Math.max(Math.abs(A.x + A.w / 2 - (B.x + B.w / 2)), Math.abs(A.y - B.y)), size = Math.max(Math.abs(A.w - B.w) / A.w, Math.abs(A.h - B.h) / A.h);
-    check(`stage, ${x.name}: the garment lands in the same place`, place < 3 && size < 0.03, `${place.toFixed(1)} px apart, ${(size * 100).toFixed(1)}% in size`);
+    check(`baker, ${x.name}: same front panel`, x.panelDiff < 6, `mean difference ${x.panelDiff.toFixed(2)} / 255`);
+    check(`baker, ${x.name}: same fabric colour`, x.colourDiff <= 6, `${x.colourDiff}`);
+    check(`mannequin, ${x.name}: same panel shape`, Math.abs(x.aspect[0] - x.aspect[1]) < 0.03, x.aspect.map((v) => v.toFixed(3)).join(" vs "));
+    if (x.crotch[0] != null) check(`baker, ${x.name}: same crotch line`, Math.abs(x.crotch[0] - x.crotch[1]) < 0.03, x.crotch.map((v) => v.toFixed(3)).join(" vs "));
   }
 }
 

@@ -1,13 +1,13 @@
-// Smart Wardrobe service worker: the app's own files (code, styles, the fashion bible, the
-// vendored scripts, icons) are kept in a cache on the device, so the app opens and the lookbook
-// stage shows without waiting for the network, also offline. Two rules, by kind of file:
+// Smart Wardrobe service worker: the app's own files (code, styles, the fashion bible, the 3D
+// mirror's body, hair and three.js, icons) are kept in a cache on the device, so the app opens and
+// the mirror loads without waiting for the network, also offline. Two rules, by kind of file:
 //   - the code (the page, the scripts, the styles and the data files next to them) is asked from
 //     the network first, so a fix shows on the next load and the page never runs stale code while
 //     the server can be reached; the copy in the cache stands in when the network fails, is slow
 //     (NET_MS) or sends something that isn't the file (an error page, the sign-in page);
-//   - the heavy files that only change with a deploy (the scripts in /vendor, the sample photos,
-//     icons, fonts, and the versioned scripts the app imports from a CDN) come straight from the
-//     cache once seen, so they're never downloaded twice.
+//   - the heavy files that only change with a deploy (the body, hair and three.js in /avatar and
+//     /vendor, the sample photos, icons, fonts, and the versioned scripts the app imports from a
+//     CDN) come straight from the cache once seen, so the mirror never downloads them twice.
 // Nothing else is touched: /api/…, /lens/…, /login and /logout, every other site, and anything that
 // isn't a GET always go to the network and are never stored (wardrobe data, photos, AI answers, the
 // sign-in). Opening /logout empties the cache; /?clear-cache empties it too, for troubleshooting.
@@ -25,12 +25,14 @@ const SCOPE = self.registration.scope;
 const SHELL = new URL("./", SCOPE).href;
 
 // Fetched when a version installs, so the whole app comes from one deploy. Files a page used
-// that aren't listed here (sample photos, files added later) are kept the first
+// that aren't listed here (the hair styles, sample photos, files added later) are kept the first
 // time they're used, and every new version fetches them again too.
 const CORE = [
   "./", "styles.css", "app.js", "sw-register.js", "sample/seed.js",
   "calendar.js", "stylist.js", "label.js", "cutout-editor.js", "fashion-bible.json",
-  "avatar-config.js", "avatar-stage.js", "kiosk.js", "kiosk.css", "vendor/jsqr.min.js",
+  "avatar-config.js", "avatar-stage.js", "garment-baker.js", "mannequin-shells.js", "face-photo.js",
+  "vendor/three/three.module.min.js", "vendor/three/addons/RoomEnvironment.js", "vendor/jsqr.min.js",
+  "avatar/avatar.json", "avatar/avatar.bin", "avatar/eye.png",
   "manifest.webmanifest", "icon.svg", "apple-touch-icon.png",
 ];
 
@@ -38,7 +40,7 @@ const NETWORK_ONLY = /^\/(?:api|lens)\/|^\/(?:login|logout|sw\.js)$/;
 const STATIC = /\.(?:m?js|css|json|bin|webp|png|jpe?g|gif|svg|ico|webmanifest|woff2?|ttf|wasm|glb|gltf|ktx2|hdr)$/i;
 // The code: network first (see above). Everything else in STATIC is heavy and cache first.
 const CODE = /\.(?:m?js|css|json)$/i;
-const HEAVY_DIR = /^\/(?:vendor|sample)\//;
+const HEAVY_DIR = /^\/(?:avatar|vendor|sample)\//;
 // How long the network gets for a code file before the kept copy is used instead.
 const NET_MS = 4000;
 // The CDNs the app imports versioned scripts from (an address never changes what it serves).

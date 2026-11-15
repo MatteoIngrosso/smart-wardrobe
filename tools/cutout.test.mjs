@@ -100,7 +100,7 @@ function photo(w, h, seed, { bg = [214, 206, 196], fg = [32, 44, 86], noise = 14
   return px;
 }
 
-test("constants the app and the lookbook stage rely on", () => {
+test("constants the app and the 3D mirror rely on", () => {
   assert.equal(WORK_MAX, 1024);
   assert.equal(UNDO_MAX, 8);
   assert.deepEqual([FRAME_W, FRAME_H], [768, 1024], "the frame is the mirror's top and trouser panel size");
