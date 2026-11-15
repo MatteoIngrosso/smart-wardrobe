@@ -281,25 +281,48 @@ def shoe_formality(o, ctx):
 
 
 LEATHER_FAMILY = {"black": "black", "charcoal": "black", "brown": "brown", "burgundy": "brown", "beige": "brown", "cream": "brown"}
+# Leather tones the app tags (item.leather "black" / "brown" / "tan" -> the tag "tan leather"), and
+# their families: brown and tan go together, black goes with black.
+LEATHER_TONES = (("black leather", "black"), ("brown leather", "brown"), ("cognac", "brown"), ("tan leather", "tan"))
+TONE_FAMILY = {"black": "black", "brown": "brown", "tan": "brown"}
+
+
+def leather_of(p):
+    """The leather tone a piece is tagged with (black, brown, tan), or None."""
+    for word, tone in LEATHER_TONES:
+        if p.has(word):
+            return tone
+    return None
+
+
+def leather_family(p):
+    t = leather_of(p)
+    return TONE_FAMILY[t] if t else LEATHER_FAMILY.get(p.colour)
 
 
 @check
 def belt_matches_shoes(o, ctx):
-    """Leather belt and leather shoes in the same colour family (black with black, brown with brown)."""
+    """Leather belt and leather shoes in the same colour family (black with black, brown or tan with brown or tan)."""
     belts = o.find("belt")
     s = o.shoes
-    if not belts or not s or not (s.category in ("dress-shoes", "boots") or s.has("leather", "suede")):
+    if not belts or not s or not (s.category in ("dress-shoes", "boots") or s.has("leather", "suede") or leather_of(s)):
         return None, None
-    a, b = LEATHER_FAMILY.get(belts[0].colour), LEATHER_FAMILY.get(s.colour)
-    if not a or not b:
+    b = belts[0]
+    fb, fs = leather_family(b), leather_family(s)
+    if not fb or not fs:
         return None, None
-    pair = f"{belts[0].colour.capitalize()} belt with {s.colour} shoes"
-    return (1.0, pair) if a == b else (-1.0, pair)
+    tb, ts = leather_of(b) or b.colour, leather_of(s) or s.colour
+    pair = f"{tb.capitalize()} belt with {ts} shoes"
+    if fb != fs:
+        return -1.0, pair
+    # The same tone (or two colours of one family, as before tones): textbook. Tan with brown: fine.
+    return (1.0 if tb == ts or (tb in LEATHER_FAMILY and ts in LEATHER_FAMILY) else 0.7), pair
 
 
 @check
 def tie_rules(o, ctx):
-    """A tie goes with a collared shirt and long trousers, never with a hoodie."""
+    """A tie goes with a collared shirt and long trousers, never with a hoodie, and only in a dressy
+    outfit (smart clothes) or under a blazer or suit jacket."""
     if not o.find("tie"):
         return None, None
     if not (o.base and o.base.category == "shirt"):
@@ -308,6 +331,10 @@ def tie_rules(o, ctx):
         return -1.0, f"Tie with {o.bottom.category}"
     if o.mid and o.mid.category in ("hoodie", "zip-hoodie", "sweatshirt"):
         return -1.0, "Tie under a hoodie"
+    tailored = _is_suit(o) or any(p.category == "jacket" and (p.has("blazer", "suit") or p.formality >= 3) for p in o.pieces)
+    cl = clothes(o)
+    if not tailored and sum(p.formality for p in cl) / len(cl) < 3:
+        return -0.6, "A tie wants a blazer or a dressier outfit"
     return 0.6, None
 
 
@@ -355,13 +382,53 @@ def outerwear_match(o, ctx):
     return 0.0, None
 
 
+# Metal tones (item.metal in the app is one of these tags), and the warm ones that go together.
+METAL_WORDS = (("rose gold", "rose gold"), ("gold", "gold"), ("silver", "silver"), ("steel", "silver"),
+               ("platinum", "silver"), ("bronze", "bronze"), ("brass", "bronze"), ("copper", "bronze"))
+WARM_METALS = {"gold", "rose gold", "bronze"}
+
+
+def metal_of(p):
+    """The metal tone of a piece (gold, rose gold, silver, bronze), or None."""
+    for word, tone in METAL_WORDS:
+        if p.has(word):
+            return tone
+    return None
+
+
 @check
 def metals(o, ctx):
-    """Keep metals on accessories consistent: all gold or all silver."""
-    m = {t for p in o.extras for t in p.tags if t in ("gold", "silver")}
-    if len(m) > 1:
-        return -0.5, "Gold and silver mixed"
-    return (0.2, None) if m else (None, None)
+    """Keep metals consistent: the watch, the jewellery and the belt buckle all gold-toned or all silver."""
+    tones = [t for t in (metal_of(p) for p in o.extras) if t]
+    if not tones:
+        return None, None
+    warm = sorted({t for t in tones if t in WARM_METALS})
+    cool = sorted({t for t in tones if t not in WARM_METALS})
+    if warm and cool:
+        return -0.6, f"{warm[0].capitalize()} and {cool[0]} mixed"
+    if len(tones) < 2:
+        return 0.2, None
+    return (0.6, f"All {tones[0]}") if len(set(tones)) == 1 else (0.3, None)
+
+
+# A chain or a cap is a casual touch.
+CASUAL_ACCENTS = {"necklace": "chain", "cap": "cap", "beanie": "beanie", "bucket-hat": "bucket hat"}
+
+
+@check
+def casual_accents(o, ctx):
+    """A chain, a cap or a beanie suits a casual outfit; a cap or bucket hat looks out of place with tailoring."""
+    acc = [p for p in o.extras if p.category in CASUAL_ACCENTS]
+    cl = clothes(o)
+    if not acc or not cl:
+        return None, None
+    f = sum(p.formality for p in cl) / len(cl)
+    if f <= 1.5:
+        return 0.5, f"A {CASUAL_ACCENTS[acc[0].category]} suits a casual look"
+    caps = [p for p in acc if p.category in ("cap", "bucket-hat")]
+    if caps and f >= 2.8:
+        return -0.7, f"A {CASUAL_ACCENTS[caps[0].category]} with tailoring"
+    return 0.0, None
 
 
 # ---------- Weather and fabrics ----------

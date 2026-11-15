@@ -12,7 +12,7 @@ from fashion import APP_BIBLE, bible, knowledge, learn, parity, vocab
 from fashion.knowledge import Search, merged_tips, similar
 from fashion.model import Model, example_rows
 from fashion.outfit import Context, Outfit, Piece
-from fashion.rules import CHECKS, evaluate
+from fashion.rules import CHECKS, evaluate, leather_of, metal_of
 from fashion.sources import article_text, youtube_id
 
 RULES = knowledge.load_rulebook()["rules"]
@@ -80,11 +80,38 @@ class Rules(unittest.TestCase):
 
     def test_tie_needs_shirt(self):
         self.assertEqual(scores("hoodie black, trousers grey, tie navy")["tie-rules"], -1.0)
-        self.assertGreater(scores("shirt white, trousers grey, tie navy")["tie-rules"], 0)
+        self.assertEqual(scores("tshirt white, jeans denim, tie navy")["tie-rules"], -1.0)
+        self.assertGreater(scores("shirt white smart, trousers grey smart, tie navy")["tie-rules"], 0)
+
+    def test_tie_needs_a_dressy_outfit_or_a_blazer(self):
+        self.assertLess(scores("shirt white, jeans denim, sneakers white, tie navy")["tie-rules"], 0)
+        self.assertLess(scores("shirt white, trousers grey, tie navy")["tie-rules"], 0)
+        self.assertGreater(scores("jacket navy +blazer, shirt white, trousers grey, tie navy")["tie-rules"], 0)
+        self.assertGreater(scores("jacket charcoal +suit, shirt white, trousers charcoal +suit, tie navy")["tie-rules"], 0)
 
     def test_belt_and_shoes(self):
         self.assertEqual(scores("shirt white, trousers grey, dress-shoes black, belt brown")["belt-shoes"], -1.0)
         self.assertEqual(scores("shirt white, trousers grey, dress-shoes brown, belt brown")["belt-shoes"], 1.0)
+
+    def test_belt_and_shoes_by_leather_tone(self):
+        self.assertEqual(scores("shirt white, trousers grey, dress-shoes +tan-leather, belt +brown-leather")["belt-shoes"], 0.7)
+        self.assertEqual(scores("shirt white, trousers grey, dress-shoes +tan-leather, belt +tan-leather")["belt-shoes"], 1.0)
+        self.assertEqual(scores("shirt white, trousers grey, sneakers white +black-leather, belt +brown-leather")["belt-shoes"], -1.0)
+        # the tone wins over the colour: a navy belt tagged black leather goes with black shoes
+        self.assertEqual(scores("shirt white, trousers grey, dress-shoes black, belt navy +black-leather")["belt-shoes"], 1.0)
+        # and an app piece's leather field becomes that tag
+        self.assertEqual(leather_of(Piece.from_dict({"category": "belt", "leather": "tan"})), "tan")
+
+    def test_one_metal_on_watch_jewellery_and_buckle(self):
+        self.assertEqual(scores("shirt white, jeans denim, watch +gold, bracelet +silver")["metals"], -0.6)
+        self.assertEqual(scores("shirt white, jeans denim, watch +gold, belt +rose-gold")["metals"], 0.3)
+        self.assertEqual(scores("shirt white, jeans denim, watch +silver, necklace +steel, belt +silver")["metals"], 0.6)
+        self.assertEqual(metal_of(Piece.from_dict({"category": "watch", "metal": "rose gold"})), "rose gold")
+
+    def test_chains_and_caps_are_casual(self):
+        self.assertGreater(scores("tshirt black, jeans black, sneakers white, necklace +gold")["casual-accents"], 0)
+        self.assertGreater(scores("hoodie grey, joggers grey, sneakers white, cap black")["casual-accents"], 0)
+        self.assertLess(scores("jacket navy smart +blazer, shirt white formal, trousers grey smart, dress-shoes black, cap black")["casual-accents"], 0)
 
     def test_dress_shoes_with_joggers(self):
         self.assertEqual(scores("tshirt white, joggers grey, dress-shoes black")["shoe-formality"], -1.0)

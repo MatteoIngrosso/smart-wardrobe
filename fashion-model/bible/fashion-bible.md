@@ -1,6 +1,6 @@
 # Fashion bible
 
-Built 2026-10-28 from 85 learnt sources, 26 rules, 815 tips and 242 example outfits.
+Built 2026-11-15 from 85 learnt sources, 27 rules, 815 tips and 242 example outfits.
 
 Model accuracy on outfits it hadn't seen: **90%** (rulebook weights alone: 86%).
 
@@ -12,30 +12,31 @@ Checked automatically on every outfit. Weight is how much each one matters after
 |---|---|---|
 | Don't mix gym kit with tailoring | 1.97 (1.8) | Gym kit and formal pieces come from different worlds; together they look accidental. A piece that is only sporty (a gym top) still clashes with smart pieces, but sporty streetwear with smart casual (a hoodie over a polo) is a normal high-low mix. |
 | Keep pieces at one level of dressiness | 1.64 (1.5) | A very casual piece next to a very dressy one makes both look wrong; step at most one level apart. |
-| A tie needs a collar and long trousers | 1.62 (2.0) | A tie only works with a collared shirt and tailored trousers, never with a hoodie or shorts. |
+| A tie needs a collar and a dressy outfit | 1.58 (2.0) | A tie only works with a collared shirt and tailored trousers, in a smart outfit or under a blazer or suit jacket; never with a hoodie, a T-shirt or shorts. |
 | Sports clothes for training | 1.55 (1.5) | At the gym, clothes made to move and breathe, and proper training shoes. |
 | Colours that fight | 1.45 (1.2) | Two loud colours of similar strength compete instead of working together. |
-| Dress for the occasion | 1.40 (2.0) | Being clearly under- or overdressed is the most noticed mistake; aim for the level of the room. |
-| Belt matches the shoes | 1.40 (0.9) | With leather shoes, the belt is in the same colour family: black with black, brown with brown. |
+| Dress for the occasion | 1.41 (2.0) | Being clearly under- or overdressed is the most noticed mistake; aim for the level of the room. |
+| Belt matches the shoes | 1.40 (0.9) | With leather shoes, the belt is in the same colour family: black with black, brown or tan with brown or tan. |
 | Shorts only when it's warm | 1.40 (1.4) | Shorts below about 17°C look out of season. |
 | Neutrals first, one accent colour | 1.39 (1.5) | Navy, grey, white, beige, brown, olive and black all go together; one brighter colour on top of them looks chosen, two or three look random. |
 | Fabrics for the season | 1.35 (0.8) | Linen and seersucker for heat, tweed, flannel and corduroy for cold. |
-| Shoes at the level of the outfit | 1.30 (1.6) | Shoes are read first: dress shoes with joggers or trainers with a tie break the look. |
+| Shoes at the level of the outfit | 1.32 (1.6) | Shoes are read first: dress shoes with joggers or trainers with a tie break the look. |
 | Dress for the temperature | 1.20 (1.5) | Too many layers is as uncomfortable as too few: about one warm layer above 24°C, three or four when mild, six or more when cold. |
+| Go easy on patterns | 1.20 (0.7) | One pattern is easy. Two need clearly different scales (fine stripe with a large check), so most days keep it to one. |
 | One statement piece | 1.20 (1.0) | A big graphic, logo or loud piece needs quiet pieces around it to stand out. |
-| Go easy on patterns | 1.19 (0.7) | One pattern is easy. Two need clearly different scales (fine stripe with a large check), so most days keep it to one. |
 | Balance volume | 1.11 (1.2) | A roomy top looks best over slimmer trousers and the other way round; roomy on roomy only works as a deliberate streetwear look. |
 | Three colours at most | 1.11 (0.8) | Past three colours an outfit gets busy and the eye has nowhere to rest. |
 | Ready for rain | 1.09 (0.8) | On wet days a jacket that sheds water and shoes that don't mind puddles; suede and white trainers suffer. |
 | Denim on denim needs contrast | 1.04 (0.8) | A denim top with jeans in the same wash reads as a uniform; pick clearly different washes or break it up. |
 | The coat matches the outfit | 0.96 (0.9) | A puffer or rain shell over tailoring undoes it; an overcoat finishes a smart outfit. |
 | Classic colour pairings | 0.72 (0.8) | Some top and bottom colours are proven together: navy and grey, white and denim, olive and cream. |
-| Styles that suit the occasion | 0.69 (0.8) | Each occasion has its own vocabulary: tailoring for work, sportswear for the gym. |
+| Styles that suit the occasion | 0.68 (0.8) | Each occasion has its own vocabulary: tailoring for work, sportswear for the gym. |
+| Chains and caps are casual | 0.62 (0.6) | A chain, a cap or a beanie finishes a casual outfit; a cap or bucket hat looks out of place with tailoring. |
 | Suits want shirts and leather shoes | 0.58 (1.5) | A suit is the dressiest thing most men own; a T-shirt or trainers pull it down to casual. |
-| One metal for accessories | 0.40 (0.4) | Watch, rings and bracelet look tidier all gold or all silver. |
+| One metal for accessories | 0.40 (0.4) | Watch, jewellery and belt buckle look tidier all gold-toned or all silver. |
 | Tonal dressing works | 0.20 (0.6) | Shades of one colour from head to toe look calm and expensive. |
-| One story per outfit | 0.08 (0.6) | When every piece shares a style the outfit reads as intentional. |
-| Mix light and dark | 0.00 (0.6) | Contrast between top and bottom gives the outfit shape; all mid-tones look flat. |
+| One story per outfit | 0.07 (0.6) | When every piece shares a style the outfit reads as intentional. |
+| Mix light and dark | 0.01 (0.6) | Contrast between top and bottom gives the outfit shape; all mid-tones look flat. |
 
 ## Tips
 
