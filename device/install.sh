@@ -35,7 +35,7 @@ ARCH=$(uname -m)
 case "$ARCH" in
   aarch64 | arm64) KIND="64-bit ARM" ;;
   x86_64 | amd64) KIND="x86_64" ;;
-  armv7l | armv6l) KIND="32-bit ARM (works, but the 64-bit Raspberry Pi OS runs the 3D mirror much better)" ;;
+  armv7l | armv6l) KIND="32-bit ARM (works, but the 64-bit Raspberry Pi OS runs the app much better)" ;;
   *) echo "This computer's processor ($ARCH) isn't supported: use a 64-bit ARM (Raspberry Pi) or x86_64 one." >&2; exit 1 ;;
 esac
 IS_PI=0

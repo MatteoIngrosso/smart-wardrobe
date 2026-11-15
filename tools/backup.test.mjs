@@ -1,12 +1,12 @@
 // Run with:  node --test tools/backup.test.mjs
 // Checks, in headless Chromium on the sample wardrobe:
 // - Settings > Export wardrobe backup: one file with every piece and its photos, the log, the
-//   Calendar, the 3D body and the settings, never an API key
+//   Calendar and the settings, never an API key; an old backup with the 3D mirror's body still imports
 // - importing it: "Replace" brings back exactly the backup, "Add" merges (nothing twice, a piece
 //   changed here since the backup keeps its changes), photos come back as Blobs
 // - the laundry basket on wardrobe tiles, "Laundry done" in the filters, the "Worn N×" badge
 // - the Calendar logs wears: "Wear it today", "I wore it" for a past plan, once per day, with Undo
-// - "On the avatar" shows a Calendar idea on the 3D stage in a sheet, and gives the stage back
+// - "On the stage" shows a Calendar idea on the lookbook stage in a sheet, and gives the stage back
 // Needs Playwright with Chromium.
 import assert from "node:assert/strict";
 import test from "node:test";
@@ -22,9 +22,9 @@ const ROOT = join(dirname(fileURLToPath(import.meta.url)), "..");
 
 // A copy of the app with every top-level function and constant of app.js on window.__t (as audit-sim.mjs does).
 const dir = mkdtempSync(join(tmpdir(), "wardrobe-backup-"));
-for (const f of ["index.html", "app.js", "stylist.js", "label.js", "calendar.js", "cutout-editor.js", "avatar-config.js", "avatar-stage.js", "garment-baker.js", "mannequin-shells.js", "face-photo.js", "kiosk.js", "styles.css", "kiosk.css", "fashion-bible.json", "manifest.webmanifest", "icon.svg"])
+for (const f of ["index.html", "app.js", "stylist.js", "label.js", "calendar.js", "cutout-editor.js", "avatar-config.js", "avatar-stage.js", "kiosk.js", "styles.css", "kiosk.css", "fashion-bible.json", "manifest.webmanifest", "icon.svg"])
   if (existsSync(join(ROOT, f))) cpSync(join(ROOT, f), join(dir, f));
-for (const d of ["sample", "vendor", "avatar"]) if (existsSync(join(ROOT, d))) cpSync(join(ROOT, d), join(dir, d), { recursive: true });
+for (const d of ["sample", "vendor"]) if (existsSync(join(ROOT, d))) cpSync(join(ROOT, d), join(dir, d), { recursive: true });
 const src = readFileSync(join(ROOT, "app.js"), "utf8");
 const DECL = /^(?:async\s+)?function\s+([\w$]+)|^(?:const|let)\s+([\w$]+)\s*=|^import \* as ([\w$]+)/gm;
 const names = [...new Set([...Array.from(src.matchAll(DECL), (m) => m[1] || m[2] || m[3]), "addDays", "dayDiff", "makeEntry", "entryIds", "resolveEntry"])];
@@ -52,7 +52,7 @@ test.after(async () => { await browser.close(); server.close(); rmSync(dir, { re
 const tick = (ms = 60) => page.waitForTimeout(ms);
 let backupText = "";
 
-test("the sample wardrobe loads, with a wear, a wash, a plan, a body and settings", async () => {
+test("the sample wardrobe loads, with a wear, a wash, a plan and settings", async () => {
   await page.goto(url);
   await page.waitForFunction(() => window.__t?.state, null, { timeout: 30000 });
   await page.evaluate(async () => {
@@ -62,8 +62,8 @@ test("the sample wardrobe loads, with a wear, a wash, a plan, a body and setting
     await wearOutfit([by("hoodie"), by("jeans"), by("jacket")], { occasion: "casual", feels: 18, source: "idea" });
     await setWash([by("sweater")], true);
     await setDay(addDays(localDay(), 2), makeEntry({ date: addDays(localDay(), 2), pieces: { mid: by("sweater"), bottom: by("trousers") }, occasion: "smart", notes: "Lunch with Luca" }));
-    state.avatar = { body: { heightCm: 183, weightKg: 77, build: "athletic", skinTone: "#c99a74", hairColor: "#2b211b", hairStyle: "short", beard: "stubble", eyeColor: "#5a4632", glasses: "none" }, at: new Date().toISOString() };
-    await store.put("kv", state.avatar, "avatar");
+    // (a 3D body saved before the lookbook, still in this device's storage: left alone, not exported)
+    await store.put("kv", { body: { heightCm: 183, weightKg: 77, build: "athletic" }, at: new Date().toISOString() }, "avatar");
     Object.assign(state.settings, { city: "Milano", lat: 45.46, lon: 9.19, age: 27, geminiKey: "AIzaSECRETKEY", apiKey: "sk-ant-SECRET" });
     await saveSettings();
   });
@@ -71,7 +71,7 @@ test("the sample wardrobe loads, with a wear, a wash, a plan, a body and setting
   assert.ok(n >= 25, `sample wardrobe loaded (${n} pieces)`);
 });
 
-test("export: one file with every piece and its photos, the log, plans, body and settings, no keys", async () => {
+test("export: one file with every piece and its photos, the log, plans and settings, no keys", async () => {
   await page.evaluate(() => window.__t.go("settings"));
   const [download] = await Promise.all([page.waitForEvent("download", { timeout: 60000 }), page.click('[data-act="export"]')]);
   assert.match(download.suggestedFilename(), /^smart-wardrobe-backup-\d{4}-\d{2}-\d{2}\.json$/);
@@ -87,7 +87,7 @@ test("export: one file with every piece and its photos, the log, plans, body and
   assert.equal(data.items.reduce((a, i) => a + (i.photos?.length || 0) + (i.originals?.length || 0), 0), r.photos, "every photo is in the file");
   assert.ok(data.items.every((i) => i.photos.every((p) => /^data:image\/(webp|jpeg|png);base64,/.test(p))), "photos are base64 inside the file");
   assert.equal(data.log.length, r.log);
-  assert.equal(data.avatar.body.heightCm, 183);
+  assert.ok(!("avatar" in data), "no 3D body any more");
   assert.ok(Object.values(data.days).some((d) => d.notes === "Lunch with Luca"), "the Calendar's plans");
   assert.equal(data.settings.city, "Milano");
   assert.ok(!backupText.includes("SECRET"), "no API key in the file");
@@ -102,6 +102,8 @@ test("replace: the wardrobe becomes exactly the backup; this device keeps its ow
   const r = await page.evaluate(async (text) => {
     const { state, store, restoreBackup, saveSettings } = window.__t;
     const data = JSON.parse(text);
+    // a backup made before the lookbook carried the 3D mirror's body: it's ignored
+    data.avatar = { body: { heightCm: 183, weightKg: 77, build: "athletic", skinTone: "#c99a74", hairStyle: "short" }, at: new Date().toISOString() };
     // change things after the backup: delete a piece, rename one, add a log entry, change the city
     const gone = state.items[0], renamed = state.items[1];
     await store.del("items", gone.id);
@@ -117,7 +119,7 @@ test("replace: the wardrobe becomes exactly the backup; this device keeps its ow
       res, items: state.items.length, want: data.items.length, log: state.log.length, wantLog: data.log.length,
       back: !!back, blobs: state.items.every((i) => i.photos.every((p) => p instanceof Blob)) && state.items.every((i) => !i.originals || i.originals.every((p) => p instanceof Blob)),
       type: back?.photos[0]?.type, name: again?.name, wantName: data.items.find((i) => i.id === renamed.id).name,
-      city: state.settings.city, key: state.settings.geminiKey, body: state.avatar?.body?.heightCm,
+      city: state.settings.city, key: state.settings.geminiKey, body: "avatar" in state,
       days: Object.values(state.days).some((d) => d.notes === "Lunch with Luca"), wash: state.items.filter((i) => i.wash).length,
       onDisk: (await store.all("items")).length,
     };
@@ -131,7 +133,7 @@ test("replace: the wardrobe becomes exactly the backup; this device keeps its ow
   assert.equal(r.name, r.wantName, "the rename after the backup is undone");
   assert.equal(r.city, "Milano");
   assert.equal(r.key, "AIzaLOCALKEY", "this device's key is kept");
-  assert.equal(r.body, 183);
+  assert.equal(r.body, false, "the old body is ignored");
   assert.ok(r.days);
   assert.equal(r.wash, 1);
 });
@@ -171,7 +173,7 @@ test("import through Settings: pick the file, see what's in it, add it", async (
   await page.waitForSelector("#bk-merge", { timeout: 20000 });
   const text = await page.textContent(".sheet-panel");
   assert.match(text, /\d+ pieces/);
-  assert.match(text, /your 3D body/);
+  assert.doesNotMatch(text, /3D body/);
   await page.click("#bk-merge");
   await page.waitForFunction(() => /Imported/.test(document.getElementById("toast").textContent), null, { timeout: 30000 });
 });
@@ -259,10 +261,9 @@ test("Calendar: Wear it today logs the idea once; a past plan is logged at its d
   assert.ok(!r.yWorn, "and the plan isn't ticked any more");
 });
 
-test("On the avatar: a Calendar idea on the 3D stage in a sheet, then back to Today", async () => {
+test("On the stage: a Calendar idea on the lookbook stage in a sheet, then back to Today", async () => {
   const r = await page.evaluate(async () => {
     const t = window.__t, { localDay, addDays, mirror } = t;
-    await (mirror.loading || Promise.resolve());
     const d = addDays(localDay(), 3);
     t.go("plan");
     t.pickDay(d);
@@ -271,7 +272,7 @@ test("On the avatar: a Calendar idea on the 3D stage in a sheet, then back to To
     const btn = document.querySelector(`[data-calpreview="idea|${d}"]`);
     if (btn) btn.click(); else t.openCalPreview("idea", d);
     await new Promise((res) => setTimeout(res, 100));
-    const slot = document.getElementById("stage3d-preview");
+    const slot = document.getElementById("lookbook-preview");
     const idea = t.planner.sugg.ideas[t.planner.sugg.k];
     const res = {
       failed: mirror.failed ? String(mirror.failed.message || mirror.failed) : "", button: !!btn, open: !document.getElementById("sheet").hidden, slot: !!slot,
@@ -281,24 +282,29 @@ test("On the avatar: a Calendar idea on the 3D stage in a sheet, then back to To
     // Another idea inside the sheet shows the next one
     document.querySelector(".sheet-panel [data-calnext]")?.click();
     await new Promise((res) => setTimeout(res, 100));
-    res.next = t.planner.sugg.k === 1 && !!document.getElementById("stage3d-preview");
+    res.next = t.planner.sugg.k === 1 && !!document.getElementById("lookbook-preview");
+    const want = t.wornList(t.planner.sugg.ideas[1]).map((w) => w.item.id).sort().join();
+    for (let k = 0; k < 60 && mirror.stage.debug.layers().map((l) => l.id).sort().join() !== want; k++) await new Promise((res) => setTimeout(res, 50));
+    res.shows = mirror.stage.debug.layers().map((l) => l.id).sort().join() === want;
     t.closeSheet();
     res.closed = !mirror.preview;
     t.go("today");
     await new Promise((res) => setTimeout(res, 100));
-    res.home = !!mirror.host && document.getElementById("stage3d")?.contains(mirror.host);
+    res.home = !!mirror.host && document.getElementById("lookbook")?.contains(mirror.host);
     res.tryon = document.querySelectorAll("[data-tryon]").length;
     return res;
   });
-  console.log(`  3D stage here: ${r.failed ? `couldn't start (${r.failed})` : "running"}`);
+  assert.equal(r.failed, "", "the stage started");
   assert.ok(r.open && r.slot, "the sheet opens with a stage");
-  assert.ok(r.hostIn, "the 3D stage moved into the sheet");
-  assert.ok(r.wears, "the avatar wears that idea");
+  assert.ok(r.hostIn, "the stage moved into the sheet");
+  assert.ok(r.wears, "the stage wears that idea");
   assert.equal(r.actions, 2, "Plan it and Another idea are in the sheet");
   assert.ok(r.next, "Another idea shows the next one in the sheet");
+  assert.ok(r.shows, "with its pieces on the stage");
   assert.ok(r.closed);
   assert.ok(r.home, "the stage is back on Today");
-  if (!r.failed) { assert.ok(r.button, "the Calendar offers On the avatar"); assert.ok(r.tryon >= 1, "Today's ideas offer it too"); }
+  assert.ok(r.button, "the Calendar offers On the stage");
+  assert.ok(r.tryon >= 1, "Today's ideas offer it too");
 });
 
 test("no errors on the page", () => {

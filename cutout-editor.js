@@ -24,7 +24,7 @@
 export const WORK_MAX = 1024;
 /** Undo steps the editor keeps. */
 export const UNDO_MAX = 8;
-/** Every finished cut-out: 3:4 like the cards and the mirror's top and trouser panels (PANEL_SIZE). */
+/** Every finished cut-out: 3:4 like the cards and the lookbook stage's clothing slots. */
 export const FRAME_W = 768, FRAME_H = 1024;
 /** Empty border round the piece in the frame, as a share of the frame's width and height. */
 export const FRAME_MARGIN = 0.06;
@@ -722,7 +722,7 @@ export function frameFit(bw, bh) {
  * FRAME_W x FRAME_H frame inside FRAME_MARGIN, edges defringed, saved as WebP (q 0.88; a browser
  * that can't write WebP from a canvas, like older Safari, gives a PNG). `m` maps each pixel of `src` (a Blob, bitmap
  * or canvas) to where it lands in the frame. Same size, margins and centring for every piece, so
- * cards, thumbnails and the 3D mirror's panels all start from the same framing. The piece is never
+ * cards, thumbnails and the lookbook stage all start from the same framing. The piece is never
  * stretched to the frame: `meta` keeps its own proportions (aspectRatio = height / width of the
  * trimmed piece) and where it was in `src` (trimBounds = [x, y, w, h] as fractions of src), which the
  * piece keeps as its cutoutMeta (avatar-config.js).
