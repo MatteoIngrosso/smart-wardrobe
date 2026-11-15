@@ -553,9 +553,10 @@ details summary { cursor: pointer; }
 .scent-seasons div { display: grid; gap: 2px; background: var(--surface-2); border-radius: 12px; padding: 10px 14px; }
 .scent-seasons b { font-size: 13px; color: var(--muted); font-weight: 500; text-transform: uppercase; letter-spacing: .05em; }
 
-/* ---------- Mirror: the try-on avatar at the top of Today ---------- */
-/* The stage stays dark in both themes: the pictures are drawn on the studio colour #141413. */
-.mirror { --studio: #141413; display: grid; grid-template-columns: minmax(220px, 260px) minmax(0, 1fr) minmax(250px, 310px); gap: 20px; align-items: start; margin-bottom: 20px; }
+/* ---------- The lookbook stage at the top of Today (avatar-stage.js) ---------- */
+/* An "invisible mannequin": only the clothes, floating in layers. The stage stays dark in both
+   themes, like a studio backdrop, so the cut-outs and their shadows read the same everywhere. */
+.mirror { --studio: #141413; display: grid; grid-template-columns: minmax(0, 1fr) minmax(260px, 320px); gap: 20px; align-items: start; margin-bottom: 20px; }
 .mirror-side { background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius); padding: 18px; display: grid; grid-template-columns: minmax(0, 1fr); gap: 12px; align-content: start; min-width: 0; }
 .mirror-side h2 { margin: 0; font-size: 19px; }
 .mb-field { gap: 2px; }
@@ -564,48 +565,29 @@ details summary { cursor: pointer; }
 .swatch-row { display: flex; flex-wrap: wrap; gap: 8px; padding-top: 6px; }
 .swatch { width: 40px; height: 40px; border-radius: 50%; border: 2px solid var(--line); background: var(--sw); padding: 0; }
 .swatch[aria-pressed="true"] { border-color: var(--text); box-shadow: 0 0 0 3px var(--bg), 0 0 0 5px var(--text); }
-.swatch-chip { min-height: 40px; padding: 0 14px; font-size: 14px; }
-.mirror-body .btn.primary:disabled { opacity: .45; }
-.mb-tabs { margin: 0; width: 100%; }
-.mb-tabs button { flex: 1; padding: 0 10px; font-size: 14px; min-height: 40px; }
-.mb-chips { display: flex; flex-wrap: wrap; gap: 6px; padding-top: 6px; }
-.mb-chips .chip { min-height: 38px; padding: 0 12px; font-size: 14px; }
-.mb-head { display: flex; justify-content: space-between; align-items: center; gap: 8px; }
-.mb-photo-btn { display: inline-flex; align-items: center; gap: 6px; min-height: 38px; padding: 0 12px; font-size: 14px; white-space: nowrap; }
-.mb-photo-btn svg { width: 18px; height: 18px; fill: none; stroke: currentColor; stroke-width: 1.6; stroke-linejoin: round; }
-.mb-face-tab { display: grid; gap: 10px; }
-.mb-face-tab .swatch { width: 32px; height: 32px; }
-.mb-face-tab .mb-chips .chip { min-height: 34px; padding: 0 11px; font-size: 13.5px; }
-.mb-photo { display: grid; grid-template-columns: 48px minmax(0, 1fr) auto; gap: 10px; align-items: center; }
-.mb-face { width: 48px; height: 48px; border-radius: 50%; overflow: hidden; background: var(--surface-2); }
-.mb-face img { width: 100%; height: 100%; object-fit: cover; object-position: 50% 25%; }
-.mb-photo-text { display: grid; line-height: 1.25; min-width: 0; }
-.mb-photo-text b { font-weight: 500; font-size: 15px; }
-.mb-photo .chip { min-height: 38px; padding: 0 12px; font-size: 14px; }
 
 .mirror-stage { display: grid; gap: 8px; justify-items: center; min-width: 0; }
-/* The 3D mirror (avatar-stage.js draws into .stage3d-host; drag sideways turns him). */
-.stage3d { position: relative; width: 100%; height: min(72vh, 760px); border-radius: 22px; overflow: hidden; outline: none;
-           background: var(--studio); box-shadow: inset 0 0 0 1px #2c2a27; color: #f2f2f2;
-           touch-action: pan-y; cursor: grab; user-select: none; -webkit-user-select: none; -webkit-touch-callout: none; -webkit-tap-highlight-color: transparent; }
-.stage3d:active { cursor: grabbing; }
-.stage3d:focus-visible { box-shadow: inset 0 0 0 2px #f2f2f2; }
-.stage3d-host { position: absolute; inset: 0; }
-.stage3d-host canvas { display: block; width: 100% !important; height: 100% !important; }
-.stage-note { position: absolute; left: 50%; bottom: 22px; transform: translateX(-50%); width: min(86%, 380px); display: grid; gap: 6px; justify-items: center; text-align: center; font-size: 15px; pointer-events: none; }
+.lookbook { position: relative; width: 100%; height: min(74vh, 780px); border-radius: 22px; overflow: hidden; outline: none; color: #f2f2f2;
+            background: radial-gradient(120% 80% at 50% 38%, #1d1c1a 0%, var(--studio) 62%, #0f0f0e 100%); box-shadow: inset 0 0 0 1px #2c2a27;
+            user-select: none; -webkit-user-select: none; -webkit-touch-callout: none; -webkit-tap-highlight-color: transparent; }
+.lookbook:focus-visible { box-shadow: inset 0 0 0 2px #f2f2f2; }
+.lookbook-host { position: absolute; inset: 0; }
+.stage-note { position: absolute; left: 50%; top: 16px; transform: translateX(-50%); width: min(86%, 380px); display: grid; gap: 6px; justify-items: center; text-align: center; font-size: 15px; pointer-events: none; }
 .stage-note:empty { display: none; }
 .stage-note > span:not(.stage-pill) { color: #b9b6ae; font-size: 14px; }
-.stage-note.is-error { bottom: auto; top: 50%; transform: translate(-50%, -50%); background: rgba(20, 20, 19, .82); border: 1px solid #2c2a27; border-radius: 16px; padding: 16px 18px; }
+.stage-note.is-error { top: 50%; transform: translate(-50%, -50%); background: rgba(20, 20, 19, .82); border: 1px solid #2c2a27; border-radius: 16px; padding: 16px 18px; }
 .stage-pill { padding: 8px 16px; border-radius: 999px; background: rgba(20, 20, 19, .78); border: 1px solid #3a3833; font-size: 14px; letter-spacing: .02em; }
 .angle-pills { display: flex; flex-wrap: wrap; justify-content: center; gap: 6px; }
-/* Scale and Vertical offset of one piece on the 3D mirror, on its sheet */
+/* Scale and offsets of one piece on the lookbook, on its sheet */
 .cut-fit { margin-bottom: 14px; gap: 2px; }
 .cut-fit > .mb-field { margin: 0; }
 .cut-fit .row { gap: 8px; align-items: center; }
-/* "On the avatar" (Calendar ideas and plans): the same stage, in a sheet. */
+/* "On the stage" (Calendar ideas and plans): the same stage, in a sheet. */
 .preview-wrap { --studio: #141413; display: grid; gap: 8px; justify-items: center; margin-bottom: 16px; }
 .preview-stage { height: min(62vh, 640px); }
 .angle-pills .chip { min-height: 44px; padding: 0 16px; font-size: 14px; }
+/* Picking a piece for one slot of the stage */
+.slot-pick .piece[aria-pressed="true"] { outline: 2px solid var(--text); outline-offset: 2px; border-radius: 14px; }
 
 .m-looks { display: grid; gap: 8px; }
 .m-look { display: grid; gap: 8px; text-align: left; padding: 10px 12px; border-radius: 14px; border: 1px solid var(--line); background: var(--surface); }
@@ -623,17 +605,15 @@ details summary { cursor: pointer; }
 .wear-row .chip { min-height: 40px; padding: 0 12px; font-size: 14px; }
 .wear-row.is-off img, .wear-row.is-off .wear-name { opacity: .4; }
 
-/* iPad portrait and smaller: narrower side panels; phones: the stage first, then the ideas, then the body. */
+/* iPad portrait and smaller: a narrower side panel; phones: the stage first, then the ideas. */
 @media (max-width: 1100px) {
-  .mirror { grid-template-columns: 210px minmax(0, 1fr) 250px; gap: 14px; }
+  .mirror { grid-template-columns: minmax(0, 1fr) 260px; gap: 14px; }
   .mirror-side { padding: 14px; }
-  .swatch { width: 34px; height: 34px; }
   .look-pics img { width: 34px; height: 42px; }
 }
-@media (max-width: 860px) {
+@media (max-width: 760px) {
   .mirror { grid-template-columns: minmax(0, 1fr); }
-  .mirror-stage { order: -1; }
-  .stage3d { height: min(68vh, 600px); }
+  .lookbook { height: min(70vh, 600px); }
 }
 
 /* ---------- calendar: a month of planned outfits, the forecast, one day at a time ---------- */
