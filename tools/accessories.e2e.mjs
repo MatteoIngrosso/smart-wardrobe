@@ -242,6 +242,66 @@ test("Work and Smart casual ideas: the belt like the shoes, one metal, a tie onl
   assert.ok(watches >= 6, "watches are added");
 });
 
+test("Smart casual: a dress shirt under a blazer gets a tie, tailored trousers a belt like the shoes", async () => {
+  const r = await page.evaluate(() => {
+    const t = window.__t, byId = new Map(t.state.items.map((i) => [i.id, i]));
+    const occ = t.OCCASIONS.find((x) => x.id === "smart"), cond = { feels: 16, wet: false, cool: false, humid: 0 };
+    const x = t.extrasFor({ outer: byId.get("w-blazer"), base: byId.get("w-shirt2"), bottom: byId.get("w-trousers"), shoes: byId.get("w-derby") }, cond, occ, new Set());
+    const noBlazer = t.extrasFor({ base: byId.get("w-shirt"), bottom: byId.get("w-chinos"), shoes: byId.get("w-derby") }, cond, occ, new Set());
+    return { with: x.extras.map((i) => i.id), without: noBlazer.extras.map((i) => i.category) };
+  });
+  assert.ok(r.with.some((id) => id.startsWith("w-tie")), `blazer + dress shirt: ${r.with}`);
+  assert.ok(r.with.includes("w-belt-blk"), `black belt with black derbies: ${r.with}`);
+  assert.ok(!r.without.includes("tie"), "no blazer on smart casual: no tie by itself");
+});
+
+test("an idea's accessories can be added, changed and taken off by hand", async () => {
+  await page.evaluate(() => {
+    const t = window.__t;
+    Object.assign(t.state, { occasion: "smart", manualTemp: 16, outfits: [] });
+    t.go("today");
+  });
+  await page.waitForSelector('[data-xadd="0"]', { timeout: 30000 });
+  // + Accessory: the kinds you own, best match first
+  await page.click('[data-xadd="0"]');
+  await page.waitForSelector('[data-xgroup="0:tie"]');
+  await page.click('[data-xgroup="0:tie"]');
+  await page.waitForSelector('[data-xto^="0:w-tie"]');
+  const before = await page.evaluate(() => window.__t.state.outfits[0].extras.map((x) => x.id));
+  const tie = before.find((id) => id.startsWith("w-tie")) ? null : await page.getAttribute('[data-xto^="0:w-tie"]', "data-xto");
+  if (tie) {
+    await page.click(`[data-xto="${tie}"]`);
+    await page.waitForFunction((id) => window.__t.state.outfits[0].extras.some((x) => x.id === id), tie.split(":")[1]);
+  }
+  assert.ok(await page.evaluate(() => window.__t.state.outfits[0].extras.some((x) => x.category === "tie")), "a tie on the card");
+  if (SHOTS) await page.screenshot({ path: join(SHOTS, "accessory-add-1366x1024.png") });
+  // the picker in portrait, then Cancel closes it
+  await page.setViewportSize({ width: 1024, height: 1366 });
+  await page.click('[data-xadd="0"]');
+  await page.waitForSelector("[data-xcancel]");
+  if (SHOTS) { await page.locator('[data-xadd="0"]').scrollIntoViewIfNeeded(); await page.screenshot({ path: join(SHOTS, "accessory-picker-1024x1366.png") }); }
+  await page.click("[data-xcancel]");
+  await page.waitForSelector("[data-xcancel]", { state: "detached" });
+  await page.setViewportSize({ width: 1366, height: 1024 });
+  // change the watch, then take it off
+  const watch = await page.evaluate(() => window.__t.state.outfits[0].extras.find((x) => x.category === "watch")?.id);
+  assert.ok(watch, "a watch on the card");
+  {
+    await page.click(`[data-xswap="0:${watch}"]`);
+    await page.waitForSelector('[data-xto^="0:w-watch"]');
+    const other = (await page.getAttribute('[data-xto^="0:w-watch"]', "data-xto")).split(":")[1];
+    await page.click(`[data-xto="0:${other}"]`);
+    await page.waitForFunction(([a, b]) => { const ex = window.__t.state.outfits[0].extras.map((x) => x.id); return ex.includes(b) && !ex.includes(a); }, [watch, other]);
+    await page.click(`[data-xswap="0:${other}"]`);
+    await page.click('[data-xto="0:"]');
+    await page.waitForFunction((b) => !window.__t.state.outfits[0].extras.some((x) => x.id === b), other);
+  }
+  // wearing it logs what's on the card, accessories included
+  const ids = await page.evaluate(() => window.__t.state.outfits[0].extras.map((x) => x.id));
+  await page.click('[data-wear="0"]');
+  await page.waitForFunction((ids) => { const l = window.__t.state.log.at(-1); return !!l && ids.every((id) => l.itemIds.includes(id)); }, ids);
+});
+
 test("Everyday ideas: never a tie; a chain or a cap only on casual clothes", async () => {
   const ideas = await ideasFor(page, "casual", 10);
   let accents = 0;

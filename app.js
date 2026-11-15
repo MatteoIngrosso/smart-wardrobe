@@ -2578,9 +2578,12 @@ function extrasFor(pieces, cond, occ, used) {
   const beltNeeded = pieces.bottom && (t.needsBelt?.[pieces.bottom.id] || 0) >= 0.3;
   if (beltNeeded) needs.push([["belt"], `A belt: the ${pieces.bottom.name} needed one on your fit check`]);
   else if (boxy && occ.id !== "gym") needs.push([["belt"], `Tuck the ${hero.name} in and add a belt: you found it boxy`]);
-  else if (smart && ["trousers", "jeans"].includes(bottom)) needs.push([["belt"], ""]);
+  // Tailoring: a blazer or suit jacket (or a dressy jacket) over the outfit.
+  const tailored = [pieces.outer, pieces.mid].some((p) => p && (p.category === "jacket" || /blazer|suit/i.test(p.name || "")) && (p.formality || 0) >= 2.5);
+  if (!beltNeeded && !boxy && ((smart && ["trousers", "jeans"].includes(bottom)) || (tailored && bottom === "trousers"))) needs.push([["belt"], ""]);
   needs.push([["watch"], ""]);
-  if (occ.target >= 2.9 && pieces.base?.category === "shirt") needs.push([["tie"], ""]);
+  // A tie with a shirt on dressy days, and with a shirt under a blazer on smart casual days too.
+  if (pieces.base?.category === "shirt" && (occ.target >= 2.9 || (smart && tailored))) needs.push([["tie"], ""]);
   // A casual day may get a chain, or a cap in mild weather: sometimes, not on every idea.
   if (occ.target <= 2.1 && occ.id !== "gym") {
     if (rand() < 0.5) needs.push([["necklace"], "", true]);
@@ -2609,7 +2612,19 @@ function extrasFor(pieces, cond, occ, used) {
     if (cats[0] === "tie") options = options.filter((i) => (rule("tie-rules", i) ?? -1) > 0);
     if (optional) options = options.filter((i) => (rule("casual-accents", i) ?? -1) > 0);
     else options = options.filter((i) => !((rule("casual-accents", i) ?? 0) < 0));
-    if (!options.length) continue;
+    if (!options.length) {
+      // You own one, but none goes with this outfit: say why, so it doesn't look forgotten.
+      const owned = suggestable().filter((i) => cats.includes(i.category) && !used.has(i.id));
+      if (owned.length && ["belt", "tie"].includes(cats[0])) {
+        const shoesOff = cats[0] === "belt" && pieces.shoes && Style.ready() && owned.every((i) => (Style.ruleScore([pieces.shoes, i], "belt-shoes") ?? 0) <= -0.5);
+        // The bible's own words for what one would break, e.g. "Sneakers with tailoring".
+        const v = ctx && owned.length && Style.judge([...clothes, ...extras, owned[0]], ctx).violations.find((x) => !broken.has(x.rule.id));
+        const because = v ? (v.note || v.rule.title) : "";
+        why.push(shoesOff ? `No belt: yours don't match the ${pieces.shoes.name} (black with black, brown with brown). Add one with + Accessory if you like`
+          : `No ${cats[0]}: ${because ? `${because.charAt(0).toLowerCase()}${because.slice(1)}` : "none of yours goes with this outfit"}. Add one with + Accessory if you like`);
+      }
+      continue;
+    }
     const score = (i) => {
       const c = i.colors?.[0];
       let s = COLORS[c]?.neutral || !c ? 1 : c === accent ? 1.5 : accent ? -1.5 : 0.5;
@@ -3769,6 +3784,43 @@ function swapPicker(o, i) {
     <div class="chips">${canDrop ? `<button class="chip" data-swapto="${i}:${role}:">${DROP_LABEL[role]}</button>` : ""}${state.anchor !== o.pieces[role]?.id ? `<button class="chip" data-anchor="${o.pieces[role]?.id}">Keep it, build around it</button>` : ""}<button class="chip" data-swap="${i}:${role}">Cancel</button></div>
   </div>`;
 }
+// Accessories on an idea, by hand: add one of any kind you own, or change or take off one it has.
+const ownedAccGroups = () => [...ACC_GROUPS.map((g) => g[0]), "other"].filter((g) => state.items.some((i) => accGroupOf(i) === g && !leaving(i)));
+function accChoices(o, group, from) {
+  const clothes = Object.values(o.pieces).filter(Boolean), others = (o.extras || []).filter((x) => x.id !== from);
+  const rules = ["belt-shoes", "metals", "tie-rules", "casual-accents"];
+  return state.items
+    .filter((i) => accGroupOf(i) === group && !leaving(i) && i.id !== from && !others.some((x) => x.id === i.id))
+    .map((i) => {
+      const scores = Style.ready() ? rules.map((r) => Style.ruleScore([...clothes, ...others, i], r)).filter((v) => v != null) : [];
+      return { i, s: scores.reduce((a, b) => a + b, 0) - (i.disliked ? 2 : 0) - (i.wash ? 1 : 0), bad: scores.some((v) => v < 0) };
+    })
+    .sort((a, b) => b.s - a.s);
+}
+function accPicker(o, i) {
+  const x = o.xpick, from = x.from && (o.extras || []).find((p) => p.id === x.from);
+  const groups = ownedAccGroups();
+  const group = x.group || (from ? accGroupOf(from) : groups[0]);
+  const list = accChoices(o, group, x.from);
+  const label = (g) => (g === "other" ? "Other" : ACC_GROUPS.find((a) => a[0] === g)[1]);
+  return `<div class="swap-pick stack" style="gap:8px">
+    <span class="muted small">${from ? `Instead of the ${esc(from.name)}: ` : "Add to this outfit: "}best match first.</span>
+    <div class="chips">${groups.map((g) => `<button class="chip" aria-pressed="${g === group}" data-xgroup="${i}:${g}">${esc(label(g))}</button>`).join("")}</div>
+    <div class="pieces mini">${list.map(({ i: p, bad }, k) => `<button class="piece" data-xto="${i}:${p.id}">${k === 0 && !bad ? `<em class="best">Best match</em>` : ""}${pieceImg(p)}<span>${esc(p.name)}${bad ? " · doesn't quite go" : p.wash ? " · in the wash" : ""}</span></button>`).join("")}</div>
+    ${list.length ? "" : `<span class="muted small">Nothing else of this kind in your wardrobe.</span>`}
+    <div class="chips">${from ? `<button class="chip" data-xto="${i}:">Take it off</button>` : ""}<button class="chip" data-xcancel="${i}">Cancel</button></div>
+  </div>`;
+}
+// The idea with that accessory: added, changed (`from` → `toId`) or taken off (no `toId`).
+function setAccessory(i, from, toId) {
+  const o = state.outfits[i];
+  if (!o) return;
+  const to = toId && state.items.find((x) => x.id === toId);
+  const extras = (o.extras || []).filter((x) => x.id !== from);
+  if (to) extras.push(to);
+  const occ = OCCASIONS.find((x) => x.id === state.occasion);
+  state.outfits[i] = withWarn({ ...o, extras, xpick: null, extrasWhy: (o.extrasWhy || []).filter((w) => !/^No (belt|tie)/.test(w)) }, conditions(), occ);
+}
 // One accessory you don't own that would finish the best idea (a belt with trousers, a watch on smart days).
 // Once answered (Must-Buy or no), it doesn't come back. Settings > Look turns it off.
 function finishingTouch(o) {
@@ -3822,7 +3874,8 @@ function outfitCard(o, i) {
     <div class="row" style="justify-content:space-between"><h2 style="margin:0">${o.planned ? (o.planned.eventId ? `Planned for ${esc(o.planned.title)}` : `${o.planned.src && o.planned.src !== "tonight" ? "Planned in your calendar" : "Planned last night"}${o.planned.title ? `: ${esc(o.planned.title)}` : ""}`) : ["Best match", "Option 2", "Option 3"][i] || "Option"}</h2>${levelBadge(o)}${o.planned ? '<span class="score">Your plan</span>' : i === 0 ? '<span class="score">Top<span class="wide"> pick</span></span>' : ""}</div>
     <div class="pieces">${order.filter((k) => o.pieces[k]).map((k) => `<div class="swap-wrap">${pieceTile(o.pieces[k])}<button class="swap-btn" data-swap="${i}:${k}" aria-pressed="${o.swapping === k}" aria-label="Swap the ${esc(o.pieces[k].name)}">${ICON_SWAP}</button></div>`).join("")}${ph}</div>
     ${o.swapping ? swapPicker(o, i) : ""}
-    ${o.coat || o.extras?.length ? `<div class="pieces extras">${[o.coat, ...(o.extras || [])].filter(Boolean).map(pieceTile).join("")}</div>` : ""}
+    <div class="pieces extras">${o.coat ? pieceTile(o.coat) : ""}${(o.extras || []).map((p) => `<div class="swap-wrap">${accTile(p)}<button class="swap-btn" data-xswap="${i}:${p.id}" aria-pressed="${o.xpick?.from === p.id}" aria-label="Change or take off the ${esc(p.name)}">${ICON_SWAP}</button></div>`).join("")}${ownedAccGroups().length ? `<button class="piece add-acc" data-xadd="${i}" aria-pressed="${o.xpick?.mode === "add"}"><div class="ph">${kindIcon("watch")}<small>+ Accessory</small></div><span>Add a belt, tie, watch…</span></button>` : ""}</div>
+    ${o.xpick ? accPicker(o, i) : ""}
     ${o.reasons.length || o.extrasWhy?.length ? `<p class="why">${[...o.reasons, ...(o.extrasWhy || [])].map(esc).join(" · ")}</p>` : ""}
     ${o.warn?.length ? `<p class="why warn">Heads up: ${o.warn.map(esc).join(" · ")}</p>` : ""}
     ${o.noDressShoes ? `<p class="why">Best with dress shoes: you don't have any yet.</p>` : ""}
@@ -9731,6 +9784,23 @@ async function onTap(e) {
     if (!o) return render();
     o.swapping = o.swapping === role ? null : role;
     o.swapCat = "all";
+    return render();
+  }
+  if (ds.xswap || ds.xadd != null) {
+    const [i, from] = (ds.xswap || `${ds.xadd}:`).split(":");
+    const o = state.outfits[+i];
+    if (!o) return render();
+    const same = ds.xswap ? o.xpick?.from === from : o.xpick?.mode === "add";
+    o.xpick = same ? null : { mode: ds.xswap ? "swap" : "add", from: from || null, group: null };
+    return render();
+  }
+  if (ds.xgroup) { const [i, g] = ds.xgroup.split(":"); const o = state.outfits[+i]; if (o?.xpick) o.xpick.group = g; return render(); }
+  if (ds.xcancel != null) { const o = state.outfits[+ds.xcancel]; if (o) o.xpick = null; return render(); }
+  if (ds.xto != null) {
+    const [i, to] = ds.xto.split(":");
+    const o = state.outfits[+i];
+    if (!o?.xpick) return render();
+    setAccessory(+i, o.xpick.from, to);
     return render();
   }
   if (ds.swapcat) {

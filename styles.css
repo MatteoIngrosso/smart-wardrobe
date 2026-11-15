@@ -723,3 +723,7 @@ details summary { cursor: pointer; }
 .fc-source { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1.4fr); gap: 16px; align-items: start; margin-top: 14px; }
 @media (max-width: 700px) { .fc-source { grid-template-columns: 1fr; } }
 .fc-source figure { margin: 0; }
+/* + Accessory on an outfit idea */
+.piece.add-acc { cursor: pointer; }
+.piece.add-acc .ph { aspect-ratio: 3/4; }
+.piece.add-acc[aria-pressed="true"] .ph { border-color: var(--text); color: var(--text); }
