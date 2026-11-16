@@ -3659,6 +3659,10 @@ const LINE_CROP = [[0, 8.47], [26, 8.48], [40, 8.46], [50, 8.4], [55, 8.3], [58,
 // the bottom of the ears and the top of the neck (never a jaw-length bob or hair past the shoulders)
 const LINE_WAVY = [[0, 8.7], [22, 8.64], [38, 8.5], [50, 8.3], [56, 8.14], [70, 8.08], [100, 8.0], [125, 7.8], [150, 7.62], [180, 7.56]];
 const LINE_LONG = [[0, 8.7], [22, 8.64], [38, 8.48], [50, 8.2], [58, 7.86], [80, 7.72], [115, 7.5], [150, 7.34], [180, 7.3]];
+// curtains: a fringe parted in the middle, falling to mid-forehead at each side of the part
+const LINE_CURTAIN = [[0, 8.6], [10, 8.5], [24, 8.4], [40, 8.38], [52, 8.3], [58, 7.95], [65.5, 8.3], [104, 8.3], [125, 7.95], [150, 7.78], [180, 7.74]];
+// mullet: short at the front and over the ears, long at the back down to the top of the neck
+const LINE_MULLET = [[0, 8.72], [22, 8.67], [38, 8.56], [50, 8.44], [55, 8.3], [58, 7.9], [62, 7.88], [65.5, 8.36], [100, 8.38], [118, 7.9], [140, 7.45], [180, 7.3]];
 function lineAt(L, A) {
   for (let k = 1; k < L.length; k++) if (A <= L[k][0]) { const [a0, y0] = L[k - 1], [a1, y1] = L[k]; return mix(y0, y1, sstep(a0, a1, A)); }
   return L[L.length - 1][1];
@@ -3676,15 +3680,29 @@ const HAIR_SPECS = {
   curly: { T: [0.2, 0.12, 0.15], curl: 0.08, edge: 0.14, line: LINE_SHORT, mode: 2, str: [40, 40], rough: 0.55, bump: 0.0007 },
   wavy: { T: [0.17, 0.075, 0.1], wave: 0.022, hang: 0.03, blunt: [64, 181], edge: 0.1, line: LINE_WAVY, mode: 0, str: [80, 3], rough: 0.48 },
   long: { T: [0.15, 0.085, 0.11], wave: 0.014, hang: 0.04, blunt: [56, 181], edge: 0.08, line: LINE_LONG, mode: 1, str: [70, 3], rough: 0.44 },
+  crew: { T: [0.08, 0.035, 0.05], edge: 0.12, line: LINE_SHORT, mode: 0, str: [100, 5], rough: 0.55 },
+  shaggy: { T: [0.17, 0.09, 0.11], wave: 0.018, hang: 0.03, blunt: [0, 181], edge: 0.12, line: LINE_WAVY, mode: 0, str: [80, 3], rough: 0.5 },
+  // the styles from here on have no photographed (Rocketbox) version: in the Real finish they're drawn
+  // as this strand-textured volume. lift: extra height over the front of the top (a quiff, a pompadour);
+  // bun: a knot of hair [its centre, as the angle back from the top of the head (rad), its size (rad), how far it stands out (dm)]
+  textured: { T: [0.13, 0.035, 0.05], lift: 0.06, curl: 0.035, fade: [7.95, 8.5], edge: 0.16, line: LINE_SHORT, mode: 0, str: [70, 6], rough: 0.55, bump: 0.0009 },
+  afro: { T: [0.34, 0.26, 0.27], curl: 0.1, edge: 0.14, line: LINE_SHORT, mode: 2, str: [40, 40], rough: 0.62, bump: 0.0008 },
+  quiff: { T: [0.13, 0.03, 0.04], lift: 0.16, fade: [7.95, 8.6], edge: 0.14, line: LINE_SHORT, mode: 0, str: [90, 4], rough: 0.48 },
+  pompadour: { T: [0.16, 0.04, 0.05], lift: 0.22, fade: [7.95, 8.55], edge: 0.12, line: LINE_SHORT, mode: 1, str: [70, 3], rough: 0.34 },
+  undercut: { T: [0.15, 0.01, 0.012], fade: [8.36, 8.4], lift: 0.05, edge: 0.07, line: LINE_SHORT, mode: 1, str: [70, 3], rough: 0.38 },
+  curtains: { T: [0.13, 0.07, 0.09], part: 0, partW: 0.03, hang: 0.02, blunt: [0, 50], edge: 0.12, line: LINE_CURTAIN, mode: 0, str: [80, 3], rough: 0.46 },
+  mullet: { T: [0.12, 0.045, 0.1], hang: 0.03, wave: 0.012, blunt: [110, 181], edge: 0.1, line: LINE_MULLET, mode: 0, str: [80, 3], rough: 0.48 },
+  manbun: { T: [0.09, 0.05, 0.07], bun: [0.8, 0.3, 0.42], edge: 0.06, line: LINE_SHORT, mode: 1, str: [80, 3], rough: 0.34 },
+  curlyfade: { T: [0.2, 0.012, 0.015], fade: [8.1, 8.45], curl: 0.08, edge: 0.14, line: LINE_SHORT, mode: 2, str: [40, 40], rough: 0.55, bump: 0.0007 },
 };
 const HAIR_CENTER = [0, 8.25, 0.35];
 
 // opts.clay: the "Sculpted" finish, a smooth matte volume with soft carved grooves (no strands, no
 // dithered edge: the hairline fades by alpha to coverage)
 function hairMaterial(skinU, opts) {
-  const clay = !!opts.clay;
-  const mat = new THREE.MeshStandardMaterial(clay
-    ? { color: 0xffffff, roughness: 0.9, metalness: 0, side: THREE.DoubleSide, envMapIntensity: 0.25, alphaTest: 0.15, alphaToCoverage: true }
+  const clay = !!opts.clay, soft = clay || !!opts.soft;
+  const mat = new THREE.MeshStandardMaterial(soft
+    ? { color: 0xffffff, roughness: clay ? 0.9 : opts.rough ?? 0.5, metalness: 0, side: THREE.DoubleSide, envMapIntensity: clay ? 0.25 : 0.5, alphaTest: 0.15, alphaToCoverage: true }
     : { color: 0xffffff, roughness: opts.rough ?? 0.5, metalness: 0, side: THREE.DoubleSide, alphaHash: true });
   const U = { uHair: skinU.uHair, uHairP: { value: new THREE.Vector4(opts.mode ?? 0, opts.str?.[0] ?? 90, opts.str?.[1] ?? 4, opts.bump ?? 0.0004) }, uHairP2: { value: opts.under ? 0.62 : 1 } };
   mat.onBeforeCompile = (shader) => {
@@ -3706,11 +3724,11 @@ float hn = hairN();
 float clump = vnoise(vec3(cos(vHair.x) * 7.0, sin(vHair.x) * 7.0, vHair.y * 1.5));
 ${clay ? `diffuseColor.rgb = uHair * (0.9 + 0.2 * hn) * (0.94 + 0.12 * clump);
 diffuseColor.a = smoothstep(0.25, 0.75, vHair.z * 1.7 - 0.35);` : `diffuseColor.rgb = uHair * (0.6 + 0.6 * hn) * (0.82 + 0.36 * clump) * uHairP2;
-diffuseColor.a = clamp(vHair.z * 1.7 - 0.35 + (hn - 0.5) * 0.9, 0.0, 1.0);`}`)
+diffuseColor.a = ${soft ? 'smoothstep(0.2, 0.7, vHair.z * 1.7 - 0.35 + (hn - 0.5) * 0.5)' : 'clamp(vHair.z * 1.7 - 0.35 + (hn - 0.5) * 0.9, 0.0, 1.0)'};`}`)
       .replace('#include <roughnessmap_fragment>', clay ? '#include <roughnessmap_fragment>' : '#include <roughnessmap_fragment>\nroughnessFactor *= 0.8 + 0.45 * hn;')
       .replace('#include <normal_fragment_maps>', `#include <normal_fragment_maps>\nnormal = bumpN(normal, (hn - 0.5) * uHairP.w${clay ? ' * 1.6' : ''}, 1.0);`);
   };
-  mat.customProgramCacheKey = () => (clay ? 'hair-clay-1' : 'hair-1');
+  mat.customProgramCacheKey = () => (clay ? 'hair-clay-1' : soft ? 'hair-soft-1' : 'hair-1');
   return mat;
 }
 
@@ -3744,14 +3762,22 @@ function hairGeometry(D, B, hf, spec, Rs, c) {
       if (spec.fade && A > 30) { const f = sstep(spec.fade[0], spec.fade[1], yR); T = mix(spec.T[1], T, f); alpha = mix(0.15, 1, f); }
       let e = sstep(1, 1 - spec.edge, t);
       if (blunt) e = mix(0.55, 1, e); else alpha *= sstep(1, 1 - spec.edge * 0.9, t);
+      if (spec.lift) T += spec.lift * sstep(70, 5, A) * sstep(8.45, 8.72, yR) * sstep(0.15, 0.65, q); // (none at the crown: no ridge)
       let r = rs + (T * e + 0.004) * s;
+      if (spec.bun) {
+        // the knot sits at the back of the crown: angular distance from its centre (az 180°, bun[0] from the top)
+        const qb = spec.bun[0];
+        const dq = Math.acos(clamp(Math.cos(q) * Math.cos(qb) + sp * Math.sin(qb) * Math.cos(az - Math.PI), -1, 1));
+        const k = dq / spec.bun[1];
+        if (k < 1) r += spec.bun[2] * s * Math.sqrt(1 - k * k) * e;
+      }
       if (spec.curl) r += spec.curl * s * e * ((vnoise3(sp * Math.sin(az) * 7, Math.cos(q) * 7, sp * Math.cos(az) * 7) - 0.45) * 1.3 + (vnoise3(sp * Math.sin(az) * 15 + 9, Math.cos(q) * 15, sp * Math.cos(az) * 15) - 0.5) * 0.6);
       if (spec.wave) r += spec.wave * s * Math.sin(q * 15 + az * 2) * e * sstep(0.2, 0.5, t);
-      if (spec.part) {
+      if (spec.part != null) {
         const px = (r * sp * Math.sin(az) + c[0] - hf.off[0]) / s;
         const front = sstep(-0.5, 0.2, Math.cos(az)) * sstep(8.3, 8.6, yR);
-        r -= 0.055 * s * Math.exp(-(((px - spec.part) / 0.045) ** 2)) * front;
-        r += 0.03 * s * sstep(0.25, -0.35, px) * top;
+        r -= 0.055 * s * Math.exp(-(((px - spec.part) / (spec.partW ?? 0.045)) ** 2)) * front;
+        if (spec.part) r += 0.03 * s * sstep(0.25, -0.35, px) * top;
       }
       if (spec.hang) {
         const rho = r * sp, y = c[1] + r * Math.cos(q);
@@ -3905,7 +3931,7 @@ function glassesGroup(D, B, hf) {
 // fitted to our head by tools/build-hair.py. Per style: avatar/hair/<style>.json (each vertex as a
 // direction from HAIR_CENTER + its height above the scalp, kind 0 = the hair painted on the scalp,
 // 1 = a hair card) and <style>.webp (the hair's luminance + alpha). Loaded only when the style is shown.
-const HAIR_FILES = new Set(['buzz', 'short', 'fade', 'sidepart', 'crop', 'slick', 'curly', 'wavy', 'long']);
+const HAIR_FILES = new Set(['buzz', 'short', 'fade', 'sidepart', 'crop', 'slick', 'curly', 'wavy', 'long', 'crew', 'shaggy']);
 const CAP_OFF = 0.018; // the painted hair sits 1.8 mm off the scalp (dm, rest)
 const hairAssets = new Map();
 function loadHairAsset(style) {
@@ -4023,6 +4049,11 @@ function makeHead(st, skinU) {
     } else if (H && !(H instanceof Promise)) {
       // one mesh, one pass: alpha to coverage gives soft strand edges with depth writes, so nothing to sort
       const mesh = new THREE.Mesh(realHairGeometry(H, hf, Rs, c), realHairMaterial(skinU, H));
+      mesh.frustumCulled = false; mesh.name = 'hair';
+      group.add(mesh);
+    } else if (!HAIR_FILES.has(cfg.hairStyle)) {
+      // a style with no photographed version: its own volume with strand texture
+      const mesh = new THREE.Mesh(hairGeometry(D, B, hf, hs, Rs, c), hairMaterial(skinU, { ...hs, soft: true }));
       mesh.frustumCulled = false; mesh.name = 'hair';
       group.add(mesh);
     } else {

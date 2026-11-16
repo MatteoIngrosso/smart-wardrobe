@@ -202,6 +202,17 @@ export const HAIR_STYLES = [
   { id: "curly", label: "Curly" },
   { id: "wavy", label: "Wavy" },
   { id: "long", label: "Long" },
+  { id: "crew", label: "Crew cut" },
+  { id: "textured", label: "Textured" },
+  { id: "quiff", label: "Quiff" },
+  { id: "pompadour", label: "Pompadour" },
+  { id: "undercut", label: "Undercut" },
+  { id: "curtains", label: "Curtains" },
+  { id: "shaggy", label: "Shaggy" },
+  { id: "mullet", label: "Mullet" },
+  { id: "manbun", label: "Man bun" },
+  { id: "curlyfade", label: "Curly fade" },
+  { id: "afro", label: "Afro" },
 ];
 export const BEARDS = [
   { id: "clean", label: "None" },
