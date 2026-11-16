@@ -167,56 +167,6 @@ export async function bakeGarment(item, { front, back } = {}, opts = {}) {
   return asset;
 }
 
-/**
- * The garment's own pixels with their outline as alpha, for the mirror's mannequin look: each photo
- * cropped like its panel (tops: shoulder line to hem, side seam to side seam; bottoms: waistband to
- * hems), at the photo's own resolution (≤ 1024 px). An opaque photo gets its alpha from the baker's
- * mask. In memory only: nothing is stored or sent, and the baked asset doesn't change.
- * @returns {Promise<{front: Blob, back: Blob|null} | null>} PNGs; null when the piece isn't drawn
- */
-export async function cutoutPanels(item, { front, back } = {}) {
-  const sub = subTypeOf(item);
-  if (!sub || !front) return null;
-  const kind = KIND_OF[sub];
-  if (kind === "shoes") return null;
-  let seen = null; // the front as cropped: what a back is made from when there's no back photo
-  const one = async (blob, keep) => {
-    const a = await analysePhoto(blob, kind);
-    const { w, data, mask, eroded, core } = a;
-    const cw = core.x1 - core.x0 + 1, ch = core.y1 - core.y0 + 1, k = Math.min(1, 1024 / Math.max(cw, ch));
-    const W = Math.max(1, Math.round(cw * k)), H = Math.max(1, Math.round(ch * k)), out = new Uint8ClampedArray(W * H * 4);
-    const valid = keep ? new Uint8Array(W * H) : null;
-    for (let y = 0; y < H; y++) for (let x = 0; x < W; x++) {
-      const sx = Math.min(core.x1, core.x0 + Math.floor((x + 0.5) / k)), sy = Math.min(core.y1, core.y0 + Math.floor((y + 0.5) / k));
-      const i = sy * w + sx, o = (y * W + x) * 4;
-      out[o] = data[i * 4]; out[o + 1] = data[i * 4 + 1]; out[o + 2] = data[i * 4 + 2];
-      out[o + 3] = mask[i] ? (a.fromAlpha ? data[i * 4 + 3] : 255) : 0;
-      if (valid) valid[y * W + x] = eroded[i];
-    }
-    if (keep) seen = { a, W, H, rgba: out, valid };
-    return encodeRGBA(out, W, H, "image/png");
-  };
-  const f = await one(front, !back);
-  await yieldNow();
-  let b = back ? await one(back).catch(() => null) : null, backSynth = false;
-  if (!b && seen) {
-    try {
-      const { a, W, H, rgba, valid } = seen, n = W * H, rgb = new Float32Array(n * 3), alpha = new Uint8ClampedArray(n);
-      for (let i = 0; i < n; i++) { rgb[i * 3] = rgba[i * 4]; rgb[i * 3 + 1] = rgba[i * 4 + 1]; rgb[i * 3 + 2] = rgba[i * 4 + 2]; alpha[i] = rgba[i * 4 + 3]; }
-      const p = { w: W, h: H, rgb, valid }, fabric = fabricColours([p], kind);
-      await yieldNow();
-      const tile = fabricTile([p], fabric, kind), shape = shapeOf(a, kind);
-      await yieldNow();
-      const s = synthBack(rgb, W, H, fabric, tile, { kind, sub, valid, alpha, crotchV: kind === "bottoms" ? crotchOf(p) : null, ratio: shape?.ratio, aspect: shape?.aspect, denim: isDenim(item) });
-      const out = new Uint8ClampedArray(n * 4);
-      for (let i = 0; i < n; i++) { out[i * 4] = s.rgb[i * 3]; out[i * 4 + 1] = s.rgb[i * 3 + 1]; out[i * 4 + 2] = s.rgb[i * 3 + 2]; out[i * 4 + 3] = s.alpha[i]; }
-      b = await encodeRGBA(out, W, H, "image/png");
-      backSynth = true;
-    } catch (e) { console.warn("Garment baker: no back made for", item.name || item.id, e); }
-  }
-  return { front: f, back: b, backSynth };
-}
-
 const mem = new Map(); // garmentId → asset
 const inflight = new Map(); // garmentId|sig → Promise
 
@@ -1590,7 +1540,7 @@ function shapeOf(a, kind) {
  * The back of a piece photographed from the front only, made on the device: the front as seen from
  * behind (mirrored), with what belongs to the front taken out (prints, logos, a label, the fly and
  * pockets) and the fabric's own tone and grain in their place, then a soft shading round the body, a
- * few folds and the back's own seams. With an outline (`alpha`, the mannequin look's cut-outs) the
+ * few folds and the back's own seams. With an outline (`alpha`, a cut-out with its own edge) the
  * outline is mirrored too, an open front is closed and the neckline's dip is raised to a back collar.
  * An all-over pattern (stripes, checks, camo) is the fabric itself and stays. Pure: arrays in, arrays out.
  *

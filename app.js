@@ -10,6 +10,8 @@ import * as Brain from "./stylist-brain.js";
 import * as Label from "./label.js";
 import { editCutout, workingCopy, basicCutout, frameCutout, WORK_MAX } from "./cutout-editor.js";
 import * as Avatar from "./avatar-config.js";
+import * as Look from "./lookbook-config.js";
+import { createStage as createLookbook } from "./lookbook-stage.js";
 import { startKiosk } from "./kiosk.js";
 
 /* ======================================================================
@@ -3905,13 +3907,17 @@ function aiCard() {
   </section>`;
 }
 
-/* ---------- Mirror: you in 3D, wearing today's ideas ---------- */
-// The top of Today: your body on the left, you in 3D in the middle (drag sideways to turn him, or
-// tap an angle), today's ideas on the right with what you're wearing, and each piece can come off.
-// It all runs on this device: each piece's front and back photos are baked into textures once
-// (garment-baker.js, kept in IndexedDB) and the 3D scene (avatar-stage.js, three.js) puts them on
-// garment layers over a body shaped by the left panel. No server and no AI are involved, so
-// switching ideas, taking pieces off and turning him are instant and free.
+/* ---------- Mirror: you in 3D, or the clothes on the Lookbook, wearing today's ideas ---------- */
+// The top of Today has two looks (Avatar | Lookbook, kept on this device):
+// - Avatar: your body on the left, you in 3D in the middle (drag sideways to turn him, or tap an
+//   angle). Each piece's front and back photos are baked into textures once (garment-baker.js, kept
+//   in IndexedDB) and the 3D scene (avatar-stage.js, three.js) puts them on garment layers over a body
+//   shaped by the left panel.
+// - Lookbook: an "invisible mannequin" (lookbook-stage.js): only the clothes and accessories, each
+//   piece's own cut-out floating in its own layer with depth and a soft shadow; jewelry, watch,
+//   eyewear and bag on cards at the sides. Tap a piece to change it; Arrange drags and sizes it.
+// Today's ideas are on the right with what you're wearing, and each piece can come off. No server
+// and no AI are involved, so switching ideas, taking pieces off and turning are instant and free.
 const mirror = {
   draft: null, // the body on the left panel (AvatarBodyConfig); the saved one is state.avatar.body
   bodyTab: "body",
@@ -3929,21 +3935,30 @@ const mirror = {
   pending: new Map(), // item id → Promise while it's baked
   noBake: new Set(), // item ids that couldn't be baked this time (not asked again until the app reopens)
   worn: {}, // slot → { id, on }: what the stage shows now
+  lb: null, // the Lookbook stage (when that look is on), made once like the 3D one
+  lbHost: null,
+  side: "front", // the Lookbook's Front or Back (the back photos, where a piece has one)
+  editing: false, // the Lookbook's Arrange: drag and size the pieces
 };
 const MIRROR_ROLES = ["outer", "mid", "base", "bottom", "shoes"];
-const ROLE_WORD = { coat: "Coat", outer: "Jacket", mid: "Layer", base: "Top", bottom: "Bottoms", shoes: "Shoes" };
+const ROLE_WORD = { coat: "Coat", outer: "Jacket", mid: "Layer", base: "Top", bottom: "Bottoms", shoes: "Shoes", ...Object.fromEntries(Look.ACC_SLOTS.map((s) => [s, Look.SLOT[s].label])) };
+const MIRROR_SIDES = [["front", "Front"], ["back", "Back"]];
 const MIRROR_ANGLES = [[0, "Front"], [90, "Right side"], [180, "Back"], [270, "Left side"]];
 // Scale and Vertical offset: how one piece sits on the 3D mirror (longer or shorter, higher or lower),
 // kept on the piece as cutoutMeta (avatar-config.js), so every device shows it the same. Not shoes.
 const cutOffText = (v) => (v === 0 ? "As measured" : `${v > 0 ? "+" : "−"}${Math.abs(v)} cm`);
 function mirrorFitField(i) {
-  const sub = Avatar.subTypeOf(i);
-  if (!sub || sub === "sneakers" || sub === "boots") return "";
-  const m = Avatar.cleanCutMeta(i.cutoutMeta), pct = Math.round(m.scale * 100), off = m.offsetY;
-  return `<div class="field cut-fit"><label>On the 3D mirror</label>
-    <div class="field mb-field"><label for="cf-scale">Scale <b id="cf-scale-v">${pct}%</b></label><input id="cf-scale" type="range" min="${Math.round(Avatar.CUT_SCALE[0] * 100)}" max="${Math.round(Avatar.CUT_SCALE[1] * 100)}" step="1" value="${pct}" data-input="cf-scale" data-cutfit="${i.id}"></div>
-    <div class="field mb-field"><label for="cf-off">Vertical offset <b id="cf-off-v">${cutOffText(off)}</b></label><input id="cf-off" type="range" min="${Avatar.CUT_OFFSET[0]}" max="${Avatar.CUT_OFFSET[1]}" step="0.5" value="${off}" data-input="cf-off" data-cutfit="${i.id}"></div>
-    <div class="row"><span class="muted small">How this piece sits on you in 3D: Scale makes it longer or shorter, the offset moves it up or down.</span>${pct !== 100 || off !== 0 ? `<button class="chip" data-cutreset="${i.id}">Reset</button>` : ""}</div></div>`;
+  const sub = Avatar.subTypeOf(i), lb = mirrorMode() === "lookbook", slot = stageSlotOf(i);
+  // the avatar: clothes but not shoes; the Lookbook: anything with a place on it
+  if (lb ? !slot : !sub || sub === "sneakers" || sub === "boots") return "";
+  const m = Avatar.cleanCutMeta(i.cutoutMeta), pct = Math.round(m.scale * 100), off = m.offsetY, offx = m.offsetX || 0;
+  const column = !lb || Look.SLOT[slot].where === "column";
+  const range = (id, label, min, max, step, val, shown) => `<div class="field mb-field"><label for="${id}">${label} <b id="${id}-v">${shown}</b></label><input id="${id}" type="range" min="${min}" max="${max}" step="${step}" value="${val}" data-input="${id}" data-cutfit="${i.id}"></div>`;
+  return `<div class="field cut-fit"><label>${lb ? "On the Lookbook" : "On the 3D mirror"}</label>
+    ${range("cf-scale", "Scale", Math.round(Avatar.CUT_SCALE[0] * 100), Math.round(Avatar.CUT_SCALE[1] * 100), 1, pct, `${pct}%`)}
+    ${column ? range("cf-off", "Vertical offset", Avatar.CUT_OFFSET[0], Avatar.CUT_OFFSET[1], 0.5, off, cutOffText(off)) : ""}
+    ${lb && column ? range("cf-offx", "Sideways", Avatar.CUT_OFFSET[0], Avatar.CUT_OFFSET[1], 0.5, offx, cutOffText(offx)) : ""}
+    <div class="row"><span class="muted small">${lb ? `How this piece sits on the Lookbook, for every outfit${column ? ". You can also drag it there with Arrange" : ""}.` : "How this piece sits on you in 3D: Scale makes it longer or shorter, the offset moves it up or down."}</span>${Avatar.isPlainCut(m) ? "" : `<button class="chip" data-cutreset="${i.id}">Reset</button>`}</div></div>`;
 }
 // A slider moved (save: let go of it): the number beside it now, the piece and the mirror on release.
 async function cutFitInput(el, save) {
@@ -3952,15 +3967,17 @@ async function cutFitInput(el, save) {
   const k = el.dataset.input, v = +el.value, lab = document.getElementById(`${k}-v`);
   if (lab) lab.textContent = k === "cf-scale" ? `${v}%` : cutOffText(v);
   if (!save) return;
-  it.cutoutMeta = Avatar.cleanCutMeta({ ...(it.cutoutMeta || {}), ...(k === "cf-scale" ? { scale: v / 100 } : { offsetY: v }) });
+  it.cutoutMeta = Avatar.cleanCutMeta({ ...(it.cutoutMeta || {}), ...({ "cf-scale": { scale: v / 100 }, "cf-off": { offsetY: v }, "cf-offx": { offsetX: v } })[k] });
   await store.put("items", it);
   dressStage();
 }
 
-// The mirror's look (Avatar | Mannequin, next to the angle buttons), kept on this device like the
-// other settings: the mannequin wears each piece as a shell of its own cut-out photos.
-const MIRROR_MODES = [["avatar", "Avatar"], ["mannequin", "Mannequin"]];
-const mirrorMode = () => (state.settings.mirrorMode === "mannequin" ? "mannequin" : "avatar");
+// The mirror's look (Avatar | Lookbook, under the stage), kept on this device like the other
+// settings. The Lookbook took the old grey Mannequin's place (November 2026): a device that had the
+// Mannequin on opens on the Lookbook.
+const MIRROR_MODES = [["avatar", "Avatar"], ["lookbook", "Lookbook"]];
+const mirrorMode = () => (["lookbook", "mannequin"].includes(state.settings.mirrorMode) ? "lookbook" : "avatar");
+const lookbookOn = () => mirrorMode() === "lookbook";
 // The avatar's hair: the photographed hair, or the same style sculpted as a smooth matte volume
 // (also kept on this device, so the saved body that syncs stays as it is)
 const HAIR_FINISHES = [["real", "Real"], ["sculpted", "Sculpted"]];
@@ -3978,14 +3995,22 @@ async function setMirrorTuck(on) {
   state.settings.mirrorTuck = !!on;
   document.querySelectorAll("[data-mtuck]").forEach((x) => x.setAttribute("aria-pressed", mirrorTuck()));
   mirror.stage?.setTuck?.(mirrorTuck());
+  if (mirror.lb) dressLookbook();
   await saveSettings();
 }
 
 const bodyDraft = () => (mirror.draft ||= Avatar.cleanBody(state.avatar?.body || {}));
+// What an idea puts on: the coat, the clothes, then the accessories that have a place on the
+// Lookbook (one per slot). `role` is the outfit role, or the Lookbook slot for an accessory (the 3D
+// avatar doesn't draw accessories, but they're listed and can come off all the same).
 function wornList(o) {
   if (!o) return [];
-  return [...(o.coat ? [{ role: "coat", item: o.coat }] : []), ...MIRROR_ROLES.filter((r) => o.pieces[r]).map((r) => ({ role: r, item: o.pieces[r] }))];
+  const seen = new Set();
+  const acc = (o.extras || []).map((e) => ({ role: Look.accSlotOf(e.category), item: e })).filter((w) => w.role && !seen.has(w.role) && seen.add(w.role));
+  return [...(o.coat ? [{ role: "coat", item: o.coat }] : []), ...MIRROR_ROLES.filter((r) => o.pieces[r]).map((r) => ({ role: r, item: o.pieces[r] })), ...acc];
 }
+// The Lookbook slot a piece goes in (null: not on it, like an umbrella or socks).
+const stageSlotOf = (it) => (it ? Look.ROLE_TO_SLOT[roleOf(it)] || Look.accSlotOf(it.category) : null);
 const mirrorOff = (o) => (o && mirror.off[o.key]) || [];
 // What you'd log with "Wear this today" from the mirror: the idea without the pieces taken off.
 function mirrorWorn(o) {
@@ -4000,8 +4025,8 @@ const mirrorIdea = () => {
   const ideas = state.outfits.slice(0, 3);
   return ideas[Math.min(mirror.pick, ideas.length - 1)];
 };
-// The 3D stage can start here (a device without WebGL says so on Today, and offers no previews).
-const stageOK = () => !mirror.failed;
+// The stage can start here (a device without WebGL says so on Today, and offers no previews).
+const stageOK = () => lookbookOn() || !mirror.failed;
 
 // The piece each garment layer shows for an idea. A coat goes in the jacket layer, over the jacket:
 // take the coat off and the jacket under it shows.
@@ -4056,6 +4081,7 @@ function prebake() {
 // Put the picked idea on the 3D stage: baked pieces go on in this same frame (a piece taken off
 // fades out, the others stay); a piece baked for the first time follows when it's ready.
 function dressStage() {
+  if (lookbookOn()) return dressLookbook();
   const st = mirror.stage;
   if (!st) return;
   const want = slotsFor(mirrorIdea());
@@ -4097,23 +4123,29 @@ function startStage() {
   })();
 }
 // Switch the look: the stage is made again in the other look, in the same place, and dressed again.
+// Switch the look: the other stage is made in the same place and dressed; the one that's off is let go
+// (the 3D one frees its graphics memory). The body panel only shows with the avatar.
 async function setMirrorMode(mode) {
   if (mode === mirrorMode()) return;
-  state.settings.mirrorMode = mode;
+  state.settings.mirrorMode = mode === "lookbook" ? "lookbook" : "avatar";
   await saveSettings();
-  paintModes();
-  remountBody(); // (the hair look only applies to the avatar)
   if (mirror.loading) await mirror.loading;
-  if (!mirror.host) return;
   if (mirror.stage) { mirror.stage.dispose(); mirror.stage = null; }
-  mirror.assets.clear(); mirror.pending.clear(); mirror.worn = {}; mirror.failed = null;
-  paintStageNote(); paintLooks();
-  startStage();
+  if (mirror.lb) { mirror.lb.dispose(); mirror.lb = null; mirror.lbHost = null; }
+  mirror.host?.remove();
+  mirror.assets.clear(); mirror.pending.clear(); mirror.noBake.clear(); mirror.worn = {}; mirror.failed = null; mirror.editing = false;
+  if (mirror.preview) {
+    const o = mirror.preview;
+    $(".sheet-panel").innerHTML = "";
+    return previewOnAvatar(o, mirror.previewOpts || {});
+  }
+  remountMirror();
 }
 function paintModes() {
   document.querySelectorAll("#mirror [data-mmode]").forEach((b) => b.setAttribute("aria-pressed", b.dataset.mmode === mirrorMode()));
 }
 function mountMirror() {
+  if (lookbookOn()) return mountLookbook();
   try {
     const slot = $(mirror.preview ? "#stage3d-preview" : "#stage3d");
     if (!slot) return;
@@ -4135,6 +4167,7 @@ function mountMirror() {
 function paintStageNote() {
   const note = $(mirror.preview ? "#stage3d-preview .stage-note" : "#stage3d .stage-note");
   if (!note) return;
+  if (lookbookOn()) return paintLookbookNote(note);
   const busy = mirror.stage && Object.values(slotsFor(mirrorIdea())).find((w) => mirror.pending.has(w.item.id));
   const html = mirror.failed ? `<b>The 3D mirror can't start here</b><span>${esc(mirror.failed.message || String(mirror.failed))}</span>`
     : !mirror.stage ? `<span class="stage-pill">Getting the 3D mirror ready…</span>`
@@ -4151,6 +4184,7 @@ function paintLooks() {
   state.outfits.slice(0, 3).forEach((o, i) => {
     const el = $(`#mirror [data-lookstate="${i}"]`);
     if (!el) return;
+    if (lookbookOn()) { el.textContent = lookCount(o); return; }
     const pieces = Object.values(slotsFor({ ...o, key: "" }));
     const ready = pieces.filter((w) => bakedAsset(w.item)).length, missing = pieces.filter((w) => mirror.noBake.has(w.item.id)).length;
     el.textContent = mirror.failed ? "" : !mirror.stage ? "…"
@@ -4160,19 +4194,183 @@ function paintLooks() {
   paintStageNote();
 }
 
+/* ---------- The Lookbook look: only the clothes, floating (lookbook-stage.js) ---------- */
+// How many pieces and accessories an idea shows on the Lookbook (the line under it on the right).
+function lookCount(o) {
+  const w = wornList(o), acc = w.filter((y) => Look.ACC_SLOTS.includes(y.role)).length, n = w.length - acc;
+  return `${n} piece${n === 1 ? "" : "s"}${acc ? ` · ${acc} accessor${acc === 1 ? "y" : "ies"}` : ""}`;
+}
+// The piece each Lookbook slot shows for an idea. A coat goes in the jacket slot, over the jacket:
+// take the coat off and the jacket under it shows.
+function lbSlotsFor(o) {
+  const off = mirrorOff(o), out = {};
+  for (const w of wornList(o)) {
+    const slot = Look.ROLE_TO_SLOT[w.role] || w.role;
+    if (!Look.SLOT[slot]) continue;
+    const on = !off.includes(w.role);
+    if (!out[slot] || (!out[slot].on && on)) out[slot] = { ...w, on };
+  }
+  return out;
+}
+// What the Lookbook gets: each slot's photos (front, and back where there is one) and how it sits.
+function lookbookSpec(o) {
+  const spec = {};
+  for (const [slot, w] of Object.entries(lbSlotsFor(o))) {
+    const it = w.item;
+    if (!it.photos?.[0]) continue;
+    spec[slot] = { id: it.id, name: it.name, category: it.category, front: BlobUrlManager.url(it, "front"), back: it.photos[1] ? BlobUrlManager.url(it, "back") : null, meta: it.cutoutMeta, on: w.on, short: Look.isShort(it) };
+  }
+  return spec;
+}
+// Put the picked idea on the Lookbook: what's already there stays, a piece taken off fades out.
+// A belt shows best with the top tucked in, so it's tucked whenever a belt is worn.
+function dressLookbook() {
+  const st = mirror.lb;
+  if (!st) return;
+  const spec = lookbookSpec(mirrorIdea());
+  st.set(spec, { tuck: mirrorTuck() || !!spec.belt?.on }).then(() => paintStageNote()).catch((e) => console.warn("Lookbook:", e));
+  paintLooks();
+}
+// A photo kept with its background (a shop photo on white, see autoCutout) floats on the Lookbook too:
+// the background is taken out on the device (basicCutout, the same offline cut-out as Add), once per
+// photo and only in memory. The saved photo doesn't change.
+const keyedOut = new Map(); // photo address → Promise<object URL>
+function lookbookKeyOut(src) {
+  let p = keyedOut.get(src);
+  if (!p) {
+    p = fetch(src).then((r) => r.blob()).then(basicCutout).then((png) => URL.createObjectURL(png));
+    keyedOut.set(src, p);
+    p.catch(() => keyedOut.delete(src));
+    if (keyedOut.size > 40) { const [k, old] = keyedOut.entries().next().value; keyedOut.delete(k); old.then((u) => URL.revokeObjectURL(u)).catch(() => {}); }
+  }
+  return p;
+}
+// Made once and moved into each new mirror (and into a sheet for a Calendar outfit).
+function mountLookbook() {
+  try {
+    const slot = $(mirror.preview ? "#stage3d-preview" : "#stage3d");
+    if (!slot) return;
+    if (!mirror.lb) {
+      mirror.lbHost = Object.assign(document.createElement("div"), { className: "lookbook-host" });
+      mirror.lb = createLookbook(mirror.lbHost, { onSlot: stageSlotTapped, keyOut: lookbookKeyOut, onNudge: (s, id, meta) => stageNudged(s, id, meta).catch((e) => failed(e, "arranging a piece")) });
+    }
+    if (!slot.contains(mirror.lbHost)) slot.prepend(mirror.lbHost);
+    mirror.lb.setEditing(mirror.editing && !mirror.preview);
+    if (mirror.lb.side !== mirror.side) mirror.lb.setSide(mirror.side);
+    mirror.lb.resize();
+    dressLookbook();
+    paintSides();
+    paintStageNote();
+  } catch (e) { console.error("Lookbook:", e); }
+}
+function paintLookbookNote(note) {
+  const o = mirrorIdea();
+  const html = !o ? `<span class="stage-pill">Add a few tops and bottoms to see outfits here</span>`
+    : !Object.keys(lookbookSpec(o)).length ? `<span class="stage-pill">These pieces have no photos yet</span>` : "";
+  if (note.dataset.html !== html) { note.innerHTML = html; note.dataset.html = html; }
+  note.classList.remove("is-error");
+}
+function paintSides() {
+  document.querySelectorAll("[data-mside]").forEach((b) => b.setAttribute("aria-pressed", b.dataset.mside === mirror.side));
+}
+function setMirrorSide(side) {
+  mirror.side = side === "back" ? "back" : "front";
+  paintSides();
+  mirror.lb?.setSide(mirror.side);
+}
+// Arrange: a piece dragged, sized or moved forward or back. Kept on the piece, for every outfit.
+async function stageNudged(slot, id, meta) {
+  const it = state.items.find((i) => i.id === id);
+  if (!it) return;
+  const was = Avatar.cleanCutMeta(it.cutoutMeta);
+  it.cutoutMeta = Avatar.cleanCutMeta({ aspectRatio: was.aspectRatio, trimBounds: was.trimBounds, scale: meta.scale, offsetY: meta.offsetY, offsetX: meta.offsetX, z: meta.z });
+  await store.put("items", it);
+}
+/* Tap a piece (or, in Arrange, an empty place) on the Lookbook: pick what goes there, from what you
+   own of that kind, best match first. */
+function stageSlotTapped(slot) {
+  if (mirror.preview || !Look.SLOT[slot]) return; // a Calendar outfit in a sheet: just to look at
+  openSlotPicker(slot);
+}
+const slotRole = (o, slot) => (lbSlotsFor(o)[slot]?.role === "coat" ? "coat" : slot === "jacket" ? "outer" : Look.SLOT[slot].roles?.[0]);
+function slotOptions(o, slot) {
+  const S = Look.SLOT[slot];
+  if (S.cats) {
+    // the accessories: the stylist's own ranking where it has one (accChoices), else most loved first
+    const ranked = ACC_GROUPS.some((g) => g[0] === slot) ? accChoices(o, slot, lbSlotsFor(o)[slot]?.item?.id).map((x) => x.i) : [];
+    const rest = suggestable().filter((i) => S.cats.includes(i.category) && !ranked.includes(i))
+      .sort((a, b) => (starsOf(b) || 0) - (starsOf(a) || 0) || daysSince(b.lastWorn) - daysSince(a.lastWorn));
+    return [...ranked.filter((i) => S.cats.includes(i.category)), ...rest];
+  }
+  const occ = OCCASIONS.find((x) => x.id === state.occasion), role = slotRole(o, slot) === "coat" ? "outer" : slotRole(o, slot);
+  const cond = conditions(), t = taste();
+  return (piecesByRole(occ, true)[role] || [])
+    .map((p) => ({ p, s: scoreOutfit({ ...o.pieces, [role]: p }, cond, occ, t).score }))
+    .sort((a, b) => b.s - a.s).map((x) => x.p);
+}
+function openSlotPicker(slot) {
+  const o = mirrorIdea();
+  if (!o || !state.outfits.includes(o)) return;
+  const S = Look.SLOT[slot], cur = lbSlotsFor(o)[slot]?.item, role = slotRole(o, slot);
+  const list = slotOptions(o, slot).filter((p) => p.id !== cur?.id);
+  const canDrop = !!cur && (S.cats || role === "coat" || swapOptions(o, role).canDrop);
+  const best = new Set(list.slice(0, S.cats ? 1 : 3).map((p) => p.id));
+  const kinds = S.cats ? S.cats.filter((c) => CAT[c]).map((c) => catLabel(c).toLowerCase()) : [];
+  $(".sheet-panel").innerHTML = `
+    <div class="detail-head">
+      <div><h1 style="font-size:28px">${cur ? `Change the ${esc(S.label.toLowerCase())}` : `Add ${esc(S.label.toLowerCase())}`}</h1><p class="sub">${S.cats ? `Your ${esc(kinds.join(", "))}, best match for this outfit first.` : "Everything of this kind you own, best match for this outfit first."}</p></div>
+      <button class="btn icon-btn ghost" data-close aria-label="Close"><svg viewBox="0 0 24 24"><path d="M6 6l12 12M18 6 6 18"/></svg></button>
+    </div>
+    ${cur ? `<div class="card row" style="margin-bottom:14px">${pieceImg(cur)}<span style="flex:1;min-width:0"><b>${esc(cur.name)}</b><br><span class="muted small">On the Lookbook now</span></span>${canDrop ? `<button class="chip" data-slotpick="${slot}:">${S.cats ? "Take it off" : role === "coat" ? "No coat" : esc(DROP_LABEL[role] || "None")}</button>` : ""}</div>` : ""}
+    <div class="pieces mini anchor-grid slot-pick">${list.map((p) => `<button class="piece" data-slotpick="${slot}:${p.id}">${best.has(p.id) ? `<em class="best">Best match</em>` : ""}${pieceImg(p)}<span>${esc(p.name)}</span></button>`).join("")}</div>
+    ${list.length ? "" : `<p class="muted">${cur ? "Nothing else of this kind for this occasion." : `You don't have ${esc(S.label.toLowerCase())} yet.`}</p>`}
+    <div class="row" style="margin-top:14px"><button class="btn" data-slotward="${slot}">See them in Wardrobe</button><button class="btn ghost" data-close>Cancel</button></div>`;
+  $("#sheet").hidden = false;
+}
+// A piece picked for a slot: the idea on the Lookbook (and its card below) wears it.
+async function pickForSlot(slot, id) {
+  const o = mirrorIdea(), i = state.outfits.indexOf(o);
+  closeSheet();
+  if (!o || i < 0 || !Look.SLOT[slot]) return;
+  const S = Look.SLOT[slot], role = slotRole(o, slot);
+  if (S.cats) {
+    const from = lbSlotsFor(o)[slot]?.item?.id || "";
+    setAccessory(i, from, id || "");
+  } else if (role === "coat") state.outfits[i] = { ...o, coat: (id && state.items.find((x) => x.id === id)) || null };
+  else await swapPiece(i, role, id || "");
+  const now = state.outfits[i], back = S.cats ? slot : role;
+  if (mirror.off[now.key]) mirror.off[now.key] = mirror.off[now.key].filter((r) => r !== back);
+  dressStage();
+  render();
+}
+// "See them in Wardrobe": the wardrobe, showing that kind.
+function slotToWardrobe(slot) {
+  const S = Look.SLOT[slot];
+  closeSheet();
+  const f = state.filters;
+  if (S.cats) { f.slot = slotOf({ category: S.cats[0] }); f.cat = ACC_GROUPS.some((g) => g[0] === slot) ? `acc:${slot}` : "all"; }
+  else { f.slot = ({ top: "base", layer: "mid", jacket: "outer", bottoms: "bottom", shoes: "shoes" })[slot]; f.cat = "all"; }
+  go("wardrobe");
+}
+
 // "On the avatar": any outfit (a Calendar idea or plan) on the 3D avatar, in a sheet. The stage
 // itself moves into the sheet (it's made once, see startStage) and goes back to Today when the sheet
 // closes, wearing Today's idea again. Pieces are baked the same way, once, on this device.
-function previewOnAvatar(o, { title = "On the avatar", sub = "", actions = "" } = {}) {
+function previewOnAvatar(o, opts = {}) {
+  const { title = lookbookOn() ? "On the Lookbook" : "On the avatar", sub = "", actions = "" } = opts;
   mirror.preview = { ...o, key: `preview:${o.key || outfitKey(Object.values(o.pieces || {}).filter(Boolean))}` };
+  mirror.previewOpts = opts;
   $(".sheet-panel").innerHTML = `
     <div class="detail-head"><div><h1 style="font-size:26px">${esc(title)}</h1>${sub ? `<p class="sub">${esc(sub)}</p>` : ""}</div>
       <button class="btn icon-btn ghost" data-close aria-label="Close"><svg viewBox="0 0 24 24"><path d="M6 6l12 12M18 6 6 18"/></svg></button></div>
     <div class="preview-wrap">
-      <div class="stage3d preview-stage" id="stage3d-preview" tabindex="0" role="img" aria-label="You in 3D, wearing this outfit. Drag sideways to turn him, or use the angle buttons."><div class="stage-note" role="status"></div></div>
-      <div class="angle-pills" role="group" aria-label="Turn him">${MIRROR_ANGLES.map(([deg, label]) => `<button class="chip" data-mangle="${deg}" aria-pressed="false">${label}</button>`).join("")}</div>
+      ${lookbookOn() ? `<div class="stage3d is-lookbook preview-stage" id="stage3d-preview" tabindex="0" role="group" aria-label="This outfit on the Lookbook. Drag to tilt, pinch to zoom, double tap to reset."><div class="stage-note" role="status"></div></div>
+      <div class="angle-pills" role="group" aria-label="Side">${sidePills()}</div>`
+      : `<div class="stage3d preview-stage" id="stage3d-preview" tabindex="0" role="img" aria-label="You in 3D, wearing this outfit. Drag sideways to turn him, or use the angle buttons."><div class="stage-note" role="status"></div></div>
+      <div class="angle-pills" role="group" aria-label="Turn him">${MIRROR_ANGLES.map(([deg, label]) => `<button class="chip" data-mangle="${deg}" aria-pressed="false">${label}</button>`).join("")}</div>`}
+      <div class="angle-pills" role="group" aria-label="Look">${modePills()}</div>
     </div>
-    <div class="pieces mini">${wornList(o).map((w) => pieceTile(w.item)).join("")}${(o.extras || []).map(pieceTile).join("")}</div>
+    <div class="pieces mini">${allPieces(o).map(pieceTile).join("")}</div>
     ${actions ? `<div class="row" style="margin-top:14px">${actions}</div>` : ""}`;
   $("#sheet").hidden = false;
   mountMirror();
@@ -4182,9 +4380,11 @@ function previewOnAvatar(o, { title = "On the avatar", sub = "", actions = "" } 
 function endPreview() {
   const was = !!mirror.preview;
   mirror.preview = null;
+  mirror.previewOpts = null;
   const home = view === "today" && $("#stage3d");
-  if (home && mirror.host && !home.contains(mirror.host)) mountMirror();
-  else if (was && !home) mirror.host?.remove();
+  const host = lookbookOn() ? mirror.lbHost : mirror.host;
+  if (home && host && !home.contains(host)) mountMirror();
+  else if (was && !home) host?.remove();
   if (was) dressStage();
 }
 function openCalPreview(kind, date) {
@@ -4269,24 +4469,32 @@ async function bodyPhoto(file) {
     remountBody();
   }
 }
+const modePills = () => MIRROR_MODES.map(([m, label]) => `<button class="chip" data-mmode="${m}" aria-pressed="${m === mirrorMode()}">${label}</button>`).join("");
+const sidePills = () => MIRROR_SIDES.map(([s, label]) => `<button class="chip" data-mside="${s}" aria-pressed="${mirror.side === s}">${label}</button>`).join("");
 function mirrorHTML() {
   const ideas = state.outfits.slice(0, 3), o = mirrorIdea(), pick = ideas.indexOf(o);
-  const off = mirrorOff(o);
-  return `<section class="mirror" id="mirror">
-    ${bodyPanelHTML()}
+  const off = mirrorOff(o), lb = lookbookOn();
+  const tuck = `<button class="chip" data-mtuck="1" aria-pressed="${mirrorTuck()}" title="The top under everything goes into the waistband">Tuck base top</button>`;
+  return `<section class="mirror${lb ? " is-lookbook" : ""}" id="mirror">
+    ${lb ? "" : bodyPanelHTML()}
     <div class="mirror-stage">
-      <div class="stage3d" id="stage3d" tabindex="0" role="img" aria-label="You in 3D, wearing the outfit picked on the right. Drag sideways to turn him, or use the angle buttons.">
+      ${lb ? `<div class="stage3d is-lookbook" id="stage3d" tabindex="0" role="group" aria-label="The outfit picked on the right, on the Lookbook: only the clothes. Tap a piece to change it, drag to tilt, pinch to zoom, double tap to reset.">
         <div class="stage-note" role="status"></div>
       </div>
-      <div class="angle-pills" role="group" aria-label="Turn him">${MIRROR_ANGLES.map(([deg, label]) => `<button class="chip" data-mangle="${deg}" aria-pressed="false">${label}</button>`).join("")}</div>
-      <div class="angle-pills" role="group" aria-label="Look">${MIRROR_MODES.map(([m, label]) => `<button class="chip" data-mmode="${m}" aria-pressed="${m === mirrorMode()}">${label}</button>`).join("")}<button class="chip" data-mtuck="1" aria-pressed="${mirrorTuck()}" title="The top under everything goes into the waistband">Tuck base top</button></div>
+      <div class="angle-pills" role="group" aria-label="Side">${sidePills()}<button class="chip" data-medit="1" aria-pressed="${mirror.editing}">${mirror.editing ? "Done arranging" : "Arrange"}</button></div>
+      ${mirror.editing ? `<p class="muted small lb-hint">Drag a piece to move it, tap it to size it or send it back. Dashed outlines are empty places: tap one to add a piece. It's kept on the piece, for every outfit.</p>` : ""}`
+      : `<div class="stage3d" id="stage3d" tabindex="0" role="img" aria-label="You in 3D, wearing the outfit picked on the right. Drag sideways to turn him, or use the angle buttons.">
+        <div class="stage-note" role="status"></div>
+      </div>
+      <div class="angle-pills" role="group" aria-label="Turn him">${MIRROR_ANGLES.map(([deg, label]) => `<button class="chip" data-mangle="${deg}" aria-pressed="false">${label}</button>`).join("")}</div>`}
+      <div class="angle-pills" role="group" aria-label="Look">${modePills()}${tuck}</div>
       ${o ? `<div class="row fc-log"><button class="btn" data-fitlog="today">${ICON_CAMERA}Log fit check</button><span class="muted small">A photo of this outfit on you: say how it fit, and the ideas learn from it.</span></div>` : ""}
     </div>
     <aside class="mirror-side mirror-looks" aria-label="Today's ideas">
       <h2>Today's ideas</h2>
       <div class="m-looks">${ideas.map((x, i) => `<button class="m-look" data-mlook="${i}" aria-pressed="${i === pick}">
-        <span class="look-pics">${wornList(x).filter((w) => w.role !== "coat").map((w) => pieceImg(w.item, "")).join("")}</span>
-        <span class="look-text"><b>${x.planned ? "Your plan" : ["Best match", "Option 2", "Option 3"][i]}</b><span class="muted small" data-lookstate="${i}"></span></span>
+        <span class="look-pics">${wornList(x).filter((w) => MIRROR_ROLES.includes(w.role)).map((w) => pieceImg(w.item, "")).join("")}</span>
+        <span class="look-text"><b>${x.planned ? "Your plan" : ["Best match", "Option 2", "Option 3"][i]}</b><span class="muted small" data-lookstate="${i}">${lb ? lookCount(x) : ""}</span></span>
       </button>`).join("") || `<p class="muted small">Add a few more tops to get outfit ideas.</p>`}</div>
       ${o ? `<h2 class="wearing-head">Wearing</h2>
       <div class="wearing">${wornList(o).map((w) => {
@@ -4354,8 +4562,8 @@ function mirrorCard() {
     } catch { el.textContent = ""; }
   });
   return `<section class="card stack">
-    <h2 style="margin:0">3D mirror</h2>
-    <p class="muted small" style="margin:0">The avatar on Today runs on this device. Your body, hair and face come from the panel on its left. Each piece's front and back photos are baked into 3D textures the first time it's shown and kept on this device, so changing outfits, taking pieces off and turning him need no internet, no server and no AI.</p>
+    <h2 style="margin:0">Mirror</h2>
+    <p class="muted small" style="margin:0">The mirror on Today has two looks, switched under it. <b>Avatar</b>: you in 3D, with your body, hair and face from the panel on its left; each piece's front and back photos are baked into 3D textures the first time it's shown and kept on this device. <b>Lookbook</b>: only the clothes and accessories, each piece's own cut-out floating in layers with soft shadows, the jewelry, watch, eyewear and bag on cards at the sides. Both run on this device: no internet, no server and no AI.</p>
     <div class="row" style="justify-content:space-between"><span class="muted small" id="baked-count"></span><button class="btn" data-act="rebake">Bake the pieces again</button></div>
   </section>`;
 }
@@ -9569,6 +9777,10 @@ async function onTap(e) {
   if (ds.mbtab) { mirror.bodyTab = ds.mbtab; return remountBody(); }
   if (ds.mangle != null) { mirror.angle = +ds.mangle; mirror.stage?.snapTo(mirror.angle); return paintAngles(); }
   if (ds.mmode) return setMirrorMode(ds.mmode);
+  if (ds.mside) return setMirrorSide(ds.mside);
+  if (ds.medit) { mirror.editing = !mirror.editing; mirror.lb?.setEditing(mirror.editing); return remountMirror(); }
+  if (ds.slotpick != null) { const [slot, id] = ds.slotpick.split(":"); return pickForSlot(slot, id); }
+  if (ds.slotward) return slotToWardrobe(ds.slotward);
   if (ds.hfin) return setHairFinish(ds.hfin);
   if (ds.mtuck) return setMirrorTuck(!mirrorTuck());
   // Fit check
@@ -10366,12 +10578,13 @@ const startWallScreen = () => {
   kiosk = startKiosk({
     settings: state.settings,
     saveSettings,
-    stage: () => mirror.stage,
+    stage: () => mirror.stage || mirror.lb,
     ambient: ambientInfo,
     refreshWeather: () => loadWeather(),
     resetCamera() {
       mirror.angle = 0;
       paintAngles();
+      if (mirror.lb) { mirror.lb.reset(); return true; }
       if (!mirror.stage) return false;
       mirror.stage.resize();
       mirror.stage.snapTo(0);

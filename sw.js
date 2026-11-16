@@ -30,7 +30,7 @@ const SHELL = new URL("./", SCOPE).href;
 const CORE = [
   "./", "styles.css", "app.js", "sw-register.js", "sample/seed.js",
   "calendar.js", "stylist.js", "stylist-brain.js", "label.js", "cutout-editor.js", "fashion-bible.json",
-  "avatar-config.js", "avatar-stage.js", "garment-baker.js", "mannequin-shells.js", "face-photo.js",
+  "avatar-config.js", "avatar-stage.js", "garment-baker.js", "face-photo.js", "lookbook-config.js", "lookbook-stage.js",
   "vendor/three/three.module.min.js", "vendor/three/addons/RoomEnvironment.js", "vendor/jsqr.min.js",
   "avatar/avatar.json", "avatar/avatar.bin", "avatar/eye.png",
   "manifest.webmanifest", "icon.svg", "apple-touch-icon.png",
