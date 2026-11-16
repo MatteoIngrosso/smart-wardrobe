@@ -5016,6 +5016,7 @@ function brandTyped(value) {
 const ICON_CAMERA = `<svg viewBox="0 0 24 24"><path d="M3 8a2 2 0 0 1 2-2h2l2-2h6l2 2h2a2 2 0 0 1 2 2v10a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><circle cx="12" cy="13" r="4"/></svg>`;
 const ICON_GALLERY = `<svg viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="16" rx="2"/><circle cx="9" cy="10" r="2"/><path d="m21 16-5-5-9 9"/></svg>`;
 const ICON_TAG = `<svg viewBox="0 0 24 24"><path d="M3 12V4a1 1 0 0 1 1-1h8l9 9-9 9z"/><circle cx="8" cy="8" r="1.5"/></svg>`;
+const ICON_LINK = `<svg viewBox="0 0 24 24"><path d="M10 14a4 4 0 0 0 5.7 0l3-3a4 4 0 0 0-5.7-5.7l-1 1"/><path d="M14 10a4 4 0 0 0-5.7 0l-3 3a4 4 0 0 0 5.7 5.7l1-1"/></svg>`;
 const ICON_LENS = `<svg viewBox="0 0 24 24"><path d="M4 8V6a2 2 0 0 1 2-2h2M16 4h2a2 2 0 0 1 2 2v2M20 16v2a2 2 0 0 1-2 2h-2M8 20H6a2 2 0 0 1-2-2v-2"/><circle cx="12" cy="12" r="3.5"/></svg>`;
 const ICON_SCISSORS = `<svg viewBox="0 0 24 24"><circle cx="6" cy="6" r="3"/><circle cx="6" cy="18" r="3"/><path d="M8.1 8.1 20 20M8.1 15.9 20 4"/></svg>`;
 const ICON_BOTTLE = `<svg viewBox="0 0 24 24"><path d="M10 2.5h4v3h-4zM8.5 5.5h7V8h-7zM6.5 11a3 3 0 0 1 3-3h5a3 3 0 0 1 3 3v8a2.5 2.5 0 0 1-2.5 2.5H9A2.5 2.5 0 0 1 6.5 19zM9.5 14.5h5"/></svg>`;
@@ -5046,6 +5047,7 @@ function renderAdd() {
         <button class="btn big" data-act="gallery">${ICON_GALLERY}<span class="big-label">Choose from gallery<small>Front and back photos are paired up</small></span></button>
         <button class="btn big" data-act="scan-label">${ICON_TAG}<span class="big-label">Scan the label<small>Fills it in from the shop</small></span></button>
         <button class="btn big" data-act="lens-start">${ICON_LENS}<span class="big-label">Google Lens<small>Finds it in the shops</small></span></button>
+        <button class="btn big" data-act="link-start">${ICON_LINK}<span class="big-label">Paste a link<small>From the shop's website</small></span></button>
         <button class="btn big" data-act="scent-start">${ICON_BOTTLE}<span class="big-label">Fragrance<small>A bottle photo or its name</small></span></button>
       </div>
       <ol class="how">
@@ -5071,6 +5073,7 @@ function renderAdd() {
       <div class="photos">
         ${!cur ? `<div class="photo-wrap no-photo">${d.scanningTag
           ? `<div class="busy"><div class="spinner"></div><span>${esc(d.labelStep || "Reading the label…")}</span></div>`
+          : d.linkOpen ? `<p class="muted" style="margin:0;padding:24px;text-align:center">Paste the product's link: the shop's photo of the piece on its own goes here.</p>`
           : `<div class="stack" style="align-items:center;text-align:center;padding:24px"><p class="muted" style="margin:0">No photo from the shop. Take one of the piece, or pick one.</p>
               <button class="btn primary" data-act="label-shoot">${ICON_CAMERA}Take a photo</button><button class="btn" data-act="more-photo">${ICON_GALLERY}Choose from gallery</button></div>`}</div>` : `
         <div class="photo-wrap">
@@ -5091,6 +5094,7 @@ function renderAdd() {
         ${d.photos[0]?.shop ? `<p class="muted small" style="margin:0">Photo from ${esc(d.shopPhoto.site || "the shop")}.${d.shopPhoto.otherColour ? " It shows the piece in another colour: add your own photo with + and remove this one." : d.photos.some((p) => !p.shop) ? " Yours are after it." : " Add your own with +."}</p>` : ""}`}
       </div>
       <div class="stack">
+        ${linkHTML(d)}
         ${lensHTML(d)}
         <div class="field"><label for="f-name">Name</label><input id="f-name" class="input" data-input="name" value="${esc(d.name || "")}" placeholder="${esc(autoName(d) || "e.g. Navy cable-knit sweater")}"></div>
         <div class="field"><label>Type</label>${!d.category && SHAPE_TYPES[d.shape] ? `<div class="type-group type-guess"><span class="muted small">Looks like ${SHAPE_WORDS[d.shape]}</span><div class="chips">${SHAPE_TYPES[d.shape].map((c) => `<button class="chip" data-cat="${c}">${CAT[c].label}</button>`).join("")}</div></div>` : ""}${Object.entries(SLOTS).map(([slot, label]) => `<div class="type-group"><span class="muted small">${label}</span><div class="chips">${CATS.filter((c) => c.slot === slot).map((c) => `<button class="chip" aria-pressed="${d.category === c.id}" data-cat="${c.id}">${c.label}</button>`).join("")}</div></div>`).join("")}</div>
@@ -5103,6 +5107,7 @@ function renderAdd() {
           <div class="row">
             <button class="btn" data-act="scan-tag" ${d.scanningTag ? "disabled" : ""}>${d.scanningTag ? `<span class="spinner"></span>${esc(d.labelStep || "Reading the label…")}` : `${ICON_TAG}Scan the label`}</button>
             <button class="btn" data-act="lens" ${d.scanningTag || d.lens?.busy ? "disabled" : ""}>${d.lens?.busy ? `<span class="spinner"></span>Searching with Google Lens…` : `${ICON_LENS}Google Lens`}</button>
+            <button class="btn" data-act="link-open" ${d.scanningTag || d.lens?.busy ? "disabled" : ""}>${ICON_LINK}Paste a link</button>
             <span class="muted small">${aiReady() ? `Reads the QR code, and ${aiName()} reads brand, price, size and material from a photo of the tag or label. Google Lens finds the piece in the shops from its photo.` : "Reads the QR code on the tag. Add a Gemini key in Settings to read the printed text too, or type it in."}</span>
           </div>
           ${d.labelNote ? `<p class="muted small" style="margin:0">${esc(d.labelNote)}</p>` : ""}
@@ -5571,8 +5576,8 @@ const PIECE_SCHEMA = {
 };
 // A candidate photo is { url, thumb }: thumb is Google's small copy, used if the shop's won't load.
 const shopPhoto = async (x) => (await productPhoto(x.url)) || (x.thumb ? await productPhoto(x.thumb) : null);
-async function pieceOnlyPhotos(list, colour = "") {
-  const got = (await Promise.all(list.slice(0, 8).map(async (x) => ({ url: x.url, blob: await shopPhoto(x) })))).filter((x) => x.blob);
+async function pieceOnlyPhotos(list, colour = "", max = 8) {
+  const got = (await Promise.all(list.slice(0, max).map(async (x) => ({ url: x.url, blob: await shopPhoto(x) })))).filter((x) => x.blob);
   if (!got.length) return null; // none could be loaded: not the same as "all worn"
   const cols = Math.min(4, got.length), w = 240, h = 320;
   const c = newCanvas(cols * w, Math.ceil(got.length / cols) * h);
@@ -5601,21 +5606,34 @@ async function pieceOnlyPhotos(list, colour = "") {
 }
 // The shop's photos from its page, as candidates: only this colour's when their names say it,
 // the same photo in another size once, video stills last.
-function photoCandidates(urls, ref) {
+// `code` (from a pasted link's address, e.g. Hugo Boss hbeu50525359_100) does the same for other shops.
+function photoCandidates(urls, ref, code = "") {
   const seen = new Set();
   let list = urls.filter((u) => {
-    const key = /\.(jpe?g|png|webp)(\?|$)/i.test(u) ? u.split("?")[0] : u;
-    return /^https:\/\//.test(u) && !seen.has(key) && seen.add(key);
+    const key = /\.(jpe?g|png|webp)(\?|$)/i.test(u) || /\/is\/image\//.test(u) ? u.split("?")[0] : u; // Scene7 photos have no file type
+    return /^https:\/\//.test(u) && !/\/is\/image\/.*_sw(\?|$)/i.test(u) && !seen.has(key) && seen.add(key);
   });
   if (ref?.colour && list.some((u) => Label.codeIn(u, ref))) list = list.filter((u) => Label.codeIn(u, ref));
+  else if (code && list.some((u) => u.toLowerCase().includes(code))) list = list.filter((u) => u.toLowerCase().includes(code));
   return list.sort((a, b) => /poster/i.test(a) - /poster/i.test(b)).map((url) => ({ url }));
 }
 // The shop's own photos of a reference, through Google Images, for shops that show their pages
 // to no server (one search, kept two weeks on the server). Only photos named after the
 // reference, or from its product page, so they're surely this piece in this colour.
-async function galleryPhotos(ref, brand, name = "") {
-  if (!productsOn() || !ref?.colour) return [];
+// For a pasted link (`code` from its address, `page` the address itself): one search by the
+// product's name, keeping the photos named with its code or taken from that same page.
+async function galleryPhotos(ref, brand, name = "", { code = "", page = "" } = {}) {
+  if (!productsOn()) return [];
   const it = state.settings.region === "it";
+  if (!ref?.colour) {
+    if (!name || (!code && !page)) return [];
+    const path = (u) => { try { const x = new URL(u); return x.hostname.replace(/^www\d*\./, "") + x.pathname.replace(/\/$/, ""); } catch { return ""; } };
+    const r = await fetch(`api/photos?${new URLSearchParams({ q: `${brand} ${name}`.trim(), gl: it ? "it" : "us", hl: it ? "it" : "en" })}`).catch(() => null);
+    const j = await r?.json().catch(() => null);
+    if (!r?.ok) { if (/^SerpApi/.test(j?.error || "")) productsDown = j.error; return []; }
+    return (j.items || []).filter((x) => (code && `${x.image} ${x.url}`.toLowerCase().includes(code)) || (page && path(x.url) === path(page)))
+      .map((x) => ({ url: x.image || x.thumb, thumb: x.thumb }));
+  }
   // By reference first; then by the shop's product name, still keeping only this reference's photos.
   for (const q of [`${brand} ${ref.model}${ref.colour}`, `${brand} ${ref.text}`, name && `${brand} ${name}`].filter(Boolean)) {
     const r = await fetch(`api/photos?${new URLSearchParams({ q: q.trim(), gl: it ? "it" : "us", hl: it ? "it" : "en" })}`).catch(() => null);
@@ -5633,13 +5651,15 @@ async function galleryPhotos(ref, brand, name = "") {
   return [];
 }
 // Puts the shop's photos of the piece on its own first (`replace`: instead of the piece's
-// photos). Says why when none could be kept.
-async function useShopPhotos(d, list, { site, ref, colour, replace, step }) {
+// photos). Says why when none could be kept. `strict` (a pasted link): only photos the AI saw
+// are of the piece alone, never the shop's main photo unchecked, which is often worn.
+async function useShopPhotos(d, list, { site, ref, colour, replace, step, strict = false }) {
   let chosen = null;
   if (aiReady()) {
     step("Picking the photos of the piece on its own…");
-    chosen = await pieceOnlyPhotos(list, colour).catch(() => null);
+    chosen = await pieceOnlyPhotos(list, colour, strict ? 12 : 8).catch(() => null);
   }
+  if (!chosen && strict) return aiReady() ? "The shop's photos couldn't be checked for the piece on its own, so none was kept: take a photo of the piece, or try the link again." : "Without an AI key the shop's photos can't be checked for the piece on its own, so none was kept: take a photo of the piece.";
   if (!chosen) { // no AI to tell worn photos apart (or it failed): the shop's main photo
     step("Getting the shop's photo…");
     const blob = await shopPhoto(list[0]);
@@ -5819,28 +5839,7 @@ async function pickLens(d, k) {
   d.scanningTag = true;
   const step = (s) => { d.labelStep = s; rerenderAdd(d); };
   try {
-    const ref = Label.refInUrl(m.url);
-    const site = m.shop || Label.siteOf(m.url);
-    step("Opening the product page…");
-    const got = await pageInfo(m.url, 20000, ref?.colour ? Label.photoCode(ref) : ""); // shops that block the server are skipped after 20 s
-    const lensPage = { url: m.url, title: m.title, image: m.image, images: [m.image].filter(Boolean), price: m.price, site, description: "" };
-    const page = got?.title ? { ...lensPage, ...got, images: [...(got.images || []), ...lensPage.images], price: got.price || m.price, site: got.site || site } : lensPage;
-    let info = null;
-    if (aiReady()) {
-      step("Reading the product details…");
-      info = await productDetails(page, m.url, null, ref).catch(() => null);
-    }
-    const colour = fillFromProduct(d, { page, info, ref, link: m.url, override: true });
-    if (colour && !d.colors.length) d.colors = [colour];
-    refreshStyles();
-    if (d.brand) lookupBrand(d.brand).then((learnt) => learnt && (refreshStyles(), rerenderAdd(d)));
-    let list = photoCandidates([...page.images, ...(info?.photos || [])], ref).map((x) => (x.url === m.image ? { ...x, thumb: m.thumb } : x));
-    if (ref?.colour && list.length < 3 && productsOn()) { // Lens shows one photo; the shop has its whole gallery on Google
-      step("Finding the shop's photos on Google…");
-      const more = (await galleryPhotos(ref, d.brand)).filter((x) => !list.some((y) => y.url.split("?")[0] === x.url.split("?")[0]));
-      list = [...list, ...more];
-    }
-    d.labelNote = list.length ? await useShopPhotos(d, list, { site: page.site, ref, colour, replace: !d.photos.length, step }) : "";
+    const { page } = await fillFromShopUrl(d, { url: m.url, title: m.title, image: m.image, thumb: m.thumb, price: m.price, site: m.shop, step });
     if (draft === d) toast(`Filled in from ${page.site || "the shop"}`);
   } catch (e) {
     if (draft === d) toast(e.message || "Couldn't read that product");
@@ -5848,6 +5847,146 @@ async function pickLens(d, k) {
   d.scanningTag = false;
   d.labelStep = "";
   rerenderAdd(d);
+}
+// Fills a piece in from a product page you chose (a Google Lens match, or a link you pasted):
+// the page's details, what the AI finds about it, then the shop's photos of the piece on its own.
+// What's already known about the product (title, photo, price, brand, colour) fills the gaps
+// when the shop's page can't be opened. `link`: a pasted link, which asks for every photo on the
+// page (by the code in its address) and keeps only photos the AI saw are of the piece alone.
+async function fillFromShopUrl(d, { url, title = "", image = "", thumb = "", price = "", site = "", brand = "", colour: colourHint = "", more = [], link = false, step }) {
+  const ref = Label.refInUrl(url);
+  site = site || Label.siteOf(url);
+  const code = ref?.colour ? Label.photoCode(ref) : link ? Label.productCode(url) : "";
+  step("Opening the product page…");
+  // Shops that block the server are given up on after 20 s (45 s for a link: its whole gallery is read).
+  const got = await pageInfo(url, link ? 45000 : 20000, code);
+  const known = { url, title, image, images: [image].filter(Boolean), price, site, description: "", brand, color: colourHint };
+  const page = got?.title ? { ...known, ...got, images: [...(got.images || []), ...known.images], price: got.price || price, site: got.site || site, brand: got.brand || brand, color: got.color || colourHint } : known;
+  let info = null;
+  if (aiReady()) {
+    step("Reading the product details…");
+    info = await productDetails(page, url, null, ref).catch(() => null);
+  }
+  const colour = fillFromProduct(d, { page, info, ref, link: url, override: true });
+  if (colour && !d.colors.length) d.colors = [colour];
+  refreshStyles();
+  if (d.brand) lookupBrand(d.brand).then((learnt) => learnt && (refreshStyles(), rerenderAdd(d)));
+  let list = photoCandidates([...page.images, ...(info?.photos || []), ...more.map((x) => x.url)], ref, code)
+    .map((x) => ({ ...x, thumb: x.url === image ? thumb : more.find((y) => y.url === x.url)?.thumb }));
+  if (list.length < 3 && productsOn() && (ref?.colour || (link && (code || got?.title)))) { // a page shares one or two photos; Google has the whole gallery
+    step("Finding the shop's photos on Google…");
+    const name = Label.cleanTitle(page.title, d.brand) || info?.name || "";
+    const extra = (await galleryPhotos(ref?.colour ? ref : null, d.brand, ref?.colour ? "" : name, link ? { code, page: url } : {})).filter((x) => !list.some((y) => y.url.split("?")[0] === x.url.split("?")[0]));
+    list = [...list, ...extra];
+  }
+  d.labelNote = list.length ? await useShopPhotos(d, list, { site: page.site, ref, colour, replace: !d.photos.length, step, strict: link })
+    : link && !got?.title && !title ? `Couldn't open the product page${got?.error ? ` (${got.error.replace(/\.$/, "")})` : ""}.` : "";
+  return { page, opened: !!got?.title };
+}
+
+/* ---------- Add from a link ----------
+   Paste a shop's link (or what a Share button gives, like the Google app's "BOSS - Camicia …
+   https://share.google/…") and the piece is filled in from the shop's page, with its photos of
+   the piece on its own. Short links are followed on the server (GET /api/link); a link that only
+   leads to a Google search is found in the shops by its name. Works on a new piece and when
+   editing one: then your name, size, tags and photos stay, and the shop's photo goes first. */
+// Where a link really goes: {kind: "shop"|"google", url, query}. Without the app's server
+// (server.py on a PC) the link is used as it is.
+async function resolveLink(url) {
+  try {
+    const r = await fetch(`api/link?${new URLSearchParams({ url })}`, AbortSignal.timeout ? { signal: AbortSignal.timeout(30000) } : {});
+    const j = await r.json().catch(() => null);
+    if (r.ok && j?.url) return j;
+    if (j?.error) return { error: j.error };
+  } catch { /* no answer: try the link itself */ }
+  return Label.isGoogleUrl(url) ? { kind: "google", url, query: "", error: "The app's server couldn't open that link." } : { kind: "shop", url, query: "" };
+}
+// The shop page of a product known only by its name ("BOSS - Camicia slim fit … - Bianco"):
+// one Google Images search, where each photo comes with the page it's on (the brand's own site
+// first), else the AI with Google Search. {url, image, thumb, more} or null.
+async function findByTitle(words, brand) {
+  if (productsOn()) {
+    const it = state.settings.region === "it";
+    const r = await fetch(`api/photos?${new URLSearchParams({ q: words, gl: it ? "it" : "us", hl: it ? "it" : "en" })}`).catch(() => null);
+    const j = await r?.json().catch(() => null);
+    if (!r?.ok && /^SerpApi/.test(j?.error || "")) productsDown = j.error;
+    const items = (r?.ok ? j?.items || [] : []).filter((x) => x.url && !Label.isGoogleUrl(x.url));
+    const score = (x) => (Label.onBrandSite(x.url, brand) ? 1 : 0) + Label.titleMatch(words, x.title);
+    const best = items.map((x) => ({ x, s: score(x) })).filter((y) => y.s >= 0.6).sort((a, b) => b.s - a.s)[0]?.x;
+    if (best) {
+      const more = items.filter((x) => x !== best && x.url === best.url).map((x) => ({ url: x.image || x.thumb, thumb: x.thumb }));
+      return { url: best.url, image: best.image || best.thumb, thumb: best.thumb, site: best.shop, more };
+    }
+  }
+  if (aiReady() && searchesWeb()) {
+    let sources = [];
+    const text = await aiGenerate({
+      system: "You find the product page of a piece of clothing from its name. Use Google Search. Prefer the brand's own website, then a big shop. Reply with the product page URL only.",
+      text: `Product: ${words}`, search: true, maxTokens: 120, onSources: (w) => (sources = w),
+    }).catch(() => "");
+    const url = [Label.linkIn(text), ...sources.map((s) => s.uri)].find((u) => u && !Label.isGoogleUrl(u));
+    if (url) return { url, image: "", thumb: "", more: [] };
+  }
+  return null;
+}
+async function addFromLink(d, text) {
+  const { url, title } = Label.pastedLink(text);
+  if (!url) { d.labelNote = "That isn't a link. Paste the shop's address: it starts with https://"; return rerenderAdd(d); }
+  if (navigator.onLine === false) return toast("Needs internet to open the shop's page");
+  if (d.scanningTag || d.lens?.busy) return;
+  Object.assign(d, { linkOpen: false, linkText: "", labelNote: "", scanningTag: true });
+  const step = (s) => { d.labelStep = s; rerenderAdd(d); };
+  try {
+    step("Opening the link…");
+    const where = await resolveLink(url);
+    const words = title || where.query || "";
+    const hint = Label.shopTitle(words);
+    let target = where.kind === "shop" ? { url: where.url } : null;
+    if (!target && words) {
+      step("Finding it in the shops…");
+      target = await findByTitle(words, hint.brand);
+    }
+    if (target) {
+      const { page, opened } = await fillFromShopUrl(d, { ...target, title: target.title || words, brand: hint.brand, colour: hint.colour, link: true, step });
+      if (draft === d) toast(opened || words ? `Filled in from ${page.site || "the shop"}` : "Couldn't open the product page");
+    } else if (words) { // only the name: what it says (brand, type, colour)
+      const colour = fillFromProduct(d, { page: { title: words, brand: hint.brand, color: hint.colour }, info: null, override: true });
+      if (colour && !d.colors.length) d.colors = [colour];
+      refreshStyles();
+      d.labelNote = `Couldn't find the shop's page for this link${where.error ? ` (${where.error.replace(/\.$/, "")})` : ""}, so only its name was used. Paste the link from the shop's own website, or take a photo of the piece.`;
+      if (draft === d) toast("Filled in from the link's name");
+    } else {
+      d.labelNote = where.error ? `Couldn't open the link: ${where.error}` : "That link leads to a Google page, not a shop. Open the product on the shop's website and share that link instead.";
+    }
+  } catch (e) {
+    if (draft === d) toast(e.message || "Couldn't read that link");
+  }
+  d.scanningTag = false;
+  d.labelStep = "";
+  rerenderAdd(d);
+}
+async function pasteLink() {
+  const d = draft;
+  if (!d) return;
+  try {
+    const text = await navigator.clipboard.readText();
+    if (!text?.trim()) return toast("Nothing copied yet: copy the shop's link first");
+    d.linkText = text.trim();
+    return addFromLink(d, d.linkText);
+  } catch {
+    toast("Tap the box and paste the link there");
+    $("#f-link")?.focus();
+  }
+}
+// The box a link is pasted into, above the form.
+function linkHTML(d) {
+  if (!d.linkOpen) return "";
+  return `<div class="field link-box"><label for="f-link">Product link</label>
+    <div class="row"><input id="f-link" class="input" data-input="link-text" type="url" inputmode="url" autocomplete="off" autocapitalize="off" spellcheck="false" value="${esc(d.linkText || "")}" placeholder="https://… or what the Share button gives" style="flex:1;min-width:0">
+      <button class="btn" data-act="link-paste">Paste</button>
+      <button class="btn primary" data-act="link-go">Fill it in</button>
+      <button class="btn ghost" data-act="link-close" aria-label="Close">×</button></div>
+    <span class="muted small">${d.id ? "Brand, type, fit, price, material and the shop's photo of the piece on its own. Your name, size and photos stay." : "Brand, type, colour, fit, price and material come from the shop's page, with its photos of the piece on its own."}</span></div>`;
 }
 function fmtPrice(n, currency) {
   const cur = currency || (state.settings.region === "it" ? "EUR" : "");
@@ -10360,6 +10499,11 @@ async function onTap(e) {
     case "scan-tag": case "scan-label": return tagInput.click();
     case "lens-more": draft.lens.open = true; return rerenderAdd(draft);
     case "lens-start": return state.serverKeys.products ? lensInput.click() : toast(LENS_OFF);
+    case "link-start": draft = { ...newDraft(), fromLabel: true, linkOpen: true }; queue = []; pendingShots = []; go("add"); return $("#f-link")?.focus();
+    case "link-open": draft.linkOpen = true; rerenderAdd(draft); return $("#f-link")?.focus();
+    case "link-close": draft.linkOpen = false; return rerenderAdd(draft);
+    case "link-paste": return pasteLink();
+    case "link-go": return addFromLink(draft, $("#f-link")?.value ?? draft.linkText ?? "");
     case "lens": {
       const p = draft?.photos[draft.active] || draft?.photos[0];
       if (!state.serverKeys.products) { draft.labelNote = LENS_OFF; return rerenderAdd(draft); }
@@ -10539,6 +10683,7 @@ document.addEventListener("input", (e) => {
     return;
   }
   if (draft && ["name", "brand", "tags", "notes", "warmth", "price", "size", "material"].includes(k)) draft[k] = v;
+  if (draft && k === "link-text") draft.linkText = v;
   if (draft && k === "brand") brandTyped(v);
   if (draft && (k === "brand" || k === "tags")) {
     refreshStyles();
@@ -10554,6 +10699,7 @@ document.addEventListener("keydown", (e) => {
   if (e.key === "Enter" && e.target.dataset.input === "cal") addCalendar(e.target.value);
   if (e.key === "Enter" && ["trytext", "trybrand"].includes(e.target.dataset.input)) tryIt();
   if (e.key === "Enter" && e.target.dataset.input === "tripq") lookupTrip(e.target.value);
+  if (e.key === "Enter" && e.target.dataset.input === "link-text" && draft) addFromLink(draft, e.target.value);
   if (e.key === "Escape") { closeSheet(); if (cam.stream) { cam.shots = []; stopCamera(); } }
 });
 

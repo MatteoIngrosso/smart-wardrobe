@@ -146,3 +146,60 @@ export function linkIn(text) {
     return /^https?:$/.test(u.protocol) ? u.href : "";
   } catch { return ""; }
 }
+
+/* ---------- Pasted links ---------- */
+
+// What you paste to add a piece: a shop's link, or what a Share button gives, like the Google
+// app's "BOSS - Camicia slim fit in cotone elasticizzato - Bianco https://share.google/…".
+// The words before the link are kept as a hint of what the product is.
+export function pastedLink(text) {
+  const t = String(text || "").replace(/\s+/g, " ").trim();
+  const url = linkIn(t);
+  if (!url) return { url: "", title: "" };
+  const at = t.search(/https?:\/\/|(?:^|\s)(?:www\.)?[a-z0-9-]+(?:\.[a-z0-9-]+)+\//i);
+  const title = (at > 0 ? t.slice(0, at) : "")
+    .replace(/^(check (this|it) out|guarda( qui)?|look at this|ti piace)[:!.]?\s*/i, "")
+    .replace(/[\s"'“”«»:|·,–—-]+$/u, "").replace(/^["'“”«»\s]+/u, "").trim().slice(0, 160);
+  return { url, title };
+}
+// A Google address: a Google page (search, Shopping, a consent page) or Google's share link.
+export function isGoogleUrl(url) {
+  try {
+    const h = new URL(url).hostname.toLowerCase();
+    return h === "share.google" || /(^|\.)google\.(com|[a-z]{2}|com?\.[a-z]{2})$/.test(h);
+  } catch { return false; }
+}
+// Google Shopping writes products as "Brand - Name - Colour":
+// "BOSS - Camicia slim fit in cotone elasticizzato - Bianco" → { brand: "BOSS", name: "Camicia…", colour: "Bianco" }.
+// A title without " - " is all name.
+export function shopTitle(title) {
+  const parts = String(title || "").split(/\s+[-–—|]\s+/).map((p) => p.trim()).filter(Boolean);
+  if (parts.length < 2) return { brand: "", name: parts[0] || "", colour: "" };
+  const brand = parts[0].split(/\s+/).length <= 3 && parts[0].length <= 30 ? parts.shift() : "";
+  const colour = parts.length > 1 && parts.at(-1).split(/\s+/).length <= 3 ? parts.pop() : "";
+  return { brand, name: parts.join(" - "), colour };
+}
+// The code a product's address holds that its photo names hold too, so the product's photos
+// can be told from the rest of the page: Hugo Boss …/hbeu50525359_100.html → "hbeu50525359_100"
+// (model and colour), Zara …-p04387410.html → "p04387410". At least 6 digits, or nothing.
+export function productCode(url) {
+  let u;
+  try { u = new URL(url); } catch { return ""; }
+  const last = decodeURIComponent(u.pathname.split("/").filter(Boolean).pop() || "").replace(/\.(html?|aspx?|php)$/i, "");
+  const m = last.match(/(?:^|[-_./])([a-z]{0,6}\d{6,}(?:_\d{2,4})?)$/i) || last.match(/^([a-z]{0,6}\d{6,}(?:_\d{2,4})?)$/i);
+  return m ? m[1].toLowerCase() : "";
+}
+// Whether an address is on the brand's own website: "BOSS" and hugoboss.com, "Lacoste" and lacoste.com.
+export function onBrandSite(url, brand) {
+  const b = norm(brand).replace(/&/g, "");
+  if (b.length < 2) return false;
+  const host = siteOf(url).replace(/\.[a-z.]+$/, "").replace(/[^a-z0-9]/g, "");
+  return !!host && (host.includes(b) || host.includes(norm(String(brand).replace(/&/g, "and"))));
+}
+// How much two product names share (0…1): the words of 3+ letters in the shorter one found in the other.
+export function titleMatch(a, b) {
+  const words = (s) => new Set(String(s || "").toLowerCase().normalize("NFD").replace(/[̀-ͯ]/g, "").split(/[^a-z0-9]+/).filter((w) => w.length >= 3));
+  const [x, y] = [words(a), words(b)].sort((p, q) => p.size - q.size);
+  if (!x.size) return 0;
+  return [...x].filter((w) => y.has(w)).length / x.size;
+}

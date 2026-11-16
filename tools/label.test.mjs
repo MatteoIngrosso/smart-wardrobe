@@ -136,3 +136,33 @@ test("AI answer schemas never offer an empty choice", () => {
   const app = readFileSync(new URL("../app.js", import.meta.url), "utf8");
   for (const m of app.matchAll(/enum: \[[^\]]*\]/g)) assert.doesNotMatch(m[0], /""|''/, m[0]);
 });
+
+test("a pasted link: the address, and the product's name before it", () => {
+  const boss = "BOSS - Camicia slim fit in cotone elasticizzato - Bianco https://share.google/H3toR0wOO1aU6OEhX";
+  assert.deepEqual(L.pastedLink(boss), { url: "https://share.google/H3toR0wOO1aU6OEhX", title: "BOSS - Camicia slim fit in cotone elasticizzato - Bianco" });
+  assert.deepEqual(L.pastedLink("  https://www.hugoboss.com/it/x/hbeu50525359_100.html \n"), { url: "https://www.hugoboss.com/it/x/hbeu50525359_100.html", title: "" });
+  assert.deepEqual(L.pastedLink("“Baggy jeans” – https://www.pullandbear.com/it/jeans-l03660516?cS=833"), { url: "https://www.pullandbear.com/it/jeans-l03660516?cS=833", title: "Baggy jeans" });
+  assert.deepEqual(L.pastedLink("Check this out: Oxford shirt\nwww.zara.com/it/it/camicia-p04387410.html"), { url: "https://www.zara.com/it/it/camicia-p04387410.html", title: "Oxford shirt" });
+  assert.deepEqual(L.pastedLink("no link here"), { url: "", title: "" });
+});
+
+test("Google addresses and Google Shopping names", () => {
+  for (const u of ["https://share.google/abc", "https://www.google.com/search?q=x", "https://www.google.it/search?q=x", "https://consent.google.com/ml?continue=x", "https://www.google.co.uk/shopping/product/1"]) assert.ok(L.isGoogleUrl(u), u);
+  for (const u of ["https://www.hugoboss.com/it/", "https://googleshop.example.com/", "https://www.notgoogle.com/", "nonsense"]) assert.equal(L.isGoogleUrl(u), false, u);
+  assert.deepEqual(L.shopTitle("BOSS - Camicia slim fit in cotone elasticizzato - Bianco"), { brand: "BOSS", name: "Camicia slim fit in cotone elasticizzato", colour: "Bianco" });
+  assert.deepEqual(L.shopTitle("Ralph Lauren - Polo slim fit"), { brand: "Ralph Lauren", name: "Polo slim fit", colour: "" });
+  assert.deepEqual(L.shopTitle("Oxford shirt"), { brand: "", name: "Oxford shirt", colour: "" });
+});
+
+test("the photo code in a product's address, and the brand's own site", () => {
+  assert.equal(L.productCode("https://www.hugoboss.com/it/camicia-slim-fit-in-cotone-elasticizzato-lavorato-italiano/hbeu50525359_100.html"), "hbeu50525359_100");
+  assert.equal(L.productCode("https://www.zara.com/it/it/camicia-oxford-p04387410.html?v1=1"), "p04387410");
+  assert.equal(L.productCode("https://www.shop.com/men/shirts/white-shirt"), "");
+  assert.equal(L.productCode("https://www.shop.com/p/12345"), "", "fewer than 6 digits");
+  assert.ok(L.onBrandSite("https://www.hugoboss.com/it/x", "BOSS"));
+  assert.ok(L.onBrandSite("https://www.pullandbear.com/it/x", "Pull&Bear"));
+  assert.ok(L.onBrandSite("https://www.lacoste.com/it/x", "Lacoste"));
+  assert.equal(L.onBrandSite("https://www.zalando.it/boss-x", "BOSS"), false);
+  assert.equal(L.titleMatch("BOSS - Camicia slim fit in cotone elasticizzato - Bianco", "Camicia slim fit in cotone elasticizzato | BOSS"), 1);
+  assert.ok(L.titleMatch("BOSS - Camicia slim fit in cotone elasticizzato - Bianco", "Jeans baggy | Pull&Bear") < 0.2);
+});
