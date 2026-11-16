@@ -12,6 +12,7 @@
 //     HEAD/GET/PUT /api/blob/<key>        photos, stored once by content hash
 //     POST /api/ai/gemini/<model>         Gemini generateContent with the GEMINI_KEY secret
 //     POST /api/ai/claude/v1/messages     Claude Messages API with the CLAUDE_KEY secret
+//     GET  /api/link?url=…                where a pasted link really goes: {kind: "shop"|"google", url, query, hops}
 //     GET  /api/page?url=…&code=…         a shop's product page: {url, title, image, images, description, price, site, text, tried}
 //     GET  /api/image?url=…               a product photo from a shop (to keep as a piece's picture)
 //     GET  /api/products?q=…&gl=it&hl=it  real products with photos (Google Shopping via SerpApi)
@@ -69,6 +70,7 @@ export async function handleApi(request, env) {
   const method = request.method;
   try {
     if (path.startsWith("ai/")) return await ai(request, env, path.slice(3));
+    if (path === "link" && method === "GET") return await resolveLink(new URL(request.url).searchParams.get("url"));
     if (path === "page" && method === "GET") return await productPage(new URL(request.url).searchParams);
     if (path === "image" && method === "GET") return await productImage(new URL(request.url).searchParams.get("url"));
     if (path === "products" && method === "GET") return await products(env, new URL(request.url).searchParams);
@@ -378,6 +380,75 @@ const BROWSER = {
 };
 const unescapeHtml = (s) => s.replace(/&(amp|quot|#39|#x27|#x2F|lt|gt);/gi, (m, e) => ({ amp: "&", quot: '"', "#39": "'", "#x27": "'", "#x2f": "/", lt: "<", gt: ">" })[e.toLowerCase()]);
 
+// The code a shop's photo names hold, to pick the product's photos from a page: Inditex model
+// and colour (07660508434), or a code from the product's address (Hugo Boss hbeu50525359_100).
+const PHOTO_CODE = /^(?=(?:[^\d]*\d){6})[a-z0-9_-]{6,30}$/i;
+
+/* ---------- Pasted links ---------- */
+// What you paste to add a piece can be a short link (the Google app's Share button gives
+// share.google/…, others bit.ly/… or amzn.eu/…) or a Google page. Short links are followed one
+// hop at a time; a Google page gives the shop's address inside it, or the search it stands for.
+// Google's result pages themselves aren't opened: servers only get a consent page there.
+const SHORT_HOSTS = /^(share\.google|goo\.gl|g\.co|bit\.ly|t\.co|tinyurl\.com|amzn\.(to|eu)|a\.co|rb\.gy|shorturl\.at|is\.gd|ow\.ly|buff\.ly|pin\.it|l\.facebook\.com|lm\.facebook\.com|l\.instagram\.com|vm\.tiktok\.com|zalan\.do|s\.click\.aliexpress\.com)$/i;
+const isGoogle = (host) => /(^|\.)google\.(com|[a-z]{2}|com?\.[a-z]{2})$/i.test(host);
+const MAX_HOPS = 5;
+// Only http(s) addresses on a real public host name: no IP numbers, ports, local names or this app.
+function publicUrl(raw, base) {
+  let u;
+  try { u = new URL(String(raw || "").trim(), base); } catch { return null; }
+  const host = u.hostname.toLowerCase();
+  if (!/^https?:$/.test(u.protocol) || u.username || u.password || u.port || !host.includes(".") || /^[\d.]+$|:|localhost$|\.local$|\.internal$|workers\.dev$/.test(host)) return null;
+  return u;
+}
+// The address a Google page stands for: a shop link inside it (/url?q=…, Images' imgrefurl,
+// an ad's adurl), another Google page (a consent page's continue=…), or the words searched.
+function googleTarget(u) {
+  for (const k of ["url", "q", "imgrefurl", "adurl", "u", "continue"]) {
+    const v = publicUrl(u.searchParams.get(k) || "");
+    if (v) return { next: v };
+  }
+  const query = (u.searchParams.get("q") || u.searchParams.get("oq") || "").replace(/\s+/g, " ").trim().slice(0, 200);
+  return { query };
+}
+// Where an HTML page sends you when it isn't an HTTP redirect: <meta http-equiv="refresh"> or a script.
+function pageRedirect(html) {
+  const meta = html.match(/<meta[^>]+http-equiv=["']?refresh["']?[^>]*>/i)?.[0].match(/content=["']?\s*\d*\s*;?\s*url=([^"'>]+)/i)?.[1];
+  const script = html.match(/(?:location\.(?:replace|assign)\(|location(?:\.href)?\s*=\s*)["']([^"']+)["']/i)?.[1];
+  return unescapeHtml((meta || script || "").trim()).replace(/\\x2F|\\\//gi, "/").replace(/\\x3D/gi, "=").replace(/\\x26|\\u0026/gi, "&");
+}
+export async function resolveLink(raw) {
+  let u = publicUrl(raw);
+  if (!u) return fail(400, "That isn't a link to a website.");
+  const hops = [u.href];
+  for (;;) {
+    let next = null;
+    if (isGoogle(u.hostname)) {
+      const g = googleTarget(u);
+      if (!g.next) return json({ kind: "google", url: u.href, query: g.query || "", hops });
+      next = g.next;
+    } else if (!SHORT_HOSTS.test(u.hostname)) {
+      return json({ kind: "shop", url: u.href, query: "", hops });
+    } else {
+      let r;
+      try {
+        r = await fetch(u, { headers: BROWSER, redirect: "manual", signal: AbortSignal.timeout(8000) });
+      } catch {
+        return fail(502, "The link didn't answer.");
+      }
+      let to = "";
+      if (r.status >= 300 && r.status < 400) to = r.headers.get("Location") || "";
+      else if (r.ok) to = pageRedirect((await r.text()).slice(0, 200_000));
+      else return fail(502, r.status === 404 ? "That link doesn't work any more." : `The link answered ${r.status}.`);
+      if (!to) return fail(502, "The link doesn't lead to a page.");
+      next = publicUrl(to, u);
+      if (!next) return fail(400, "The link leads somewhere the app can't open.");
+    }
+    if (hops.length > MAX_HOPS) return fail(502, "The link goes round in circles.");
+    u = next;
+    hops.push(u.href);
+  }
+}
+
 // Some shops (Pull&Bear, Zara…) turn away requests from cloud servers like this one, or send
 // a "checking your browser" page instead. So after the shop itself, the page is read through
 // Google Translate's page proxy (Google's own servers fetch it) and through Jina Reader (free,
@@ -389,7 +460,7 @@ async function productPage(params) {
   let url;
   try { url = new URL(params.get("url")); } catch { return fail(400, "Bad URL"); }
   if (!/^https?:$/.test(url.protocol)) return fail(400, "Bad URL");
-  const code = (params.get("code") || "").match(/^\d{6,14}$/)?.[0] || "";
+  const code = (params.get("code") || "").match(PHOTO_CODE)?.[0] || "";
   const tried = [];
   let best = null;
   const merge = (info) => {
@@ -482,13 +553,18 @@ async function viaJinaText(url, code) {
 function productPhotos(text, code) {
   if (!code) return [];
   const found = new Map();
-  const re = new RegExp(`https?:\\/\\/[^"'\\s<>()\\\\]*${code}[^"'\\s<>()\\\\]*?\\.(?:jpe?g|png|webp)(?:\\?[^"'\\s<>()\\\\]*)?`, "gi");
+  const c = `[^"'\\s<>()\\\\]`; // a character an address can hold here
+  const re = new RegExp(`https?:\\/\\/${c}*${code}${c}*?\\.(?:jpe?g|png|webp)(?:\\?${c}*)?|https?:\\/\\/${c}*\\/is\\/image\\/[^"'\\s<>()\\\\?]*${code}[^"'\\s<>()\\\\?]*(?:\\?${c}*)?`, "gi");
   for (const m of text.replace(/\\\//g, "/").matchAll(re)) {
     let u;
     try { u = new URL(unescapeHtml(m[0])); } catch { continue; }
-    for (const k of ["w", "h", "imwidth", "width", "f"]) u.searchParams.delete(k);
-    const key = u.pathname.replace(/\/[^/]*$/, "");
-    if (!found.has(key)) found.set(key, u.href.replace(/^http:/, "https:"));
+    // Image servers like Adobe Scene7 (Hugo Boss) name each photo without a file type, all in
+    // one folder: each name is a photo there, and the colour swatches (…_SW) aren't photos.
+    const scene7 = u.pathname.includes("/is/image/");
+    if (scene7 && /_sw$/i.test(u.pathname)) continue;
+    if (!scene7) for (const k of ["w", "h", "imwidth", "width", "f"]) u.searchParams.delete(k); // Scene7's $preset$ names must stay as written
+    const key = scene7 ? u.pathname : u.pathname.replace(/\/[^/]*$/, "");
+    if (!found.has(key)) found.set(key, (scene7 ? unescapeHtml(m[0]) : u.href).replace(/^http:/, "https:"));
   }
   return [...found.values()].slice(0, 12);
 }
