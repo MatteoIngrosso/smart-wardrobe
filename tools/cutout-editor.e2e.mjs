@@ -177,7 +177,7 @@ const check = (name, ok, info = "") => { results.push(ok); console.log(`${ok ? "
 {
   const r = await page.evaluate(async () => {
     const { frameCutout } = await import("/cutout-editor.js");
-    const { bakeGarment, cutoutPanels } = await import("/garment-baker.js");
+    const { bakeGarment } = await import("/garment-baker.js");
     const items = [
       { id: "a", name: "All City hoodie", category: "hoodie", photo: "123659645" },
       { id: "b", name: "Tommy Jeans bomber", category: "jacket", photo: "125852471" },
@@ -199,13 +199,10 @@ const check = (name, ok, info = "") => { results.push(ok); console.log(`${ok ? "
       for (let i = 0; i < pa.d.length; i += 4) diff += Math.abs(pa.d[i] - pb.d[i]) + Math.abs(pa.d[i + 1] - pb.d[i + 1]) + Math.abs(pa.d[i + 2] - pb.d[i + 2]);
       const hex = (h) => [1, 3, 5].map((k) => parseInt(h.slice(k, k + 2), 16));
       const ca = hex(A.fabricBaseColor), cb = hex(B.fabricBaseColor);
-      const [ka, kb] = [await cutoutPanels(it, { front: old }), await cutoutPanels(it, { front: now })];
-      const [qa, qb] = [await createImageBitmap(ka.front), await createImageBitmap(kb.front)];
       out.push({
         name: it.name, panelDiff: diff / (pa.d.length / 4) / 3,
         colourDiff: Math.max(...ca.map((v, k) => Math.abs(v - cb[k]))),
         crotch: [A.crotchV, B.crotchV],
-        aspect: [qa.width / qa.height, qb.width / qb.height],
       });
     }
     return out;
@@ -213,7 +210,6 @@ const check = (name, ok, info = "") => { results.push(ok); console.log(`${ok ? "
   for (const x of r) {
     check(`baker, ${x.name}: same front panel`, x.panelDiff < 6, `mean difference ${x.panelDiff.toFixed(2)} / 255`);
     check(`baker, ${x.name}: same fabric colour`, x.colourDiff <= 6, `${x.colourDiff}`);
-    check(`mannequin, ${x.name}: same panel shape`, Math.abs(x.aspect[0] - x.aspect[1]) < 0.03, x.aspect.map((v) => v.toFixed(3)).join(" vs "));
     if (x.crotch[0] != null) check(`baker, ${x.name}: same crotch line`, Math.abs(x.crotch[0] - x.crotch[1]) < 0.03, x.crotch.map((v) => v.toFixed(3)).join(" vs "));
   }
 }

@@ -84,11 +84,16 @@ export const lengthOf = (item) => (["shorts", "gym-shorts"].includes(item?.categ
    - aspectRatio: the trimmed cut-out's height over its width (as photographed, never stretched)
    - trimBounds:  [x, y, w, h] of the garment inside its photo, as fractions of the photo
    - scale:       the wearer's own tweak of its size, 1 = as measured (CUT_SCALE)
-   - offsetY:     the wearer's own tweak of where it sits, in cm, + is higher (CUT_OFFSET) */
-export const CUT_SCALE = [0.8, 1.25], CUT_OFFSET = [-8, 8];
+   - offsetY:     the wearer's own tweak of where it sits, in cm, + is higher (CUT_OFFSET)
+   - offsetX:     sideways, in cm, + is to the right as you look at it (Lookbook only; kept only when set)
+   - z:           steps in front of (+) or behind (-) its slot on the Lookbook (CUT_Z; kept only when set) */
+export const CUT_SCALE = [0.8, 1.25], CUT_OFFSET = [-8, 8], CUT_Z = [-3, 3];
 export function cleanCutMeta(m) {
   const num = (v, lo, hi, d) => (Number.isFinite(+v) && v !== null && v !== "" ? Math.max(lo, Math.min(hi, +v)) : d);
   const out = { scale: Math.round(num(m?.scale, CUT_SCALE[0], CUT_SCALE[1], 1) * 100) / 100, offsetY: Math.round(num(m?.offsetY, CUT_OFFSET[0], CUT_OFFSET[1], 0) * 2) / 2 };
+  const x = Math.round(num(m?.offsetX, CUT_OFFSET[0], CUT_OFFSET[1], 0) * 2) / 2, z = Math.round(num(m?.z, CUT_Z[0], CUT_Z[1], 0));
+  if (x) out.offsetX = x;
+  if (z) out.z = z;
   if (Number.isFinite(+m?.aspectRatio) && +m.aspectRatio > 0) out.aspectRatio = Math.round(+m.aspectRatio * 1000) / 1000;
   if (Array.isArray(m?.trimBounds) && m.trimBounds.length === 4 && m.trimBounds.every((v) => Number.isFinite(+v))) out.trimBounds = m.trimBounds.map((v) => Math.round(+v * 10000) / 10000);
   return out;
@@ -152,6 +157,9 @@ export function bottomsSize(asset, { leg = 1, waist = REST.waist, short = false 
    - Shoes: one shoe from the side, cropped to the shoe, the toe pointing right (+u), the sole along
      the bottom edge. backPanelUV is the other photo in the same orientation.
    Every panel is fully opaque: what was background is filled with the fabric. */
+/** The piece sits as measured: no Scale, offsets or layer step of its own. */
+export const isPlainCut = (m) => { const c = cleanCutMeta(m); return c.scale === 1 && !c.offsetY && !c.offsetX && !c.z; };
+
 export const PANEL_SIZE = { top: [768, 1024], bottoms: [768, 1024], shoes: [1024, 512] };
 
 /* facePhotoDataUrl framing: 512 x 512, the face centred, the eye line at 42% of the height, the

@@ -592,6 +592,13 @@ details summary { cursor: pointer; }
 .stage3d:focus-visible { box-shadow: inset 0 0 0 2px #f2f2f2; }
 .stage3d-host { position: absolute; inset: 0; }
 .stage3d-host canvas { display: block; width: 100% !important; height: 100% !important; }
+/* The Lookbook look (lookbook-stage.js): only the clothes, floating over a studio backdrop. */
+.mirror.is-lookbook { grid-template-columns: minmax(0, 1fr) minmax(260px, 320px); }
+.stage3d.is-lookbook { background: radial-gradient(120% 80% at 50% 38%, #1d1c1a 0%, var(--studio) 62%, #0f0f0e 100%); touch-action: none; cursor: default; height: min(74vh, 780px); }
+.stage3d.is-lookbook.preview-stage { height: min(62vh, 640px); }
+.lookbook-host { position: absolute; inset: 0; }
+.lb-hint { margin: 0; text-align: center; max-width: 560px; }
+.slot-pick .piece[aria-pressed="true"] { outline: 2px solid var(--text); outline-offset: 2px; border-radius: 14px; }
 .stage-note { position: absolute; left: 50%; bottom: 22px; transform: translateX(-50%); width: min(86%, 380px); display: grid; gap: 6px; justify-items: center; text-align: center; font-size: 15px; pointer-events: none; }
 .stage-note:empty { display: none; }
 .stage-note > span:not(.stage-pill) { color: #b9b6ae; font-size: 14px; }
@@ -626,6 +633,7 @@ details summary { cursor: pointer; }
 /* iPad portrait and smaller: narrower side panels; phones: the stage first, then the ideas, then the body. */
 @media (max-width: 1100px) {
   .mirror { grid-template-columns: 210px minmax(0, 1fr) 250px; gap: 14px; }
+  .mirror.is-lookbook { grid-template-columns: minmax(0, 1fr) 260px; }
   .mirror-side { padding: 14px; }
   .swatch { width: 34px; height: 34px; }
   .look-pics img { width: 34px; height: 42px; }
@@ -634,6 +642,8 @@ details summary { cursor: pointer; }
   .mirror { grid-template-columns: minmax(0, 1fr); }
   .mirror-stage { order: -1; }
   .stage3d { height: min(68vh, 600px); }
+  .mirror.is-lookbook { grid-template-columns: minmax(0, 1fr); }
+  .stage3d.is-lookbook { height: min(70vh, 600px); }
 }
 
 /* ---------- calendar: a month of planned outfits, the forecast, one day at a time ---------- */
