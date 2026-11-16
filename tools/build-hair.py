@@ -39,7 +39,11 @@ STYLES = {
     'curly': ('Male_Adult_06', 0.1),      # medium curls
     'wavy': ('Male_Adult_01', 0.12),      # medium, wavy, over the ears
     'long': ('Male_Adult_02', 0.2),       # to the bottom of the ears and the nape
+    'crew': ('Male_Adult_11', 0.05),      # crew cut: short textured top, tapered sides
+    'shaggy': ('Male_Adult_10', 0.12),    # shaggy mop with a fringe, over the ears
 }
+# Not usable: Male_Adult_16 (blond: its hair is too close to its skin to cut out) and Male_Adult_04
+# (afro: the scalp paint leaves gaps and its cards stand off as strips). Those looks are drawn instead.
 
 
 # ---------- a small reader for binary FBX (enough for Rocketbox's meshes) ----------
