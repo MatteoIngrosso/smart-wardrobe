@@ -1201,6 +1201,21 @@ function guessTones(it, groups = null) {
   return out;
 }
 // Pieces saved before the tones existed: guessed once, a few at a time, from their words and photo.
+// A blazer is a jacket (the outer layer the tailoring, tie and suit rules look for), whatever the photo
+// reader called it: a "single-breasted blazer" saved as an Overshirt was only ever a mid layer, so it
+// never made a Smart or Formal look, never took a tie and showed on the avatar as a sweater.
+const TAILORED_RE = /\b(blazers?|suit jackets?|sport ?coats?|sports jackets?|tuxedo|dinner jackets?)\b/i;
+const tailoredCategory = (category, name = "", tags = []) =>
+  ["overshirt", "sweater", "shirt", "sweatshirt"].includes(category) && TAILORED_RE.test(`${name} ${(tags || []).join(" ")}`) ? "jacket" : category;
+async function fixTailoredCategories() {
+  for (const it of state.items) {
+    const cat = tailoredCategory(it.category, it.name, it.tags);
+    if (cat === it.category) continue;
+    it.category = cat;
+    if (CAT[cat]) it.warmth = Math.max(+it.warmth || 0, CAT[cat].warmth);
+    await store.put("items", it);
+  }
+}
 async function backfillTones() {
   for (const it of state.items) {
     if (!(METAL_CATS.includes(it.category) && it.metal === undefined) && !(LEATHER_CATS.includes(it.category) && it.leather === undefined)) continue;
@@ -5960,7 +5975,7 @@ async function saveDraft(next = false) {
   const item = {
     ...(existing || { id: uid(), createdAt: new Date().toISOString(), wearCount: 0, lastWorn: null, favorite: false }),
     name: d.name.trim() || autoName(d) || "Untitled piece",
-    category: d.category, colors: d.colors, brand: d.brand.trim(), styles,
+    category: tailoredCategory(d.category, d.name, tags), colors: d.colors, brand: d.brand.trim(), styles,
     // the styles decide, unless they're as they were: then a level set on the piece's page stays
     formality: existing && existing.category === d.category && existing.formality != null && sameList(existing.styles, styles) ? existing.formality : formalityOf(styles, d.category),
     warmth: +d.warmth, tags, notes: d.notes.trim(),
@@ -10608,6 +10623,7 @@ await moveWishlist();
 applyTheme();
 await loadBible();
 setTimeout(() => backfillTones().catch(() => {}), 3000);
+await fixTailoredCategories().catch((e) => console.warn("Blazers:", e));
 loadWeather().then(() => { if (view === "today") { state.outfits = []; render(); } });
 // Calendar events: now, when the app comes back to the front, and every half hour.
 async function refreshCalendar() {

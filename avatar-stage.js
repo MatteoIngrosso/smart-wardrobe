@@ -973,14 +973,14 @@ function clothMaterial(kind, opts, U) {
     side: THREE.DoubleSide, alphaHash: true, transparent: false,
   });
   // (black cloth: softer creases, and less of the little specular there is)
-  if (opts.normalMap) mat.normalScale.setScalar(mix(0.8, 0.45, opts.deep ?? 0));
+  if (opts.normalMap) mat.normalScale.setScalar(mix(0.8, 0.45, opts.deep ?? 0) * (opts.creases ?? 1));
   mat.specularIntensity *= mix(1, 0.6, opts.deep ?? 0);
   mat.defines = {};
   if (kind === 'fabric' && opts.tile) mat.defines.TRIPLANAR = '';
   if (kind === 'trim') mat.defines.RIBS = '';
   if (kind === 'panel' && opts.map && opts.edge) mat.defines.PANEL_EDGE = '';
   if (kind === 'panel' && opts.map && opts.tile) mat.defines.PANEL_SIDE = '';
-  const u = { ...U, uLining: { value: new THREE.Color(opts.lining ?? 0x222222) }, uTile: { value: opts.tile || null }, uTileScale: { value: opts.tileScale ?? 1.6 }, uGrain: { value: opts.grain ?? 1 }, uDeep: { value: opts.deep ?? 0 }, uFabricCol: { value: new THREE.Color(opts.fabric ?? 0x777777) } };
+  const u = { ...U, uLining: { value: new THREE.Color(opts.lining ?? 0x222222) }, uTile: { value: opts.tile || null }, uTileScale: { value: opts.tileScale ?? 1.6 }, uGrain: { value: opts.grain ?? 1 }, uDeep: { value: opts.deep ?? 0 }, uFabricCol: { value: new THREE.Color(opts.fabric ?? 0x777777) }, uFlat: { value: opts.flat ?? 0.7 } };
   mat.userData.uniforms = u;
   mat.onBeforeCompile = (shader) => {
     hookCommon(shader, u);
@@ -988,7 +988,7 @@ function clothMaterial(kind, opts, U) {
       .replace('#include <common>', '#include <common>\nattribute vec3 aRib; varying vec3 vRib; varying vec3 vRestN;')
       .replace('#include <begin_vertex>', '#include <begin_vertex>\nvRib = aRib; vRestN = normal;');
     shader.fragmentShader = shader.fragmentShader
-      .replace('#include <common>', '#include <common>\nuniform vec3 uLining; uniform sampler2D uTile; uniform float uTileScale; uniform float uGrain; uniform float uDeep; uniform vec3 uFabricCol; varying vec3 vRib; varying vec3 vRestN;')
+      .replace('#include <common>', '#include <common>\nuniform vec3 uLining; uniform sampler2D uTile; uniform float uTileScale; uniform float uGrain; uniform float uDeep; uniform vec3 uFabricCol; uniform float uFlat; varying vec3 vRib; varying vec3 vRestN;')
       .replace('#include <map_fragment>', `#include <map_fragment>
 #ifdef TRIPLANAR
 {
@@ -999,8 +999,17 @@ function clothMaterial(kind, opts, U) {
 }
 #endif
 #ifdef PANEL_EDGE
-// the photo's edges (the sleeves laid beside the body, the collar above) fade into the plain cloth
-float panelEdge = smoothstep(0.0, 0.14, min(vMapUv.x, 1.0 - vMapUv.x)) * smoothstep(1.0, 0.93, vMapUv.y);
+// The photo's own creases (it was laid on a bed or hung up) are light and shade close to the fabric's
+// colour: they are pulled towards it (by uFlat), so the cloth isn't crumpled where the body holds it
+// smooth. Prints, logos, zips and stripes are far from the fabric's colour and stay as they are.
+{
+  vec3 d = diffuseColor.rgb - uFabricCol;
+  float far = smoothstep(0.06, 0.2, length(d) / max(0.08, dot(uFabricCol, vec3(0.333)) + 0.08));
+  diffuseColor.rgb = uFabricCol + d * mix(uFlat, 1.0, far);
+}
+// the photo's edges (the sleeves laid beside the body, the collar above) fade into the plain cloth,
+// over a wide band, so there's no seam where the photo ends at the sides of the back
+float panelEdge = smoothstep(0.0, 0.24, min(vMapUv.x, 1.0 - vMapUv.x)) * smoothstep(1.0, 0.93, vMapUv.y);
 diffuseColor.rgb = mix(uFabricCol, diffuseColor.rgb, panelEdge);
 #endif
 #ifdef PANEL_SIDE
@@ -1041,7 +1050,7 @@ normal = normalize(mix(nonPerturbedNormal, normal, panelSide));
   normal = bumpN(normal, hb, 1.0);
 }`);
   };
-  mat.customProgramCacheKey = () => 'cloth-4' + (opts.map && opts.edge && kind === 'panel' ? 'e' : '') + (opts.map && opts.tile && kind === 'panel' ? 's' : '');
+  mat.customProgramCacheKey = () => 'cloth-5' + (opts.map && opts.edge && kind === 'panel' ? 'e' : '') + (opts.map && opts.tile && kind === 'panel' ? 's' : '');
   return mat;
 }
 
@@ -1759,14 +1768,16 @@ const CLOTH_TYPE = {
   tank: { around: 0.9, along: 0.02, sleeve: 1 },
   longsleeve: { around: 0.8, along: 0.03, sleeve: 0.8 },
   sweater: { around: 1.1, along: 0.04, sleeve: 1 },
-  hoodie: { around: 1.3, along: 0.05, sleeve: 1.2 },
-  trackjacket: { around: 1.1, along: 0.04, sleeve: 1 },
+  hoodie: { around: 1.3, along: 0.05, sleeve: 1.2, tube: 0.02 },
+  trackjacket: { around: 1.1, along: 0.04, sleeve: 1, tube: 0.02 },
   // (room: it blouses over its rib; chest / low: the ease over the upper chest and over the lowest
   // quarter, x around: a blouson is flat on the chest and full just above its waistband)
   // (tube: the sleeves hang as round tubes this far off the arm's outline with its hollows bridged,
   // so the deltoid, the biceps and the forearm don't print through)
   bomber: { around: 2.2, along: 0.1, sleeve: 1.5, rib: -0.06, room: 2.2, chest: 0.7, low: 1.25, tube: 0.05 },
-  jacket_open: { around: 1.25, along: 0.03, sleeve: 1.1 },
+  // (an open jacket, a zip hoodie: round sleeves too, or the shoulder, the biceps and the forearm print
+  // through the cloth as if it were skin-tight: Matteo's "bulky, muscly" grey jacket, 2026-11-16)
+  jacket_open: { around: 1.25, along: 0.03, sleeve: 1.1, tube: 0.015 },
 }; // (a puffer keeps its quilted shell)
 const CLOTH_STEPS = 30, CLOTH_ITERS = 4;
 let clothIds = 0; // (each prepared piece gets one, for the drape cache's keys)
@@ -1810,9 +1821,17 @@ function sleeveTubes(B, D, inner, gapBody, room) {
     let run = 0; for (let k = NB - 1; k >= 0; k--) { run = Math.max(run, A.R[k]); M[k] = run; }
     // (the shoulders stay relaxed: over the deltoid the tube is barely wider than over the biceps; the
     // deltoid keeps the cloth off itself as a collider, it doesn't blow the sleeve up)
-    const kB = Math.round(NB * 0.25); for (let k = 0; k < kB; k++) M[k] = Math.min(M[k], M[kB] + 0.05 * B.s * (1 - k / kB));
+    const kB = Math.round(NB * 0.25); for (let k = 0; k < kB; k++) M[k] = Math.min(M[k], M[kB] + 0.03 * B.s * (1 - k / kB));
     const H = new Float32Array(NB);
     for (let k = 0; k < NB; k++) { let sm = 0, n = 0; for (let j = k - 2; j <= k + 2; j++) if (j >= 0 && j < NB) { sm += M[j]; n++; } H[k] = sm / n + room; }
+    // a sleeve tapers evenly from the shoulder to the cuff: the smallest profile over this one that
+    // bends only outwards (no step where the biceps ends or at the elbow)
+    const hull = [];
+    for (let k = 0; k < NB; k++) {
+      while (hull.length >= 2) { const o = hull[hull.length - 2], a = hull[hull.length - 1]; if ((a - o) * (H[k] - H[o]) - (H[a] - H[o]) * (k - o) >= 0) hull.pop(); else break; }
+      hull.push(k);
+    }
+    for (let i = 0; i + 1 < hull.length; i++) { const a = hull[i], b = hull[i + 1]; for (let k = a; k <= b; k++) H[k] = Math.max(H[k], mix(H[a], H[b], (k - a) / Math.max(1, b - a))); }
     A.H = H;
   }
   const out = (X, v, w, snap) => {
@@ -1964,7 +1983,7 @@ function clothSolve(gm, B, G0, inner) {
     const ax = ew > 0.5 ? (Pb[a * 3] >= 0 ? axL : axR) : [0, 1, 0];
     const c2 = (((S0[b * 3] - S0[a * 3]) * ax[0] + (S0[b * 3 + 1] - S0[a * 3 + 1]) * ax[1] + (S0[b * 3 + 2] - S0[a * 3 + 2]) * ax[2]) / L) ** 2; // 1 along, 0 around
     const bd = (band[a] + band[b]) / 2;
-    const around = mix(ew > 0.5 ? ease * ty.sleeve * (tube ? 0.4 : 1) : ease * (zoneK[a] + zoneK[b]) / 2, ty.rib ?? 0.015, bd), along = mix(ty.along, 0, bd);
+    const around = mix(ew > 0.5 ? ease * ty.sleeve * (tube ? (ty.room ? 0.4 : 0.15) : 1) : ease * (zoneK[a] + zoneK[b]) / 2, ty.rib ?? 0.015, bd), along = mix(ty.along, 0, bd);
     rest[e] = L * (1 + around * (1 - c2) + along * c2);
   }
   const cp = [], cn = [], cg = [];
@@ -3143,9 +3162,13 @@ diffuseColor.rgb *= mix(1.0, 0.42, smoothstep(0.0, 0.42, vEyeUp));`)
       const sole = new THREE.Color(asset.soleColor || asset.trimColor || asset.fabricBaseColor || '#777777');
       // (the two halves of the normal map are textures of their own: listed below so they are disposed)
       const nF = isShoe ? null : half(normal, false), nB = isShoe ? null : half(normal, true);
+      // jackets and hoodies are photographed crumpled more than tees: their creases are calmed more
+      // (flat: how much of a crease's light and shade stays; creases: the photo normal map's strength)
+      const outerish = ['jacket_open', 'bomber', 'trackjacket', 'hoodie', 'sweater'].includes(sub);
+      const flat = outerish ? 0.4 : 0.7, creases = outerish ? 0.55 : 1;
       const mats = [
-        clothMaterial('panel', { map: front, normalMap: nF, roughness: rough, specular: spec, lining, deep, fabric, edge: !isShoe, tile: isShoe ? null : tile, tileScale: 1.4, color: front ? 0xffffff : fabric }, U()),
-        clothMaterial('panel', { map: back || front, normalMap: nB, roughness: rough, specular: spec, lining, deep, fabric, edge: !isShoe, tile: isShoe ? null : tile, tileScale: 1.4, color: back || front ? 0xffffff : fabric }, U()),
+        clothMaterial('panel', { map: front, normalMap: nF, roughness: rough, specular: spec, lining, deep, fabric, flat, creases, edge: !isShoe, tile: isShoe ? null : tile, tileScale: 1.4, color: front ? 0xffffff : fabric }, U()),
+        clothMaterial('panel', { map: back || front, normalMap: nB, roughness: rough, specular: spec, lining, deep, fabric, flat, creases, edge: !isShoe, tile: isShoe ? null : tile, tileScale: 1.4, color: back || front ? 0xffffff : fabric }, U()),
         clothMaterial('fabric', { color: tile ? 0xffffff : fabric, tile, roughness: rough, specular: spec, lining, deep, tileScale: 1.4 }, U()),
         clothMaterial('trim', { color: isShoe ? sole : trim, roughness: isShoe ? 0.8 : Math.min(0.92, rough + 0.03), specular: spec, lining, deep: isShoe ? 0 : deep, grain: 0.6 }, U()),
       ];
