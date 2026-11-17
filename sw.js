@@ -29,7 +29,7 @@ const SHELL = new URL("./", SCOPE).href;
 // time they're used, and every new version fetches them again too.
 const CORE = [
   "./", "styles.css", "app.js", "sw-register.js", "sample/seed.js",
-  "calendar.js", "stylist.js", "stylist-brain.js", "label.js", "cutout-editor.js", "fashion-bible.json",
+  "calendar.js", "stylist.js", "stylist-brain.js", "stylist-chat.js", "label.js", "cutout-editor.js", "fashion-bible.json",
   "avatar-config.js", "avatar-stage.js", "garment-baker.js", "face-photo.js", "lookbook-config.js", "lookbook-stage.js",
   "vendor/three/three.module.min.js", "vendor/three/addons/RoomEnvironment.js", "vendor/jsqr.min.js",
   "avatar/avatar.json", "avatar/avatar.bin", "avatar/eye.png",

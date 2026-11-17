@@ -737,3 +737,16 @@ details summary { cursor: pointer; }
 .piece.add-acc { cursor: pointer; }
 .piece.add-acc .ph { aspect-ratio: 3/4; }
 .piece.add-acc[aria-pressed="true"] .ph { border-color: var(--text); color: var(--text); }
+
+/* Ask the stylist: talking about its outfits */
+.ai-chat { white-space: normal; display: grid; gap: 12px; }
+.plan-read { margin: 0; padding: 8px 12px; border-radius: 12px; background: var(--surface-2); justify-self: start; }
+.look-tag { margin-left: 6px; padding: 2px 8px; border-radius: 999px; font-size: 12px; font-weight: 500; background: var(--surface); color: var(--muted); vertical-align: middle; }
+.look.fresh { box-shadow: inset 0 0 0 2px var(--accent); }
+.ai-rich .look .pieces .swap-wrap .piece { width: 100%; }
+.chat-log { display: grid; gap: 10px; }
+.chat-turn { display: grid; gap: 6px; }
+.chat-me { justify-self: end; max-width: 80%; margin: 0; padding: 10px 14px; border-radius: 16px 16px 4px 16px; background: var(--text); color: var(--bg); white-space: pre-wrap; }
+.chat-you { max-width: 92%; margin: 0; }
+p.chat-you { padding: 0 4px; }
+.chat-bar { padding-top: 14px; border-top: 1px solid var(--line); }
