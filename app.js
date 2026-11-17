@@ -7,6 +7,7 @@ import { parseICS, eventsBetween, guessOccasion, titleKey, monthGrid, addDays, a
   makeEntry, entryIds, resolveEntry, pruneDays, nearbyCost, nearestUse, ROTATION_DAYS } from "./calendar.js";
 import * as Style from "./stylist.js";
 import * as Brain from "./stylist-brain.js";
+import * as Chat from "./stylist-chat.js";
 import * as Label from "./label.js";
 import { editCutout, workingCopy, basicCutout, frameCutout, WORK_MAX } from "./cutout-editor.js";
 import * as Avatar from "./avatar-config.js";
@@ -335,6 +336,7 @@ const state = {
   plan: null, // shared, before the Calendar: an outfit planned the evening before {date, itemIds, occasion, title}
   days: {}, // shared: the Calendar, an outfit (piece ids) and notes per day {"YYYY-MM-DD": entry} (see calendar.js)
   aiAnswer: "",
+  aiChat: null, // the conversation with the stylist (see followUp)
   // Discover: the open tab, which version of each idea is picked, real photos found,
   // "Try a piece", "New look" and the shop trip being planned.
   disc: {
@@ -1556,12 +1558,13 @@ async function loadWeather(force = false) {
   const fresh = cached && !cached.typical && cached.lat === lat && cached.hourly; // older copies had no hourly forecast
   if (!force && fresh && Date.now() - cached.at < 30 * 60e3) return (state.weather = cached);
   try {
-    const j = await getJSON(`https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lon}&current=temperature_2m,apparent_temperature,relative_humidity_2m,weather_code,wind_speed_10m,precipitation&hourly=apparent_temperature,precipitation_probability,weather_code,relative_humidity_2m&daily=temperature_2m_max,temperature_2m_min,precipitation_probability_max&forecast_days=2&timezone=auto`);
+    const j = await getJSON(`https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lon}&current=temperature_2m,apparent_temperature,relative_humidity_2m,weather_code,wind_speed_10m,precipitation&hourly=apparent_temperature,precipitation_probability,weather_code,relative_humidity_2m&daily=temperature_2m_max,temperature_2m_min,precipitation_probability_max,sunset&forecast_days=2&timezone=auto`);
     const w = {
       at: Date.now(), lat,
       temp: j.current.temperature_2m, feels: j.current.apparent_temperature, code: j.current.weather_code,
       wind: j.current.wind_speed_10m, humid: j.current.relative_humidity_2m, max: j.daily.temperature_2m_max[0], min: j.daily.temperature_2m_min[0],
       rainChance: j.daily.precipitation_probability_max[0] ?? 0,
+      sunset: j.daily.sunset || null, // today and tomorrow, local time: "dark from" in the stylist's plan
       // Hour by hour for today and tomorrow, for events later in the day (local times, "2026-10-15T19:00").
       hourly: { time: j.hourly.time, feels: j.hourly.apparent_temperature, rain: j.hourly.precipitation_probability, code: j.hourly.weather_code, humid: j.hourly.relative_humidity_2m },
     };
@@ -3234,6 +3237,8 @@ const STYLIST_SYSTEM =
   "For anything the user doesn't own (a missing piece, a suggested buy), write its own line: 'To buy: <item> | search: <words to paste into a shop>'. " +
   "Dress for the temperature: add up the warmth of the top layers (about 1 when hot, 3-4 when mild, 6+ when cold). " +
   "Never put a piece marked IN THE WASH in an outfit. " +
+  "When the context reads a plan from the question (start time, how long, outdoors or in and out of shops), dress for all of it: warm enough at its coolest hour, a layer that opens or comes off indoors, and still right for how it ends (dinner, evening); say in 'Why:' how the outfit handles that. " +
+  "Number the outfits: 'Outfit 1: <title>', 'Outfit 2: <title>'. " +
   "Follow the user's taste notes when given: build on pairings they wear and like, avoid what they turned down, and don't repeat pieces worn in the last 2 days unless asked. " +
   "Plain text, no markdown, at most 24 short lines.";
 // Used when the fashion bible hasn't loaded (it normally brings these and many more rules).
@@ -3439,12 +3444,28 @@ function parseAnswer(ans) {
   }
   return { named, intro, looks };
 }
-function answerHTML(ans) {
+// `chat`: the outfits of the stylist conversation (state.aiChat), where each piece can be changed
+// by hand (⇄ on its photo) or by asking, and each outfit talked about.
+function answerHTML(ans, { chat = null } = {}) {
   if (!ans) return "";
   if (typeof ans === "string") return esc(ans);
   const { named, intro, looks } = parseAnswer(ans);
   if (!looks.length) return `<div class="ai-rich">${tipsHTML(intro, ans.refs, named)}</div>`;
-  return `<div class="ai-rich">${tipsHTML(intro, ans.refs, named)}<div class="looks">${looks.map((l) => `<article class="look"><h3>${esc(cleanRefs(l.title, ans.refs))}</h3><div class="pieces">${l.items.map(pieceTile).join("")}${l.buy.map(buyTile).join("")}</div>${l.lines.length ? `<p class="why">${esc(l.lines.map((x) => cleanRefs(x, ans.refs)).join("\n"))}</p>` : ""}${ans.warn?.[looks.indexOf(l)]?.length ? `<p class="why warn">Heads up: ${ans.warn[looks.indexOf(l)].map(esc).join(" · ")}</p>` : ""}${l.items.length ? `<div class="row"><button class="btn" data-wearids="${l.items.map((i) => i.id).join(",")}">Wear this today</button><button class="btn icon-btn like" data-likeids="${l.items.map((i) => i.id).join(",")}" aria-pressed="false" aria-label="Like this outfit">${ICON_HEART}</button></div>` : ""}</article>`).join("")}</div></div>`;
+  return `<div class="ai-rich">${tipsHTML(intro, ans.refs, named)}<div class="looks">${looks.map((l, k) => lookCard(l, k, ans, chat)).join("")}</div></div>`;
+}
+function lookCard(l, k, ans, chat) {
+  const sw = chat?.swap?.look === k ? chat.swap : null;
+  const tile = (html, from, name) => (chat ? `<div class="swap-wrap">${html}<button class="swap-btn" data-cswap="${k}|${from}" aria-pressed="${sw?.from === from}" aria-label="Change the ${esc(name)}">${ICON_SWAP}</button></div>` : html);
+  const tags = chat ? [chat.edited?.includes(k) && "Changed by you", chat.changed?.includes(k) && chat.history?.length && "Updated"].filter(Boolean) : [];
+  const ids = l.items.map((i) => i.id).join(",");
+  return `<article class="look${chat?.changed?.includes(k) && chat.history?.length ? " fresh" : ""}">
+    <h3>${esc(cleanRefs(l.title, ans.refs))}${tags.map((t) => ` <small class="look-tag">${t}</small>`).join("")}</h3>
+    <div class="pieces">${l.items.map((i) => tile(pieceTile(i), i.id, i.name)).join("")}${l.buy.map((b, j) => tile(buyTile(b), `b:${j}`, b.title)).join("")}</div>
+    ${sw ? chatSwapPicker(l, k, sw) : ""}
+    ${l.lines.length ? `<p class="why">${esc(l.lines.map((x) => cleanRefs(x, ans.refs)).join("\n"))}</p>` : ""}
+    ${ans.warn?.[k]?.length ? `<p class="why warn">Heads up: ${ans.warn[k].map(esc).join(" · ")}</p>` : ""}
+    <div class="row">${l.items.length ? `<button class="btn" data-wearids="${ids}">Wear this today</button><button class="btn icon-btn like" data-likeids="${ids}" aria-pressed="false" aria-label="Like this outfit">${ICON_HEART}</button>` : ""}${chat ? `<button class="btn ghost" data-cabout="${k}">Talk about it</button>` : ""}</div>
+  </article>`;
 }
 
 /* ---------- What the AI sees in a piece's photo ----------
@@ -3918,7 +3939,7 @@ function aiCard() {
       ${["3 outfits for today", "What should I wear for a dinner date?", "Which pieces should I donate?", "Build me a capsule for a weekend trip"].map((q) => `<button class="chip" data-ask="${esc(q)}">${esc(q)}</button>`).join("")}
     </div>
     <div class="row"><input id="ask-input" class="input" style="flex:1;min-width:0" placeholder="Ask about your wardrobe…" data-input="ask"><button class="btn primary" data-act="ask">Ask</button></div>
-    <div class="ai-answer" id="ai-answer">${answerHTML(state.aiAnswer)}</div>
+    <div class="ai-answer" id="ai-answer">${chatHTML()}</div>
   </section>`;
 }
 
@@ -7902,7 +7923,7 @@ function forYouTab() {
       <h2 style="margin:0">Personal shopping advice</h2>
       <p class="muted small" style="margin:0">${aiReady() ? `${aiName()} looks at your whole wardrobe and suggests the next few buys.` : "Add a Gemini or Claude API key in Settings for tailored shopping advice."}</p>
       <div class="row"><button class="btn primary" data-ask="${esc(SHOP_QUESTION)}">What should I buy next?</button></div>
-      <div class="ai-answer" id="ai-answer">${answerHTML(state.aiAnswer)}</div>
+      <div class="ai-answer" id="ai-answer">${chatHTML()}</div>
     </section>`;
 }
 
@@ -9850,36 +9871,280 @@ function answerBreaks(ans) {
   return parseAnswer(ans).looks.map((l) => (l.items.length >= 2 ? Style.judge(l.items, {}).violations.map(ruleLine) : []));
 }
 
+/* ---------- Ask the stylist: a conversation about its outfits ----------
+   The first question gets 3 outfits as before. Then the outfits can be talked about: a follow-up
+   ("warmer for the evening", "something other than sneakers in Outfit 2"), Reshuffle for a new
+   set, and ⇄ on any piece to change it by hand (your other pieces of that kind, best match first)
+   or to ask the stylist for another. Kept in state.aiChat while the app is open:
+   { question, plan, wx, place, answer (the outfits on screen), history [{ q, a, refs }],
+     prev (earlier answers, for Back), edited (outfits changed by hand), changed, swap, busy, error }.
+   Token use: the timing and places are read here (stylist-chat.js, no AI), a follow-up sends the
+   outfits on screen in a few short lines instead of the whole conversation, the system prompt stays
+   the same for the whole conversation (Gemini's implicit cache can reuse it), and the answer
+   rewrites only the outfits that change. Manual swaps cost nothing. */
+const FOLLOW_CHIPS = [
+  ["Warmer for the evening", "Make them warmer for the evening, without being too hot at the start."],
+  ["A bit dressier", "Make them a bit dressier."],
+  ["More relaxed", "Make them a bit more relaxed."],
+];
+
+// A city named in the question ("Piazza Venezia (Rome)"), if it's somewhere else than your city.
+function cityIn(text) {
+  const t = ` ${String(text).toLowerCase().normalize("NFD").replace(/[̀-ͯ]/g, "")} `;
+  const s = state.settings;
+  for (const c of CITIES) {
+    const names = [c.name, ...c.aka].filter((n) => n.length >= 4).map((n) => n.toLowerCase().normalize("NFD").replace(/[̀-ͯ]/g, ""));
+    if (!names.some((n) => new RegExp(`[^a-z]${escRe(n)}[^a-z]`).test(t))) continue;
+    const far = s.lat == null || Math.hypot((c.lon - s.lon) * 111 * Math.cos((c.lat * Math.PI) / 180), (c.lat - s.lat) * 111) > 40;
+    return far ? c : null;
+  }
+  return null;
+}
+// The weather over the plan's hours: your city's forecast (already loaded), or the forecast of
+// a city the question names. Open-Meteo is free and costs no AI tokens.
+async function planWeather(plan, question) {
+  const city = cityIn(question);
+  let w = state.weather, place = state.settings.city || "";
+  if (city) {
+    place = c2name(city);
+    try {
+      const j = await getJSON(`https://api.open-meteo.com/v1/forecast?latitude=${city.lat}&longitude=${city.lon}&hourly=apparent_temperature,precipitation_probability,weather_code&daily=temperature_2m_max,temperature_2m_min,sunset&forecast_days=2&timezone=auto`);
+      w = { hourly: { time: j.hourly.time, feels: j.hourly.apparent_temperature, rain: j.hourly.precipitation_probability, code: j.hourly.weather_code }, min: j.daily.temperature_2m_min[0], max: j.daily.temperature_2m_max[0], sunset: j.daily.sunset };
+    } catch {
+      const m = new Date().getMonth();
+      w = { min: city.lo[m], max: city.hi[m] };
+    }
+  }
+  if (!w) return { wx: null, place };
+  return { wx: Chat.spanWeather({ hourly: w.hourly, min: w.min, max: w.max, sunset: w.sunset?.[plan.day] }, plan.start, plan.end), place };
+}
+const c2name = (c) => (c.aka.find((a) => /^[A-Z][a-z]+$/.test(a)) || c.name);
+
+// The system prompt of a conversation: the same for every message of it.
+function stylistSystem(chat) {
+  const { question, plan, wx, place } = chat;
+  const c = conditions();
+  const occ = OCCASIONS.find((o) => o.id === (guessOccasion({ title: question }) || state.occasion)) || OCCASIONS.find((o) => o.id === state.occasion);
+  const feels = wx ? wx.min : c.feels, wet = wx ? wx.wet : c.wet;
+  const likes = tasteText();
+  const cal = calendarText();
+  const day = plan ? Chat.planText(plan, wx, { place }) : `${state.event?.day === "tomorrow" ? "Tomorrow" : "Today"}: feels ${Math.round(c.feels)}°C${c.wet ? ", wet" : ""}.`;
+  const context = `The user is ${shopperText()}.${ageNow()}\n${day}\nOccasion: ${occ.label}${occ.id !== state.occasion ? " (from the question)" : ""}.${cal ? `\n${cal}` : ""}\nWardrobe (#number name; type; colours; brand; style; fit; warmth 1-5; wear):\n${wardrobeText({ gym: state.occasion === "gym" || /\b(gym|run|running|train|training|workout|sport)\b/i.test(question) }) || "(empty)"}${likes ? `\nTaste (learnt from what the user wears, likes and skips):\n${likes}` : ""}`;
+  // The fashion bible: its mandatory rules and the tips that fit this question.
+  const weather = [feels < 8 ? "cold winter layers coat" : feels >= 24 ? "hot summer light" : "", wet ? "rain" : "", plan?.where === "in and out" || (wx && wx.max - wx.min >= 3) ? "layering layers" : "", plan?.evening ? "evening" : ""].join(" ");
+  const guide = Style.guideText({ question, occasion: occ.id, extra: `${occ.label} ${occ.likes.join(" ")} ${weather}` });
+  return { system: `${STYLIST_SYSTEM}${guide ? "" : ` ${BASIC_RULES}`}\n\n${guide ? guide + "\n\n" : ""}${context}`, occ, cond: { feels, wet, humid: c.humid } };
+}
+
+// The conversation's system prompt and the #numbers it uses, built once and kept while the
+// wardrobe and the plan stay the same, so every message of it starts with the same prompt (Gemini
+// reuses it from its cache). A change by hand reaches the AI in the follow-up text instead.
+function chatSystem(chat) {
+  const key = `${state.items.map((i) => i.id + (i.wash ? "~" : "")).join()}|${chat.plan?.start}|${chat.plan?.end}|${chat.place}`;
+  if (chat.sysKey !== key) Object.assign(chat, { sysKey: key, system: stylistSystem(chat).system, refs: state.items.map((i) => i.id) });
+  return { system: chat.system, refs: chat.refs };
+}
+
+// The outfits of an answer as short lines with today's #numbers ("Outfit 1: …", "#4 Navy knit",
+// "To buy: …", "Why: …"): what a follow-up sends, and the answer's text after a change by hand.
+function looksText(looks, fromRefs, refs) {
+  return looks.map((l, k) => [
+    `Outfit ${k + 1}: ${cleanRefs(l.title, fromRefs)}`,
+    ...l.items.filter((it) => refs.includes(it.id)).map((it) => `#${refs.indexOf(it.id) + 1} ${it.name}`),
+    ...l.buy.map((b) => `To buy: ${b.title} | search: ${b.query}`),
+    ...l.lines.map((x) => cleanRefs(x, fromRefs)),
+  ].join("\n")).join("\n");
+}
+
+function paintChat() {
+  const el = document.getElementById("ai-answer");
+  if (!el) return;
+  const input = el.querySelector('[data-input="cfollow"]'), typed = input?.value || "", focused = input && document.activeElement === input;
+  el.innerHTML = chatHTML();
+  const again = el.querySelector('[data-input="cfollow"]');
+  if (again && typed) again.value = typed;
+  if (again && focused) again.focus();
+  watchTiles();
+}
+function chatHTML() {
+  const chat = state.aiChat;
+  if (!chat) return answerHTML(state.aiAnswer);
+  const { plan, wx, answer, busy } = chat;
+  const planLine = plan ? `<p class="plan-read muted small">Dressing for ${plan.day ? "tomorrow " : ""}${fmtTime(plan.start)} to ${plan.maybe ? "maybe " : ""}about ${fmtTime(plan.end)}${plan.where ? ` · ${plan.where === "in and out" ? "in and out" : plan.where}` : ""}${wx ? ` · feels ${fmtTemp(wx.first)}${Math.round(wx.last) !== Math.round(wx.first) ? ` → ${fmtTemp(wx.last)}` : ""}${wx.wet ? ", rain likely" : ""}` : ""}${chat.place && cityIn(chat.question) ? ` in ${esc(chat.place)}` : ""}</p>` : "";
+  const log = chat.history.map((h) => `<div class="chat-turn"><p class="chat-me">${esc(h.q)}</p>${h.a ? `<div class="chat-you ai-rich">${tipsHTML(h.a.split("\n"), h.refs, namedPieces(h.refs))}</div>` : h.did ? `<p class="chat-you muted small">${esc(h.did)}</p>` : ""}</div>`).join("")
+    + (busy && chat.pendingQ ? `<div class="chat-turn"><p class="chat-me">${esc(chat.pendingQ)}</p></div>` : "");
+  const spinner = busy ? `<div class="row"><div class="spinner"></div><span class="muted">${esc(busy)}</span></div>` : "";
+  const err = chat.error ? `<p class="why warn">${esc(chat.error)}</p>` : "";
+  const hasLooks = answer && parseAnswer(answer).looks.length;
+  const bar = answer && !busy ? `<div class="chat-bar stack" style="gap:10px">
+      <div class="chips">${hasLooks ? `<button class="chip" data-creshuffle="1">Reshuffle</button>${FOLLOW_CHIPS.map(([l]) => `<button class="chip" data-cfollow="${esc(l)}">${esc(l)}</button>`).join("")}` : ""}${chat.prev.length ? `<button class="chip" data-cback="1">Back to the previous outfits</button>` : ""}</div>
+      <div class="row"><input id="cfollow-input" class="input" style="flex:1;min-width:0" placeholder="${hasLooks ? "Talk about these outfits…" : "Ask a follow-up…"}" data-input="cfollow" enterkeyhint="send"><button class="btn primary" data-act="cfollow">Send</button></div>
+    </div>` : "";
+  return `<div class="ai-chat">${planLine}${answer ? answerHTML(answer, { chat }) : ""}${log ? `<div class="chat-log">${log}</div>` : ""}${spinner}${err}${bar}</div>`;
+}
+
+// A new question: a new conversation.
 async function ask(question, targetId = "ai-answer") {
-  const out = document.getElementById(targetId);
   if (!question?.trim()) return;
-  if (out) out.innerHTML = `<div class="row"><div class="spinner"></div><span class="muted">Thinking about your wardrobe…</span></div>`;
+  if (targetId !== "ai-answer") return askOnce(question, targetId);
+  const plan = Chat.readPlan(question);
+  const chat = (state.aiChat = { question: question.trim(), plan, wx: null, place: "", answer: null, history: [], prev: [], edited: [], changed: [], swap: null, busy: plan ? "Checking the weather for your plan…" : "Thinking about your wardrobe…", error: "" });
+  state.aiAnswer = "";
+  paintChat();
   try {
-    const c = conditions();
-    const likes = tasteText();
-    const cal = calendarText();
-    const context = `The user is ${shopperText()}.${ageNow()}\n${state.event?.day === "tomorrow" ? "Tomorrow" : "Today"}: feels ${Math.round(c.feels)}°C${c.wet ? ", wet" : ""}. Occasion: ${OCCASIONS.find((o) => o.id === state.occasion).label}.${cal ? `\n${cal}` : ""}\nWardrobe (#number name; type; colours; brand; style; fit; warmth 1-5; wear):\n${wardrobeText({ gym: state.occasion === "gym" || /\b(gym|run|running|train|training|workout|sport)\b/i.test(question) }) || "(empty)"}${likes ? `\nTaste (learnt from what the user wears, likes and skips):\n${likes}` : ""}`;
-    const refs = state.items.map((i) => i.id);
-    const show = (t) => { const el = document.getElementById(targetId); if (el) el.textContent = cleanRefs(t, refs); };
-    // The fashion bible: its mandatory rules and the tips that fit this question.
-    const weather = [c.feels < 8 ? "cold winter layers coat" : c.feels >= 24 ? "hot summer light" : "", c.wet ? "rain" : ""].join(" ");
-    const occ = OCCASIONS.find((o) => o.id === state.occasion);
-    const guide = Style.guideText({ question, occasion: occ.id, extra: `${occ.label} ${occ.likes.join(" ")} ${weather}` });
-    const system = `${STYLIST_SYSTEM}${guide ? "" : ` ${BASIC_RULES}`}\n\n${guide ? guide + "\n\n" : ""}${context}`;
-    const answer = { text: await aiGenerate({ system, text: question, maxTokens: 800, onText: show }), refs };
+    if (plan) Object.assign(chat, await planWeather(plan, question));
+    chat.busy = "Thinking about your wardrobe…";
+    paintChat();
+    const { system, refs } = chatSystem(chat);
+    const answer = { text: await aiGenerate({ system, text: question, maxTokens: 800 }), refs };
     // Check the outfits against the rules; if one breaks an important rule, ask once for a fixed answer.
     let broken = answerBreaks(answer);
     if (broken.some((b) => b.length)) {
-      const el = document.getElementById(targetId);
-      if (el) el.innerHTML = `<div class="row"><div class="spinner"></div><span class="muted">Checking the outfits against the style guide…</span></div>`;
+      chat.busy = "Checking the outfits against the style guide…";
+      paintChat();
       const { looks } = parseAnswer(answer);
       const fix = broken.map((b, i) => (b.length ? `- ${looks[i].title}: ${b.join("; ")}` : "")).filter(Boolean).join("\n");
-      const retry = { text: await aiGenerate({ system, text: `${question}\n\nYour first answer:\n${answer.text}\n\nIt breaks the style guide:\n${fix}\nWrite the whole answer again in the same format, changing only what is needed to follow the guide.`, maxTokens: 800, onText: show }), refs };
+      const retry = { text: await aiGenerate({ system, text: `${question}\n\nYour first answer:\n${answer.text}\n\nIt breaks the style guide:\n${fix}\nWrite the whole answer again in the same format, changing only what is needed to follow the guide.`, maxTokens: 800 }), refs };
       const again = answerBreaks(retry);
       if (again.flat().length <= broken.flat().length) { answer.text = retry.text; broken = again; }
     }
     if (broken.some((b) => b.length)) answer.warn = broken;
-    if (targetId === "ai-answer") state.aiAnswer = answer;
+    if (state.aiChat !== chat) return; // a newer question took over
+    chat.answer = state.aiAnswer = answer;
+  } catch (e) {
+    chat.error = e.message || "Something went wrong talking to the AI.";
+  }
+  chat.busy = null;
+  if (state.aiChat === chat) paintChat();
+}
+
+// A message about the outfits on screen. `replaceAll`: a whole new set (Reshuffle).
+// `label`: what the conversation shows for it, when the message to the AI is longer.
+async function followUp(message, { replaceAll = false, label = "" } = {}) {
+  const chat = state.aiChat;
+  message = String(message || "").trim();
+  if (!chat?.answer || chat.busy || !message) return;
+  // A new time or place ("actually we meet at 18:00") changes the plan and its weather.
+  const moved = /\d/.test(message) && Chat.readPlan(message);
+  chat.swap = null; chat.error = "";
+  chat.busy = replaceAll ? "Reshuffling…" : "Thinking it over…";
+  chat.pendingQ = label || message;
+  paintChat();
+  try {
+    if (moved) {
+      chat.plan = moved;
+      Object.assign(chat, await planWeather(moved, `${chat.question} ${message}`));
+    }
+    const { system, refs } = chatSystem(chat);
+    const { looks } = parseAnswer(chat.answer);
+    const outfits = looks.length ? looksText(looks, chat.answer.refs, refs) : "";
+    const text = Chat.followupText({
+      question: chat.question, outfits, edited: chat.edited, message,
+      lastAnswer: outfits ? "" : cleanRefs(chat.answer.text, chat.answer.refs),
+      history: chat.history.map((h) => ({ q: h.q, a: cleanRefs(h.a || h.did || "", h.refs) })),
+    });
+    const reply = await aiGenerate({ system, text, maxTokens: 800 });
+    if (state.aiChat !== chat) return;
+    const merged = Chat.mergeReply(outfits, reply, { replaceAll });
+    let did = "";
+    if (merged.replaced || merged.changed.length) {
+      chat.prev = [...chat.prev, chat.answer].slice(-5);
+      const answer = { text: merged.text, refs };
+      const broken = answerBreaks(answer);
+      if (broken.some((b) => b.length)) answer.warn = broken;
+      chat.answer = state.aiAnswer = answer;
+      chat.edited = merged.replaced ? [] : chat.edited.filter((k) => !merged.changed.includes(k));
+      chat.changed = merged.changed;
+      did = merged.replaced ? "A new set of outfits, above." : `${merged.changed.map((k) => `“${cleanRefs(parseAnswer(chat.answer).looks[k]?.title || `Outfit ${k + 1}`, refs)}”`).join(" and ")} updated above.`;
+    }
+    chat.history.push({ q: label || message, a: merged.note, did, refs });
+  } catch (e) {
+    chat.error = e.message || "Something went wrong talking to the AI.";
+  }
+  chat.busy = null; chat.pendingQ = "";
+  if (state.aiChat === chat) paintChat();
+}
+
+// ⇄ on a piece of one of the stylist's outfits: your other pieces of that kind that aren't in the
+// wash or on their way out, best match with the rest of the outfit first (the same scoring as the
+// outfit ideas, for the plan's weather), or for an accessory, the ones you rate and wear most.
+function chatSwapOptions(l, from) {
+  const cur = from.startsWith("b:") ? null : l.items.find((i) => i.id === from);
+  const kindOf = (i) => (slotOf(i) === "acc" ? `acc:${accGroupOf(i)}` : slotOf(i) === "gym" && i.everyday ? roleOf(i) : slotOf(i) === "gym" ? "gym" : roleOf(i));
+  const want = cur ? kindOf(cur) : kindOf({ category: buyKind(l.buy[+from.slice(2)]?.title || "").cat });
+  const others = l.items.filter((i) => i !== cur);
+  const opts = state.items.filter((i) => kindOf(i) === want && !leaving(i) && !i.wash && i !== cur && !others.includes(i) && slotOf(i) !== "under");
+  const { occ, cond } = stylistSystemLite();
+  const t = taste();
+  if (CORE.includes(want)) {
+    const pieces = {};
+    for (const i of others) if (CORE.includes(roleOf(i)) && !pieces[roleOf(i)]) pieces[roleOf(i)] = i;
+    return opts.map((p) => ({ p, s: scoreOutfit({ ...pieces, [want]: p }, cond, occ, t).score })).sort((a, b) => b.s - a.s).map((x) => x.p);
+  }
+  return opts.sort((a, b) => (t.stars?.[b.id] || 0) - (t.stars?.[a.id] || 0) || (b.wearCount || 0) - (a.wearCount || 0));
+}
+// The occasion and weather the swap list is ranked for (no prompt needed).
+function stylistSystemLite() {
+  const chat = state.aiChat, c = conditions();
+  const occ = OCCASIONS.find((o) => o.id === (guessOccasion({ title: chat?.question || "" }) || state.occasion)) || OCCASIONS[0];
+  return { occ, cond: chat?.wx ? { feels: chat.wx.min, wet: chat.wx.wet, humid: c.humid } : c };
+}
+function chatSwapPicker(l, k, sw) {
+  const opts = chatSwapOptions(l, sw.from);
+  const cur = sw.from.startsWith("b:") ? l.buy[+sw.from.slice(2)] : l.items.find((i) => i.id === sw.from);
+  const name = cur?.name || cur?.title || "piece";
+  const cats = [...new Set(opts.map((p) => p.category))];
+  const cat = cats.includes(sw.cat) ? sw.cat : "all";
+  const shown = opts.filter((p) => cat === "all" || p.category === cat);
+  const top = new Set(opts.slice(0, 3).map((p) => p.id));
+  return `<div class="swap-pick stack" style="gap:8px">
+    <span class="muted small">Instead of the ${esc(name)}: ${opts.length ? `your ${opts.length} option${opts.length === 1 ? "" : "s"}, best match first` : "nothing else of this kind in your wardrobe"}.</span>
+    ${cats.length > 1 ? `<div class="chips"><button class="chip" aria-pressed="${cat === "all"}" data-ccat="all">All</button>${cats.map((c) => `<button class="chip" aria-pressed="${cat === c}" data-ccat="${c}">${esc(catLabel(c))} <span class="muted">${opts.filter((p) => p.category === c).length}</span></button>`).join("")}</div>` : ""}
+    ${shown.length ? `<div class="pieces mini">${shown.map((p) => `<button class="piece" data-cto="${k}|${sw.from}|${p.id}">${top.has(p.id) ? `<em class="best">Best match</em>` : ""}${pieceImg(p)}<span>${esc(p.name)}</span></button>`).join("")}</div>` : ""}
+    <div class="chips">${aiReady() ? `<button class="chip" data-caskswap="${k}|${sw.from}">Ask the stylist for another</button>` : ""}<button class="chip" data-cto="${k}|${sw.from}|">Leave it out</button><button class="chip" data-cswap="${k}|${sw.from}">Cancel</button></div>
+  </div>`;
+}
+// A piece changed by hand: the answer's text is written again with it (so a follow-up knows), and
+// the swap teaches the outfit ideas like a swap on an idea does.
+async function chatSwap(k, from, toId) {
+  const chat = state.aiChat;
+  if (!chat?.answer) return;
+  const { looks } = parseAnswer(chat.answer);
+  const l = looks[k];
+  if (!l) return;
+  const to = toId ? state.items.find((i) => i.id === toId) : null;
+  const before = l.items.map((i) => i.id);
+  let removed = null;
+  if (from.startsWith("b:")) { l.buy.splice(+from.slice(2), 1); if (to) l.items.push(to); }
+  else {
+    const at = l.items.findIndex((i) => i.id === from);
+    if (at < 0) return;
+    removed = l.items[at];
+    if (to) l.items[at] = to; else l.items.splice(at, 1);
+  }
+  if (removed) await addLog({ kind: "swap", itemIds: before, removed: removed.id, added: to?.id || null, ...outfitContext(), source: "stylist" });
+  const refs = state.items.map((i) => i.id);
+  const answer = { text: looksText(looks, chat.answer.refs, refs), refs };
+  const broken = answerBreaks(answer);
+  if (broken.some((b) => b.length)) answer.warn = broken;
+  chat.answer = state.aiAnswer = answer;
+  if (!chat.edited.includes(k)) chat.edited = [...chat.edited, k];
+  chat.changed = chat.changed.filter((x) => x !== k);
+  chat.swap = null;
+  paintChat();
+}
+
+// One answer, no conversation (Discover's "Ask the stylist about it").
+async function askOnce(question, targetId) {
+  const out = document.getElementById(targetId);
+  if (out) out.innerHTML = `<div class="row"><div class="spinner"></div><span class="muted">Thinking about your wardrobe…</span></div>`;
+  try {
+    const { system } = stylistSystem({ question, plan: null });
+    const refs = state.items.map((i) => i.id);
+    const show = (t) => { const el = document.getElementById(targetId); if (el) el.textContent = cleanRefs(t, refs); };
+    const answer = { text: await aiGenerate({ system, text: question, maxTokens: 800, onText: show }), refs };
+    const broken = answerBreaks(answer);
+    if (broken.some((b) => b.length)) answer.warn = broken;
     if (targetId === "try-ai") state.disc.try.answer = answer;
     const el = document.getElementById(targetId);
     if (el) el.innerHTML = answerHTML(answer);
@@ -10431,6 +10696,41 @@ async function onTap(e) {
   if (ds.evrm) return removeEvent(ds.evrm);
   if (ds.needchip) return askNeed("", ds.needchip);
   if (ds.ask) return ask(ds.ask);
+  // The stylist's conversation (see followUp, chatSwap)
+  if (ds.creshuffle) return followUp(Chat.RESHUFFLE, { replaceAll: true, label: "Reshuffle" });
+  if (ds.cfollow) return followUp(FOLLOW_CHIPS.find(([l]) => l === ds.cfollow)?.[1] || ds.cfollow, { label: ds.cfollow });
+  if (ds.cback) {
+    const chat = state.aiChat;
+    if (!chat?.prev.length) return;
+    chat.answer = state.aiAnswer = chat.prev.pop();
+    chat.edited = []; chat.changed = []; chat.swap = null;
+    chat.history.push({ q: "Back to the previous outfits", a: "", did: "", refs: chat.answer.refs });
+    return paintChat();
+  }
+  if (ds.cswap) {
+    const chat = state.aiChat, [k, from] = ds.cswap.split("|");
+    if (!chat) return;
+    chat.swap = chat.swap?.look === +k && chat.swap.from === from ? null : { look: +k, from, cat: "all" };
+    return paintChat();
+  }
+  if (ds.ccat) { if (state.aiChat?.swap) state.aiChat.swap.cat = ds.ccat; return paintChat(); }
+  if (ds.cto != null) { const [k, from, to] = ds.cto.split("|"); return chatSwap(+k, from, to); }
+  if (ds.caskswap) {
+    const chat = state.aiChat, [k, from] = ds.caskswap.split("|");
+    const l = chat?.answer && parseAnswer(chat.answer).looks[+k];
+    if (!l) return;
+    const name = from.startsWith("b:") ? l.buy[+from.slice(2)]?.title : l.items.find((i) => i.id === from)?.name;
+    const why = $('[data-input="cfollow"]')?.value.trim();
+    return followUp(`In Outfit ${+k + 1}, change the ${name} for something else from my wardrobe${why ? ` (${why})` : ""}. Keep the rest unless it no longer goes.`, { label: `Change the ${name} in “${cleanRefs(l.title, chat.answer.refs)}”${why ? `: ${why}` : ""}` });
+  }
+  if (ds.cabout != null) {
+    const chat = state.aiChat, l = chat?.answer && parseAnswer(chat.answer).looks[+ds.cabout];
+    const input = $('[data-input="cfollow"]');
+    if (!l || !input) return;
+    input.value = `Outfit ${+ds.cabout + 1} (${cleanRefs(l.title, chat.answer.refs)}): `;
+    input.focus();
+    return input.scrollIntoView({ behavior: "smooth", block: "center" });
+  }
   if (ds.unit) { state.settings.unit = ds.unit; await saveSettings(); return render(); }
   if (ds.theme) { state.settings.theme = ds.theme; applyTheme(); await saveSettings(); return render(); }
   if (ds.region) { state.settings.region = ds.region; await saveSettings(); return render(); }
@@ -10556,6 +10856,7 @@ async function onTap(e) {
       return render();
     }
     case "ask": return ask($('[data-input="ask"]')?.value);
+    case "cfollow": { const v = $('[data-input="cfollow"]')?.value; return followUp(v); }
     case "savekey":
       state.settings.apiKey = inputValue("apikey"); anthropicClient = null;
       await saveSettings(); toast(state.settings.apiKey ? "Claude key saved on this device" : "Claude key removed"); return render();
@@ -10695,6 +10996,7 @@ document.addEventListener("input", (e) => {
 });
 document.addEventListener("keydown", (e) => {
   if (e.key === "Enter" && e.target.dataset.input === "ask") ask(e.target.value);
+  if (e.key === "Enter" && e.target.dataset.input === "cfollow") followUp(e.target.value);
   if (e.key === "Enter" && e.target.dataset.input === "city") $('[data-act="city"]')?.click();
   if (e.key === "Enter" && e.target.dataset.input === "cal") addCalendar(e.target.value);
   if (e.key === "Enter" && ["trytext", "trybrand"].includes(e.target.dataset.input)) tryIt();
