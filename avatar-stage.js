@@ -26,7 +26,7 @@
 
 import * as THREE from './vendor/three/three.module.min.js';
 import { RoomEnvironment } from './vendor/three/addons/RoomEnvironment.js';
-import { SLOTS, SLOT_OFFSET_MM, FACE_FRAME, cleanBody, topSize, bottomsSize } from './avatar-config.js';
+import { SLOTS, SLOT_OFFSET_MM, FACE_FRAME, cleanBody, topSize, bottomsSize, REST } from './avatar-config.js';
 
 const DATA = new URL('./avatar/', import.meta.url);
 const BACKDROP = '#141413';
@@ -1094,7 +1094,7 @@ function garmentFields(D, S, spec, sub, length) {
   F.neck = f((c, x, y) => y - neckY(c));
   F.sleeve = f((c) => { const s = armS(c); return s * (S.armT[c] - spec.sleeve) * S.armLen - (1 - s) * 1; });
   if (spec.open) {
-    const g = (y) => openAt(spec, y);
+    const g = (y) => openAt(spec, y, L.c);
     F.open = f((c, x, y, z) => Math.min(g(y) - Math.abs(x), (z - S.rowVal(S.zc, y)) * 2 - 0.05) - (armS(c) > 0.5 ? 2 : 0));
   }
   if (spec.armhole) F.armhole = f((c) => armW[c] - spec.armhole); // a tank top: cut where the arm begins
@@ -1106,8 +1106,18 @@ function garmentFields(D, S, spec, sub, length) {
   return F;
 }
 // half the width of an open front at rest height y: lapels open into a V by the collar; a zip front
-// is straight
-const openAt = (spec, y) => (spec.zip ? spec.open : spec.open + 0.22 * sstep(5.5, 6.4, y) - 0.05 * sstep(4.5, 2.5, y));
+// is straight. How it is worn (close, from a fit check: see wearFor in stylist-brain.js):
+//   1 buttoned: the fronts meet at the waist button (BUTTON_Y), a V opens above it to the lapels and
+//     the fronts part a little below it, as a buttoned blazer's do;
+//   2 closed up: a coat buttoned (a zip done up) to the chest, only a small V at the collar.
+// Below zero the front is whole there (nothing cut).
+const BUTTON_Y = 3.05;
+const lin = (a, b, x) => clamp((x - a) / (b - a), 0, 1);
+function openAt(spec, y, close = 0) {
+  if (close >= 2) return -0.03 + (spec.zip ? 0.2 : 0.42) * sstep(5.0, 6.35, y);
+  if (close === 1) return y >= BUTTON_Y ? -0.03 + 0.8 * lin(BUTTON_Y, 6.3, y) ** 0.85 : -0.03 + 0.45 * sstep(BUTTON_Y - 0.25, 0.6, y);
+  return spec.zip ? spec.open : spec.open + 0.22 * sstep(5.5, 6.4, y) - 0.05 * sstep(4.5, 2.5, y);
+}
 // the hem of a top on the rest mesh, by its length
 const topHem = (spec, sub, length) => (length === 'cropped' ? 1.95 : length === 'long' && (sub === 'jacket_open' || sub === 'puffer') ? 0.18 : spec.hem);
 
@@ -1129,7 +1139,22 @@ function sizeOf(asset, sub, name) {
     return { ...z, base, key: z.changed ? `${base}|l=${z.leg}|w=${z.waist}` : base };
   }
   const z = topSize(asset, { hem: topHem(spec, sub, base), fit, long: base === 'long' });
-  return { ...z, base, key: `${base}${z.changed ? `|h=${z.hem}` : ''}`, hem: z.changed ? z.hem : topHem(spec, sub, base) };
+  // how its front is worn: open (the cut's own), buttoned or closed up (asset.wear.close, see openAt)
+  const close = spec.open ? clamp(Math.round(+asset.wear?.close || 0), 0, 2) : 0;
+  return { ...z, base, close, key: `${base}${z.changed ? `|h=${z.hem}` : ''}${close ? `|c=${close}` : ''}`, hem: z.changed ? z.hem : topHem(spec, sub, base) };
+}
+/**
+ * Where a top's front panel (frontChestUV) lands on the body, so something can be painted on it in
+ * the right place (a tie, app.js tiedAsset): row = (top - y) / (top - hem) of the panel's height for
+ * rest height y (decimetres), column = 0.5 + d / width for d decimetres of cloth from the centre front.
+ * neck: the rest height of the front of its neckline.
+ */
+export function panelFrame(asset, name) {
+  const sub = SPECS[asset?.garmentSubType] ? asset.garmentSubType : 'tee', spec = SPECS[sub];
+  if (spec.slot !== 'top' && spec.slot !== 'layer') return null;
+  const z = sizeOf(asset, sub, name);
+  const neck = spec.neck === 'jacket' ? 6.12 : spec.neck === 'hood' ? 6.2 : spec.neck === 'tank' ? 5.95 : 6.24;
+  return { sub, top: 6.45, hem: z.hem, width: z.width || 4.48, neck, waist: REST.waist };
 }
 // "full|h=0.74" cut at 1.2 → "full@1.20|h=0.74"
 const cutKey = (key, tuck) => { if (!tuck) return key; const i = key.indexOf('|'); return i < 0 ? `${key}@${tuck}` : `${key.slice(0, i)}@${tuck}${key.slice(i)}`; };
@@ -1161,6 +1186,7 @@ function garmentTopology(D, S, sub, length) {
   }
   const patch = buildPatch(D.m, D.index, fields, cover, split, groupOf, spec.slot !== 'shoes');
   patch.names = names; patch.spec = spec; patch.sub = sub; patch.length = length; patch.hemY = F._hemY; patch.hem0 = F._hem0 ?? F._hemY;
+  patch.close = spec.open ? parseLength(length).c || 0 : 0;
   patch.waistY = F._waistY; patch.legEnd = F._legEnd;
   // the body vertices the garment touches, and a ring around them (for smoothing the height field)
   const touched = new Uint8Array(D.m);
@@ -2047,7 +2073,7 @@ function clothSolve(gm, B, G0, inner) {
   };
   // a zip front: its two edges hang straight down, spec.zip apart (blending into the collar's shape)
   const fOpen = p.names.indexOf('open'), zipV = [], zipW = [];
-  if (spec.zip && fOpen >= 0) {
+  if (spec.zip && fOpen >= 0 && !p.close) { // (a zip done up has no edges to hang)
     const seen = new Uint8Array(nv);
     for (const e of p.bound) for (const v of [e.a, e.b]) {
       if (seen[v] || Math.abs(p.vf[v * p.nf + fOpen]) > 0.01 || aw[v] >= 0.3) continue;
@@ -2255,7 +2281,7 @@ class GarmentMesh {
       const th = Math.abs(Math.atan2(x, z - S.rowVal(S.zc, y)));
       let a = g === G_BACK ? arcs.at(y, Math.PI) - arcs.at(y, th) : arcs.at(y, th);
       // an open jacket: each half of the photo starts at its edge of the opening
-      if (spec.open && g === G_FRONT) a = Math.max(0, a - openAt(spec, y));
+      if (spec.open && g === G_FRONT) a = Math.max(0, a - openAt(spec, y, p.close));
       const u = clamp(0.5 + (Math.sign(x) * a) / Wp, 0, 1);
       return [g === G_FRONT ? u : 1 - u, v];
     };

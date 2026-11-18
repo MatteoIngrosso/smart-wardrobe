@@ -3849,6 +3849,34 @@ function accPicker(o, i) {
     <div class="chips">${from ? `<button class="chip" data-xto="${i}:">Take it off</button>` : ""}<button class="chip" data-xcancel="${i}">Cancel</button></div>
   </div>`;
 }
+// A coat over the jacket or blazer, by hand: an idea has one jacket (outer) and, over it, a coat. Coats,
+// parkas and the other outer pieces that aren't blazers, warmest first (dressiest first on dressy days).
+function coatOptions(o) {
+  const occ = OCCASIONS.find((x) => x.id === state.occasion) || {};
+  const dressy = occ.level ? occ.level >= 4 : occ.target >= 2.9;
+  const isCoat = (p) => ["coat", "puffer", "rain"].includes(p.category);
+  return state.items.filter((p) => roleOf(p) === "outer" && slotOf(p) !== "gym" && !isBlazer(p) && !leaving(p) && p.id !== o.pieces.outer?.id && p.id !== o.coat?.id)
+    .sort((a, b) => isCoat(b) - isCoat(a) || (dressy ? dressOf(b) - dressOf(a) : 0) || (b.warmth || 0) - (a.warmth || 0) || (a.wash ? 1 : 0) - (b.wash ? 1 : 0));
+}
+function coatPicker(o, i) {
+  const list = coatOptions(o);
+  return `<div class="swap-pick stack" style="gap:8px">
+    <span class="muted small">${o.coat ? `Instead of the ${esc(o.coat.name)}` : `Over the ${esc(o.pieces.outer?.name || "outfit")}`}: ${list.length} option${list.length === 1 ? "" : "s"}, warmest first.</span>
+    <div class="pieces mini">${list.map((p, k) => `<button class="piece" data-coatto="${i}:${p.id}">${k === 0 ? `<em class="best">Best match</em>` : ""}${pieceImg(p)}<span>${esc(p.name)}${p.wash ? " · in the wash" : ""}</span></button>`).join("")}</div>
+    ${list.length ? "" : `<span class="muted small">No other coat in your wardrobe.</span>`}
+    <div class="chips">${o.coat ? `<button class="chip" data-coatto="${i}:">No coat</button>` : ""}<button class="chip" data-coatpick="${i}">Cancel</button></div>
+  </div>`;
+}
+function setCoat(i, id) {
+  const o = state.outfits[i];
+  if (!o) return;
+  const coat = (id && state.items.find((x) => x.id === id)) || null;
+  const why = (o.extrasWhy || []).filter((w) => !o.coat || !w.startsWith(`${o.coat.name} over`));
+  if (coat && o.pieces.outer) why.unshift(`${coat.name} over the ${o.pieces.outer.name}`);
+  state.outfits[i] = { ...o, coat, cpick: false, extrasWhy: why };
+  if (mirror.off[o.key]) mirror.off[o.key] = mirror.off[o.key].filter((r) => r !== "coat");
+  dressStage();
+}
 // The idea with that accessory: added, changed (`from` → `toId`) or taken off (no `toId`).
 function setAccessory(i, from, toId) {
   const o = state.outfits[i];
@@ -3912,7 +3940,8 @@ function outfitCard(o, i) {
     <div class="row" style="justify-content:space-between"><h2 style="margin:0">${o.planned ? (o.planned.eventId ? `Planned for ${esc(o.planned.title)}` : `${o.planned.src && o.planned.src !== "tonight" ? "Planned in your calendar" : "Planned last night"}${o.planned.title ? `: ${esc(o.planned.title)}` : ""}`) : ["Best match", "Option 2", "Option 3"][i] || "Option"}</h2>${levelBadge(o)}${o.planned ? '<span class="score">Your plan</span>' : i === 0 ? '<span class="score">Top<span class="wide"> pick</span></span>' : ""}</div>
     <div class="pieces">${order.filter((k) => o.pieces[k]).map((k) => `<div class="swap-wrap">${pieceTile(o.pieces[k])}<button class="swap-btn" data-swap="${i}:${k}" aria-pressed="${o.swapping === k}" aria-label="Swap the ${esc(o.pieces[k].name)}">${ICON_SWAP}</button></div>`).join("")}${ph}</div>
     ${o.swapping ? swapPicker(o, i) : ""}
-    <div class="pieces extras">${o.coat ? pieceTile(o.coat) : ""}${(o.extras || []).map((p) => `<div class="swap-wrap">${accTile(p)}<button class="swap-btn" data-xswap="${i}:${p.id}" aria-pressed="${o.xpick?.from === p.id}" aria-label="Change or take off the ${esc(p.name)}">${ICON_SWAP}</button></div>`).join("")}${ownedAccGroups().length ? `<button class="piece add-acc" data-xadd="${i}" aria-pressed="${o.xpick?.mode === "add"}"><div class="ph">${kindIcon("watch")}<small>+ Accessory</small></div><span>Add a belt, tie, watch…</span></button>` : ""}</div>
+    <div class="pieces extras">${o.coat ? `<div class="swap-wrap">${pieceTile(o.coat)}<button class="swap-btn" data-coatpick="${i}" aria-pressed="${!!o.cpick}" aria-label="Change or take off the ${esc(o.coat.name)}">${ICON_SWAP}</button></div>` : o.pieces.outer && coatOptions(o).length ? `<button class="piece add-acc add-coat" data-coatpick="${i}" aria-pressed="${!!o.cpick}"><div class="ph">${kindIcon("coat")}<small>+ Coat</small></div><span>A coat over the ${esc(o.pieces.outer.name.toLowerCase())}</span></button>` : ""}${(o.extras || []).map((p) => `<div class="swap-wrap">${accTile(p)}<button class="swap-btn" data-xswap="${i}:${p.id}" aria-pressed="${o.xpick?.from === p.id}" aria-label="Change or take off the ${esc(p.name)}">${ICON_SWAP}</button></div>`).join("")}${ownedAccGroups().length ? `<button class="piece add-acc" data-xadd="${i}" aria-pressed="${o.xpick?.mode === "add"}"><div class="ph">${kindIcon("watch")}<small>+ Accessory</small></div><span>Add a belt, tie, watch…</span></button>` : ""}</div>
+    ${o.cpick ? coatPicker(o, i) : ""}
     ${o.xpick ? accPicker(o, i) : ""}
     ${o.reasons.length || o.extrasWhy?.length ? `<p class="why">${[...o.reasons, ...(o.extrasWhy || [])].map(esc).join(" · ")}</p>` : ""}
     ${o.warn?.length ? `<p class="why warn">Heads up: ${o.warn.map(esc).join(" · ")}</p>` : ""}
@@ -3960,6 +3989,9 @@ const mirror = {
   reading: false, // "From a photo" is reading a photo
   pick: 0, // which of today's ideas he wears
   off: {}, // per idea key: the roles taken off ("outer", "shoes"…)
+  wearHand: {}, // per idea key: {pieceId: {close, tuck}} changed on the mirror by hand (this visit only)
+  ties: new Map(), // a shirt's front panel with the tie painted on: key → { asset } (or { pending })
+  lib: null, // avatar-stage.js, once loaded (panelFrame for the tie)
   angle: 0, // degrees he's turned: 0 front, 90 right side, 180 back, 270 left side
   stage: null, // the 3D stage, made once and moved into each new mirror
   host: null, // the element its canvas lives in
@@ -4066,10 +4098,15 @@ const stageOK = () => lookbookOn() || !mirror.failed;
 
 // The piece each garment layer shows for an idea. A coat goes in the jacket layer, over the jacket:
 // take the coat off and the jacket under it shows.
+// A coat worn over a blazer or jacket: the coat takes the jacket layer and the jacket goes under it, in
+// the layer's place (a jumper under both stays off the avatar: two jackets hide it).
 function slotsFor(o) {
-  const off = mirrorOff(o), out = {};
-  for (const w of wornList(o)) {
-    const slot = w.role === "coat" ? "jacket" : Avatar.ROLE_TO_SLOT[w.role];
+  const off = mirrorOff(o), out = {}, list = wornList(o);
+  const drawn = (r) => list.some((w) => w.role === r && !off.includes(r) && Avatar.subTypeOf(w.item));
+  const both = drawn("coat") && drawn("outer");
+  for (const w of list) {
+    if (both && w.role === "mid") continue;
+    const slot = both && w.role === "outer" ? "layer" : w.role === "coat" ? "jacket" : Avatar.ROLE_TO_SLOT[w.role];
     if (!slot || !Avatar.subTypeOf(w.item)) continue;
     const on = !off.includes(w.role);
     if (!out[slot] || (!out[slot].on && on)) out[slot] = { ...w, on };
@@ -4120,10 +4157,11 @@ function dressStage() {
   if (lookbookOn()) return dressLookbook();
   const st = mirror.stage;
   if (!st) return;
-  const want = slotsFor(mirrorIdea());
+  const o = mirrorIdea(), want = slotsFor(o), wear = wearNow(o);
+  st.setTuck?.(tuckNow(o, wear));
   for (const slot of Avatar.SLOTS) {
-    const w = want[slot], asset = w && bakedAsset(w.item);
-    const now = mirror.worn[slot], id = asset ? w.item.id : null, on = !!w?.on, sk = id ? sitKey(w.item) : "";
+    const w = want[slot], dressed = w && styledAsset(w, bakedAsset(w.item), wear, o), asset = dressed?.asset;
+    const now = mirror.worn[slot], id = asset ? w.item.id : null, on = !!w?.on, sk = id ? sitKey(w.item) + dressed.key : "";
     if ((now?.id ?? null) === id && (!id || now.sk === sk)) {
       if (id && now.on !== on) { st.setVisible(slot, on); now.on = on; }
     } else {
@@ -4136,13 +4174,110 @@ function dressStage() {
   paintLooks();
 }
 
+/* ---------- How the pieces are worn on the avatar ----------
+   From the fit checks (Brain.wearFor: the same occasion first, then the check that shares the most
+   pieces), and what was changed on the mirror by hand: a coat or blazer open, buttoned or closed up,
+   the top tucked in or out. A tie in the outfit is painted on the shirt's front. */
+function wearNow(o) {
+  if (!o) return {};
+  const out = Brain.wearFor(state.brain, allPieces(o).map((p) => p.id), state.occasion);
+  for (const [id, st] of Object.entries(mirror.wearHand[o.key] || {})) out[id] = { ...out[id], ...st, hand: true };
+  return out;
+}
+const COAT_LIKE = /coat|puffer|rain|zip|track/;
+// 0 open, 1 buttoned, 2 closed up (avatar-stage.js openAt): a blazer "closed up" is buttoned.
+const closeOf = (item, st) => (st?.close === "buttoned" ? 1 : st?.close === "closed" ? (COAT_LIKE.test(item.category) ? 2 : 1) : 0);
+// The top next to the skin tucked in: as the fit check (or the mirror) says, else Tuck base top.
+function tuckNow(o, wear = wearNow(o)) {
+  const t = o?.pieces?.base && wear[o.pieces.base.id]?.tuck;
+  return t ? t !== "out" : mirrorTuck();
+}
+const tieOf = (o) => (o?.extras || []).find((x) => x.category === "tie" && !mirrorOff(o).includes(Look.accSlotOf("tie")));
+// The asset a slot gets (and what to add to its sitKey): its front open or closed, a tie on the shirt.
+function styledAsset(w, asset, wear, o) {
+  if (!asset) return null;
+  let a = asset, key = "";
+  const close = closeOf(w.item, wear[w.item.id]);
+  if (close) { a = { ...a, wear: { close } }; key += `|c${close}`; }
+  const tie = w.role === "base" && tieOf(o);
+  if (tie) { const t = tiedAsset(a, w.item, tie); if (t) { a = t; key += `|tie:${tie.id}`; } }
+  return { asset: a, key };
+}
+// The shirt's front panel with the tie painted down its centre, from the knot at the collar to the
+// belt (made once per shirt and tie, in memory). Null until it's ready: the plain shirt shows meanwhile.
+function tiedAsset(asset, shirt, tie) {
+  const F = mirror.lib?.panelFrame?.(asset, shirt.name);
+  if (!F || !asset.frontChestUV) return null;
+  const k = `${shirt.id}|${asset.updatedAt || 0}|${tie.id}|${F.hem}|${F.width}`;
+  const got = mirror.ties.get(k);
+  if (got?.asset) return { ...asset, garmentId: got.asset.garmentId, frontChestUV: got.asset.frontChestUV };
+  if (!got) {
+    mirror.ties.set(k, { pending: true });
+    (async () => {
+      const color = await tieColour(tie);
+      const blob = await mirror.baker.paintTie(asset.frontChestUV, F, color);
+      mirror.ties.set(k, { asset: { garmentId: `${asset.garmentId}~tie~${tie.id}`, frontChestUV: blob } });
+      if (mirror.ties.size > 12) mirror.ties.delete(mirror.ties.keys().next().value);
+      dressStage();
+    })().catch((e) => console.warn("Mirror: couldn't draw the tie", e));
+  }
+  return null;
+}
+// The tie's colour: the middle of its photo's cloth (its saved colour when the photo can't be read).
+const tieColours = new Map();
+async function tieColour(tie) {
+  if (tieColours.has(tie.id)) return tieColours.get(tie.id);
+  let hex = COLORS[tie.colors?.[0]]?.hex || "#6a1d2b";
+  try {
+    const bmp = await createImageBitmap(await asBlob(tie.photos[0]));
+    const w = 48, h = Math.max(8, Math.round((48 * bmp.height) / bmp.width)), ctx = newCanvas(w, h).getContext("2d", { willReadFrequently: true });
+    ctx.drawImage(bmp, 0, 0, w, h);
+    bmp.close?.();
+    const d = ctx.getImageData(0, 0, w, h).data, bg = [d[0], d[1], d[2]], px = [];
+    for (let i = 0; i < d.length; i += 4) {
+      if (d[i + 3] < 200) continue;
+      if (d[3] >= 200 && Math.abs(d[i] - bg[0]) + Math.abs(d[i + 1] - bg[1]) + Math.abs(d[i + 2] - bg[2]) < 40) continue; // (no cut-out: the background)
+      px.push([d[i], d[i + 1], d[i + 2]]);
+    }
+    if (px.length > 20) {
+      const med = (k) => px.map((p) => p[k]).sort((a, b) => a - b)[px.length >> 1];
+      hex = `#${[0, 1, 2].map((k) => med(k).toString(16).padStart(2, "0")).join("")}`;
+    }
+  } catch { /* the saved colour */ }
+  tieColours.set(tie.id, hex);
+  return hex;
+}
+// The mirror's Wearing list: tap how a coat or jacket is worn (open, buttoned, closed up) for this idea.
+function cycleClose(id) {
+  const o = mirrorIdea(), it = o && allPieces(o).find((p) => p.id === id);
+  if (!it) return;
+  const ways = COAT_LIKE.test(it.category) ? ["open", "buttoned", "closed"] : ["open", "buttoned"];
+  const cur = wearNow(o)[id]?.close || "open", next = ways[(ways.indexOf(cur) + 1) % ways.length];
+  const hand = (mirror.wearHand[o.key] ||= {});
+  hand[id] = { ...hand[id], close: next };
+  dressStage();
+  remountMirror();
+}
+// "Tuck base top": with a tuck the fit check saw (or set here), it changes this idea only.
+async function toggleTuck() {
+  const o = mirrorIdea(), base = o?.pieces?.base;
+  if (base && wearNow(o)[base.id]?.tuck) {
+    const hand = (mirror.wearHand[o.key] ||= {});
+    hand[base.id] = { ...hand[base.id], tuck: tuckNow(o) ? "out" : "in" };
+    dressStage();
+    return remountMirror();
+  }
+  return setMirrorTuck(!state.settings.mirrorTuck);
+}
+
 // The 3D stage is made once (three.js loads only now, not with the rest of the app) and its canvas
 // moves into each new mirror, so Today can be drawn again without starting 3D again.
 function startStage() {
   mirror.loading = (async () => {
     try {
-      const [{ createStage }, baker] = await Promise.all([import("./avatar-stage.js"), import("./garment-baker.js")]);
-      mirror.baker = baker;
+      const [lib, baker] = await Promise.all([import("./avatar-stage.js"), import("./garment-baker.js")]);
+      const { createStage } = lib;
+      mirror.baker = baker; mirror.lib = lib;
       const mode = mirrorMode();
       mirror.stage = await createStage(mirror.host, { mode, hairFinish: hairFinish(), tuck: mirrorTuck(), onAngle: (deg) => { mirror.angle = deg; paintAngles(); } });
       mirror.stage.setBody(bodyDraft());
@@ -4510,7 +4645,19 @@ const sidePills = () => MIRROR_SIDES.map(([s, label]) => `<button class="chip" d
 function mirrorHTML() {
   const ideas = state.outfits.slice(0, 3), o = mirrorIdea(), pick = ideas.indexOf(o);
   const off = mirrorOff(o), lb = lookbookOn();
-  const tuck = `<button class="chip" data-mtuck="1" aria-pressed="${mirrorTuck()}" title="The top under everything goes into the waistband">Tuck base top</button>`;
+  const tuck = `<button class="chip" data-mtuck="1" aria-pressed="${tuckNow(o)}" title="The top under everything goes into the waistband">Tuck base top</button>`;
+  const wear = lb ? {} : wearNow(o);
+  // how a piece is worn, under its name: "Coat · Open" (tap to change), "Top · Tucked in (fit check, 14 Nov)"
+  const style = (w) => {
+    if (lb) return "";
+    const st = wear[w.item.id], from = st && !st.hand && st.from ? ` <span title="As in your fit check">(fit check, ${esc(fmtDay(st.from))})</span>` : "";
+    if ((w.role === "coat" || w.role === "outer") && Avatar.subTypeOf(w.item) && ["jacket_open", "bomber"].includes(Avatar.subTypeOf(w.item))) {
+      const c = st?.close === "closed" && !COAT_LIKE.test(w.item.category) ? "buttoned" : st?.close || "open";
+      return ` · <button class="wear-style" data-mclose="${esc(w.item.id)}" aria-label="How the ${esc(w.item.name)} is worn: ${esc(Brain.wearWord("close", c))}. Tap to change.">${esc(Brain.wearWord("close", c))}</button>${from}`;
+    }
+    const bits = ["tuck", "sleeves"].map((f) => st?.[f] && Brain.wearWord(f, st[f])).filter(Boolean);
+    return bits.length ? ` · ${esc(bits.join(", "))}${from}` : "";
+  };
   return `<section class="mirror${lb ? " is-lookbook" : ""}" id="mirror">
     ${lb ? "" : bodyPanelHTML()}
     <div class="mirror-stage">
@@ -4535,7 +4682,7 @@ function mirrorHTML() {
       ${o ? `<h2 class="wearing-head">Wearing</h2>
       <div class="wearing">${wornList(o).map((w) => {
         const on = !off.includes(w.role);
-        return `<div class="wear-row${on ? "" : " is-off"}">${pieceImg(w.item, "")}<span class="wear-name"><b>${esc(w.item.name)}</b><span class="muted small">${ROLE_WORD[w.role]}</span></span><button class="chip" data-mpiece="${w.role}" aria-pressed="${!on}">${on ? "Take off" : "Put on"}</button></div>`;
+        return `<div class="wear-row${on ? "" : " is-off"}">${pieceImg(w.item, "")}<span class="wear-name"><b>${esc(w.item.name)}</b><span class="muted small">${ROLE_WORD[w.role]}${style(w)}</span></span><button class="chip" data-mpiece="${w.role}" aria-pressed="${!on}">${on ? "Take off" : "Put on"}</button></div>`;
       }).join("")}</div>
       ${state.event?.day === "tomorrow" ? `<button class="btn primary" data-plan="${pick}">Plan it for tomorrow</button>` : `<button class="btn primary" data-wear="${pick}" data-mirror="1">Wear this today</button>`}` : ""}
     </aside>
@@ -7459,12 +7606,62 @@ function fitOutfitData(outfit) {
   const byId = itemMap(), desc = (id) => { const p = byId.get(id); return p && { id, name: p.name, category: p.category, colors: p.colors || [], fit: p.fit || "", metal: p.metal || "", leather: p.leather || "" }; };
   return { date: outfit.date, occasion: outfit.occasion, slots: Object.fromEntries(Object.entries(outfit.slots).map(([r, id]) => [r, desc(id)])), coat: outfit.coat && desc(outfit.coat), extras: outfit.extras.map(desc).filter(Boolean) };
 }
+/* How each piece is worn (Brain.WEAR): the AI reads it from the photo, once per check (one small
+   JPEG, about 600 tokens), and it can be set by hand on the review sheet and on a saved check. The
+   3D avatar then wears the outfit that way (see wearNow). */
+// The pieces of an outfit (or a saved check) that have a way of being worn, top to bottom.
+function wearPieces(slots, coat, byId = itemMap()) {
+  return [["coat", coat], ...["outer", "mid", "base", "bottom"].map((r) => [r, slots?.[r]])]
+    .map(([role, id]) => { const p = id && byId.get(id); return p && { id, role, name: p.name, category: p.category, fields: Brain.wearFields(role, p.category) }; })
+    .filter((p) => p?.fields.length);
+}
+// A JPEG for the AI (Gemini takes JPEG here), 768 px on the long side: buttons and a tucked hem still show.
+async function fitAIImage(blob) {
+  const bmp = await createImageBitmap(blob);
+  const s = Math.min(1, 768 / Math.max(bmp.width, bmp.height));
+  const c = newCanvas(Math.max(1, Math.round(bmp.width * s)), Math.max(1, Math.round(bmp.height * s)));
+  c.getContext("2d").drawImage(bmp, 0, 0, c.width, c.height);
+  bmp.close?.();
+  return canvasBlob(c, "image/jpeg", 0.8);
+}
+async function readWear(photo, outfit) {
+  const req = Brain.wearRequest(wearPieces(outfit.slots || outfit.itemIds, outfit.coat));
+  if (req.empty) return { wear: null, note: "", unseen: [] };
+  const text = await aiGenerate({ system: req.system, text: req.text, image: await fitAIImage(photo), schema: req.schema, maxTokens: req.maxTokens, wait: 30000 });
+  return Brain.parseWear(text, req.refs);
+}
+// "How you wore it": per piece, a chip per way (tap the lit one again to clear it).
+function wearFormHTML(pieces, wear, key) {
+  if (!pieces.length) return "";
+  return `<div class="fc-wear stack" style="gap:6px">${pieces.map((p) => `<div class="fc-wear-row"><span class="small"><b>${esc(p.name)}</b></span><div class="chips">${p.fields.flatMap((f) => Brain.WEAR[f].values
+    .filter(([v]) => f !== "close" || v !== "closed" || p.role === "coat" || /coat|puffer|rain|zip|track/.test(p.category))
+    .map(([v, l]) => `<button class="chip small" aria-pressed="${wear?.[p.id]?.[f] === v}" data-fcstyle="${esc(key)}|${esc(p.id)}|${f}|${v}">${esc(l)}</button>`)).join("")}</div></div>`).join("")}</div>`;
+}
+function wearStatusHTML(d) {
+  const line = d.wearRead === "reading" ? `Reading how you wore it with ${esc(aiName())}…`
+    : d.wearRead === "done" ? `Read from the photo by ${esc(aiName())}${d.wearNote ? `: ${esc(d.wearNote)}` : ""}. Tap to correct it.`
+    : d.wearRead === "error" ? `${esc(d.wearError || "Couldn't read it")}. Set it by hand.`
+    : `Set it by hand${aiReady() ? "" : ", or add a Gemini key in Settings to read it from the photo"}.`;
+  return `<p class="muted small" style="margin:0">${line} The 3D avatar wears these pieces this way for ${esc(occLabel(d.outfit?.occasion || d.occasion))}.</p>`;
+}
+function toggleWear(wear, id, field, v) {
+  const one = { ...wear[id] };
+  if (one[field] === v) delete one[field]; else one[field] = v;
+  if (Object.keys(one).length) wear[id] = one; else delete wear[id];
+}
 async function openFitReview(outfit, file) {
   toast("Reading the photo…");
   const photo = await fitPhoto(file);
-  fitDraft = { outfit, photo, thumb: await fitPhoto(photo, FIT_THUMB, 0.8), metrics: null, stars: 0, tags: [], saving: false };
+  fitDraft = { outfit, photo, thumb: await fitPhoto(photo, FIT_THUMB, 0.8), metrics: null, stars: 0, tags: [], saving: false, wear: {}, wearNote: "", wearRead: aiReady() ? "reading" : "off" };
   showFitReview();
   const d = fitDraft;
+  if (d.wearRead === "reading") readWear(photo, outfit).then((r) => {
+    if (fitDraft !== d) return;
+    // (what was set by hand meanwhile stays)
+    for (const [id, st] of Object.entries(r.wear || {})) d.wear[id] = { ...st, ...d.wear[id] };
+    Object.assign(d, { wearNote: r.note, wearRead: "done" });
+    paintFitReview();
+  }, (e) => { if (fitDraft !== d) return; Object.assign(d, { wearRead: "error", wearError: e.message || "Couldn't read it" }); paintFitReview(); });
   const m = await Brain.analyzeWithExternalAI(photo, fitOutfitData(outfit), { local: () => fitMetrics(photo) });
   if (fitDraft !== d) return;
   d.metrics = m;
@@ -7506,6 +7703,7 @@ function fitReviewHTML() {
       ${fitStars(d.stars, "draft")}
       <div class="chips fc-tags" role="group" aria-label="What stood out">${Brain.TAGS.map((t) => `<button class="chip${t.good ? "" : " fc-off"}" aria-pressed="${d.tags.includes(t.id)}" data-fctag="${t.id}">${esc(t.label)}</button>`).join("")}</div>
       <div class="fc-metrics-box">${fitMetricsHTML(d.metrics)}</div>
+      ${wearPieces(d.outfit.slots, d.outfit.coat).length ? `<h3 style="margin:0">How you wore it</h3>${wearStatusHTML(d)}${wearFormHTML(wearPieces(d.outfit.slots, d.outfit.coat), d.wear, "draft")}` : ""}
       <div class="row"><button class="btn primary" data-fcsave="1"${d.stars && !d.saving ? "" : " disabled"}>Save fit check</button><button class="btn" data-fcretake="1">Another photo</button></div>
       ${d.stars ? "" : `<p class="muted small" style="margin:0">Give it stars to save it.</p>`}
     </div>`;
@@ -7531,6 +7729,7 @@ async function saveFitCheck() {
     id, date: d.outfit.date, at, occasion: d.outfit.occasion,
     itemIds: { ...d.outfit.slots }, coat: d.outfit.coat || null, extras: [...d.outfit.extras],
     stars: d.stars, tags: [...d.tags], metrics, photo: d.photo, thumb: d.thumb,
+    ...(Brain.cleanWear(d.wear) && { wear: Brain.cleanWear(d.wear), wearBy: d.wearRead === "done" ? "ai" : "hand" }), ...(d.wearNote && { wearNote: d.wearNote }),
   };
   // The stars count as an outfit rating too (with the clothes and the accessories), and "Too warm" or
   // "Too cold" teaches how warm you like to dress, like a skip for the weather does.
@@ -7546,8 +7745,9 @@ async function saveFitCheck() {
   state.outfits = [];
   fitDraft = null;
   closeSheet();
-  toast(`Fit check saved: ${d.stars} star${d.stars === 1 ? "" : "s"}. The ideas learn from it.`);
+  toast(`Fit check saved: ${d.stars} star${d.stars === 1 ? "" : "s"}. The ideas learn from it${fc.wear ? ", and the avatar wears it your way" : ""}.`);
   render();
+  dressStage();
 }
 async function deleteFitCheck(id) {
   const fc = state.fitChecks.find((x) => x.id === id);
@@ -7597,11 +7797,62 @@ function openFitCheck(id) {
         <div class="pieces mini">${[...column, ...extras].map((p) => pieceTile(p)).join("")}${missing ? removedTile() : ""}</div>
         ${fc.tags?.length ? `<div class="chips">${fc.tags.map((t) => `<span class="chip" aria-pressed="true">${esc(Brain.tagLabel(t))}</span>`).join("")}</div>` : ""}
         ${fc.metrics ? fitMetricsHTML(fc.metrics) : ""}
+        ${savedWearHTML(fc)}
         <div class="field"><label for="fc-date">Wear it again on</label><input id="fc-date" class="input" type="date" min="${localDay()}" value="${tomorrow}" style="max-width:12rem"></div>
         <div class="row"><button class="btn primary" data-fcwear="${esc(fc.id)}"${column.length ? "" : " disabled"}>Wear again</button><button class="btn" data-fcback="1">All fit checks</button><button class="btn ghost danger" data-fcdel="${esc(fc.id)}">Delete</button></div>
       </div>
     </div>`;
   $("#sheet").hidden = false;
+}
+// A saved check: how each piece was worn, to correct by hand or read again from its photo.
+function savedWearHTML(fc) {
+  const pieces = wearPieces(fc.itemIds, fc.coat);
+  if (!pieces.length) return "";
+  const st = fitUI.reading === fc.id ? "reading" : fitUI.errors?.[fc.id] ? "error" : fc.wear ? (fc.wearBy === "hand" ? "hand" : "done") : "none";
+  const line = st === "reading" ? `Reading how you wore it with ${esc(aiName())}…` : st === "error" ? esc(fitUI.errors[fc.id])
+    : st === "done" ? `Read from the photo${fc.wearNote ? `: ${esc(fc.wearNote)}` : ""}.` : st === "hand" ? "Set by hand." : "Not read yet.";
+  return `<div class="stack" style="gap:6px"><h3 style="margin:0">How you wore it</h3>
+    <p class="muted small" style="margin:0">${line} The 3D avatar wears these pieces this way for ${esc(occLabel(fc.occasion))}.</p>
+    ${wearFormHTML(pieces, fc.wear || {}, `fc:${fc.id}`)}
+    ${aiReady() && fc.photo && st !== "reading" ? `<div class="row"><button class="btn" data-fcread="${esc(fc.id)}">${fc.wear ? "Read it again from the photo" : "Read it from the photo"}</button></div>` : ""}</div>`;
+}
+// Keep a saved check's wear (and the brain's summary of it), then dress the avatar again.
+async function saveCheckWear(fc) {
+  const w = Brain.cleanWear(fc.wear);
+  if (w) fc.wear = w; else delete fc.wear;
+  await store.put("fit_checks", fc);
+  state.brain = { ...Brain.emptyBrain(), ...state.brain, checks: { ...state.brain?.checks, [fc.id]: Brain.summarize(fc) } };
+  await saveBrain();
+  dressStage();
+}
+async function readCheckWear(id) {
+  const fc = state.fitChecks.find((x) => x.id === id);
+  if (!fc || fitUI.reading) return;
+  fitUI.reading = id;
+  openFitCheck(id);
+  try {
+    const r = await readWear(await asBlob(fc.photo), fc);
+    fc.wear = r.wear || {}; fc.wearBy = "ai"; delete (fitUI.errors ||= {})[id];
+    if (r.note) fc.wearNote = r.note; else delete fc.wearNote;
+  } catch (e) { (fitUI.errors ||= {})[id] = `${e.message || "Couldn't read it"}. Set it by hand.`; }
+  fitUI.reading = null;
+  await saveCheckWear(fc);
+  if (!$("#sheet").hidden && $(`.sheet-panel [data-fcread="${id}"], .sheet-panel [data-fcdel="${id}"]`)) openFitCheck(id);
+}
+async function setWearStyle(spec) {
+  const [key, id, field, v] = spec.split("|");
+  if (key === "draft") {
+    if (!fitDraft) return;
+    toggleWear(fitDraft.wear, id, field, v);
+    return paintFitReview();
+  }
+  const fc = state.fitChecks.find((x) => `fc:${x.id}` === key);
+  if (!fc) return;
+  fc.wear = { ...fc.wear };
+  toggleWear(fc.wear, id, field, v);
+  fc.wearBy = "hand"; delete fitUI.errors?.[fc.id];
+  await saveCheckWear(fc);
+  openFitCheck(fc.id);
 }
 // "Wear again": the outfit goes on the day you pick, like a plan made in the Calendar.
 async function wearFitAgain(id) {
@@ -10201,7 +10452,8 @@ async function onTap(e) {
   if (ds.slotpick != null) { const [slot, id] = ds.slotpick.split(":"); return pickForSlot(slot, id); }
   if (ds.slotward) return slotToWardrobe(ds.slotward);
   if (ds.hfin) return setHairFinish(ds.hfin);
-  if (ds.mtuck) return setMirrorTuck(!mirrorTuck());
+  if (ds.mtuck) return toggleTuck();
+  if (ds.mclose) return cycleClose(ds.mclose);
   // Fit check
   if (ds.fitlog) return startFitCheck(ds.fitlog);
   if (ds.fcstar) {
@@ -10217,6 +10469,8 @@ async function onTap(e) {
     return paintFitReview();
   }
   if (ds.fcsave) return saveFitCheck();
+  if (ds.fcstyle) return setWearStyle(ds.fcstyle);
+  if (ds.fcread) return readCheckWear(ds.fcread);
   if (ds.fcpick) return pickFitPhoto(ds.fcpick);
   if (ds.fcretake) { const o = fitDraft?.outfit; fitDraft = null; return o ? fitSource(o) : closeSheet(); }
   if (ds.fitgallery || ds.fcback) return openFitGallery();
@@ -10425,6 +10679,8 @@ async function onTap(e) {
     o.xpick = same ? null : { mode: ds.xswap ? "swap" : "add", from: from || null, group: null };
     return render();
   }
+  if (ds.coatpick != null) { const o = state.outfits[+ds.coatpick]; if (o) { o.cpick = !o.cpick; o.xpick = null; } return render(); }
+  if (ds.coatto != null) { const [i, id] = ds.coatto.split(":"); setCoat(+i, id); return render(); }
   if (ds.xgroup) { const [i, g] = ds.xgroup.split(":"); const o = state.outfits[+i]; if (o?.xpick) o.xpick.group = g; return render(); }
   if (ds.xcancel != null) { const o = state.outfits[+ds.xcancel]; if (o) o.xpick = null; return render(); }
   if (ds.xto != null) {

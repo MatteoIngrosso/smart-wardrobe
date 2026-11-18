@@ -140,3 +140,64 @@ test("analyzeWithExternalAI: the server's answer merged, else the device's metri
   assert.equal(slow.source, "device");
   assert.match(slow.aiError, /within 15 s/);
 });
+
+// ---------- how each piece was worn (fit check → avatar) ----------
+test("wear: which ways a piece can be worn, and only known values are kept", () => {
+  assert.deepEqual(Brain.wearFields("coat", "coat"), ["close"]);
+  assert.deepEqual(Brain.wearFields("outer", "jacket"), ["close"]);
+  assert.deepEqual(Brain.wearFields("mid", "jacket"), ["close"], "a blazer saved as a layer still buttons");
+  assert.deepEqual(Brain.wearFields("base", "shirt"), ["tuck", "sleeves"]);
+  assert.deepEqual(Brain.wearFields("bottom", "trousers"), ["break"]);
+  assert.deepEqual(Brain.wearFields("shoes", "dress-shoes"), []);
+  assert.deepEqual(Brain.cleanWear({ a: { close: "open", tuck: "sideways" }, b: { nope: 1 }, "": { close: "open" } }), { a: { close: "open" } });
+  assert.equal(Brain.cleanWear({}), null);
+  assert.equal(Brain.wearWord("close", "closed"), "Closed up");
+});
+
+test("wear: the summary keeps the coat and the wear", () => {
+  const s = Brain.summarize({ at: "2026-11-14T09:00:00Z", date: "2026-11-14", occasion: "work", itemIds: { base: "s" }, coat: "c", extras: [], stars: 5, tags: [], wear: { c: { close: "open", x: 1 } } });
+  assert.equal(s.coat, "c");
+  assert.deepEqual(s.wear, { c: { close: "open" } });
+  assert.equal("wear" in Brain.summarize({ itemIds: {}, extras: [] }), false);
+});
+
+test("wear: the same occasion first, then the check sharing the most pieces, then the newest", () => {
+  const brain = { checks: {
+    a: { at: "2026-11-01T08:00:00Z", date: "2026-11-01", occasion: "work", slots: { base: "shirt", outer: "blazer" }, coat: "coat", extras: [], wear: { coat: { close: "closed" }, shirt: { tuck: "in" } } },
+    b: { at: "2026-11-10T20:00:00Z", date: "2026-11-10", occasion: "night", slots: { base: "shirt", outer: "blazer" }, coat: "coat", extras: [], wear: { coat: { close: "open" }, shirt: { tuck: "out" } } },
+    c: { at: "2026-11-12T20:00:00Z", date: "2026-11-12", occasion: "work", slots: { base: "tee" }, coat: "coat", extras: [], wear: { coat: { close: "buttoned" } } },
+  } };
+  const ids = ["shirt", "blazer", "coat"];
+  const work = Brain.wearFor(brain, ids, "work");
+  assert.equal(work.coat.close, "closed", "the work check with the same suit beats a newer work check with a tee");
+  assert.equal(work.shirt.tuck, "in");
+  assert.equal(work.coat.from, "2026-11-01");
+  const night = Brain.wearFor(brain, ids, "night");
+  assert.deepEqual([night.coat.close, night.shirt.tuck], ["open", "out"]);
+  const casual = Brain.wearFor(brain, ids, "casual");
+  assert.equal(casual.coat.close, "open", "no casual check: the ones sharing the most pieces (a and b), the newest of them");
+  assert.deepEqual(Brain.wearFor(brain, ["jeans"], "work"), {});
+  assert.deepEqual(Brain.wearFor({}, ids, "work"), {});
+});
+
+test("wear: the request is short, and the answer maps back to the piece ids", () => {
+  const r = Brain.wearRequest([
+    { id: "c1", role: "coat", name: "Navy wool coat", category: "coat" },
+    { id: "s1", role: "base", name: "White shirt", category: "shirt" },
+    { id: "sh", role: "shoes", name: "Black shoes", category: "dress-shoes" },
+  ]);
+  assert.equal(Object.keys(r.refs).length, 2, "shoes have nothing to read");
+  assert.ok(r.text.length < 700, `${r.text.length} characters`);
+  assert.ok(r.maxTokens <= 200);
+  assert.deepEqual(r.schema.properties.pieces.items.properties.close.enum, ["open", "buttoned", "closed", "n/a"]);
+  const p = Brain.parseWear(JSON.stringify({ pieces: [
+    { ref: "p1", seen: true, close: "open", tuck: "in", sleeves: "n/a", break: "n/a" }, // (a coat has no tuck: dropped)
+    { ref: "p2", seen: false, close: "n/a", tuck: "in", sleeves: "down", break: "n/a" },
+    { ref: "p9", seen: true, close: "open" },
+  ], note: "collar up" }), r.refs);
+  assert.deepEqual(p.wear, { c1: { close: "open" } });
+  assert.deepEqual(p.unseen, ["s1"]);
+  assert.equal(p.note, "collar up");
+  assert.deepEqual(Brain.parseWear("not json", r.refs).wear, null);
+  assert.ok(Brain.wearRequest([]).empty);
+});
