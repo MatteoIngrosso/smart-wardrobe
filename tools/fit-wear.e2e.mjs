@@ -231,17 +231,17 @@ test("Today: a coat goes over the blazer from the idea card (+ Coat), and comes 
   // the best idea, in the suit's blazer (whatever the ideas picked for this weather)
   const i = await page.evaluate(() => { const t = window.__t; t.state.outfits[0] = { ...t.state.outfits[0], pieces: { ...t.state.outfits[0].pieces, outer: t.state.items.find((x) => x.id === "w-blazer") } }; return 0; });
   await page.evaluate((i) => { const t = window.__t; t.state.outfits[i] = { ...t.state.outfits[i], coat: null }; t.render(); }, i);
-  await page.click(`button.add-coat[data-cswap="${i}"]`);
-  await page.waitForSelector(`[data-cto="${i}:w-coat"]`);
-  const opts = await page.$$eval(`[data-cto^="${i}:"]`, (els) => els.map((e) => e.dataset.cto.split(":")[1]).filter(Boolean));
+  await page.click(`button.add-coat[data-coatpick="${i}"]`);
+  await page.waitForSelector(`[data-coatto="${i}:w-coat"]`);
+  const opts = await page.$$eval(`[data-coatto^="${i}:"]`, (els) => els.map((e) => e.dataset.coatto.split(":")[1]).filter(Boolean));
   assert.ok(!opts.includes("w-blazer"), "not the blazer itself");
   assert.ok(opts.includes("w-parka"));
   if (SHOTS) await page.screenshot({ path: join(SHOTS, "coat-picker-1366x1024.png") });
-  await page.click(`[data-cto="${i}:w-coat"]`);
+  await page.click(`[data-coatto="${i}:w-coat"]`);
   await page.waitForFunction((i) => window.__t.state.outfits[i].coat?.id === "w-coat", i);
-  assert.ok(await page.$(`.swap-btn[data-cswap="${i}"]`), "the coat has its own swap button");
-  await page.click(`.swap-btn[data-cswap="${i}"]`);
-  await page.click(`[data-cto="${i}:"]`);
+  assert.ok(await page.$(`.swap-btn[data-coatpick="${i}"]`), "the coat has its own swap button");
+  await page.click(`.swap-btn[data-coatpick="${i}"]`);
+  await page.click(`[data-coatto="${i}:"]`);
   await page.waitForFunction((i) => !window.__t.state.outfits[i].coat, i);
 });
 

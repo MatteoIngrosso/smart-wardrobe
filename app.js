@@ -3862,9 +3862,9 @@ function coatPicker(o, i) {
   const list = coatOptions(o);
   return `<div class="swap-pick stack" style="gap:8px">
     <span class="muted small">${o.coat ? `Instead of the ${esc(o.coat.name)}` : `Over the ${esc(o.pieces.outer?.name || "outfit")}`}: ${list.length} option${list.length === 1 ? "" : "s"}, warmest first.</span>
-    <div class="pieces mini">${list.map((p, k) => `<button class="piece" data-cto="${i}:${p.id}">${k === 0 ? `<em class="best">Best match</em>` : ""}${pieceImg(p)}<span>${esc(p.name)}${p.wash ? " · in the wash" : ""}</span></button>`).join("")}</div>
+    <div class="pieces mini">${list.map((p, k) => `<button class="piece" data-coatto="${i}:${p.id}">${k === 0 ? `<em class="best">Best match</em>` : ""}${pieceImg(p)}<span>${esc(p.name)}${p.wash ? " · in the wash" : ""}</span></button>`).join("")}</div>
     ${list.length ? "" : `<span class="muted small">No other coat in your wardrobe.</span>`}
-    <div class="chips">${o.coat ? `<button class="chip" data-cto="${i}:">No coat</button>` : ""}<button class="chip" data-cswap="${i}">Cancel</button></div>
+    <div class="chips">${o.coat ? `<button class="chip" data-coatto="${i}:">No coat</button>` : ""}<button class="chip" data-coatpick="${i}">Cancel</button></div>
   </div>`;
 }
 function setCoat(i, id) {
@@ -3940,7 +3940,7 @@ function outfitCard(o, i) {
     <div class="row" style="justify-content:space-between"><h2 style="margin:0">${o.planned ? (o.planned.eventId ? `Planned for ${esc(o.planned.title)}` : `${o.planned.src && o.planned.src !== "tonight" ? "Planned in your calendar" : "Planned last night"}${o.planned.title ? `: ${esc(o.planned.title)}` : ""}`) : ["Best match", "Option 2", "Option 3"][i] || "Option"}</h2>${levelBadge(o)}${o.planned ? '<span class="score">Your plan</span>' : i === 0 ? '<span class="score">Top<span class="wide"> pick</span></span>' : ""}</div>
     <div class="pieces">${order.filter((k) => o.pieces[k]).map((k) => `<div class="swap-wrap">${pieceTile(o.pieces[k])}<button class="swap-btn" data-swap="${i}:${k}" aria-pressed="${o.swapping === k}" aria-label="Swap the ${esc(o.pieces[k].name)}">${ICON_SWAP}</button></div>`).join("")}${ph}</div>
     ${o.swapping ? swapPicker(o, i) : ""}
-    <div class="pieces extras">${o.coat ? `<div class="swap-wrap">${pieceTile(o.coat)}<button class="swap-btn" data-cswap="${i}" aria-pressed="${!!o.cpick}" aria-label="Change or take off the ${esc(o.coat.name)}">${ICON_SWAP}</button></div>` : o.pieces.outer && coatOptions(o).length ? `<button class="piece add-acc add-coat" data-cswap="${i}" aria-pressed="${!!o.cpick}"><div class="ph">${kindIcon("coat")}<small>+ Coat</small></div><span>A coat over the ${esc(o.pieces.outer.name.toLowerCase())}</span></button>` : ""}${(o.extras || []).map((p) => `<div class="swap-wrap">${accTile(p)}<button class="swap-btn" data-xswap="${i}:${p.id}" aria-pressed="${o.xpick?.from === p.id}" aria-label="Change or take off the ${esc(p.name)}">${ICON_SWAP}</button></div>`).join("")}${ownedAccGroups().length ? `<button class="piece add-acc" data-xadd="${i}" aria-pressed="${o.xpick?.mode === "add"}"><div class="ph">${kindIcon("watch")}<small>+ Accessory</small></div><span>Add a belt, tie, watch…</span></button>` : ""}</div>
+    <div class="pieces extras">${o.coat ? `<div class="swap-wrap">${pieceTile(o.coat)}<button class="swap-btn" data-coatpick="${i}" aria-pressed="${!!o.cpick}" aria-label="Change or take off the ${esc(o.coat.name)}">${ICON_SWAP}</button></div>` : o.pieces.outer && coatOptions(o).length ? `<button class="piece add-acc add-coat" data-coatpick="${i}" aria-pressed="${!!o.cpick}"><div class="ph">${kindIcon("coat")}<small>+ Coat</small></div><span>A coat over the ${esc(o.pieces.outer.name.toLowerCase())}</span></button>` : ""}${(o.extras || []).map((p) => `<div class="swap-wrap">${accTile(p)}<button class="swap-btn" data-xswap="${i}:${p.id}" aria-pressed="${o.xpick?.from === p.id}" aria-label="Change or take off the ${esc(p.name)}">${ICON_SWAP}</button></div>`).join("")}${ownedAccGroups().length ? `<button class="piece add-acc" data-xadd="${i}" aria-pressed="${o.xpick?.mode === "add"}"><div class="ph">${kindIcon("watch")}<small>+ Accessory</small></div><span>Add a belt, tie, watch…</span></button>` : ""}</div>
     ${o.cpick ? coatPicker(o, i) : ""}
     ${o.xpick ? accPicker(o, i) : ""}
     ${o.reasons.length || o.extrasWhy?.length ? `<p class="why">${[...o.reasons, ...(o.extrasWhy || [])].map(esc).join(" · ")}</p>` : ""}
@@ -10679,8 +10679,8 @@ async function onTap(e) {
     o.xpick = same ? null : { mode: ds.xswap ? "swap" : "add", from: from || null, group: null };
     return render();
   }
-  if (ds.cswap != null) { const o = state.outfits[+ds.cswap]; if (o) { o.cpick = !o.cpick; o.xpick = null; } return render(); }
-  if (ds.cto != null) { const [i, id] = ds.cto.split(":"); setCoat(+i, id); return render(); }
+  if (ds.coatpick != null) { const o = state.outfits[+ds.coatpick]; if (o) { o.cpick = !o.cpick; o.xpick = null; } return render(); }
+  if (ds.coatto != null) { const [i, id] = ds.coatto.split(":"); setCoat(+i, id); return render(); }
   if (ds.xgroup) { const [i, g] = ds.xgroup.split(":"); const o = state.outfits[+i]; if (o?.xpick) o.xpick.group = g; return render(); }
   if (ds.xcancel != null) { const o = state.outfits[+ds.xcancel]; if (o) o.xpick = null; return render(); }
   if (ds.xto != null) {
