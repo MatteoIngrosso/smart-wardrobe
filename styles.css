@@ -629,6 +629,9 @@ details summary { cursor: pointer; }
 .wear-name b { font-weight: 500; font-size: 15px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .wear-row .chip { min-height: 40px; padding: 0 12px; font-size: 14px; }
 .wear-row.is-off img, .wear-row.is-off .wear-name { opacity: .4; }
+.wear-style { background: none; border: 0; padding: 4px 2px; margin: -4px 0; min-height: 28px; font: inherit; color: var(--text); text-decoration: underline dotted; text-underline-offset: 3px; cursor: pointer; }
+.fc-wear-row { display: grid; gap: 4px; }
+.fc-wear-row .chips { gap: 6px; }
 
 /* iPad portrait and smaller: narrower side panels; phones: the stage first, then the ideas, then the body. */
 @media (max-width: 1100px) {

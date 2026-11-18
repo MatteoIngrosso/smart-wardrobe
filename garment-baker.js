@@ -1973,3 +1973,40 @@ function percentile(a, p) {
 }
 const clamp255 = (v) => (v < 0 ? 0 : v > 255 ? 255 : v);
 const hexOf = (rgb) => "#" + rgb.map((v) => Math.round(clamp255(v)).toString(16).padStart(2, "0")).join("");
+
+/* A tie on a top's front panel, for the 3D avatar (app.js tiedAsset): `F` is avatar-stage.js
+   panelFrame (where rest heights and widths land on the panel). Drawn over the photo: the knot
+   under the collar, the blade widening to the point just above the belt, the collar's points
+   either side of the knot as a shadow line. */
+export async function paintTie(panel, F, color) {
+  const bmp = await createImageBitmap(panel);
+  const W = bmp.width, H = bmp.height, c = newCanvas(W, H), ctx = c.getContext("2d");
+  ctx.drawImage(bmp, 0, 0);
+  bmp.close?.();
+  const X = (d) => W * (0.5 + d / F.width), Y = (y) => H * Math.min(1, Math.max(0, (F.top - y) / (F.top - F.hem)));
+  const k0 = F.neck - 0.03, k1 = k0 - 0.36, tip = Math.max(F.waist + 0.12, F.hem + 0.15), side = tip + 0.3;
+  const poly = (pts) => { ctx.beginPath(); pts.forEach(([d, y], i) => (i ? ctx.lineTo(X(d), Y(y)) : ctx.moveTo(X(d), Y(y)))); ctx.closePath(); };
+  // the collar's points
+  ctx.lineJoin = "round"; ctx.lineWidth = Math.max(2, W * 0.004); ctx.strokeStyle = "rgba(0,0,0,0.22)";
+  for (const sg of [-1, 1]) { ctx.beginPath(); ctx.moveTo(X(sg * 0.24), Y(k0 + 0.04)); ctx.lineTo(X(sg * 0.58), Y(k0 - 0.46)); ctx.lineTo(X(sg * 0.15), Y(k0 - 0.2)); ctx.stroke(); }
+  // the blade, a little darker at its edges
+  const g = ctx.createLinearGradient(X(-0.42), 0, X(0.42), 0);
+  g.addColorStop(0, shadeHex(color, -0.28)); g.addColorStop(0.3, color); g.addColorStop(0.62, shadeHex(color, 0.06)); g.addColorStop(1, shadeHex(color, -0.3));
+  ctx.fillStyle = g;
+  poly([[-0.15, k1 + 0.02], [0.15, k1 + 0.02], [0.41, side], [0, tip], [-0.41, side]]);
+  ctx.fill();
+  ctx.strokeStyle = shadeHex(color, -0.45); ctx.lineWidth = Math.max(1, W * 0.002); ctx.stroke();
+  // the knot, darker underneath, with its dimple
+  const gk = ctx.createLinearGradient(0, Y(k0), 0, Y(k1));
+  gk.addColorStop(0, shadeHex(color, 0.04)); gk.addColorStop(1, shadeHex(color, -0.32));
+  ctx.fillStyle = gk;
+  poly([[-0.21, k0], [0.21, k0], [0.14, k1], [-0.14, k1]]);
+  ctx.fill(); ctx.stroke();
+  ctx.strokeStyle = "rgba(0,0,0,0.3)"; ctx.beginPath(); ctx.moveTo(X(0), Y(k1 - 0.02)); ctx.lineTo(X(0.02), Y(k1 - 0.22)); ctx.stroke();
+  return encode(c, "image/webp", 0.92);
+}
+// A hex colour lighter (+) or darker (-) by k.
+function shadeHex(hex, k) {
+  const n = parseInt(hex.slice(1), 16), ch = [(n >> 16) & 255, (n >> 8) & 255, n & 255];
+  return `#${ch.map((v) => Math.round(clamp255(k < 0 ? v * (1 + k) : v + (255 - v) * k)).toString(16).padStart(2, "0")).join("")}`;
+}

@@ -42,11 +42,126 @@ const STAR_PAIR = { 5: 1.5, 4: 0.8, 3: 0, 2: -0.8, 1: -1.5 };
 
 // The summary kept in `brain` for one fit check (no photo, no metrics: those stay on the record).
 export function summarize(fc) {
+  const wear = cleanWear(fc.wear);
   return {
     at: fc.at, date: fc.date, occasion: fc.occasion || "",
     slots: { ...(fc.itemIds || {}) }, extras: [...(fc.extras || [])],
+    ...(fc.coat && { coat: fc.coat }),
     stars: fc.stars || 0, tags: (fc.tags || []).filter((t) => TAG_IDS.has(t)),
+    ...(wear && { wear }),
   };
+}
+
+/* ---------- How each piece was worn ----------
+   The same piece is worn in different ways for different occasions: a coat buttoned up on a cold
+   work morning and open over the blazer for dinner, a shirt tucked in under a suit and out with
+   jeans. A fit check keeps, per piece id, how it was worn in its photo (read by the AI, or set by
+   hand on the review sheet), and wearFor() gives the 3D avatar the closest one for an outfit: the
+   same occasion first, then the check that shares the most pieces with it, then the newest.
+   - close: a jacket, blazer or coat worn open, buttoned (a blazer's waist button: a V above it),
+     or closed up (a coat buttoned to the chest, a zip done up)
+   - tuck: a shirt or top tucked into the trousers, worn out, or half-tucked (the front only)
+   - sleeves: down or rolled up; break: where the trousers meet the shoes (none, slight, full) */
+export const WEAR = {
+  close: { label: "Front", values: [["open", "Open"], ["buttoned", "Buttoned"], ["closed", "Closed up"]] },
+  tuck: { label: "Tuck", values: [["in", "Tucked in"], ["out", "Worn out"], ["half", "Half-tucked"]] },
+  sleeves: { label: "Sleeves", values: [["down", "Sleeves down"], ["rolled", "Sleeves rolled"]] },
+  break: { label: "Trouser break", values: [["none", "No break"], ["slight", "Slight break"], ["full", "Full break"]] },
+};
+const WEAR_OK = Object.fromEntries(Object.entries(WEAR).map(([k, v]) => [k, new Set(v.values.map((x) => x[0]))]));
+export const wearWord = (field, v) => WEAR[field]?.values.find((x) => x[0] === v)?.[1] || "";
+// Which of these a piece can have, by its outfit role and its category.
+const OPENS = new Set(["jacket", "coat", "rain", "puffer", "overshirt", "track-jacket", "zip-hoodie", "gym-hoodie"]);
+const TUCKS = new Set(["shirt", "tshirt", "polo", "long-sleeve-top", "tank-top", "gym-top"]);
+const SLEEVED = new Set(["shirt", "overshirt", "long-sleeve-top", "sweater", "sweatshirt"]);
+export function wearFields(role, category) {
+  const out = [];
+  if (role === "coat" || role === "outer" || OPENS.has(category)) out.push("close");
+  if ((role === "base" || role === "mid") && TUCKS.has(category)) out.push("tuck");
+  if (SLEEVED.has(category) && role !== "coat" && role !== "outer") out.push("sleeves");
+  if (role === "bottom" && ["trousers", "jeans"].includes(category)) out.push("break");
+  return out;
+}
+// {pieceId: {close, tuck, sleeves, break}} with only known values (null when nothing is left).
+export function cleanWear(w) {
+  if (!w || typeof w !== "object") return null;
+  const out = {};
+  for (const [id, st] of Object.entries(w)) {
+    if (!id || !st || typeof st !== "object") continue;
+    const one = {};
+    for (const k of Object.keys(WEAR)) if (WEAR_OK[k].has(st[k])) one[k] = st[k];
+    if (Object.keys(one).length) out[id] = one;
+  }
+  return Object.keys(out).length ? out : null;
+}
+// How to wear these pieces (ids) for this occasion: {pieceId: {...style, from: date}} from the fit
+// checks that saw them. Per piece and per field, the closest check wins: the same occasion counts
+// most, then the pieces it shares with this outfit, then the newest.
+export function wearFor(brain, ids, occasion) {
+  const want = new Set((ids || []).filter(Boolean)), best = {};
+  if (!want.size) return {};
+  for (const s of Object.values(brain?.checks || {})) {
+    const w = s && cleanWear(s.wear); if (!w) continue;
+    const worn = [...Object.values(s.slots || {}), s.coat, ...(s.extras || [])].filter(Boolean);
+    const score = (occasion && s.occasion === occasion ? 100 : 0) + worn.filter((id) => want.has(id)).length;
+    for (const [id, st] of Object.entries(w)) {
+      if (!want.has(id)) continue;
+      for (const [k, v] of Object.entries(st)) {
+        const b = (best[id] ||= {})[k];
+        if (!b || score > b.score || (score === b.score && String(s.at || s.date || "") > String(b.at))) best[id][k] = { v, score, at: String(s.at || s.date || ""), date: s.date };
+      }
+    }
+  }
+  const out = {};
+  for (const [id, f] of Object.entries(best)) {
+    out[id] = Object.fromEntries(Object.entries(f).map(([k, b]) => [k, b.v]));
+    out[id].from = Object.values(f).map((b) => b.date).filter(Boolean).sort().pop() || "";
+  }
+  return out;
+}
+
+// The request that reads how each piece is worn in a fit check photo: one small JPEG and one short
+// line per piece (refs p1, p2… instead of ids), answered with a few enums (about 600 tokens in all).
+// `pieces`: [{id, role, name, category}].
+export function wearRequest(pieces) {
+  const list = (pieces || []).map((p, k) => ({ ...p, ref: `p${k + 1}`, fields: wearFields(p.role, p.category) })).filter((p) => p.fields.length);
+  const NA = "n/a";
+  const en = (k) => ({ type: "string", enum: [...WEAR[k].values.map((x) => x[0]), NA] });
+  const schema = {
+    type: "object", additionalProperties: false, required: ["pieces", "note"],
+    properties: {
+      pieces: {
+        type: "array",
+        items: {
+          type: "object", additionalProperties: false, required: ["ref", "seen", "close", "tuck", "sleeves", "break"],
+          properties: { ref: { type: "string" }, seen: { type: "boolean" }, close: en("close"), tuck: en("tuck"), sleeves: en("sleeves"), break: en("break") },
+        },
+      },
+      note: { type: "string", description: "At most 12 words: anything else about how it is worn (collar up, scarf, coat length)." },
+    },
+  };
+  const ROLE = { coat: "coat", outer: "jacket", mid: "layer", base: "top", bottom: "bottoms" };
+  const text = `The man in this mirror photo wears this outfit. For each piece say how he wears it here (${NA} when it doesn't apply or can't be seen; seen=false if the piece isn't in the photo).
+close: open, buttoned (a jacket's button done, V above it) or closed (buttoned or zipped up to the chest). tuck: in, out or half (front only). sleeves: down or rolled. break: trousers at the shoes, none, slight or full.
+${list.map((p) => `${p.ref} | ${ROLE[p.role] || p.role} | ${p.name} (${p.category}) | ${p.fields.join(", ")}`).join("\n")}`;
+  return {
+    refs: Object.fromEntries(list.map((p) => [p.ref, p])),
+    system: "You look at outfit photos for a wardrobe app and say how each listed piece is worn. Reply with JSON only.",
+    text, schema, maxTokens: 60 + 45 * list.length, empty: !list.length,
+  };
+}
+// The answer as {wear: {pieceId: style}, note, unseen: [ids]}; only the fields each piece can have.
+export function parseWear(answer, refs) {
+  let j = answer;
+  if (typeof j === "string") { try { j = JSON.parse(j.replace(/^```(json)?|```$/g, "").trim()); } catch { return { wear: null, note: "", unseen: [] }; } }
+  const raw = {}, unseen = [];
+  for (const x of Array.isArray(j?.pieces) ? j.pieces : []) {
+    const p = refs?.[x?.ref]; if (!p) continue;
+    if (x.seen === false) { unseen.push(p.id); continue; }
+    raw[p.id] = Object.fromEntries(p.fields.filter((k) => x[k] && x[k] !== "n/a").map((k) => [k, x[k]]));
+  }
+  const note = typeof j?.note === "string" ? j.note.trim().split(/\s+/).slice(0, 16).join(" ") : "";
+  return { wear: cleanWear(raw), note, unseen };
 }
 
 // The pairs a fit check speaks about, each with its kind:
