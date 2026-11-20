@@ -36,7 +36,9 @@ Other leads own what goes *inside* their slots: Avatar = the Mirror stage (`avat
 | 6 | **Long screens**: Settings in two columns with a section index; Discover cards compact (Discover lead owns content, UI lead the layout); Wardrobe filters collapse | Settings, Discover, Wardrobe | Less scrolling |
 | 7 | **Kiosk pass** at 800x1280: dock, type sizes, ambient screen | Pi screen | Before the Pi build |
 
-## Proposed UI contract (to move into `docs/leads/CONTRACTS.md`)
+## UI contract
+
+Now lives in `docs/leads/CONTRACTS.md` (UI/UX section; this lead owns the file). Summary:
 
 - **Screens** register with the shell: `registerScreen(id, { title, render(main), dock?: {icon, label, order} })`. Only the UI lead edits the dock order.
 - **Slots**: Today and Mirror expose mount points (`#mirror-slot`, `#ideas-slot`, `#ask-slot`); the owning lead fills them, the UI lead decides their size and position.
