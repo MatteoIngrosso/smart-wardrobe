@@ -1,7 +1,7 @@
 # Discover lead: plan
 
 Owner: the Discover lead thread ("Lead Discover for new pieces"). Re-read this file at the start of every session.
-Shared interfaces with the other leads (UI/UX, Avatar, Stylist) live in `docs/leads/CONTRACTS.md`.
+Shared interfaces with the other leads (UI/UX, Avatar, Stylist) live in `docs/leads/CONTRACTS.md`, created by the UI/UX lead; add the Discover section once it exists.
 
 ## What Discover owns
 
@@ -24,7 +24,7 @@ Tests in my area pass: label 17/17, link 6/6, photos 7/7, backup 9/9, integratio
 
 ## Plan (one PR each, auto-merge when tests pass)
 
-1. **Move Discover into `discover.js`.** No behaviour change, same load order as `stylist-chat.js`. Add `tools/discover.test.mjs`. This mostly helps the other leads: fewer conflicts in app.js.
+1. **Move Discover into its own screen file.** No behaviour change. Waits for the UI/UX lead's split of app.js into `ui/` + `screens/` (their first PR): Discover then goes where their screen registry says. Add `tools/discover.test.mjs`. Until that split merges, no large app.js edits from this lead.
 2. **Search budget.** Only the colour on screen loads its photo (others on tap). A monthly counter in D1 plus SerpApi's free account check (doesn't use a search) shown in Settings > Look ("118 of 250 searches left, resets 1 Dec"). Keep about 60 a month for Add (label, Lens, link) so Discover can't use them up.
 3. **"Bought this one".** On a real product card and on Must-Buy: opens Add by link with that product's page, so everything is filled in. The want keeps `product {url, shop, price, image}`.
 4. **Prices and budget.** Must-Buy shows the price of the chosen product; an optional budget per type in Settings; sort by new outfits per euro. Prices refresh only when the 2-week cache expires (no extra searches).
