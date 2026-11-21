@@ -42,6 +42,9 @@ Each step is one branch + PR, auto-merged when tests pass.
 5. **Engine tests in plain Node** (`tools/stylist-engine.test.mjs`) on a trimmed copy of the real backup committed without photos, so `gym-everyday` and the audit checks run every time instead of being skipped.
 6. **Chat tokens**: a wardrobe digest cached across conversations; `gemini-flash-lite-latest` for follow-ups (free tier, fewer tokens). Measure before and after.
 
+7. **FashionStylist dataset** (github.com/recsys-benchmark/FashionStylist, CC BY-NC 4.0, Matteo found it 2026-11-21): its 300 men's outfits (text CSVs: style, fit, material, colour, pattern, season, occasion) go into the fashion-model learner as example outfits, weighted below the magazine sources (mostly Asian streetwear, no Business looks), then retrain the bible. Also use them as a benchmark: the scorer should rank each real outfit above the same outfit with one piece swapped at random. No tokens, no GPU.
+   Rejected: CLHE and DiFashion (GPU training on millions of shoppers' data; DiFashion draws new garments rather than picking from the wardrobe). Neither runs on the free setup.
+
 Cross-lead notes:
 - UI/UX: I hold large `app.js` edits until the split merges. After it, the engine is a module the screens import.
 - Avatar: Fit Check's "how you wore it" (`wear` per piece: open/closed, tuck) is produced by the Stylist and drawn by the Avatar; it belongs in CONTRACTS.md.
@@ -54,3 +57,4 @@ Matteo's PC folder `C:\Users\matte\Documents\Wardrobe2.0` (approved). When it's 
 ## Log
 
 - 2026-11-20: thread started, audit done, plan written. No PRs yet.
+- 2026-11-21: explained the scoring scheme; reviewed FashionStylist / CLHE / DiFashion (step 7).
