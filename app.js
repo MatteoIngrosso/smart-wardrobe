@@ -2384,7 +2384,7 @@ const wornCost = (p, d) => (d <= 1 ? 3 : d <= 4 ? 1.2 : 0) * (ROTATION[starsOf(p
 // by stars 1 to 5 (unrated counts as 3): loved pieces are still worn the most, but not every day, and
 // the rest of the wardrobe gets its turn. Shoes have no budget; gym clothes only outside the gym, where
 // their everyday wears count (recentWears leaves out the gym sessions).
-const WEAR_BUDGET = { top: [1, 1, 1.5, 2, 2.5], bottom: [1, 1, 2, 2.5, 3], outer: [1.5, 1.5, 2.5, 3, 4] };
+const WEAR_BUDGET = { top: [1, 1, 1.5, 1.5, 2], bottom: [1, 1, 2, 2, 2.5], outer: [1.5, 1.5, 2, 2, 2.5] };
 const BUDGET_GROUP = { base: "top", mid: "top", bottom: "bottom", outer: "outer" };
 const budgetGroup = (p) => (slotOf(p) === "gym" && !p.everyday ? null : BUDGET_GROUP[roleOf(p)] || null); // ("Everyday too": like an everyday piece)
 const budgetOf = (p, occ) => {
