@@ -42,11 +42,31 @@ Each step is one branch + PR, auto-merged when tests pass.
 5. **Engine tests in plain Node** (`tools/stylist-engine.test.mjs`) on a trimmed copy of the real backup committed without photos, so `gym-everyday` and the audit checks run every time instead of being skipped.
 6. **Chat tokens**: a wardrobe digest cached across conversations; `gemini-flash-lite-latest` for follow-ups (free tier, fewer tokens). Measure before and after.
 
-7. **FashionStylist dataset** (github.com/recsys-benchmark/FashionStylist, CC BY-NC 4.0, Matteo found it 2026-11-21): its 300 men's outfits (text CSVs: style, fit, material, colour, pattern, season, occasion) go into the fashion-model learner as example outfits, weighted below the magazine sources (mostly Asian streetwear, no Business looks), then retrain the bible. Also use them as a benchmark: the scorer should rank each real outfit above the same outfit with one piece swapped at random. No tokens, no GPU.
-   CLHE: Matteo has a PC with an RTX 3060. Experiment after step 7: train on the PC (Remote Control), precompute pair scores for his pieces into app data, keep it only if it beats our scorer on the FashionStylist benchmark.
-   Rejected: DiFashion. Earlier note: CLHE and DiFashion (GPU training on millions of shoppers' data; DiFashion draws new garments rather than picking from the wardrobe). Neither runs on the free setup.
+7. **FashionStylist dataset** as bible examples and a benchmark. See "Research repos" below.
+8. **CLHE experiment on Matteo's RTX 3060**, only after step 7 gives us the benchmark. See "Research repos" below.
 
-8. **Style Trainer, PARKED** (Matteo 2026-11-21: "for later or at least go in UI/UX"; focus stays on the stylist) (Matteo's idea, 2026-11-21): a "Taste" button opens swipe cards of outfits from his wardrobe. Right = like, left = pass, down = "almost": tap the piece that's off, pick a reason chip (colour, fit, too dressy, too casual, not my style) plus optional text. Cards mix sure bets with outfits the engine is unsure about, so each swipe teaches the most. Swipes feed the same `taste()` at about half the weight of real wears, and after about 50 swipes the device refits the bible's rule weights to him (a "personal bible", small logistic regression in JS, no tokens). Own module `style-trainer.js` exporting `open(container)`. UI/UX lead's contract (CONTRACTS.md "Style Trainer", 2026-11-21): "Taste" button in the Today header next to New ideas + a row in Settings > Look, no dock tab; full-screen with X top-left returning to the opener; after their split it registers as `registerScreen("trainer", { title: "Taste", render: open, fullscreen: true })` (before it, a small Today button + full-screen container in app.js). The card area sets `touch-action: none`; 56 px Pass / Almost / Like buttons for the kiosk; paper tiles, one outfit per card; fits 1024x1366 and 800x1280 without scrolling; tokens and classes only, no inline colours (ask UI/UX for new tokens).
+9. **Style Trainer, PARKED** (Matteo 2026-11-21: "for later or at least go in UI/UX"; focus stays on the stylist) (Matteo's idea, 2026-11-21): a "Taste" button opens swipe cards of outfits from his wardrobe. Right = like, left = pass, down = "almost": tap the piece that's off, pick a reason chip (colour, fit, too dressy, too casual, not my style) plus optional text. Cards mix sure bets with outfits the engine is unsure about, so each swipe teaches the most. Swipes feed the same `taste()` at about half the weight of real wears, and after about 50 swipes the device refits the bible's rule weights to him (a "personal bible", small logistic regression in JS, no tokens). Own module `style-trainer.js` exporting `open(container)`. UI/UX lead's contract (CONTRACTS.md "Style Trainer", 2026-11-21): "Taste" button in the Today header next to New ideas + a row in Settings > Look, no dock tab; full-screen with X top-left returning to the opener; after their split it registers as `registerScreen("trainer", { title: "Taste", render: open, fullscreen: true })` (before it, a small Today button + full-screen container in app.js). The card area sets `touch-action: none`; 56 px Pass / Almost / Like buttons for the kiosk; paper tiles, one outfit per card; fits 1024x1366 and 800x1280 without scrolling; tokens and classes only, no inline colours (ask UI/UX for new tokens).
+
+## Research repos (reviewed 2026-11-21, Matteo found them)
+
+What we keep from each, and what we don't.
+
+**FashionStylist** (github.com/recsys-benchmark/FashionStylist, CC BY-NC 4.0: fine for a personal app). USE.
+- Men's set: 300 outfits, 1,390 pieces, expert labels per piece (category, style, outline/fit, material, colour, pattern, detail, donning) and per outfit (look description, season, occasion: Home, Travel, Social, School, Sports). Plain CSV, no images needed.
+- Keep 1: **more knowledge for the bible.** Map its labels to our vocab (category -> slots, outline -> FITS, materials, colours) and feed the outfits to the fashion-model learner as examples (`add --no-train`, then `train`). Weight them below the magazine sources: mostly Asian streetwear (Cityboy, Korean, avant-garde, quiet luxury), no business or formal looks.
+- Keep 2: **a benchmark for our scorer**, copied from its Task 2 (outfit completion) and Task 3 (outfit evaluation): each real outfit should score above the same outfit with one piece swapped at random. Gives one accuracy number to track every engine PR, and the yardstick for CLHE.
+- Its look descriptions ("quiet luxury: oatmeal collared knit over a turtleneck, black wide-leg trousers") can also become bible tips for Ask the stylist.
+
+**CLHE** (github.com/Xiaohao-Liu/CLHE, bundle construction, WSDM 2024). EXPERIMENT, not a replacement.
+- What it is: learns which items make a good bundle (outfit) from multimodal item features plus item-level user feedback, trained on POG (Alibaba iFashion/Taobao outfits, mostly women's, around 2018). PyTorch + CUDA.
+- Matteo's PC has an RTX 3060 (12 GB): enough to train it (small model on pre-extracted features).
+- Keep: **its idea of using item-level feedback** (we already do: pairs worn/liked, stars, skips, swaps, fit-check tags) and **multimodal item features** (we have `item.look` from the photo; image embeddings would add similarity).
+- Experiment: train on the PC via Remote Control, extract the same features for his cut-outs, precompute a "goes together" score for every pair of his pieces into app data (works offline, PC off; re-run after adding pieces). Adopt only if it beats our scorer on the FashionStylist benchmark, and then as one more signal next to the bible.
+
+**DiFashion** (github.com/YiyanXu/DiFashion, generative outfit recommendation, SIGIR 2024). DON'T USE.
+- What it is: fine-tuned Stable Diffusion that paints images of invented garments to complete an outfit (iFashion + Polyvore data, mostly women's, 2017-19).
+- Why not: our job is choosing among pieces he owns, not drawing new ones; training is tight on 12 GB and every suggestion needs many denoising steps on the GPU (PC on each time); no free host for a custom SD model.
+- Keep: **the "history condition" idea** (personalise from past outfits: our taste learning) and **its evaluation set-up** (fill-in-the-blank with 1 right piece among 5 candidates), which the FashionStylist benchmark copies. Drawing a "missing piece" picture could suit Discover one day (Discover lead's call).
 
 Cross-lead notes:
 - UI/UX: I hold large `app.js` edits until the split merges. After it, the engine is a module the screens import.
@@ -60,5 +80,6 @@ Matteo's PC folder `C:\Users\matte\Documents\Wardrobe2.0` (approved). When it's 
 ## Log
 
 - 2026-11-20: thread started, audit done, plan written. No PRs yet.
+- 2026-11-21: "Research repos" section added on Matteo's ask (keep what's useful).
 - 2026-11-21: Style Trainer parked; DiFashion explained as rejected (draws invented garments, heavy SD inference, iFashion/Polyvore women's data).
 - 2026-11-21: explained the scoring scheme; reviewed FashionStylist / CLHE / DiFashion (step 7).
