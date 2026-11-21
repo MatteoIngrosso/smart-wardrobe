@@ -15,6 +15,21 @@ Shared rules with the other leads (UI/UX, Stylist, Discover) live in `docs/leads
 Rules: zero API calls on the avatar (everything on the device), free assets only (CC0/MIT), never remove the 3D Avatar
 without asking Matteo, branch + PR per update, auto-merge when tests pass.
 
+## Split (2026-11-21, Matteo: "the avatar itself and the clothes")
+
+Two threads share this area and this plan file:
+- **Avatar body** (thread "Lead the 3D Avatar"): body shape and sliders, face and "From a photo", hair, beard, glasses, pose,
+  lights and shadows, the shared 3D test (`tools/avatar.e2e.mjs`) and the stage file split. Files: `avatar-config.js`
+  (body part), `face-photo.js`, `avatar/`, `tools/build-avatar.py`, `tools/build-hair.py`, `stage/body*`, `stage/hair*`, `stage/face*`.
+- **Avatar clothes** (new thread): `garment-baker.js`, cloth drape, shoes, coats, open/buttoned/tuck, tie, accessories on
+  the body, photo sleeves, the Lookbook, a Discover "try it on". Files: `garment-baker.js`, `lookbook-*.js`,
+  `avatar-config.js` (garment part), `stage/cloth*`, `stage/shoes*`.
+- Shared: the `createStage` API and the garment asset shape below. A change to either goes in this file and is
+  messaged to the other thread.
+- Order: roadmap steps 1 and 2 (body thread) come first because they give the two threads separate files; the clothes
+  thread holds code changes until they merge. Then steps 3-5 and the clothes half of 6 go to the clothes thread;
+  hair and shadows (step 6) stay with the body thread.
+
 ## Audit (2026-11-20, main at aae4dbd / PR #88)
 
 Working well
@@ -69,3 +84,4 @@ Cross-area ideas to raise with the other leads
 ## Log
 
 - 2026-11-20: thread started, audit done, plan sent to Matteo. Waiting for go.
+- 2026-11-21: Matteo asked to split the avatar into body and clothes; asked the coordinator for a clothes thread.
