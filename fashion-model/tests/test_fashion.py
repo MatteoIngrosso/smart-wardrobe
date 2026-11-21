@@ -423,5 +423,40 @@ class CommandLine(unittest.TestCase):
         self.assertIn("No garment type", err.getvalue())
 
 
+class Dataset(unittest.TestCase):
+    """FashionStylist: the expert-labelled men's outfits, read into the app's words."""
+
+    def test_pieces_in_app_words(self):
+        from fashion.datasets import piece_of
+        row = {"category": "mid_layer_top", "title": "letter print half-zip hooded sweatshirt", "style": "trendy casual hooded top",
+               "outline": "loose fit", "materials": "cotton", "color": "navy blue", "pattern": "hooded half-zip", "detail": "letter print"}
+        p = piece_of(row)
+        self.assertEqual((p.category, p.colors, p.fit), ("hoodie", ["navy"], "relaxed"))
+        self.assertIn("streetwear", p.styles)
+        self.assertIn("graphic", p.tags)
+        shoes = piece_of({"category": "shoes", "title": "platform derby shoes", "style": "commuter platform loafers", "outline": "platform sole",
+                          "materials": "leather", "color": "black", "pattern": "", "detail": ""})
+        self.assertEqual(shoes.category, "dress-shoes")
+        self.assertIsNone(piece_of({"category": "shoes", "title": "Birkenstock-style clogs", "style": "", "outline": "", "materials": "", "color": "", "pattern": "", "detail": ""}))
+
+    def test_outfits_and_held_out(self):
+        from fashion.datasets import HELD_OUT, load
+        outfits = load()
+        self.assertGreater(len(outfits), 250)
+        for o in outfits:
+            slots = {p.slot for p in o["pieces"]}
+            self.assertTrue({"base", "mid"} & slots and "bottom" in slots, o["id"])
+            self.assertIn(o["occasion"], vocab.OCCASIONS)
+        learnt = json.loads((knowledge.LEARNED / "fashionstylist-men.json").read_text(encoding="utf-8"))
+        self.assertEqual(len(learnt["outfits"]), sum(1 for o in outfits if o["number"] % HELD_OUT))
+
+    def test_bench_beats_chance(self):
+        from fashion.datasets import bench
+        b = json.loads(APP_BIBLE.read_text(encoding="utf-8"))
+        share, n = bench(b["rules"], Model({r["id"]: r["weight"] for r in b["rules"]}, b["model"]["bias"]))
+        self.assertGreater(n, 40)
+        self.assertGreater(share, 0.5)
+
+
 if __name__ == "__main__":
     unittest.main()

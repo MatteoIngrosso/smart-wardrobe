@@ -10,6 +10,8 @@
   check "<outfit>"               score an outfit and say why
   search "<question>"            the tips that answer a question
   stats                          what the model knows so far
+  dataset                        read the FashionStylist outfits into knowledge/learned/ (then train)
+  bench                          how often the bible ranks a stylist's outfit above the same outfit with one piece swapped
 """
 import argparse
 import sys
@@ -60,6 +62,9 @@ def main(argv=None):
     ps.add_argument("--occasion")
 
     sub.add_parser("stats", help="what the model knows so far")
+    sub.add_parser("dataset", help="read the FashionStylist men's outfits into knowledge/learned/ (run train after)")
+    pb = sub.add_parser("bench", help="real outfit vs one piece swapped: how often the bible ranks the real one higher")
+    pb.add_argument("--all", action="store_true", help="every outfit, not only the ones kept back from training")
 
     a = p.parse_args(argv)
     try:
@@ -190,7 +195,30 @@ def cmd_stats(a):
     return 0
 
 
-COMMANDS = {"learn": cmd_learn, "fetch": cmd_fetch, "instructions": cmd_instructions, "add": cmd_add, "train": cmd_train, "export": cmd_export, "parity": cmd_parity, "check": cmd_check, "search": cmd_search, "stats": cmd_stats}
+def cmd_dataset(a):
+    from .datasets import write
+    path, n = write()
+    print(f"Wrote {n} outfits to {path.name}. Run `python -m fashion train` to teach them to the bible.")
+    return 0
+
+
+def cmd_bench(a):
+    from .bible import load_bible
+    from .datasets import bench
+    from .knowledge import load_rulebook
+    from .model import Model
+    rb = load_rulebook()["rules"]
+    rows = [("rulebook weights", rb, Model({r["id"]: r["weight"] for r in rb}))]
+    b = load_bible()
+    if b:
+        rows.append(("trained bible", b["rules"], Model({r["id"]: r["weight"] for r in b["rules"]}, b["model"]["bias"])))
+    for name, rules, model in rows:
+        share, n = bench(rules, model, held_out=not a.all)
+        print(f"{name}: the real outfit wins {share:.0%} of swaps ({n} outfits x 5 swaps; 50% is chance)")
+    return 0
+
+
+COMMANDS = {"dataset": cmd_dataset, "bench": cmd_bench, "learn": cmd_learn, "fetch": cmd_fetch, "instructions": cmd_instructions, "add": cmd_add, "train": cmd_train, "export": cmd_export, "parity": cmd_parity, "check": cmd_check, "search": cmd_search, "stats": cmd_stats}
 
 if __name__ == "__main__":
     sys.exit(main())
