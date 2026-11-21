@@ -45,6 +45,8 @@ Each step is one branch + PR, auto-merged when tests pass.
 7. **FashionStylist dataset** (github.com/recsys-benchmark/FashionStylist, CC BY-NC 4.0, Matteo found it 2026-11-21): its 300 men's outfits (text CSVs: style, fit, material, colour, pattern, season, occasion) go into the fashion-model learner as example outfits, weighted below the magazine sources (mostly Asian streetwear, no Business looks), then retrain the bible. Also use them as a benchmark: the scorer should rank each real outfit above the same outfit with one piece swapped at random. No tokens, no GPU.
    Rejected: CLHE and DiFashion (GPU training on millions of shoppers' data; DiFashion draws new garments rather than picking from the wardrobe). Neither runs on the free setup.
 
+8. **Style Trainer** (Matteo's idea, 2026-11-21): a "Taste" button opens swipe cards of outfits from his wardrobe. Right = like, left = pass, down = "almost": tap the piece that's off, pick a reason chip (colour, fit, too dressy, too casual, not my style) plus optional text. Cards mix sure bets with outfits the engine is unsure about, so each swipe teaches the most. Swipes feed the same `taste()` at about half the weight of real wears, and after about 50 swipes the device refits the bible's rule weights to him (a "personal bible", small logistic regression in JS, no tokens). Own module `style-trainer.js`; UI/UX lead decides where the button lives.
+
 Cross-lead notes:
 - UI/UX: I hold large `app.js` edits until the split merges. After it, the engine is a module the screens import.
 - Avatar: Fit Check's "how you wore it" (`wear` per piece: open/closed, tuck) is produced by the Stylist and drawn by the Avatar; it belongs in CONTRACTS.md.
