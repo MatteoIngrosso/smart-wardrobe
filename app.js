@@ -3083,12 +3083,13 @@ function aiReady() {
 const aiName = () => (state.previewAI || state.settings.aiProvider === "claude" ? "Claude" : "Gemini");
 const NO_AI = "Add a Gemini or Claude API key in Settings to use this.";
 
-async function trackUsage(input = 0, output = 0) {
+async function trackUsage(input = 0, output = 0, cached = 0) {
   const month = today().slice(0, 7);
-  if (state.usage.month !== month) state.usage = { month, requests: 0, input: 0, output: 0 };
+  if (state.usage.month !== month) state.usage = { month, requests: 0, input: 0, output: 0, cached: 0 };
   state.usage.requests++;
   state.usage.input += input;
   state.usage.output += output;
+  state.usage.cached = (state.usage.cached || 0) + cached; // part of `input` Gemini reused from its cache
   await store.put("kv", state.usage, "usage");
 }
 
@@ -3160,7 +3161,7 @@ async function geminiGenerate({ system, text, image, schema, maxTokens, search, 
   const j = await res.json().catch(() => ({}));
   if (!res.ok) throw new Error(j.error?.message ? `Gemini: ${j.error.message}` : `Gemini error ${res.status}`);
   const u = j.usageMetadata || {};
-  await trackUsage(u.promptTokenCount || 0, (u.candidatesTokenCount || 0) + (u.thoughtsTokenCount || 0));
+  await trackUsage(u.promptTokenCount || 0, (u.candidatesTokenCount || 0) + (u.thoughtsTokenCount || 0), u.cachedContentTokenCount || 0);
   const out = (j.candidates?.[0]?.content?.parts || []).map((p) => p.text || "").join("").trim();
   if (!out) throw new Error("Gemini returned no answer. Try again.");
   onSources?.((j.candidates[0].groundingMetadata?.groundingChunks || []).map((c) => c.web).filter((w) => w?.uri));
@@ -3246,9 +3247,22 @@ async function aiGenerate(opts) {
 // The wardrobe for the AI, one short line a piece (#numbers follow state.items, so the app finds them).
 // Left out to save tokens: underwear and socks, pieces you're giving away, and gym clothes unless the
 // question is about training (`gym`) or the piece is "Everyday too". The type, brand or colour isn't repeated when the name says it.
-function wardrobeText({ gym = false } = {}) {
-  return state.items.map((i, n) => {
-    if (slotOf(i) === "under" || leaving(i) || (!gym && slotOf(i) === "gym" && !i.everyday)) return "";
+// `weather` ({min, max} feels, for a question about what to wear today or at a plan's time): pieces no
+// outfit can use then are left out too (coats, puffers, hoodies and heavy knits when even the coolest
+// hour feels 22° or more; shorts and tank tops when the warmest stays under 12°), with one line saying
+// how many, so the AI knows they exist.
+function wardrobeText({ gym = false, weather = null } = {}) {
+  let skipped = 0;
+  const offSeason = (i) => {
+    if (!weather) return false;
+    const r = roleOf(i), w = i.warmth || 2;
+    const off = (weather.min >= 22 && ((r === "outer" && w >= 4) || (r === "mid" && w >= 3) || ["scarf", "gloves", "beanie"].includes(i.category)))
+      || (weather.max < 12 && ["shorts", "tank-top"].includes(i.category));
+    if (off) skipped++;
+    return off;
+  };
+  const lines = state.items.map((i, n) => {
+    if (slotOf(i) === "under" || leaving(i) || (!gym && slotOf(i) === "gym" && !i.everyday) || offSeason(i)) return "";
     const b = brandInfo(i.brand), says = (w) => w && i.name.toLowerCase().includes(String(w).toLowerCase());
     const type = catLabel(i.category);
     return [
@@ -3262,7 +3276,9 @@ function wardrobeText({ gym = false } = {}) {
       i.disliked ? "disliked" : "",
       i.wash ? "IN THE WASH" : "",
     ].filter(Boolean).join("; ");
-  }).filter(Boolean).join("\n");
+  }).filter(Boolean);
+  if (skipped && lines.length) lines.push(`(${skipped} more pieces not listed: ${weather.min >= 22 ? "too warm" : "too light"} for this weather)`);
+  return lines.join("\n");
 }
 const STYLIST_SYSTEM =
   "You are a personal stylist in a smart-wardrobe app. Whenever you mention one of the user's pieces, in any kind of answer, write its #number and name, e.g. '#4 Navy knit', so the app can show its photo. " +
@@ -9646,7 +9662,7 @@ function renderSettings() {
         ${aiReady() && unrecognised ? `<div class="row"><button class="btn" data-act="recognise-all">Recognise ${unrecognised} piece${unrecognised > 1 ? "s" : ""} without a brand</button></div>` : ""}
         ${aiReady() && unlooked().length ? `<div class="row"><button class="btn" data-act="look-all">Let the AI look at ${unlooked().length} photo${unlooked().length > 1 ? "s" : ""}</button><span class="muted small">Once per piece, about 350 tokens each: how dressy it really looks, fabric, pattern, detail colours and suits. Outfit ideas then use it offline.</span></div>` : ""}
         ${aiReady() && noFit ? `<div class="row"><button class="btn" data-act="fit-all">Find the fit of ${noFit} piece${noFit > 1 ? "s" : ""}</button><span class="muted small">About 300 tokens per piece. You can also tap the fit on any piece.</span></div>` : ""}
-        <p class="muted small" style="margin:0">This month: ${u.requests} AI request${u.requests === 1 ? "" : "s"} · ${(u.input + u.output).toLocaleString()} tokens (${u.input.toLocaleString()} in, ${u.output.toLocaleString()} out)</p>
+        <p class="muted small" style="margin:0">This month: ${u.requests} AI request${u.requests === 1 ? "" : "s"} · ${(u.input + u.output).toLocaleString()} tokens (${u.input.toLocaleString()} in, ${u.output.toLocaleString()} out${u.cached ? `; ${u.cached.toLocaleString()} of the input reused from Gemini's cache` : ""})</p>
       </section>
       ${mirrorCard()}
       ${kiosk?.card() || ""}
@@ -10214,12 +10230,25 @@ function stylistSystem(chat) {
   const likes = tasteText();
   const cal = calendarText();
   const day = plan ? Chat.planText(plan, wx, { place }) : `${state.event?.day === "tomorrow" ? "Tomorrow" : "Today"}: feels ${Math.round(c.feels)}°C${c.wet ? ", wet" : ""}.`;
-  const context = `The user is ${shopperText()}.${ageNow()}\n${day}\nOccasion: ${occ.label}${occ.id !== state.occasion ? " (from the question)" : ""}.${cal ? `\n${cal}` : ""}\nWardrobe (#number name; type; colours; brand; style; fit; warmth 1-5; wear):\n${wardrobeText({ gym: state.occasion === "gym" || /\b(gym|run|running|train|training|workout|sport)\b/i.test(question) }) || "(empty)"}${likes ? `\nTaste (learnt from what the user wears, likes and skips):\n${likes}` : ""}`;
+  // A question about what to wear now or at the plan's time (not a trip, not shopping or packing):
+  // the wardrobe leaves out what that weather rules out (see wardrobeText).
+  const span = chat.trim ? { min: feels, max: wx ? wx.max : c.feels } : null;
+  const wardrobe = wardrobeText({ gym: state.occasion === "gym" || /\b(gym|run|running|train|training|workout|sport)\b/i.test(question), weather: span }) || "(empty)";
+  const context = `The user is ${shopperText()}.${ageNow()}\n${day}\nOccasion: ${occ.label}${occ.id !== state.occasion ? " (from the question)" : ""}.${cal ? `\n${cal}` : ""}${likes ? `\nTaste (learnt from what the user wears, likes and skips):\n${likes}` : ""}`;
   // The fashion bible: its mandatory rules and the tips that fit this question.
   const weather = [feels < 8 ? "cold winter layers coat" : feels >= 24 ? "hot summer light" : "", wet ? "rain" : "", plan?.where === "in and out" || (wx && wx.max - wx.min >= 3) ? "layering layers" : "", plan?.evening ? "evening" : ""].join(" ");
-  const guide = Style.guideText({ question, occasion: occ.id, extra: `${occ.label} ${occ.likes.join(" ")} ${weather}` });
-  return { system: `${STYLIST_SYSTEM}${guide ? "" : ` ${BASIC_RULES}`}\n\n${guide ? guide + "\n\n" : ""}${context}`, occ, cond: { feels, wet, humid: c.humid } };
+  const rules = Style.guideText({ part: "rules" });
+  const tips = Style.guideText({ part: "tips", question, occasion: occ.id, extra: `${occ.label} ${occ.likes.join(" ")} ${weather}` });
+  // What stays the same from one question to the next comes first (instructions, the rules, the
+  // wardrobe), what this question changes last (its tips, the day, the occasion, the taste lines): every
+  // conversation then starts with the same long text, which Gemini can reuse from its cache.
+  return { system: `${STYLIST_SYSTEM}${rules ? "" : ` ${BASIC_RULES}`}\n\n${rules ? rules + "\n\n" : ""}Wardrobe (#number name; type; colours; brand; style; fit; warmth 1-5; wear):\n${wardrobe}\n\n${tips ? tips + "\n\n" : ""}${context}`, occ, cond: { feels, wet, humid: c.humid } };
 }
+// Questions about what to wear now or at a plan's time, as opposed to a trip, packing, shopping or
+// any other advice about the wardrobe (those get the whole wardrobe).
+const WEAR_NOW = /\b(wear|outfits?|dress|put on|look for|metto|mettere|indosso|indossare|vestir\w*)\b/i;
+const NOT_NOW = /\b(pack\w*|trip|travel\w*|holiday|vacation|week|weekend|days|month|buy|shop\w*|donate|valigia|viaggio|vacanza|settimana|compr\w*)\b/i;
+const askWearNow = (q) => WEAR_NOW.test(q) && !NOT_NOW.test(q) && !/\b\d{1,2}[/.-]\d{1,2}\b/.test(q);
 
 // The conversation's system prompt and the #numbers it uses, built once and kept while the
 // wardrobe and the plan stay the same, so every message of it starts with the same prompt (Gemini
@@ -10273,7 +10302,7 @@ async function ask(question, targetId = "ai-answer") {
   if (!question?.trim()) return;
   if (targetId !== "ai-answer") return askOnce(question, targetId);
   const plan = Chat.readPlan(question);
-  const chat = (state.aiChat = { question: question.trim(), plan, wx: null, place: "", answer: null, history: [], prev: [], edited: [], changed: [], swap: null, busy: plan ? "Checking the weather for your plan…" : "Thinking about your wardrobe…", error: "" });
+  const chat = (state.aiChat = { question: question.trim(), trim: askWearNow(question), plan, wx: null, place: "", answer: null, history: [], prev: [], edited: [], changed: [], swap: null, busy: plan ? "Checking the weather for your plan…" : "Thinking about your wardrobe…", error: "" });
   state.aiAnswer = "";
   paintChat();
   try {

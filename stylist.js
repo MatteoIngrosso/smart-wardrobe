@@ -441,13 +441,14 @@ export function tips(query, k = 5, occasion = null) {
 /* ---------- For the AI stylist ---------- */
 // The rules every outfit must follow (the ones that matter most) and the few tips that answer
 // this question, ready for the start of a prompt. About 400 tokens.
-export function guideText({ question = "", occasion = null, extra = "", k = 8 } = {}) {
+// `part`: "rules" gives only the mandatory rules (the same for every question, so a prompt that starts
+// with them can be reused from Gemini's cache), "tips" only the advice for this question.
+export function guideText({ question = "", occasion = null, extra = "", k = 8, part = null } = {}) {
   if (!B) return "";
-  const rules = [...B.rules].filter((r) => r.weight >= HARD_WEIGHT).sort((a, b) => b.weight - a.weight).map((r) => `- ${r.title}.`);
-  const picked = tips(`${question} ${extra}`, k * 2, occasion).filter((t) => t.strength !== "opinion").slice(0, k);
-  return [
+  const rules = part === "tips" ? [] : [
     "STYLE GUIDE (mandatory). Every outfit you suggest must follow these rules, most important first:",
-    ...rules,
-    ...(picked.length ? ["Advice that applies to this question:", ...picked.map((t) => `- ${t.text}`)] : []),
-  ].join("\n");
+    ...[...B.rules].filter((r) => r.weight >= HARD_WEIGHT).sort((a, b) => b.weight - a.weight).map((r) => `- ${r.title}.`),
+  ];
+  const picked = part === "rules" ? [] : tips(`${question} ${extra}`, k * 2, occasion).filter((t) => t.strength !== "opinion").slice(0, k);
+  return [...rules, ...(picked.length ? ["Advice that applies to this question:", ...picked.map((t) => `- ${t.text}`)] : [])].join("\n");
 }
