@@ -4068,7 +4068,7 @@ const cutOffText = (v) => (v === 0 ? "As measured" : `${v > 0 ? "+" : "−"}${Ma
 function mirrorFitField(i) {
   const sub = Avatar.subTypeOf(i), lb = mirrorMode() === "lookbook", slot = stageSlotOf(i);
   // the avatar: clothes but not shoes; the Lookbook: anything with a place on it
-  if (lb ? !slot : !sub || sub === "sneakers" || sub === "boots") return "";
+  if (lb ? !slot : !sub || sub === "sneakers" || sub === "boots" || sub === "dress") return "";
   const m = Avatar.cleanCutMeta(i.cutoutMeta), pct = Math.round(m.scale * 100), off = m.offsetY, offx = m.offsetX || 0;
   const column = !lb || Look.SLOT[slot].where === "column";
   const range = (id, label, min, max, step, val, shown) => `<div class="field mb-field"><label for="${id}">${label} <b id="${id}-v">${shown}</b></label><input id="${id}" type="range" min="${min}" max="${max}" step="${step}" value="${val}" data-input="${id}" data-cutfit="${i.id}"></div>`;
@@ -4235,8 +4235,11 @@ function wearNow(o) {
   return out;
 }
 const COAT_LIKE = /coat|puffer|rain|zip|track/;
+// the mirror's shells whose front can be worn open, buttoned or done up (a zip: open or done up)
+const OPENS_ON_MIRROR = ["jacket_open", "blazer", "bomber", "ziphoodie"];
 // 0 open, 1 buttoned, 2 closed up (avatar-stage.js openAt): a blazer "closed up" is buttoned.
-const closeOf = (item, st) => (st?.close === "buttoned" ? 1 : st?.close === "closed" ? (COAT_LIKE.test(item.category) ? 2 : 1) : 0);
+// (null: nothing said, so the piece's own way: see Avatar.defaultClose)
+const closeOf = (item, st) => (st?.close === "buttoned" ? 1 : st?.close === "closed" ? (COAT_LIKE.test(item.category) ? 2 : 1) : st?.close === "open" ? 0 : null);
 // The top next to the skin tucked in: as the fit check (or the mirror) says, else Tuck base top.
 function tuckNow(o, wear = wearNow(o)) {
   const t = o?.pieces?.base && wear[o.pieces.base.id]?.tuck;
@@ -4248,7 +4251,7 @@ function styledAsset(w, asset, wear, o) {
   if (!asset) return null;
   let a = asset, key = "";
   const close = closeOf(w.item, wear[w.item.id]);
-  if (close) { a = { ...a, wear: { close } }; key += `|c${close}`; }
+  if (close != null) { a = { ...a, wear: { close } }; key += `|c${close}`; }
   const tie = w.role === "base" && tieOf(o);
   if (tie) { const t = tiedAsset(a, w.item, tie); if (t) { a = t; key += `|tie:${tie.id}`; } }
   return { asset: a, key };
@@ -4301,8 +4304,8 @@ async function tieColour(tie) {
 function cycleClose(id) {
   const o = mirrorIdea(), it = o && allPieces(o).find((p) => p.id === id);
   if (!it) return;
-  const ways = COAT_LIKE.test(it.category) ? ["open", "buttoned", "closed"] : ["open", "buttoned"];
-  const cur = wearNow(o)[id]?.close || "open", next = ways[(ways.indexOf(cur) + 1) % ways.length];
+  const ways = Avatar.subTypeOf(it) === "ziphoodie" ? ["open", "closed"] : COAT_LIKE.test(it.category) ? ["open", "buttoned", "closed"] : ["open", "buttoned"];
+  const cur = wearNow(o)[id]?.close || Avatar.defaultClose(it), next = ways[(ways.indexOf(cur) + 1) % ways.length];
   const hand = (mirror.wearHand[o.key] ||= {});
   hand[id] = { ...hand[id], close: next };
   dressStage();
@@ -4701,8 +4704,8 @@ function mirrorHTML() {
   const style = (w) => {
     if (lb) return "";
     const st = wear[w.item.id], from = st && !st.hand && st.from ? ` <span title="As in your fit check">(fit check, ${esc(fmtDay(st.from))})</span>` : "";
-    if ((w.role === "coat" || w.role === "outer") && Avatar.subTypeOf(w.item) && ["jacket_open", "bomber"].includes(Avatar.subTypeOf(w.item))) {
-      const c = st?.close === "closed" && !COAT_LIKE.test(w.item.category) ? "buttoned" : st?.close || "open";
+    if (["coat", "outer", "mid"].includes(w.role) && OPENS_ON_MIRROR.includes(Avatar.subTypeOf(w.item))) {
+      const c = st?.close === "closed" && !COAT_LIKE.test(w.item.category) ? "buttoned" : st?.close || Avatar.defaultClose(w.item);
       return ` · <button class="wear-style" data-mclose="${esc(w.item.id)}" aria-label="How the ${esc(w.item.name)} is worn: ${esc(Brain.wearWord("close", c))}. Tap to change.">${esc(Brain.wearWord("close", c))}</button>${from}`;
     }
     const bits = ["tuck", "sleeves"].map((f) => st?.[f] && Brain.wearWord(f, st[f])).filter(Boolean);

@@ -724,6 +724,12 @@ const SPECS = {
   // a tank top: no sleeves, armholes cut deep into the side (armhole: the arm weight it is cut at)
   tank: { slot: 'top', sleeve: 0, hem: 0.45, neck: 'tank', taper: 0.25, loose: 0.03, thick: 0.03, collar: 'rim', armhole: 0.1 },
   longsleeve: { slot: 'top', sleeve: 0.97, hem: 0.45, neck: 'crew', taper: 0.25, loose: 0.035, sleeveLoose: 0.035, thick: 0.03, collar: 'rim' },
+  // a woven shirt: a higher neckline closed at the throat, a folded collar (band + leaf, its points at
+  // the front), long sleeves to the wrist, a longer tail; short-sleeved shirts end above the elbow
+  shirt: { slot: 'top', sleeve: 0.975, hem: 0.3, neck: 'shirt', taper: 0.22, loose: 0.04, sleeveLoose: 0.05, thick: 0.025, collar: 'shirt' },
+  shortshirt: { slot: 'top', sleeve: 0.32, hem: 0.36, neck: 'shirt', taper: 0.22, loose: 0.045, flare: 0.1, thick: 0.025, collar: 'shirt' },
+  // a polo: a tee's body and sleeves with a soft knitted collar on a short placket
+  polo: { slot: 'top', sleeve: 0.3, hem: 0.42, neck: 'polo', taper: 0.25, loose: 0.04, flare: 0.1, thick: 0.035, collar: 'polo' },
   sweater: { slot: 'layer', sleeve: 0.985, hem: 0.62, neck: 'crew', taper: 0.2, loose: 0.06, sleeveLoose: 0.07, thick: 0.05, rib: 0.55, cuff: 0.11, collar: 'rib' },
   // fit-style knobs (all lengths in decimetres before the body's scale):
   //   loft: how far the cloth stands off whatever is under it, below the chest (a jacket's volume);
@@ -733,6 +739,10 @@ const SPECS = {
   //   sleeveTap: the sleeve's ease kept at [the deltoid, the wrist]; sleeveRamp: the share of it already
   //   at the shoulder seam (the rest comes in by the biceps); baffle: quilting
   hoodie: { slot: 'layer', sleeve: 0.985, hem: 0.58, neck: 'hood', taper: 0.18, loose: 0.08, sleeveLoose: 0.09, thick: 0.04, rib: 0.6, cuff: 0.11, hood: true, loft: 0.15, loftTop: [5.4, 4.6], blouse: 0.05, ribPull: 0.75 },
+  // a zip hoodie: a hoodie whose front can be worn open (its edges hang straight, zip apart) or zipped up
+  // (close: how it is worn when nothing says, see avatar-config.js defaultClose; zipTop: the V a zip
+  // done up leaves at the neck)
+  ziphoodie: { slot: 'layer', sleeve: 0.985, hem: 0.58, neck: 'hood', open: 0.24, zip: 0.8, zipTop: 0.05, close: 2, taper: 0.18, loose: 0.08, sleeveLoose: 0.09, thick: 0.04, rib: 0.6, cuff: 0.11, hood: true, loft: 0.15, loftTop: [5.4, 4.6], blouse: 0.05, ribPull: 0.75 },
   trackjacket: { slot: 'layer', sleeve: 0.985, hem: 0.62, neck: 'crew', taper: 0.2, loose: 0.05, sleeveLoose: 0.06, thick: 0.035, rib: 0.35, cuff: 0.08, collar: 'stand', ribPull: 0.6 },
   // MA-1 blouson: a short body that billows just above a tight rib waistband (at the belt line), a
   // flat chest, a zip front whose edges hang straight down (zip: the gap between them), rib cuffs
@@ -740,6 +750,9 @@ const SPECS = {
   // a quilted down jacket: inflated, horizontal baffles every ~10 cm, a high stand collar, elastic hem and cuffs
   puffer: { slot: 'jacket', sleeve: 0.97, hem: 1.05, neck: 'crew', taper: 0.06, loose: 0.08, sleeveLoose: 0.55, sleeveTap: [1, 0.8], sleeveRamp: 0.5, thick: 0.06, cuff: 0.07, collar: 'stand', collarR: 0.12, loft: 0.66, loftTop: [6.2, 5.5], hemPull: 0.3, ribPull: 0.4, baffle: { step: 1.05, amp: 0.12, armStep: 0.85, armAmp: 0.08 } },
   jacket_open: { slot: 'jacket', sleeve: 0.955, hem: 0.3, neck: 'jacket', open: 0.56, taper: 0.12, loose: 0.06, sleeveLoose: 0.08, thick: 0.03, collar: 'fold' },
+  // a tailored jacket: buttoned unless worn open, covering the seat, notch lapels folded back along the
+  // opening from the button up (lapel: [break, notch] rest heights and the lapel's width at the notch)
+  blazer: { slot: 'jacket', sleeve: 0.955, hem: 0.2, neck: 'jacket', open: 0.56, close: 1, taper: 0.12, loose: 0.055, sleeveLoose: 0.07, thick: 0.03, collar: 'lapel', lapel: [3.2, 5.42, 0.62], lapelTop: 5.95 },
   jeans: { slot: 'bottoms', waist: 2.02, leg: 1.0, loose: 0.06, taper: 0.12, thick: 0.015 },
   cargo: { slot: 'bottoms', waist: 2.02, leg: 1.0, loose: 0.1, taper: 0.06, thick: 0.015, pockets: true },
   // joggers and track pants: tapered from the knee to an elastic ankle cuff (band: its height; tight:
@@ -752,6 +765,8 @@ const SPECS = {
   sneakers: { slot: 'shoes', collar: 1.02, sole: 0.3, toe: 0.24, bulk: 0.1, tongue: 0.05 },
   hightop: { slot: 'shoes', collar: 1.22, sole: 0.32, toe: 0.24, bulk: 0.11, tongue: 0.16 },
   boots: { slot: 'shoes', collar: 1.42, sole: 0.42, toe: 0.22, bulk: 0.14, tongue: 0.06, lug: true },
+  // dress shoes (oxfords, derbies, loafers): low, close to the foot, a thin leather sole, no tongue
+  dress: { slot: 'shoes', collar: 0.86, sole: 0.2, toe: 0.2, bulk: 0.05, tongue: 0 },
 };
 // A quilted baffle along u (one baffle per unit): 0 on the stitch lines, 1 in the middle of the puff.
 const puffOf = (u) => { const f = u - Math.floor(u), d = 2 * f - 1; return Math.sqrt(Math.max(0, 1 - d * d)); };
@@ -763,7 +778,8 @@ const FIT = { slim: 0.5, regular: 1, straight: 1.05, tapered: 0.9, relaxed: 1.2,
 const FIT_WORDS = [[/\b(skinny|slim)\b/, 'slim'], [/\b(oversized?|boxy)\b/, 'oversized'], [/\b(baggy|wide)(-leg)?\b/, 'baggy'], [/\b(relaxed|loose)\b/, 'relaxed'], [/\bstraight\b/, 'straight'], [/\b(tapered|joggers?)\b/, 'tapered'], [/\bregular\b/, 'regular']];
 // Which shell a shoe gets: the asset's shoeStyle, else its name, then its category.
 function shoeShell(asset, name, sub) {
-  const style = { low_sneaker: 'sneakers', high_top_sneaker: 'hightop', boot: 'boots' }[asset?.shoeStyle];
+  if (sub === 'dress') return 'dress';
+  const style = { low_sneaker: 'sneakers', high_top_sneaker: 'hightop', boot: 'boots', dress_shoe: 'dress' }[asset?.shoeStyle];
   if (style) return style; // the baker's call (it reads the name and the photo)
   const n = `${name || ''} ${asset?.name || ''} ${asset?.category || ''}`.toLowerCase();
   if (/\b(boots?|timberlands?|timbs|chelsea|combat|hiking)\b/.test(n) || sub === 'boots') return 'boots';
@@ -980,7 +996,8 @@ function clothMaterial(kind, opts, U) {
   if (kind === 'trim') mat.defines.RIBS = '';
   if (kind === 'panel' && opts.map && opts.edge) mat.defines.PANEL_EDGE = '';
   if (kind === 'panel' && opts.map && opts.tile) mat.defines.PANEL_SIDE = '';
-  const u = { ...U, uLining: { value: new THREE.Color(opts.lining ?? 0x222222) }, uTile: { value: opts.tile || null }, uTileScale: { value: opts.tileScale ?? 1.6 }, uGrain: { value: opts.grain ?? 1 }, uDeep: { value: opts.deep ?? 0 }, uFabricCol: { value: new THREE.Color(opts.fabric ?? 0x777777) }, uFlat: { value: opts.flat ?? 0.7 } };
+  if (kind === 'panel' && opts.map && opts.gloss) mat.defines.GLOSS = '';
+  const u = { ...U, uLining: { value: new THREE.Color(opts.lining ?? 0x222222) }, uTile: { value: opts.tile || null }, uTileScale: { value: opts.tileScale ?? 1.6 }, uGrain: { value: opts.grain ?? 1 }, uDeep: { value: opts.deep ?? 0 }, uFabricCol: { value: new THREE.Color(opts.fabric ?? 0x777777) }, uFlat: { value: opts.flat ?? 0.7 }, uNeck: { value: opts.neck ?? 0 } };
   mat.userData.uniforms = u;
   mat.onBeforeCompile = (shader) => {
     hookCommon(shader, u);
@@ -988,7 +1005,7 @@ function clothMaterial(kind, opts, U) {
       .replace('#include <common>', '#include <common>\nattribute vec3 aRib; varying vec3 vRib; varying vec3 vRestN;')
       .replace('#include <begin_vertex>', '#include <begin_vertex>\nvRib = aRib; vRestN = normal;');
     shader.fragmentShader = shader.fragmentShader
-      .replace('#include <common>', '#include <common>\nuniform vec3 uLining; uniform sampler2D uTile; uniform float uTileScale; uniform float uGrain; uniform float uDeep; uniform vec3 uFabricCol; uniform float uFlat; varying vec3 vRib; varying vec3 vRestN;')
+      .replace('#include <common>', '#include <common>\nuniform vec3 uLining; uniform sampler2D uTile; uniform float uTileScale; uniform float uGrain; uniform float uDeep; uniform vec3 uFabricCol; uniform float uFlat; uniform float uNeck; varying vec3 vRib; varying vec3 vRestN;')
       .replace('#include <map_fragment>', `#include <map_fragment>
 #ifdef TRIPLANAR
 {
@@ -1010,6 +1027,9 @@ function clothMaterial(kind, opts, U) {
 // the photo's edges (the sleeves laid beside the body, the collar above) fade into the plain cloth,
 // over a wide band, so there's no seam where the photo ends at the sides of the back
 float panelEdge = smoothstep(0.0, 0.24, min(vMapUv.x, 1.0 - vMapUv.x)) * smoothstep(1.0, 0.93, vMapUv.y);
+// a shirt's photo shows the inside of its collar (the label) at the top of the placket, which the
+// collar now covers on the body: plain cloth there (uNeck)
+panelEdge *= 1.0 - uNeck * smoothstep(0.14, 0.08, abs(vMapUv.x - 0.5)) * smoothstep(0.83, 0.89, vMapUv.y);
 diffuseColor.rgb = mix(uFabricCol, diffuseColor.rgb, panelEdge);
 #endif
 #ifdef PANEL_SIDE
@@ -1023,6 +1043,17 @@ float panelSide;
   vec3 bw = pow(abs(n0), vec3(4.0)); bw /= dot(bw, vec3(1.0));
   vec3 t = texture2D(uTile, q.zy).rgb * bw.x + texture2D(uTile, q.xz).rgb * bw.y + texture2D(uTile, q.xy).rgb * bw.z;
   diffuseColor.rgb = mix(t, diffuseColor.rgb, panelSide);
+}
+#endif
+#ifdef GLOSS
+// polished leather: the photo's reflections (grey sheens over black leather) are light, not colour. They
+// go back to the leather's colour and the stage's own lights put the shine back where it belongs
+// (else a black oxford comes out silver)
+{
+  vec3 d = diffuseColor.rgb - uFabricCol;
+  float l = dot(d, vec3(0.3333));
+  float neutral = 1.0 - smoothstep(0.04, 0.12, length(d - vec3(l)));
+  diffuseColor.rgb = mix(diffuseColor.rgb, uFabricCol + d * 0.22, neutral * smoothstep(0.0, 0.08, l));
 }
 #endif
 // black cloth: a photo of it is lit grey; pull its albedo down to a deep charcoal, keeping its texture
@@ -1050,7 +1081,7 @@ normal = normalize(mix(nonPerturbedNormal, normal, panelSide));
   normal = bumpN(normal, hb, 1.0);
 }`);
   };
-  mat.customProgramCacheKey = () => 'cloth-5' + (opts.map && opts.edge && kind === 'panel' ? 'e' : '') + (opts.map && opts.tile && kind === 'panel' ? 's' : '');
+  mat.customProgramCacheKey = () => 'cloth-5' + (opts.map && opts.edge && kind === 'panel' ? 'e' : '') + (opts.map && opts.tile && kind === 'panel' ? 's' : '') + (opts.map && opts.gloss && kind === 'panel' ? 'g' : '');
   return mat;
 }
 
@@ -1088,7 +1119,7 @@ function garmentFields(D, S, spec, sub, length) {
   // tops (a top worn under a jacket is cut shorter: see tuckFor)
   const L = parseLength(length);
   const hem0 = L.h ?? topHem(spec, sub, L.base), hemY = L.tuck != null ? Math.max(hem0, L.tuck) : hem0;
-  const neck = spec.neck === 'jacket' ? [6.12, 6.43, 6.6] : spec.neck === 'hood' ? [6.2, 6.5, 6.66] : spec.neck === 'tank' ? [5.95, 6.42, 6.5] : [6.24, 6.52, 6.66];
+  const neck = NECK[spec.neck] || NECK.crew;
   const neckY = (c) => { const k = Math.cos(S.thetaN[c]); return k >= 0 ? mix(neck[1], neck[0], k * k) : mix(neck[1], neck[2], k * k); };
   F.hem = f((c, x, y) => { const s = armS(c); return (1 - s) * (hemY - y) - s * 1; });
   F.neck = f((c, x, y) => y - neckY(c));
@@ -1112,14 +1143,16 @@ function garmentFields(D, S, spec, sub, length) {
 //   2 closed up: a coat buttoned (a zip done up) to the chest, only a small V at the collar.
 // Below zero the front is whole there (nothing cut).
 const BUTTON_Y = 3.05;
+// necklines: the rest heights of [the centre front, the sides, the centre back]
+const NECK = { crew: [6.24, 6.52, 6.66], jacket: [6.12, 6.43, 6.6], hood: [6.2, 6.5, 6.66], tank: [5.95, 6.42, 6.5], shirt: [6.3, 6.55, 6.68], polo: [6.26, 6.53, 6.67] };
 const lin = (a, b, x) => clamp((x - a) / (b - a), 0, 1);
 function openAt(spec, y, close = 0) {
-  if (close >= 2) return -0.03 + (spec.zip ? 0.2 : 0.42) * sstep(5.0, 6.35, y);
+  if (close >= 2) return -0.03 + (spec.zip ? spec.zipTop ?? 0.2 : 0.42) * sstep(5.0, 6.35, y);
   if (close === 1) return y >= BUTTON_Y ? -0.03 + 0.8 * lin(BUTTON_Y, 6.3, y) ** 0.85 : -0.03 + 0.45 * sstep(BUTTON_Y - 0.25, 0.6, y);
   return spec.zip ? spec.open : spec.open + 0.22 * sstep(5.5, 6.4, y) - 0.05 * sstep(4.5, 2.5, y);
 }
 // the hem of a top on the rest mesh, by its length
-const topHem = (spec, sub, length) => (length === 'cropped' ? 1.95 : length === 'long' && (sub === 'jacket_open' || sub === 'puffer') ? 0.18 : spec.hem);
+const topHem = (spec, sub, length) => (length === 'cropped' ? 1.95 : length === 'long' && (sub === 'jacket_open' || sub === 'puffer' || sub === 'blazer') ? 0.18 : spec.hem);
 
 // A patch's length key: the kind's own length ("full", "short", "cropped", "long"), "@<y>" when a top
 // is cut shorter (under a jacket, or tucked in), then what the photo and the wearer make of it (see
@@ -1140,7 +1173,8 @@ function sizeOf(asset, sub, name) {
   }
   const z = topSize(asset, { hem: topHem(spec, sub, base), fit, long: base === 'long' });
   // how its front is worn: open (the cut's own), buttoned or closed up (asset.wear.close, see openAt)
-  const close = spec.open ? clamp(Math.round(+asset.wear?.close || 0), 0, 2) : 0;
+  // (nothing said: the cut's own way, a blazer buttoned and a zip hoodie zipped; see defaultClose)
+  const close = spec.open ? clamp(Math.round(+(asset.wear?.close ?? spec.close ?? 0) || 0), 0, 2) : 0;
   return { ...z, base, close, key: `${base}${z.changed ? `|h=${z.hem}` : ''}${close ? `|c=${close}` : ''}`, hem: z.changed ? z.hem : topHem(spec, sub, base) };
 }
 /**
@@ -1153,7 +1187,7 @@ export function panelFrame(asset, name) {
   const sub = SPECS[asset?.garmentSubType] ? asset.garmentSubType : 'tee', spec = SPECS[sub];
   if (spec.slot !== 'top' && spec.slot !== 'layer') return null;
   const z = sizeOf(asset, sub, name);
-  const neck = spec.neck === 'jacket' ? 6.12 : spec.neck === 'hood' ? 6.2 : spec.neck === 'tank' ? 5.95 : 6.24;
+  const neck = (NECK[spec.neck] || NECK.crew)[0];
   return { sub, top: 6.45, hem: z.hem, width: z.width || 4.48, neck, waist: REST.waist };
 }
 // "full|h=0.74" cut at 1.2 → "full@1.20|h=0.74"
@@ -1793,8 +1827,12 @@ const CLOTH_TYPE = {
   tee: { around: 1, along: 0.02, sleeve: 1.2 },
   tank: { around: 0.9, along: 0.02, sleeve: 1 },
   longsleeve: { around: 0.8, along: 0.03, sleeve: 0.8 },
+  shirt: { around: 0.9, along: 0.03, sleeve: 0.9, tube: 0.01 },
+  shortshirt: { around: 0.95, along: 0.02, sleeve: 1.2 },
+  polo: { around: 1, along: 0.02, sleeve: 1.2 },
   sweater: { around: 1.1, along: 0.04, sleeve: 1 },
   hoodie: { around: 1.3, along: 0.05, sleeve: 1.2, tube: 0.02 },
+  ziphoodie: { around: 1.3, along: 0.05, sleeve: 1.2, tube: 0.02 },
   trackjacket: { around: 1.1, along: 0.04, sleeve: 1, tube: 0.02 },
   // (room: it blouses over its rib; chest / low: the ease over the upper chest and over the lowest
   // quarter, x around: a blouson is flat on the chest and full just above its waistband)
@@ -1804,6 +1842,7 @@ const CLOTH_TYPE = {
   // (an open jacket, a zip hoodie: round sleeves too, or the shoulder, the biceps and the forearm print
   // through the cloth as if it were skin-tight: Matteo's "bulky, muscly" grey jacket, 2026-11-16)
   jacket_open: { around: 1.25, along: 0.03, sleeve: 1.1, tube: 0.015 },
+  blazer: { around: 1.15, along: 0.03, sleeve: 1.0, tube: 0.015 },
 }; // (a puffer keeps its quilted shell)
 const CLOTH_STEPS = 30, CLOTH_ITERS = 4;
 let clothIds = 0; // (each prepared piece gets one, for the drape cache's keys)
@@ -2220,6 +2259,10 @@ class GarmentMesh {
     // jackets: a soft rolled rib along the neckline (no stiff plates standing off the shoulders)
     if (this.spec.collar === 'stand') addExtra(collarRim(this, this.spec.collarR || 0.075, 8));
     if (this.spec.collar === 'fold') addExtra(collarRim(this, 0.06, 8));
+    // shirts, polos and blazers: a band and a leaf folded over it (and a blazer's lapels)
+    if (this.spec.collar === 'shirt') addExtra(foldCollar(this, { stand: 0.34, fall: 0.42, point: 0.4, gap: 0.09 }));
+    if (this.spec.collar === 'polo') addExtra(foldCollar(this, { stand: 0.22, fall: 0.36, point: 0.18, gap: 0.13 }));
+    if (this.spec.collar === 'lapel') { addExtra(foldCollar(this, { stand: 0.24, fall: 0.36, point: 0, gap: 0 })); addExtra(lapels(this)); }
     if (this.spec.hood) addExtra(hoodPart(this));
     if (isShoe) {
       // each side of the shoe shows the photo whose toe points that way, so no logo is mirrored: seen
@@ -2521,6 +2564,186 @@ function collarRim(gm, radius, seg) {
   };
 }
 
+// A strip swept along a row of cross-sections (closed polygons of NP points each): collars, lapels.
+// rowsOf(P, N, s, J) gives the rows from the garment's points P and normals N (the rest mesh with s 1
+// and the rest joints for the rest positions the fabric tile is laid by; the worn cloth for the shape);
+// segs: the rows joined to the next one.
+function sweptExtra(gm, nRows, NP, segs, rowsOf, group = G_FABRIC) {
+  const idx = [], R = nRows ? rowsOf(gm.patch.restP, gm.patch.restN, 1, gm.stage.S.J) : [];
+  for (const i of segs) for (let k = 0; k < NP; k++) {
+    const a = i * NP + k, b = (i + 1) * NP + k, c = i * NP + ((k + 1) % NP), d = (i + 1) * NP + ((k + 1) % NP);
+    // each quad wound so its front faces out of the strip (the cloth's back face shows the lining)
+    const A = R[i][k], B = R[i + 1][k], C = R[i][(k + 1) % NP];
+    const cen = [0, 1, 2].map((c2) => R[i].reduce((t, q) => t + q[c2], 0) / NP);
+    const outw = sub3([(A[0] + C[0]) / 2, (A[1] + C[1]) / 2, (A[2] + C[2]) / 2], cen);
+    if (dot3(cross3(sub3(B, A), sub3(C, A)), outw) >= 0) idx.push(a, b, c, c, b, d);
+    else idx.push(a, c, b, c, d, b);
+  }
+  const put = (ex, rows, pos, nor) => {
+    for (let i = 0; i < nRows; i++) {
+      const Q = rows[i], Qp = rows[Math.max(0, i - 1)], Qn = rows[Math.min(nRows - 1, i + 1)];
+      // the strip's direction here, from the neighbouring rows' centres
+      const cen = (R) => [0, 1, 2].map((c) => R.reduce((t, q) => t + q[c], 0) / NP);
+      const cp = cen(Qp), cn = cen(Qn), cq = cen(Q), t = norm3(sub3(cn, cp));
+      for (let k = 0; k < NP; k++) {
+        const q = Q[k], j = ex.start + i * NP + k;
+        pos[j * 3] = q[0]; pos[j * 3 + 1] = q[1]; pos[j * 3 + 2] = q[2];
+        if (!nor) continue;
+        let n = norm3(cross3(t, sub3(Q[(k + 1) % NP], Q[(k + NP - 1) % NP])));
+        if (dot3(n, sub3(q, cq)) < 0) n = n.map((v) => -v);
+        nor[j * 3] = n[0]; nor[j * 3 + 1] = n[1]; nor[j * 3 + 2] = n[2];
+      }
+    }
+  };
+  return {
+    count: nRows * NP, index: [[group, idx]],
+    writeStatic(ex, g) {
+      put(ex, rowsOf(g.patch.restP, g.patch.restN, 1, g.stage.S.J), g.geo.attributes.aRest.array, null);
+    },
+    update(ex, g, B) {
+      put(ex, rowsOf(g.G, g.Nf, B.s, B.J), g.geo.attributes.position.array, g.geo.attributes.normal.array);
+    },
+  };
+}
+const horiz = (a, c) => norm3([a[0] - c[0], 0, a[2] - c[2]]);
+const at3 = (A, v) => [A[v * 3], A[v * 3 + 1], A[v * 3 + 2]];
+const madd = (a, b, k) => [a[0] + b[0] * k, a[1] + b[1] * k, a[2] + b[2] * k];
+// the cloth vertex (not on the sleeves, below y0) nearest to point q of the rest mesh; front: only the
+// front's (z ahead of the torso's centre), measured across (x, y) only
+function nearestCloth(p, S, q, y0, front = false, beyond = 0) {
+  let best = -1, bd = Infinity;
+  for (let v = 0; v < p.nv; v++) {
+    if (p.armW[v] > 0.3) continue;
+    const x = p.restP[v * 3], y = p.restP[v * 3 + 1], z = p.restP[v * 3 + 2];
+    if (y > y0) continue;
+    if (front && (z < S.rowVal(S.zc, y) || Math.abs(x) < beyond || Math.sign(x) !== Math.sign(q[0]))) continue;
+    const d = (x - q[0]) ** 2 + (y - q[1]) ** 2 + (front ? 0 : (z - q[2]) ** 2);
+    if (d < bd) { bd = d; best = v; }
+  }
+  return best;
+}
+
+// Out of the cloth: point q at least `lift` off the plane of cloth vertex e (its position and normal in
+// P, N), along that normal.
+const offCloth = (q, P, N, e, lift) => {
+  if (e < 0) return q;
+  const n = at3(N, e), d = dot3(sub3(q, at3(P, e)), n);
+  return d < lift ? madd(q, n, lift - d) : q;
+};
+// Rows of points smoothed along the strip (the k-th point of each row with its neighbours'), so a leaf
+// or lapel edge runs clean; closed: the rows go round.
+function smoothRows(rows, ks, passes, closed) {
+  const n = rows.length; if (n < 3) return rows;
+  for (let it = 0; it < passes; it++) {
+    const next = rows.map((r) => r.slice());
+    for (let i = 0; i < n; i++) {
+      if (!closed && (i === 0 || i === n - 1)) continue;
+      const a = rows[(i + n - 1) % n], b = rows[(i + 1) % n];
+      for (const k of ks) next[i][k] = [0, 1, 2].map((c) => 0.5 * rows[i][k][c] + 0.25 * (a[k][c] + b[k][c]));
+    }
+    rows = next;
+  }
+  return rows;
+}
+
+// A shirt's (polo's, blazer's) collar: a band standing up round the neck and a leaf folded down over it
+// onto the shoulders, of the piece's own cloth. o: stand / fall (decimetres: the band's height, the
+// leaf's length), point (how much longer the leaf gets at its front points, which also spread
+// outwards), gap (half the angle round the neck left open at the centre front, radians).
+// The leaf's edge is kept off the cloth below it (a nearby vertex picked once on the rest mesh).
+function foldCollar(gm, o) {
+  const p = gm.patch, S = gm.stage.S, loop = neckLoop(gm), ids = loop.ids, L = ids.length, NP = 7;
+  const up = [0, 1, 0], angle = new Float32Array(L), len = new Float32Array(L), spread = new Float32Array(L), stand = new Float32Array(L);
+  const design = (b, i, J, s) => { // the leaf's edge as cut, for loop point i at b
+    const out = horiz(b, J.neck), side = madd([0, 0, 0], norm3(cross3(up, out)), Math.sign(angle[i]) || 1);
+    let q = madd(b, up, (stand[i] - len[i]) * s); q = madd(q, out, (0.06 + 0.3 * Math.max(0, len[i] - o.stand)) * s);
+    return { q: madd(q, side, spread[i] * s), out };
+  };
+  const edge = new Int32Array(L);
+  for (let i = 0; i < L; i++) {
+    const b = at3(p.restP, ids[i]);
+    angle[i] = Math.atan2(b[0], b[2] - S.rowVal(S.zc, b[1]));
+    const k = o.point ? sstep(0.95, o.gap + 0.12, Math.abs(angle[i])) : 0;
+    // (an open collar, a blazer's, rolls flat into the lapels at its ends)
+    const end = loop.closed ? 1 : sstep(0, 0.3, Math.min(i, L - 1 - i) / Math.max(1, L - 1));
+    stand[i] = o.stand * (0.3 + 0.7 * end);
+    len[i] = (o.fall + o.point * k) * (0.75 + 0.25 * end); spread[i] = o.point * 0.45 * k;
+    edge[i] = nearestCloth(p, S, design(b, i, S.J, 1).q, b[1] - 0.02);
+  }
+  const segs = [];
+  for (let i = 0; i < (loop.closed ? L : L - 1); i++) {
+    const j = (i + 1) % L, a = angle[i], c = angle[j];
+    if (o.gap && (Math.abs(a) < o.gap || Math.abs(c) < o.gap || (a * c < 0 && Math.abs(a) < 1.5))) continue; // (the front left open)
+    segs.push(i);
+  }
+  // a closed loop's strip has its first row again after its last one
+  const n = loop.closed ? L + 1 : L;
+  return sweptExtra(gm, n, NP, segs, (P, N, s, J) => {
+    let rows = [];
+    for (let i = 0; i < L; i++) {
+      const b = at3(P, ids[i]), { q, out } = design(b, i, J, s), st = stand[i] * s;
+      const P0 = madd(madd(b, out, 0.003 * s), up, -0.01 * s); // the band's inside, at the neckline
+      const P1 = madd(madd(b, up, st), out, -0.008 * s); // its top edge, close to the neck
+      const P2 = madd(madd(b, up, st + 0.035 * s), out, 0.035 * s); // the fold
+      const E = offCloth(q, P, N, edge[i], 0.016 * s); // the leaf's edge, on the cloth below
+      const M = madd(madd([(P2[0] + E[0]) / 2, (P2[1] + E[1]) / 2, (P2[2] + E[2]) / 2], out, (0.03 + 0.04 * len[i]) * s), up, 0.01 * s); // the leaf, rounded over the band
+      rows.push([P0, P1, P2, M, E, madd(E, out, -0.008 * s), madd(b, out, 0.018 * s)]);
+    }
+    rows = smoothRows(rows, [3, 4, 5], 3, loop.closed);
+    if (loop.closed) rows.push(rows[0]);
+    return rows;
+  });
+}
+
+// A blazer's lapels: the front folded back along each edge of the opening, from the break (where the
+// fronts part, near the top button) up to the collar, widening to the notch and narrowing above it.
+// Three points across each, lying on the jacket's own front (kept off it by vertices picked once).
+function lapels(gm) {
+  const p = gm.patch, S = gm.stage.S, spec = gm.spec, [brk, notch, W] = spec.lapel, NP = 6;
+  const fOpen = p.names.indexOf('open'); if (fOpen < 0) return sweptExtra(gm, 0, NP, [], () => []);
+  const onEdge = (v) => Math.abs(p.vf[v * p.nf + fOpen]) < 0.012 && p.armW[v] < 0.3;
+  const sides = [[], []];
+  for (const e of p.bound) {
+    if (!onEdge(e.a) || !onEdge(e.b)) continue;
+    const ya = p.restP[e.a * 3 + 1], yb = p.restP[e.b * 3 + 1];
+    if (Math.min(ya, yb) < brk - 0.02 || Math.max(ya, yb) > spec.lapelTop) continue; // (above it the collar takes over)
+    sides[p.restP[e.a * 3] + p.restP[e.b * 3] >= 0 ? 0 : 1].push(e);
+  }
+  const width = (y) => (y <= notch ? W * clamp((y - brk) / (notch - brk), 0, 1) ** 0.85 : W * (1 - 0.45 * sstep(notch, notch + 0.06, y)) * (1 - 0.3 * sstep(notch + 0.06, spec.lapelTop, y)));
+  const chains = [], segs = [];
+  let nRows = 0;
+  for (const E of sides) {
+    let ch = orderLoop(E).ids; if (ch.length < 3) continue;
+    if (p.restP[ch[0] * 3 + 1] > p.restP[ch[ch.length - 1] * 3 + 1]) ch = ch.reverse();
+    const rows = ch.map((v) => {
+      const b = at3(p.restP, v), w = width(b[1]), sg = Math.sign(b[0]) || 1;
+      const picks = [0.5, 1].map((f) => nearestCloth(p, S, [b[0] + sg * w * f, b[1], 0], 7, true, Math.abs(b[0]) + 0.005));
+      return { v, w, picks };
+    });
+    chains.push({ rows, first: nRows });
+    for (let i = 0; i < rows.length - 1; i++) segs.push(nRows + i);
+    nRows += rows.length;
+  }
+  const LIFT = [0.024, 0.016, 0.011];
+  return sweptExtra(gm, nRows, NP, segs, (P, N, s) => {
+    const all = [];
+    for (const { rows } of chains) {
+      let top = rows.map(({ v, w, picks }, i) => {
+        const b = at3(P, v), n = at3(N, v), a = at3(P, rows[Math.max(0, i - 1)].v), c = at3(P, rows[Math.min(rows.length - 1, i + 1)].v);
+        let lat = norm3(cross3(norm3(sub3(c, a)), n));
+        if (lat[0] * (b[0] || 1) < 0) lat = lat.map((x) => -x); // (away from the centre front)
+        return [0, 0.5, 1].map((f, k) => offCloth(madd(madd(b, lat, w * f * s), n, LIFT[k] * s), P, N, k ? picks[k - 1] : v, LIFT[k] * s));
+      });
+      top = smoothRows(top, [1, 2], 3, false);
+      for (const r of top) {
+        const nn = at3(N, rows[0].v);
+        all.push([r[0], r[1], r[2], ...[2, 1, 0].map((k) => madd(r[k], nn, -0.005 * s))]);
+      }
+    }
+    return all;
+  });
+}
+
 // How far a draped piece reaches out around the torso, per torso row and bin (what the hood lies on).
 function backReach(g, env, S) {
   if (g.reach && g.reachStamp === g.stamp) return g.reach;
@@ -2614,19 +2837,19 @@ function hoodPart(gm) {
 
 const SHOE_NS = 56, SHOE_NR = 40, SOLE_NR = 24;
 // How tall a shoe may be for its length (a three-quarter photo looks taller than the shoe is).
-const SHOE_ASPECT = { sneakers: [0.27, 0.37], hightop: [0.33, 0.43], boots: [0.5, 0.72] };
+const SHOE_ASPECT = { sneakers: [0.27, 0.37], hightop: [0.33, 0.43], boots: [0.5, 0.72], dress: [0.23, 0.32] };
 // The sole (decimetres at the heel and at the toe) and how far it sticks out of the upper.
-const SHOE_SOLE = { sneakers: [0.29, 0.19, 0.045], hightop: [0.3, 0.2, 0.045], boots: [0.36, 0.29, 0.06] };
+const SHOE_SOLE = { sneakers: [0.29, 0.19, 0.045], hightop: [0.3, 0.2, 0.045], boots: [0.36, 0.29, 0.06], dress: [0.25, 0.11, 0.02] };
 // An outline for shoes baked before the baker recorded one.
 function defaultShoeProfile(sub) {
-  const N = 48, collar = sub === 'boots' ? 0.97 : sub === 'hightop' ? 0.9 : 0.78;
+  const N = 48, collar = sub === 'boots' ? 0.97 : sub === 'hightop' ? 0.9 : sub === 'dress' ? 0.7 : 0.78;
   const top = [], bot = [];
   for (let i = 0; i < N; i++) {
     const u = (i + 0.5) / N;
     top.push(u < 0.42 ? mix(collar * 0.92, collar, sstep(0, 0.12, u)) : mix(collar, 0.36, sstep(0.42, 0.97, u)));
     bot.push(0.05 * sstep(0.8, 1, u) + 0.02 * sstep(0.05, 0, u));
   }
-  return { top, bot, aspect: sub === 'boots' ? 0.62 : sub === 'hightop' ? 0.42 : 0.35 };
+  return { top, bot, aspect: sub === 'boots' ? 0.62 : sub === 'hightop' ? 0.42 : sub === 'dress' ? 0.3 : 0.35 };
 }
 const profAt = (arr, u) => { // the outline at u (0 heel, 1 toe) between the column centres
   const N = arr.length, f = clamp(u * N - 0.5, 0, N - 1), i = Math.min(N - 2, Math.floor(f)), t = f - i;
@@ -3178,8 +3401,10 @@ diffuseColor.rgb *= mix(1.0, 0.42, smoothstep(0.0, 0.42, vEyeUp));`)
       // textiles: matte whatever the asset says (a nylon's low roughness reads as plastic); shoes'
       // leather may keep a little more sheen
       // (a down jacket's nylon keeps a soft sheen, so its quilting reads)
-      const rough = isShoe ? clamp(asset.roughness ?? 0.6, 0.55, 0.85) : sub === 'puffer' ? clamp(asset.roughness ?? 0.6, 0.72, 0.9) : clamp(asset.roughness ?? 0.88, 0.85, 0.92);
-      const spec = isShoe ? 0.35 : 0.2;
+      // (polished dress shoes: their real sheen comes from the lights, the photo's is taken out: GLOSS)
+      const gloss = sub === 'dress' && (asset.roughness ?? 0.6) < 0.6;
+      const rough = gloss ? 0.36 : isShoe ? clamp(asset.roughness ?? 0.6, 0.55, 0.85) : sub === 'puffer' ? clamp(asset.roughness ?? 0.6, 0.72, 0.9) : clamp(asset.roughness ?? 0.88, 0.85, 0.92);
+      const spec = gloss ? 0.55 : isShoe ? 0.35 : 0.2;
       // black cloth (by its base colour or its name) gets the deep-black albedo response
       const fl = 0.2126 * fabric.r + 0.7152 * fabric.g + 0.0722 * fabric.b;
       // (a photo already near black needs none: it would only crush it)
@@ -3190,11 +3415,11 @@ diffuseColor.rgb *= mix(1.0, 0.42, smoothstep(0.0, 0.42, vEyeUp));`)
       const nF = isShoe ? null : half(normal, false), nB = isShoe ? null : half(normal, true);
       // jackets and hoodies are photographed crumpled more than tees: their creases are calmed more
       // (flat: how much of a crease's light and shade stays; creases: the photo normal map's strength)
-      const outerish = ['jacket_open', 'bomber', 'trackjacket', 'hoodie', 'sweater'].includes(sub);
+      const outerish = ['jacket_open', 'blazer', 'bomber', 'trackjacket', 'hoodie', 'ziphoodie', 'sweater'].includes(sub);
       const flat = outerish ? 0.4 : 0.7, creases = outerish ? 0.55 : 1;
       const mats = [
-        clothMaterial('panel', { map: front, normalMap: nF, roughness: rough, specular: spec, lining, deep, fabric, flat, creases, edge: !isShoe, tile: isShoe ? null : tile, tileScale: 1.4, color: front ? 0xffffff : fabric }, U()),
-        clothMaterial('panel', { map: back || front, normalMap: nB, roughness: rough, specular: spec, lining, deep, fabric, flat, creases, edge: !isShoe, tile: isShoe ? null : tile, tileScale: 1.4, color: back || front ? 0xffffff : fabric }, U()),
+        clothMaterial('panel', { map: front, normalMap: nF, roughness: rough, specular: spec, lining, deep, fabric, flat, creases, gloss, neck: SPECS[sub].collar === 'shirt' || SPECS[sub].collar === 'polo' ? 1 : 0, edge: !isShoe, tile: isShoe ? null : tile, tileScale: 1.4, color: front ? 0xffffff : fabric }, U()),
+        clothMaterial('panel', { map: back || front, normalMap: nB, roughness: rough, specular: spec, lining, deep, fabric, flat, creases, gloss, edge: !isShoe, tile: isShoe ? null : tile, tileScale: 1.4, color: back || front ? 0xffffff : fabric }, U()),
         clothMaterial('fabric', { color: tile ? 0xffffff : fabric, tile, roughness: rough, specular: spec, lining, deep, tileScale: 1.4 }, U()),
         clothMaterial('trim', { color: isShoe ? sole : trim, roughness: isShoe ? 0.8 : Math.min(0.92, rough + 0.03), specular: spec, lining, deep: isShoe ? 0 : deep, grain: 0.6 }, U()),
       ];
