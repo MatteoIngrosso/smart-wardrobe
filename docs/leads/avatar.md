@@ -30,6 +30,16 @@ Two threads share this area and this plan file:
   thread holds code changes until they merge. Then steps 3-5 and the clothes half of 6 go to the clothes thread;
   hair and shadows (step 6) stay with the body thread.
 
+### Asks from the clothes thread (2026-11-21), for roadmap steps 1-2
+
+- Clothes plan: `docs/leads/avatar-clothes.md` (branch claude/project-thread-n5ecwf). Message that thread when each PR merges.
+- Step 1 test wardrobe in `tools/avatar.e2e.mjs` must include: dress shirt, polo, blazer, dress shoes, long wool coat,
+  open zip hoodie (baseline for their first PR).
+- Step 2 split: `SPECS`, subTypeOf use, `clothSolve`, `sleeveTubes`, tuck/`openAt`, `garmentTopology` go to `stage/cloth*.js`;
+  `photoShoe` and shoe shells to `stage/shoes*.js`.
+- Step 1 cleanup removes `bakePiece`'s `cutoutPanels` call in app.js.
+- Later: a `setAccessory` stage call (watch, belt, bag) is theirs; sunglasses and caps touch glasses/hair, agree first.
+
 ## Audit (2026-11-20, main at aae4dbd / PR #88)
 
 Working well
