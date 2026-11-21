@@ -96,3 +96,4 @@ Cross-area ideas to raise with the other leads
 - 2026-11-20: thread started, audit done, plan sent to Matteo. Waiting for go.
 - 2026-11-21: Matteo asked to split the avatar into body and clothes; asked the coordinator for a clothes thread.
 - 2026-11-21: Matteo told the clothes thread to start garment shapes before the split (SPECS, subTypeOf, collar/placket/lapel, shoe shells in avatar-stage.js). Before starting the stage split, check for their open PR and agree who merges first.
+- 2026-11-21: clothes PR #94 merged (SPECS shirt/shortshirt/polo/ziphoodie/blazer/dress, NECK, CLOTH_TYPE, GLOSS + uNeck in clothMaterial, after collarRim: sweptExtra, offCloth, smoothRows, nearestCloth, foldCollar, lapels -> stage/cloth*; shoe tables got "dress" -> stage/shoes*; avatar-config subTypeOf + defaultClose; app.js closeOf returns null for nothing said). Base the split on main after #94.
