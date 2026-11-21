@@ -1852,7 +1852,7 @@ function scoreOutfit(o, cond, occ, t = taste()) {
   // Warmth / layering, shifted by how warm you like to dress (learnt from what you wear)
   const { feels, wet } = cond;
   const coat = coatFor(o, cond, occ);
-  const warmth = layerWarmth(pieces) + (coat?.warmth || 0);
+  const warmth = layerWarmth(heatView(o, pieces, cond, occ)) + (coat?.warmth || 0);
   const want = wantedWarmth(feels) + (occ.id === "gym" ? 0 : t.offset);
   const wOff = occ.id === "gym" ? 0 : Math.abs(warmth - want);
   s -= Math.abs(warmth - want) * 0.7;
@@ -2096,6 +2096,14 @@ function coatFor(pieces, cond, occ) {
   const coats = suggestable().filter((i) => roleOf(i) === "outer" && slotOf(i) !== "gym" && !isBlazer(i) && (i.warmth || 0) >= 4);
   return coats.sort((a, b) => (dressy ? dressOf(b) - dressOf(a) : 0) || (b.warmth || 0) - (a.warmth || 0))[0] || null;
 }
+// Heat and tailoring: on a dressy day (Elegant, or level 4-5 picked by hand) from 22° the blazer is the
+// layer you take off once you're there (Work keeps shirt-only outfits in the heat), so it counts for 40% of its warmth (at least 1): the outfit no
+// longer reads as far too warm, and a lighter blazer still beats a heavier one. One line on the first
+// idea says so, instead of "Too warm" on every card.
+const CARRY_FROM = 22;
+const carriesBlazer = (o, cond, occ) => !!o?.outer && cond.feels >= CARRY_FROM && occ.id !== "gym" && isBlazer(o.outer) && (occ.level ? occ.level >= 4 : occ.id === "event");
+const carried = (p) => ({ ...p, warmth: Math.max(1, Math.round((p.warmth || 2) * 0.4)) });
+const heatView = (o, list, cond, occ) => (carriesBlazer(o, cond, occ) ? list.map((p) => (p === o.outer ? carried(p) : p)) : list);
 // Everything you'd put on for an idea: its clothes, the coat over the blazer and the accessories.
 const allPieces = (o) => [...Object.values(o.pieces), o.coat, ...(o.extras || [])].filter(Boolean);
 
@@ -2130,7 +2138,9 @@ function pickIdeas(pool, n, keep = [], avoid = []) {
   // worse than the best at the right level) waits with the ones off the level, whatever its stars.
   const wBest = Math.min(...cands.filter((c) => !c.blocked && (c.levelOff ?? 0) <= closest).map((c) => c.wOff ?? 0), Infinity);
   const tooFar = (c) => (c.wOff ?? 0) > Math.max(3.5, wBest + 1);
-  const tier = (c) => ((c.levelOff ?? 0) > closest || tooFar(c) ? 2 : c.isBroken && !onlyShoes(c) ? 1 : 0);
+  // Off the level, one step away beats two (a shirt and trousers without the blazer before a T-shirt and
+  // jeans for Elegant on a hot day), even when it repeats a piece of the ideas above.
+  const tier = (c) => ((c.levelOff ?? 0) > closest ? 1 + (c.levelOff - closest) : tooFar(c) ? 2 : c.isBroken && !onlyShoes(c) ? 1 : 0);
   const good = (cands.find((c) => !c.blocked && tier(c) === 0)?.score ?? cands.find((c) => !c.blocked && tier(c) < 2)?.score ?? cands[0]?.score ?? 0) - 3;
   // For variety an outfit is judged without the pull of the stars on its pieces: one that is good on its
   // own and brings other clothes beats a third idea with the same loved shirt.
@@ -2147,7 +2157,7 @@ function pickIdeas(pool, n, keep = [], avoid = []) {
   const only = (id) => { const p = state.items.find((i) => i.id === id); return !p || (kinds[roleOf(p)]?.size || 0) <= 1; };
   const inAll = (c) => { const ideas = [...keep, ...out]; return ideas.length === 2 && clothesOf(c).some((id) => !only(id) && ideas.every((o) => clothesOf(o).includes(id))); };
   const passes = [[differ, good, true, 2], [differ, good, true, 1], [differ, good, false, 1], [differ, good, true], [half, good, true], [differ, good - 3, true], [half, good - 3, true], [differ, good], [half, good], [any, good], [differ, -Infinity], [half, -Infinity], [any, -Infinity]];
-  for (const [allowBlocked, maxTier] of [[false, 0], [true, 0], [false, 1], [true, 1], [true, 2]]) {
+  for (const [allowBlocked, maxTier] of [[false, 0], [true, 0], [false, 1], [true, 1], [true, 2], [true, 3], [true, 4], [true, Infinity]]) {
     for (const [ok, min, newOuter, freshness] of passes) {
       for (const c of cands) {
         if (out.length === n) break;
@@ -2185,7 +2195,7 @@ const ownsDressShoes = () => state.items.some((i) => !i.disliked && !leaving(i) 
 // An idea that still breaks one of the fashion bible's important rules once its headwear and
 // accessories are on (only shown when nothing better is left) says so on its card.
 function withWarn(idea, cond, occ) {
-  const j = Style.ready() ? Style.judge(styleViewsFor([...Object.values(idea.pieces), ...(idea.extras || [])].filter(Boolean), occ), styleCtx(cond, occ, taste())) : null;
+  const j = Style.ready() ? Style.judge(styleViewsFor(heatView(idea.pieces, [...Object.values(idea.pieces), ...(idea.extras || [])].filter(Boolean), cond, occ), occ), styleCtx(cond, occ, taste())) : null;
   // The warmth rule says the temperature the way the screen does (feels like, in your unit).
   const line = (v) => (v.rule.id === "warmth" ? ruleLine(v).replace(/ for -?\d+°C$/, ` for today (feels like ${fmtTemp(cond.feels)})`) : ruleLine(v));
   const shoesOnly = (v) => v.rule.id === "shoe-formality" && /^Sneakers with tailoring/.test(ruleLine(v)) && idea.pieces.shoes && !casualPiece(idea.pieces.shoes) && !ownsDressShoes();
@@ -2218,8 +2228,10 @@ function generateOutfits(n = 3, avoid = []) {
   const picks = pickIdeas(pool, n, keep, avoid);
   state.lastFresh = picks.length; // ideas not in `avoid` (see "New ideas")
   if (picks.length < n) picks.push(...pickIdeas(pool, n - picks.length, [...keep, ...picks])); // small wardrobe: repeats are fine
-  if (!state.anchor) withLoved(pool, picks, keep, avoid);
+  if (!state.anchor) { withLoved(pool, picks, keep, avoid); withShorts(pool, picks, keep, avoid); }
   state.outfits = [...keep, ...picks.map((c) => dressIdea(c, pool, used))];
+  const hot = state.outfits.find((o) => carriesBlazer(o.pieces, pool.cond, pool.occ));
+  if (hot) hot.extrasWhy = [`Hot day (${fmtTemp(pool.cond.feels)}): wear the ${hot.pieces.outer.name} to arrive, take it off when you can`, ...(hot.extrasWhy || [])];
   state.levelGap = state.anchor ? null : levelGap(pool);
   // A piece in all three ideas is the only one of its kind that suits the occasion (see pickIdeas): say so.
   const clothesIn = (o) => Object.entries(o.pieces).filter(([r, p]) => p && r !== "shoes").map(([, p]) => p);
@@ -2255,6 +2267,28 @@ function withLoved(pool, picks, keep, avoid) {
   const swap = picks.findLastIndex((c, i) => (i > 0 || keep.length) && !Object.values(c.pieces).some((p) => p && loved(p)));
   if (swap >= 0) picks[swap] = best;
   else if (picks.length < 3 - keep.length) picks.push(best);
+}
+// Everyday from 23° on a dry day: when you own shorts that suit the day, at least one idea is in shorts,
+// even when loved jeans lead the others (stars outweigh the shorts bonus). The best shorts outfit that
+// breaks no rule, isn't far too warm and isn't far behind takes the place of the last idea, keeping a
+// loved piece that no other idea shows.
+const SHORTS_FROM = 23;
+function withShorts(pool, picks, keep, avoid) {
+  const { occ, cond } = pool;
+  if (occ.id !== "casual" || occ.level || cond.feels < SHORTS_FROM || cond.wet) return;
+  const inShorts = (c) => /shorts/.test(c.pieces.bottom?.category || "");
+  const ideas = [...keep, ...picks];
+  if (!picks.length || ideas.some(inShorts)) return;
+  const top = pool.cands.find((c) => !c.blocked && !c.isBroken)?.score ?? 0;
+  const keys = new Set([...ideas.map((o) => o.key), ...avoid]);
+  const best = pool.cands.find((c) => inShorts(c) && !c.blocked && !c.isBroken && !keys.has(c.key) && (c.wOff ?? 0) <= 3.5 && c.score >= top - 6);
+  if (!best) return;
+  const ids = (c) => Object.values(c.pieces).filter(Boolean).map((p) => p.id);
+  const lovedOnlyIn = (i) => Object.values(picks[i].pieces).some((p) => p && (starsOf(p) || 0) >= 4 && !ids(best).includes(p.id) && !ideas.some((o, k) => o !== picks[i] && ids(o).includes(p.id)));
+  const from = keep.length ? 0 : Math.min(1, picks.length - 1);
+  let at = -1;
+  for (let i = picks.length - 1; i >= from; i--) if (!lovedOnlyIn(i)) { at = i; break; }
+  picks[at >= 0 ? at : picks.length - 1] = best;
 }
 // The outfit you planned for today (in the Calendar, or last night) comes first, while all of it is
 // out of the wash; then one planned for an event today. One you wore or turned down doesn't come back.
