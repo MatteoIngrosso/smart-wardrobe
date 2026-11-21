@@ -458,5 +458,30 @@ class Dataset(unittest.TestCase):
         self.assertGreater(share, 0.5)
 
 
+
+class ClheExport(unittest.TestCase):
+    def test_export_wardrobe(self):
+        import base64, importlib.util
+        spec = importlib.util.spec_from_file_location("export_wardrobe", Path(__file__).parent.parent / "clhe" / "export_wardrobe.py")
+        ex = importlib.util.module_from_spec(spec)
+        spec.loader.exec_module(ex)
+        webp = "data:application/octet-stream;base64," + base64.b64encode(b"RIFF\x00\x00\x00\x00WEBPVP8 ").decode()
+        backup = {"items": [
+            {"id": "a", "name": "White tee", "category": "tshirt", "colors": ["white"], "styles": ["casual"], "rating": 5, "photos": [webp]},
+            {"id": "b", "name": "Black jeans", "category": "jeans", "colors": "['black']", "styles": [], "photos": []},
+            {"id": "c", "name": "Socks", "category": "socks", "photos": []},
+        ], "log": [{"itemIds": ["a", "b"], "date": "2026-11-01"}, {"kind": "skip", "itemIds": ["a", "b"]}, {"kind": "rate", "stars": 2, "itemIds": ["a", "b"]}]}
+        with tempfile.TemporaryDirectory() as tmp, redirect_stdout(io.StringIO()):
+            Path(tmp, "b.json").write_text(json.dumps(backup))
+            ex.main(Path(tmp, "b.json"), Path(tmp, "out"))
+            items = json.loads(Path(tmp, "out", "items.json").read_text())
+            worn = json.loads(Path(tmp, "out", "worn.json").read_text())
+            self.assertEqual([i["id"] for i in items], ["a", "b"])
+            self.assertEqual(items[0]["image"], "img/a.webp")
+            self.assertTrue(Path(tmp, "out", "img", "a.webp").exists())
+            self.assertEqual(items[1]["colours"], ["black"])
+            self.assertEqual(items[0]["stars"], 5)
+            self.assertEqual(worn, [{"date": "2026-11-01", "kind": "wear", "items": ["a", "b"]}])
+
 if __name__ == "__main__":
     unittest.main()
