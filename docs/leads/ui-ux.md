@@ -50,3 +50,4 @@ Now lives in `docs/leads/CONTRACTS.md` (UI/UX section; this lead owns the file).
 
 - 2026-11-20: thread started, audit done, plan proposed. Waiting for go.
 - 2026-11-20: Discover lead holds big app.js edits until the split merges. When it merges, message the Discover thread with where Discover lives and the screen API. Its code today: app.js ~6395-6740 (shop, Must-Buy), ~6737-7085 (Events), ~7882-8190 (For you audit), ~8362-8900 (Try a piece, Shop trip, New look, photos). Put those in `screens/discover.js` in the split.
+- 2026-11-21: Stylist lead is building the Style Trainer (swipe cards, `style-trainer.js`, `open(container)`). Agreed placement and API in CONTRACTS.md (screen `trainer`, fullscreen, Taste button on Today header). Until the split lands, it's opened from a Today header button in app.js.

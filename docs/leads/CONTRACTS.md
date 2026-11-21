@@ -20,7 +20,16 @@ Until then, other leads should avoid large edits to `app.js` so the split lands 
 ### Screens
 - Screens register with the shell: `registerScreen(id, { title, render(main), dock?: { icon, label, order } })`.
 - Only the UI lead changes the dock (which tabs exist and their order) and the router (`go()` / `render()`).
-- Screen ids today: `today`, `plan` (Calendar), `wardrobe`, `add`, `shop` (Discover), `settings`. Planned: `mirror`.
+- Screen ids today: `today`, `plan` (Calendar), `wardrobe`, `add`, `shop` (Discover), `settings`. Planned: `mirror`, `trainer`.
+- Full-screen screens with no dock tab register with `{ fullscreen: true }`: the shell hides the dock, adds a close (X, top left)
+  and returns to the screen that opened it. Open them with `go(id)` or a `data-go="<id>"` button.
+
+### Style Trainer (Stylist owns the module, UI owns the placement)
+- `style-trainer.js` exports `open(container)`; registered as screen `trainer`, `{ fullscreen: true }`.
+- Entry points: a "Taste" button in the Today header next to "New ideas", and a row in Settings > Look. No dock tab.
+- The card area sets `touch-action: none` itself (the app default is `pan-x pan-y`). Swipes always have tap buttons
+  too (Pass, Almost, Like, 56 px), for the kiosk and for people who don't swipe.
+- Card: garments on paper tiles, one outfit per card, sized to fit 1024x1366 and 800x1280 without scrolling.
 
 ### Slots
 - Screens that show another lead's work expose mount points. The owning lead fills the slot;
