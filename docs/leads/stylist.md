@@ -80,6 +80,7 @@ Matteo's PC folder `C:\Users\matte\Documents\Wardrobe2.0` (approved). When it's 
 ## Log
 
 - 2026-11-20: thread started, audit done, plan written. No PRs yet.
+- 2026-11-21: Step 8 prepared: fashion-model/clhe/README.md runbook + export_wardrobe.py (tested on the 11-16 backup: 86 pieces, 17 worn/loved outfits). Training, feature extraction and pair scores need Matteo's PC on (Remote Control). Yardstick: his worn outfits vs swaps, plus POG test; the bible is ~58% on stylists' outfits.
 - 2026-11-21: Step 6 done: wear-now questions drop weather-ruled-out pieces (28°: 10.6k → 9.1k chars, -14%; 15°: same), prompt reordered stable-first for Gemini implicit cache, Settings shows cached input. Not done: flash-lite for follow-ups (rewriting outfits needs the full model; free daily limit isn't the bottleneck).
 - 2026-11-21: Step 4 done: WEAR_BUDGET 5★ top 2.5→2, bottom 3→2.5, outer 4→2.5 (4★ 1.5/2/2). Zara jacket top pick 10→7 of 21 days, baggy jeans 8→6; loved pieces still ~7x the rest. audit-sim thresholds tightened (≤7, ≤8).
 - 2026-11-21: Step 7 done: 224 FashionStylist men's outfits taught to the bible (weight 0.35, positives only: swapped-piece negatives shrank every weight to ~0, dropped). Benchmark `python -m fashion bench` on 56 held-out outfits: bible 58%, rulebook 57%, 50% = chance. The rules catch mistakes, not great combinations: the bar CLHE must beat. audit-sim 25/25.
