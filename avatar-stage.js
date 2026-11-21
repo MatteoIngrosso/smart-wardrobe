@@ -743,7 +743,7 @@ const SPECS = {
   // (close: how it is worn when nothing says, see avatar-config.js defaultClose; zipTop: the V a zip
   // done up leaves at the neck)
   ziphoodie: { slot: 'layer', sleeve: 0.985, hem: 0.58, neck: 'hood', open: 0.24, zip: 0.8, zipTop: 0.05, close: 2, taper: 0.18, loose: 0.08, sleeveLoose: 0.09, thick: 0.04, rib: 0.6, cuff: 0.11, hood: true, loft: 0.15, loftTop: [5.4, 4.6], blouse: 0.05, ribPull: 0.75 },
-  trackjacket: { slot: 'layer', sleeve: 0.985, hem: 0.62, neck: 'crew', taper: 0.2, loose: 0.05, sleeveLoose: 0.06, thick: 0.035, rib: 0.35, cuff: 0.08, collar: 'stand', ribPull: 0.6 },
+  trackjacket: { slot: 'layer', sleeve: 0.985, hem: 0.62, neck: 'crew', open: 0.22, zip: 0.7, zipTop: 0.04, close: 2, taper: 0.2, loose: 0.05, sleeveLoose: 0.06, thick: 0.035, rib: 0.35, cuff: 0.08, collar: 'stand', ribPull: 0.6 },
   // MA-1 blouson: a short body that billows just above a tight rib waistband (at the belt line), a
   // flat chest, a zip front whose edges hang straight down (zip: the gap between them), rib cuffs
   bomber: { slot: 'jacket', sleeve: 0.955, hem: 1.8, neck: 'jacket', open: 0.24, zip: 0.7, taper: 0.2, loose: 0.06, sleeveLoose: 0.14, sleeveTap: [0.85, 0.8], sleeveRamp: 0.6, thick: 0.035, rib: 0.55, cuff: 0.1, collar: 'stand', loft: 0.2, loftTop: [4.9, 4.3], blouse: 0.16, ribPull: 0.85, rolls: 0.045, cuffRolls: 0.03 },
@@ -1147,6 +1147,8 @@ const BUTTON_Y = 3.05;
 const NECK = { crew: [6.24, 6.52, 6.66], jacket: [6.12, 6.43, 6.6], hood: [6.2, 6.5, 6.66], tank: [5.95, 6.42, 6.5], shirt: [6.3, 6.55, 6.68], polo: [6.26, 6.53, 6.67] };
 const lin = (a, b, x) => clamp((x - a) / (b - a), 0, 1);
 function openAt(spec, y, close = 0) {
+  // a zip pulled half way: done up to the chest, the edges straight above it
+  if (close === 1 && spec.zip) return -0.03 + (spec.open + 0.03) * sstep(4.5, 5.0, y);
   if (close >= 2) return -0.03 + (spec.zip ? spec.zipTop ?? 0.2 : 0.42) * sstep(5.0, 6.35, y);
   if (close === 1) return y >= BUTTON_Y ? -0.03 + 0.8 * lin(BUTTON_Y, 6.3, y) ** 0.85 : -0.03 + 0.45 * sstep(BUTTON_Y - 0.25, 0.6, y);
   return spec.zip ? spec.open : spec.open + 0.22 * sstep(5.5, 6.4, y) - 0.05 * sstep(4.5, 2.5, y);
@@ -1173,9 +1175,12 @@ function sizeOf(asset, sub, name) {
   }
   const z = topSize(asset, { hem: topHem(spec, sub, base), fit, long: base === 'long' });
   // how its front is worn: open (the cut's own), buttoned or closed up (asset.wear.close, see openAt)
+  // and how it fastens when that isn't the cut's own (asset.fasten: a zip jacket's edges hang straight,
+  // a snap bomber opens into a V): "|z=1" / "|z=0", see specFor
   // (nothing said: the cut's own way, a blazer buttoned and a zip hoodie zipped; see defaultClose)
   const close = spec.open ? clamp(Math.round(+(asset.wear?.close ?? spec.close ?? 0) || 0), 0, 2) : 0;
-  return { ...z, base, close, key: `${base}${z.changed ? `|h=${z.hem}` : ''}${close ? `|c=${close}` : ''}`, hem: z.changed ? z.hem : topHem(spec, sub, base) };
+  const zip = spec.open && asset.fasten === 'zip' && !spec.zip ? 1 : spec.open && asset.fasten === 'buttons' && spec.zip && sub !== 'ziphoodie' ? 0 : null;
+  return { ...z, base, close, key: `${base}${z.changed ? `|h=${z.hem}` : ''}${close ? `|c=${close}` : ''}${zip != null ? `|z=${zip}` : ''}`, hem: z.changed ? z.hem : topHem(spec, sub, base) };
 }
 /**
  * Where a top's front panel (frontChestUV) lands on the body, so something can be painted on it in
@@ -1190,6 +1195,13 @@ export function panelFrame(asset, name) {
   const neck = (NECK[spec.neck] || NECK.crew)[0];
   return { sub, top: 6.45, hem: z.hem, width: z.width || 4.48, neck, waist: REST.waist };
 }
+// The cut as this piece fastens (parseLength's z): a zip front (straight edges, a stand collar instead
+// of a lapel's fold) or a buttoned one (the opening's V).
+function specFor(spec, L) {
+  if (L.z == null || !spec.open) return spec;
+  if (L.z) return { ...spec, zip: 0.6, open: 0.22, zipTop: 0.08, collar: spec.collar === 'fold' ? 'stand' : spec.collar };
+  return { ...spec, zip: 0, open: Math.max(spec.open, 0.4) };
+}
 // "full|h=0.74" cut at 1.2 → "full@1.20|h=0.74"
 const cutKey = (key, tuck) => { if (!tuck) return key; const i = key.indexOf('|'); return i < 0 ? `${key}@${tuck}` : `${key.slice(0, i)}@${tuck}${key.slice(i)}`; };
 
@@ -1197,7 +1209,7 @@ const G_FRONT = 0, G_BACK = 1, G_FABRIC = 2, G_TRIM = 3;
 
 // Build (once per sub type and length) the patch of a garment.
 function garmentTopology(D, S, sub, length) {
-  const spec = SPECS[sub];
+  const spec = specFor(SPECS[sub], parseLength(length));
   const F = garmentFields(D, S, spec, sub, length);
   const names = Object.keys(F).filter((k) => !k.startsWith('_'));
   const fields = names.map((k) => F[k]);
@@ -2224,10 +2236,10 @@ class GarmentMesh {
     this.name = name || prepared.asset.name || '';
     this.fitKey = fitOf(prepared.asset, this.name);
     this.sub = SPECS[prepared.sub].slot === 'shoes' ? shoeShell(prepared.asset, this.name, prepared.sub) : prepared.sub;
-    this.spec = SPECS[this.sub];
     this.size = prepared.size || { key: prepared.length || 'full' };
     this.patch = stage.topology(this.sub, cutKey(this.size.key, tuck));
     const p = this.patch;
+    this.spec = p.spec || SPECS[this.sub]; // (as it fastens: see specFor)
     // render vertices: one per (welded vertex, group); bands per boundary edge (6 vertices)
     const key = new Map(), rv = [], rg = [], idxByGroup = [[], [], [], []];
     const isShoe = this.spec.slot === 'shoes'; // shoes: no shell from the body, the photo shoes below

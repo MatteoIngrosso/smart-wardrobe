@@ -4065,6 +4065,14 @@ const MIRROR_ANGLES = [[0, "Front"], [90, "Right side"], [180, "Back"], [270, "L
 // Scale and Vertical offset: how one piece sits on the 3D mirror (longer or shorter, higher or lower),
 // kept on the piece as cutoutMeta (avatar-config.js), so every device shows it the same. Not shoes.
 const cutOffText = (v) => (v === 0 ? "As measured" : `${v > 0 ? "+" : "−"}${Math.abs(v)} cm`);
+// How its front fastens (zip, buttons, nothing): read from its name and kind, or set here. The mirror and
+// "How you wore it" use it (Open / Half-zipped / Zipped up, or Open / Buttoned).
+function fastenField(i) {
+  // (jackets, coats, zip hoodies; a hoodie or track top too, which a zip makes a zip hoodie on the mirror)
+  if (!Avatar.OPENS_ON_MIRROR.includes(Avatar.subTypeOf(i)) && !["hoodie", "gym-hoodie", "track-jacket", "overshirt"].includes(i.category)) return "";
+  const now = Avatar.fasteningOf(i);
+  return `<div class="field" style="margin-bottom:14px"><label>Front fastens with</label><div class="chips">${Avatar.FASTENINGS.map(([v, l]) => `<button class="chip" aria-pressed="${now === v}" data-setfasten="${i.id}:${v}">${l}</button>`).join("")}</div>${i.fastening ? "" : `<span class="muted small">Guessed from its name. Tap to correct it.</span>`}</div>`;
+}
 function mirrorFitField(i) {
   const sub = Avatar.subTypeOf(i), lb = mirrorMode() === "lookbook", slot = stageSlotOf(i);
   // the avatar: clothes but not shoes; the Lookbook: anything with a place on it
@@ -4169,7 +4177,7 @@ const bakedAsset = (item) => {
   return mirror.baker?.withFit ? mirror.baker.withFit(a.asset, item) : a.asset; // (its fit, Scale and offset as they are now)
 };
 // What changes how a worn piece sits without baking it again: put on again when it changes.
-const sitKey = (item) => `${item.category}|${item.fit || ""}|${item.cutoutMeta?.scale ?? 1}|${item.cutoutMeta?.offsetY ?? 0}`;
+const sitKey = (item) => `${item.category}|${item.fit || ""}|${item.fastening || ""}|${item.cutoutMeta?.scale ?? 1}|${item.cutoutMeta?.offsetY ?? 0}`;
 // Bake a piece (the first time only; then it comes from IndexedDB) and get it ready on the stage.
 function bakePiece(item) {
   if (bakedAsset(item)) return Promise.resolve(bakedAsset(item));
@@ -4235,11 +4243,11 @@ function wearNow(o) {
   return out;
 }
 const COAT_LIKE = /coat|puffer|rain|zip|track/;
-// the mirror's shells whose front can be worn open, buttoned or done up (a zip: open or done up)
-const OPENS_ON_MIRROR = ["jacket_open", "blazer", "bomber", "ziphoodie"];
+const OPENS_ON_MIRROR = Avatar.OPENS_ON_MIRROR;
 // 0 open, 1 buttoned, 2 closed up (avatar-stage.js openAt): a blazer "closed up" is buttoned.
 // (null: nothing said, so the piece's own way: see Avatar.defaultClose)
-const closeOf = (item, st) => (st?.close === "buttoned" ? 1 : st?.close === "closed" ? (COAT_LIKE.test(item.category) ? 2 : 1) : st?.close === "open" ? 0 : null);
+// (a zip: "buttoned" is half-zipped, "closed" zipped right up)
+const closeOf = (item, st) => (st?.close === "buttoned" ? 1 : st?.close === "closed" ? (COAT_LIKE.test(item.category) || Avatar.fasteningOf(item) === "zip" ? 2 : 1) : st?.close === "open" ? 0 : null);
 // The top next to the skin tucked in: as the fit check (or the mirror) says, else Tuck base top.
 function tuckNow(o, wear = wearNow(o)) {
   const t = o?.pieces?.base && wear[o.pieces.base.id]?.tuck;
@@ -4252,6 +4260,8 @@ function styledAsset(w, asset, wear, o) {
   let a = asset, key = "";
   const close = closeOf(w.item, wear[w.item.id]);
   if (close != null) { a = { ...a, wear: { close } }; key += `|c${close}`; }
+  // how its front fastens (a zip's edges hang straight, buttons open into a V)
+  if (OPENS_ON_MIRROR.includes(Avatar.subTypeOf(w.item))) { const f = Avatar.fasteningOf(w.item); a = { ...a, fasten: f }; key += `|f${f}`; }
   const tie = w.role === "base" && tieOf(o);
   if (tie) { const t = tiedAsset(a, w.item, tie); if (t) { a = t; key += `|tie:${tie.id}`; } }
   return { asset: a, key };
@@ -4304,7 +4314,7 @@ async function tieColour(tie) {
 function cycleClose(id) {
   const o = mirrorIdea(), it = o && allPieces(o).find((p) => p.id === id);
   if (!it) return;
-  const ways = Avatar.subTypeOf(it) === "ziphoodie" ? ["open", "closed"] : COAT_LIKE.test(it.category) ? ["open", "buttoned", "closed"] : ["open", "buttoned"];
+  const ways = Avatar.closeWays(it).length ? Avatar.closeWays(it) : ["open", "buttoned"];
   const cur = wearNow(o)[id]?.close || Avatar.defaultClose(it), next = ways[(ways.indexOf(cur) + 1) % ways.length];
   const hand = (mirror.wearHand[o.key] ||= {});
   hand[id] = { ...hand[id], close: next };
@@ -4705,8 +4715,9 @@ function mirrorHTML() {
     if (lb) return "";
     const st = wear[w.item.id], from = st && !st.hand && st.from ? ` <span title="As in your fit check">(fit check, ${esc(fmtDay(st.from))})</span>` : "";
     if (["coat", "outer", "mid"].includes(w.role) && OPENS_ON_MIRROR.includes(Avatar.subTypeOf(w.item))) {
-      const c = st?.close === "closed" && !COAT_LIKE.test(w.item.category) ? "buttoned" : st?.close || Avatar.defaultClose(w.item);
-      return ` · <button class="wear-style" data-mclose="${esc(w.item.id)}" aria-label="How the ${esc(w.item.name)} is worn: ${esc(Brain.wearWord("close", c))}. Tap to change.">${esc(Brain.wearWord("close", c))}</button>${from}`;
+      const ways = Avatar.closeWays(w.item), c0 = st?.close || Avatar.defaultClose(w.item), c = ways.includes(c0) ? c0 : c0 === "closed" ? "buttoned" : "open";
+      const word = Avatar.closeWord(w.item, c);
+      return ` · <button class="wear-style" data-mclose="${esc(w.item.id)}" aria-label="How the ${esc(w.item.name)} is worn: ${esc(word)}. Tap to change.">${esc(word)}</button>${from}`;
     }
     const bits = ["tuck", "sleeves"].map((f) => st?.[f] && Brain.wearWord(f, st[f])).filter(Boolean);
     return bits.length ? ` · ${esc(bits.join(", "))}${from}` : "";
@@ -5019,6 +5030,7 @@ function openItem(id, showOriginal = false) {
     </div>
     ${fitsFor(i).length ? `<div class="field" style="margin-bottom:14px"><label>Fit</label><div class="chips">${fitsFor(i).map((f) => `<button class="chip" aria-pressed="${i.fit === f}" data-setfit="${i.id}:${f}">${FITS[f].label}</button>`).join("")}</div></div>` : ""}
     ${toneFields(i)}
+    ${fastenField(i)}
     ${mirrorFitField(i)}
     ${EVERYDAY_AS[i.category] ? `<div class="field" style="margin-bottom:14px"><label>Everyday too</label><div class="row"><button class="chip" data-everyday="${i.id}" aria-pressed="${!!i.everyday}">${i.everyday ? "On" : "Off"}</button><span class="muted small">${i.everyday ? "Also in your Everyday outfit ideas, not just at the gym." : "Only at the gym, unless everything else is in the wash. Turn it on to wear it every day too."}</span></div></div>` : ""}
     ${suitField(i)}
@@ -7665,7 +7677,7 @@ function fitOutfitData(outfit) {
 // The pieces of an outfit (or a saved check) that have a way of being worn, top to bottom.
 function wearPieces(slots, coat, byId = itemMap()) {
   return [["coat", coat], ...["outer", "mid", "base", "bottom"].map((r) => [r, slots?.[r]])]
-    .map(([role, id]) => { const p = id && byId.get(id); return p && { id, role, name: p.name, category: p.category, fields: Brain.wearFields(role, p.category) }; })
+    .map(([role, id]) => { const p = id && byId.get(id); return p && { id, role, name: p.name, category: p.category, fastening: Avatar.fasteningOf(p), fields: Brain.wearFields(role, p.category).filter((f) => f !== "close" || Avatar.fasteningOf(p) !== "none" || role === "coat" || role === "outer") }; })
     .filter((p) => p?.fields.length);
 }
 // A JPEG for the AI (Gemini takes JPEG here), 768 px on the long side: buttons and a tucked hem still show.
@@ -7684,10 +7696,13 @@ async function readWear(photo, outfit) {
   return Brain.parseWear(text, req.refs);
 }
 // "How you wore it": per piece, a chip per way (tap the lit one again to clear it).
+// (a coat worn as the coat can always be closed up; a zip: open, half-zipped, zipped up)
+const closeWaysOf = (p) => { const w = Avatar.closeWays(p); return p.role === "coat" && w.length && !w.includes("closed") ? [...w, "closed"] : w.length ? w : ["open", "buttoned"]; };
 function wearFormHTML(pieces, wear, key) {
   if (!pieces.length) return "";
   return `<div class="fc-wear stack" style="gap:6px">${pieces.map((p) => `<div class="fc-wear-row"><span class="small"><b>${esc(p.name)}</b></span><div class="chips">${p.fields.flatMap((f) => Brain.WEAR[f].values
-    .filter(([v]) => f !== "close" || v !== "closed" || p.role === "coat" || /coat|puffer|rain|zip|track/.test(p.category))
+    .filter(([v]) => f !== "close" || closeWaysOf(p).includes(v))
+    .map(([v, l]) => [v, f === "close" ? Avatar.closeWord(p, v) : l])
     .map(([v, l]) => `<button class="chip small" aria-pressed="${wear?.[p.id]?.[f] === v}" data-fcstyle="${esc(key)}|${esc(p.id)}|${f}|${v}">${esc(l)}</button>`)).join("")}</div></div>`).join("")}</div>`;
 }
 function wearStatusHTML(d) {
@@ -10869,6 +10884,16 @@ async function onTap(e) {
     state.outfits = [];
     openItem(it.id);
     return;
+  }
+  if (ds.setfasten) {
+    const [id, f] = ds.setfasten.split(":");
+    const it = state.items.find((i) => i.id === id);
+    if (!it) return;
+    it.fastening = f;
+    await store.put("items", it);
+    openItem(it.id);
+    dressStage();
+    return render();
   }
   if (ds.setfit) {
     const [id, fit] = ds.setfit.split(":");

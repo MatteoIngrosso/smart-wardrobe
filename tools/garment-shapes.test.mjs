@@ -5,7 +5,7 @@ import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
 import { join, dirname } from "node:path";
 import { fileURLToPath } from "node:url";
-import { subTypeOf, defaultClose } from "../avatar-config.js";
+import { subTypeOf, defaultClose, fasteningOf, closeWord, closeWays } from "../avatar-config.js";
 
 const ROOT = join(dirname(fileURLToPath(import.meta.url)), "..");
 const src = (f) => readFileSync(join(ROOT, f), "utf8");
@@ -38,6 +38,29 @@ test("how a piece that opens is worn when nothing says", () => {
   assert.equal(defaultClose({ category: "zip-hoodie", name: "Zip hoodie" }), "closed");
   assert.equal(defaultClose({ category: "jacket", name: "Black Zara jacket" }), "open");
   assert.equal(defaultClose({ category: "coat", name: "Navy wool coat" }), "open");
+});
+
+test("zips and buttons: read from the name and kind, or set on the piece, and the words follow", () => {
+  const f = (category, name, fastening) => fasteningOf({ category, name, fastening });
+  assert.equal(f("jacket", "Black Zara jacket"), "zip");
+  assert.equal(f("jacket", "Levi's denim jacket"), "buttons");
+  assert.equal(f("jacket", "Tommy Jeans bomber"), "zip");
+  assert.equal(f("rain", "Black Rain/wind jacket"), "zip");
+  assert.equal(f("puffer", "Black puffer jacket"), "zip");
+  assert.equal(f("coat", "Navy wool coat"), "buttons");
+  assert.equal(f("overshirt", "Dark blue single-breasted blazer"), "buttons");
+  assert.equal(f("zip-hoodie", "Burgundy zip hoodie"), "zip");
+  assert.equal(f("hoodie", "Stüssy hoodie"), "none");
+  assert.equal(f("hoodie", "Black zip-up hoodie"), "zip");
+  assert.equal(f("coat", "Navy wool coat", "zip"), "zip", "set by hand wins");
+  // a hoodie set to zip is drawn as a zip hoodie; a zip hoodie set to nothing as a pullover
+  assert.equal(subTypeOf({ category: "hoodie", name: "Stüssy hoodie", fastening: "zip" }), "ziphoodie");
+  assert.equal(subTypeOf({ category: "zip-hoodie", name: "x", fastening: "none" }), "hoodie");
+  const zara = { category: "jacket", name: "Black Zara jacket" }, coat = { category: "coat", name: "Navy wool coat" }, blazer = { category: "overshirt", name: "Navy blazer" };
+  assert.deepEqual(closeWays(zara).map((v) => closeWord(zara, v)), ["Open", "Half-zipped", "Zipped up"]);
+  assert.deepEqual(closeWays(coat).map((v) => closeWord(coat, v)), ["Open", "Buttoned", "Closed up"]);
+  assert.deepEqual(closeWays(blazer).map((v) => closeWord(blazer, v)), ["Open", "Buttoned"]);
+  assert.deepEqual(closeWays({ category: "hoodie", name: "Stüssy hoodie" }), []);
 });
 
 test("the baker and the stage know every shape", () => {
