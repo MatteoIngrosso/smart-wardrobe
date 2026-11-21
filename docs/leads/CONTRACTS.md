@@ -24,7 +24,7 @@ Until then, other leads should avoid large edits to `app.js` so the split lands 
 - Full-screen screens with no dock tab register with `{ fullscreen: true }`: the shell hides the dock, adds a close (X, top left)
   and returns to the screen that opened it. Open them with `go(id)` or a `data-go="<id>"` button.
 
-### Style Trainer (Stylist owns the module, UI owns the placement)
+### Style Trainer (parked 2026-11-21, spec only; UI owns the screen, Stylist the learning)
 - `style-trainer.js` exports `open(container)`; registered as screen `trainer`, `{ fullscreen: true }`.
 - Entry points: a "Taste" button in the Today header next to "New ideas", and a row in Settings > Look. No dock tab.
 - The card area sets `touch-action: none` itself (the app default is `pan-x pan-y`). Swipes always have tap buttons
