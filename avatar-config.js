@@ -71,8 +71,8 @@ export function subTypeOf(item) {
   if (["tshirt", "gym-top", "sports-bra"].includes(c)) return "tee";
   // a blazer is a blazer whatever it was saved as (his navy blazer is an "overshirt")
   if (["jacket", "coat", "overshirt", "rain"].includes(c) && BLAZER.test(name)) return "blazer";
-  if (["zip-hoodie"].includes(c)) return "ziphoodie";
-  if (["hoodie", "gym-hoodie"].includes(c)) return "hoodie";
+  // a hoodie that zips (its kind, its name, or set on the piece) can be worn open; one set to "nothing" can't
+  if (["zip-hoodie", "hoodie", "gym-hoodie"].includes(c)) return (c === "zip-hoodie" || item.fastening === "zip" || /\bzip/.test(name)) && item.fastening !== "none" && item.fastening !== "buttons" ? "ziphoodie" : "hoodie";
   if (c === "track-jacket") return "trackjacket";
   if (["sweatshirt", "sweater", "overshirt"].includes(c)) return "sweater";
   if (c === "puffer" || (["jacket", "rain", "coat"].includes(c) && /\b(puffer|down|padded|quilted)\b/.test(name))) return "puffer";
@@ -87,10 +87,41 @@ export function subTypeOf(item) {
   if (["sneakers", "training-shoes"].includes(c)) return "sneakers";
   return null; // not drawn on the mirror (accessories, headwear, underwear)
 }
+// How a piece's front fastens: "zip", "buttons" (snaps and toggles count as buttons) or "none" (a
+// pullover). Set by hand on the piece (item.fastening), else read from its name, else its kind.
+export const FASTENINGS = [["zip", "Zip"], ["buttons", "Buttons"], ["none", "Nothing (pullover)"]];
+const ZIP_WORDS = /\b(zip|zips|zipped|zipper|zip-?up|full[- ]zip|half[- ]zip|quarter[- ]zip|1\/4[- ]zip|track ?(jacket|top)|windbreaker|wind ?jacket|rain ?jacket|shell|softshell|fleece jacket|puffer|down jacket|bomber|harrington|biker|moto|leather jacket|anorak|gilet|parka)\b/;
+const BUTTON_WORDS = /\b(buttons?|buttoned|button[- ]down|single[- ]breasted|double[- ]breasted|blazers?|suit|sport ?coat|cardigan|trucker|denim jacket|jean jacket|pea ?coat|overcoat|trench|wool coat|chore|shacket|overshirt|snaps?|press[- ]studs?|toggles?|duffle)\b/;
+const OPENS = new Set(["jacket", "coat", "rain", "puffer", "overshirt", "track-jacket", "zip-hoodie", "shirt", "polo"]);
+export function fasteningOf(item) {
+  if (FASTENINGS.some(([v]) => v === item?.fastening)) return item.fastening;
+  const c = item?.category || "", n = (item?.name || "").toLowerCase();
+  if (["hoodie", "gym-hoodie"].includes(c)) return /\bzip/.test(n) ? "zip" : "none";
+  if (!OPENS.has(c) && !(c === "sweater" && /cardigan/.test(n))) return "none";
+  if (BUTTON_WORDS.test(n) && !/\bzip/.test(n)) return "buttons";
+  if (ZIP_WORDS.test(n)) return "zip";
+  if (["zip-hoodie", "track-jacket", "puffer", "rain"].includes(c)) return "zip";
+  if (c === "jacket") return "zip"; // (most casual jackets zip; a blazer or denim jacket says so in its name)
+  return "buttons"; // coats, overshirts, shirts, polos, cardigans
+}
+// The words for how its front is worn (stylist-brain.js WEAR.close values), by how it fastens.
+const CLOSE_WORDS = { zip: { open: "Open", buttoned: "Half-zipped", closed: "Zipped up" }, buttons: { open: "Open", buttoned: "Buttoned", closed: "Closed up" } };
+export const closeWord = (item, v) => (CLOSE_WORDS[fasteningOf(item)] || CLOSE_WORDS.buttons)[v] || "";
+// The ways it can be worn: a zip open, half-zipped or zipped up; buttons open or buttoned (a coat also
+// closed up to the collar); a pullover none.
+export function closeWays(item) {
+  const f = fasteningOf(item);
+  if (f === "none") return [];
+  if (f === "zip") return ["open", "buttoned", "closed"];
+  return /coat|puffer|rain/.test(item?.category || "") ? ["open", "buttoned", "closed"] : ["open", "buttoned"];
+}
+
 // How a piece that opens is worn when nothing (a fit check, a tap on the mirror) says otherwise:
 // a blazer buttoned, a zip hoodie zipped up, anything else open. Words as in stylist-brain.js WEAR.
-const CLOSE_DEFAULT = { blazer: "buttoned", ziphoodie: "closed" };
+const CLOSE_DEFAULT = { blazer: "buttoned", ziphoodie: "closed", trackjacket: "closed" };
 export const defaultClose = (item) => CLOSE_DEFAULT[subTypeOf(item)] || "open";
+// The mirror's shells whose front can be worn open, buttoned or done up.
+export const OPENS_ON_MIRROR = ["jacket_open", "blazer", "bomber", "ziphoodie", "trackjacket"];
 export const lengthOf = (item) => (["shorts", "gym-shorts"].includes(item?.category) ? "short"
   : item?.category === "coat" ? "long" : item?.fit === "cropped" ? "cropped" : "full");
 
