@@ -21,7 +21,7 @@ Two threads share this area and this plan file:
 - **Avatar body** (thread "Lead the 3D Avatar"): body shape and sliders, face and "From a photo", hair, beard, glasses, pose,
   lights and shadows, the shared 3D test (`tools/avatar.e2e.mjs`) and the stage file split. Files: `avatar-config.js`
   (body part), `face-photo.js`, `avatar/`, `tools/build-avatar.py`, `tools/build-hair.py`, `stage/body*`, `stage/hair*`, `stage/face*`.
-- **Avatar clothes** (new thread): `garment-baker.js`, cloth drape, shoes, coats, open/buttoned/tuck, tie, accessories on
+- **Avatar clothes** (thread "Lead the Avatar clothes"): `garment-baker.js`, cloth drape, shoes, coats, open/buttoned/tuck, tie, accessories on
   the body, photo sleeves, the Lookbook, a Discover "try it on". Files: `garment-baker.js`, `lookbook-*.js`,
   `avatar-config.js` (garment part), `stage/cloth*`, `stage/shoes*`.
 - Shared: the `createStage` API and the garment asset shape below. A change to either goes in this file and is
