@@ -74,4 +74,5 @@ The Lookbook stays as it is (bug fixes only) unless Matteo asks for more.
 
 ## Log
 
-- 2026-11-21: thread started. Audit done against his wardrobe, plan sent to Matteo. Waiting for go and for body PRs 1-2.
+- 2026-11-21: thread started. Audit done against his wardrobe, plan sent to Matteo.
+- 2026-11-21: Matteo: "now lets just work in the pice shape, and 3d resoult of them" (go, before the body split). Step 1 built: shirt/shortshirt/polo/blazer/ziphoodie/dress shells, folded collars and lapels (`foldCollar`, `lapels`, `sweptExtra` in avatar-stage.js), blazer buttoned and zip hoodie zipped by default (`defaultClose`), glossy dress shoes (GLOSS). Renders: project files 3d-mirror/shapes-before-after.png. Still open: hanger bar and label left in the blazer photo, slim trousers drawn wide.
