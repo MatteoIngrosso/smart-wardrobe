@@ -94,6 +94,11 @@ Status: written 2026-11-23. Plan: `docs/leads/stylist.md`. The engine still live
   only learns from these.
 - Shared kv: `days` (Calendar plans, ids only via `makeEntry`/`entryIds` in `calendar.js`), `plan`, `brain`
   (StylistBrain summaries), `calendar` (iCal links + event occasions).
+- `wants` (Must-Buy) belongs to Discover: only Discover writes it (`answerWant`). The Stylist reads Must-Buy
+  and recent No's for its prompt, and a buy idea from the stylist goes through Discover's `verdictHTML` / `data-yes`.
+  Product searches (SerpApi, 250 a month shared) are asked of the Discover lead. A change to how outfits are
+  scored or counted (`generateOutfits`, `multiplier`, the bible) is messaged to the Discover lead, so Must-Buy's
+  "+N outfits" stays right.
 - Fit check records `fit:<id>` with per-piece `wear` `{ close: open|buttoned|closed, tuck: in|out|half,
   sleeves: down|rolled, break: none|slight|full }` (`Brain.WEAR`). The Stylist decides the values; the Avatar
   draws them and owns the words shown (`Avatar.closeWord`: "Half-zipped" / "Zipped up" when `fastening` is zip).
