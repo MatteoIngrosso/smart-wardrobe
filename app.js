@@ -4371,6 +4371,7 @@ async function setMirrorMode(mode) {
   if (mirror.preview) {
     const o = mirror.preview;
     $(".sheet-panel").innerHTML = "";
+    if (mirror.previewOpts?.editor) return openAvatarEditor();
     return previewOnAvatar(o, mirror.previewOpts || {});
   }
   remountMirror();
@@ -4621,6 +4622,30 @@ function endPreview() {
   else if (was && !home) host?.remove();
   if (was) dressStage();
 }
+// Settings > Your avatar > Customize: the body, face and hair panel next to the 3D avatar, in a popup.
+// It reuses the preview stage (the sheet's #stage3d-preview), wearing today's picked idea.
+function openAvatarEditor() {
+  const lb = lookbookOn();
+  if (!lb) {
+    const o = state.outfits[Math.min(mirror.pick, state.outfits.length - 1)] || { pieces: {}, key: "" };
+    mirror.preview = { ...o, key: `preview:${o.key || outfitKey(Object.values(o.pieces || {}).filter(Boolean))}` };
+    mirror.previewOpts = { editor: true };
+  }
+  $(".sheet-panel").innerHTML = `
+    <div class="detail-head"><div><h1 class="sheet-title">Your avatar</h1><p class="sub">Shape him like you. Changes show straight away; Save keeps them on every device.</p></div>
+      <button class="btn icon-btn ghost" data-close aria-label="Close"><svg viewBox="0 0 24 24"><path d="M6 6l12 12M18 6 6 18"/></svg></button></div>
+    <div class="avatar-editor${lb ? " no-stage" : ""}">
+      ${bodyPanelHTML()}
+      ${lb ? `<p class="muted small">The Mirror is on the Lookbook, which shows only the clothes. Switch it to Avatar on Today to see these changes in 3D.</p>`
+      : `<div class="preview-wrap">
+        <div class="stage3d preview-stage" id="stage3d-preview" tabindex="0" role="img" aria-label="You in 3D. Drag sideways to turn him, or use the angle buttons."><div class="stage-note" role="status"></div></div>
+        <div class="angle-pills" role="group" aria-label="Turn him">${MIRROR_ANGLES.map(([deg, label]) => `<button class="chip" data-mangle="${deg}" aria-pressed="false">${label}</button>`).join("")}</div>
+      </div>`}
+    </div>`;
+  $("#sheet").hidden = false;
+  bodyUI();
+  if (!lb) { mountMirror(); paintStageNote(); }
+}
 function openCalPreview(kind, date) {
   const s = planner.sugg, plan = dayPlan(date);
   const o = kind === "idea" ? s?.date === date && s.ideas[s.k] : planIdea(date);
@@ -4671,7 +4696,7 @@ function bodyPanelHTML() {
     </aside>`;
 }
 function remountBody() {
-  const el = $("#mirror .mirror-body");
+  const el = $(".mirror-body");
   if (!el) return;
   el.outerHTML = bodyPanelHTML();
   bodyUI();
@@ -4723,7 +4748,6 @@ function mirrorHTML() {
     return bits.length ? ` · ${esc(bits.join(", "))}${from}` : "";
   };
   return `<section class="mirror${lb ? " is-lookbook" : ""}" id="mirror">
-    ${lb ? "" : bodyPanelHTML()}
     <div class="mirror-stage">
       ${lb ? `<div class="stage3d is-lookbook" id="stage3d" tabindex="0" role="group" aria-label="The outfit picked on the right, on the Lookbook: only the clothes. Tap a piece to change it, drag to tilt, pinch to zoom, double tap to reset.">
         <div class="stage-note" role="status"></div>
@@ -4796,6 +4820,7 @@ async function saveBody() {
   mirror.draft = { ...body };
   await store.put("kv", state.avatar, "avatar");
   bodyUI();
+  if (view === "settings") render(); // the line under Your avatar
 }
 
 // Settings > 3D mirror: what's kept on this device, and baking the pieces again.
@@ -9700,6 +9725,11 @@ function renderSettings() {
         <div class="field"><label for="local-ai">Local AI server URL</label><input id="local-ai" class="input" type="url" inputmode="url" placeholder="https://my-pc.local:8080/fit-check" data-input="localai" value="${esc(s.localAIUrl || "")}"><span id="local-ai-hint" class="muted small">${s.localAIUrl ? "Fit checks are sent there first." : "Not set: fit checks stay on the device."} From the hosted app (https) the server needs https too, or the browser blocks it.</span></div>
       </section>
       <section class="card stack">
+        <h2 class="card-title">Your avatar</h2>
+        <p class="muted small flush">${esc(state.avatar ? Avatar.bodyLine(Avatar.cleanBody(state.avatar.body)) : "Not shaped yet: height, weight, build, skin, face and hair.")}</p>
+        <div class="row"><button class="btn" data-act="avatar-edit">Customize avatar</button></div>
+      </section>
+      <section class="card stack">
         <h2 style="margin:0">Look</h2>
         <div class="chips">${[["auto", "Match system"], ["dark", "Dark"], ["light", "Light"]].map(([k, l]) => `<button class="chip" aria-pressed="${s.theme === k}" data-theme="${k}">${l}</button>`).join("")}</div>
         <div class="field"><label>Shops</label><div class="chips">${[["it", "Italy"], ["com", "International"]].map(([k, l]) => `<button class="chip" aria-pressed="${s.region === k}" data-region="${k}">${l}</button>`).join("")}</div></div>
@@ -11094,6 +11124,7 @@ async function onTap(e) {
 
   switch (ds.act) {
     case "body-save": return saveBody();
+    case "avatar-edit": return openAvatarEditor();
     case "body-photo": return bodyPhotoInput.click();
     case "body-photo-off": delete bodyDraft().facePhotoDataUrl; bodyChanged(); return remountBody();
     case "rebake": return rebakePieces();
