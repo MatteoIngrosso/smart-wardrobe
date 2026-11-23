@@ -63,7 +63,51 @@ _To be added by the Avatar lead._
 
 ## Stylist (owner: Stylist lead)
 
-_To be added by the Stylist lead._
+Status: written 2026-11-23. Plan: `docs/leads/stylist.md`. The engine still lives in `app.js`; it moves to
+`stylist-engine.js` (pure, no DOM) after the UI split merges, and this section then gives its final API.
+
+### What the Stylist owns
+- The outfit engine (`ideaPool`, `scoreOutfit`, `pickIdeas`, `generateOutfits`, `dressLevel`, `sense`,
+  `weatherPieces`, `coatFor`, `extrasFor`, `withLoved`, `withShorts`), learning (`taste`, `tasteScore`, `tasteText`),
+  Ask the stylist (`stylist-chat.js`, `stylistSystem`, `chatSystem`, `wardrobeText`), Fit Check and
+  StylistBrain (`stylist-brain.js`), Calendar picks (`suggestDay`, `nextIdea`) and laundry (`wearable`, `wash`).
+- The fashion bible: `stylist.js` (JS checks) + root `fashion-bible.json`, both built from `fashion-model/`
+  (Python). The JS checks must stay identical to `fashion/rules.py`: change both, then `python -m fashion parity`
+  and `node --test tools/stylist.test.mjs`. `python -m fashion bench` must not drop.
+- `tools/audit-sim.mjs` thresholds (25 checks on a real backup). Any PR that touches ranking runs it.
+
+### Engine API others call (planned module `stylist-engine.js`; same names in `app.js` until then)
+- `ideas({ occasion, level, feels, wet, anchor, avoid, n })` → outfits `{ key, pieces: { base, mid, outer, bottom, shoes },
+  coat, extras, score, reasons, warn, level }`. Today, Calendar, Try a piece and the mirror all use it.
+- `score(pieces, { occasion, feels, wet })` → `{ score, reasons, broken }`; `level(pieces)` → 1-5.
+- `goesWith(piece, { occasion })` → how many good outfits a piece (owned or not) makes: Discover's "goes with N"
+  and Outfit Multiplier (`multiplier`, `ownsLike`, `auditFeed` today).
+- Discover and UI never re-rank outfits themselves: ask the engine. Weather comes from `conditions()` (UI owns
+  the weather widget, the Stylist owns what the numbers mean for clothes).
+
+### Data the Stylist reads and writes (changing a shape is a contract change)
+- Items: reads `category, colors, fit, styles, tags, warmth, formality, look, suit, rating, favorite, disliked,
+  wash, wornSinceWash, everyday, leather, metal, fastening`; writes `rating, disliked, wash, wornSinceWash, fit,
+  look, suit` (the item page UI calls the Stylist's functions for these).
+- Log entries (`state.log`, shared): no `kind` = a wear `{ date, at, itemIds, occasion, feels, source }`; `like`, `rate`
+  `{ stars }`, `skip` `{ reason }`, `swap` `{ removed, added }`, `scent`. Discover writes its own kinds; the Stylist
+  only learns from these.
+- Shared kv: `days` (Calendar plans, ids only via `makeEntry`/`entryIds` in `calendar.js`), `plan`, `brain`
+  (StylistBrain summaries), `calendar` (iCal links + event occasions).
+- Fit check records `fit:<id>` with per-piece `wear` `{ close: open|buttoned|closed, tuck: in|out|half,
+  sleeves: down|rolled, break: none|slight|full }` (`Brain.WEAR`). The Stylist decides the values; the Avatar
+  draws them and owns the words shown (`Avatar.closeWord`: "Half-zipped" / "Zipped up" when `fastening` is zip).
+
+### Slots and screens
+- The Stylist fills `#ideas-slot` (outfit idea cards, via the UI's `outfitCard`) and `#ask-slot` (Ask the stylist).
+- Style Trainer (parked): Stylist owns how swipes feed `taste()`: a swipe logs `like` / `skip` with
+  `source: "trainer"` at half a wear's weight.
+
+### AI use
+- All Gemini calls go through `aiGenerate` (free tier, key on the server). Stylist prompts start with the
+  stable part (instructions, the bible's rules, the wardrobe) and end with what the question changes, so
+  Gemini's cache can reuse the start. About 2,000-2,600 tokens in per question with 86 pieces; keep new
+  prompts inside that.
 
 ## Discover (owner: Discover lead)
 
