@@ -85,6 +85,12 @@ Good sources explain *why* something works and show complete outfits: menswear c
 
 Each source costs one Gemini call: a 15-minute video is about 5,000 to 8,000 tokens in and 1,000 to 2,000 out, which fits easily in AI Studio's free tier.
 
+### Stylists' outfits: the FashionStylist dataset
+
+`knowledge/datasets/fashionstylist/` holds the men's part of [FashionStylist](https://github.com/recsys-benchmark/FashionStylist) (CC BY-NC 4.0): 300 outfits put together by fashion experts, each piece labelled with its type, style, fit, material, colour, pattern and details, each outfit with its season and occasion. `python -m fashion dataset` reads them into the app's words (a "half-zip hooded sweatshirt, loose fit, navy blue, letter print" becomes `hoodie navy relaxed streetwear casual +graphic`; clogs and skirts, which the app has no type for, are left out; the season gives the temperature, Social becomes Night out) and saves 4 in 5 of them as one learnt source, `knowledge/learned/fashionstylist-men.json`, for `train`. They're mostly East Asian streetwear (Cityboy, Korean trendy, techwear, American vintage, quiet luxury) with no business looks, so each counts 0.35 (a magazine outfit 0.7, a hand-written one 1). No key, no tokens.
+
+The other 1 in 5 is kept back for **`python -m fashion bench`**: each of those outfits against the same outfit with one piece (the top, the bottoms, the shoes...) swapped for that kind of piece from another stylist's outfit, 5 swaps each. It prints how often the bible scores the real outfit higher (50% is chance). The rules catch mistakes (clashing colours, sneakers with a suit, shorts in winter), not what makes a great combination, so on these mostly well-made outfits they only reach about 58% (57% with the rulebook's weights alone). That's the number a learnt "goes together" model (see the Stylist plan, CLHE) has to beat. Tried and dropped: teaching the swapped outfits as "avoid" examples; the rules can't tell most swaps from the real thing, so every weight shrank towards 0.
+
 ## Files
 
 - `fashion/vocab.py`: the app's garment types, colours, styles, fits and occasions (mirrors `app.js`)
@@ -96,9 +102,11 @@ Each source costs one Gemini call: a 15-minute video is about 5,000 to 8,000 tok
 - `fashion/knowledge.py`: loads everything, merges repeated tips, searches tips
 - `fashion/model.py`: the logistic regression and its cross-validation
 - `fashion/bible.py`: training, and writing the bible
+- `fashion/datasets.py`: the FashionStylist outfits in the app's words, and the swap benchmark
 - `knowledge/rulebook.json`, `knowledge/examples.json`: the hand-written rules, tips and example outfits
 - `knowledge/sources.txt`: your list of links to learn from
 - `knowledge/learned/`: one file per source learnt
+- `knowledge/datasets/`: outfit datasets made by stylists, with their licence
 - `bible/`: the fashion bible, rebuilt by every training
 - `tests/`: run `python -m unittest discover -s tests` from this folder
 

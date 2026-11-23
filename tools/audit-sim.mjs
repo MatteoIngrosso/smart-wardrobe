@@ -221,8 +221,8 @@ const avg = (k) => runs.reduce((a, r) => a + (typeof r[k] === "boolean" ? +r[k] 
 const pct = (x) => `${Math.round(x * 100)}%`;
 // [label, value, shown, pass, PR]
 const rows = !RUNS ? [] : [
-  ["Days the most-picked top or bottom is in the top pick (of 21)", avg("topDaysMax"), (v) => `${v.toFixed(1)} (${runs.map((r) => r.topDaysPiece).join(", ")})`, (v) => v <= 9, "A"],
-  ["Days the most-picked jacket or coat is in the top pick (of 21)", avg("outerDaysMax"), (v) => `${v.toFixed(1)} (${runs.map((r) => r.outerDaysPiece).join(", ")})`, (v) => v <= 12, "A"],
+  ["Days the most-picked top or bottom is in the top pick (of 21)", avg("topDaysMax"), (v) => `${v.toFixed(1)} (${runs.map((r) => r.topDaysPiece).join(", ")})`, (v) => v <= 7, "A"],
+  ["Days the most-picked jacket or coat is in the top pick (of 21)", avg("outerDaysMax"), (v) => `${v.toFixed(1)} (${runs.map((r) => r.outerDaysPiece).join(", ")})`, (v) => v <= 8, "A"],
   ["Hoodies worn at least once in 21 days", avg("hoodiesWorn"), (v) => `${v.toFixed(1)} of ${runs[0].hoodies}`, (v) => v >= 7, "A"],
   ["Wears per loved piece vs the rest", avg("lovedRatio"), (v) => `${v.toFixed(2)}x`, (v) => v >= 1.5, "A"],
   ["Smart casual sets with one piece in all 3", avg("in3_smart"), pct, (v) => v <= 0.15, "A"],

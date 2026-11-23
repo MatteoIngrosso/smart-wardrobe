@@ -21,8 +21,8 @@ import { subTypeOf, lengthOf, PANEL_SIZE, cleanCutMeta } from "./avatar-config.j
 export const BAKER_VERSION = 5;
 
 const DB_NAME = "wardrobe-garments", STORE = "baked";
-const SLOT_OF = { tee: "top", tank: "top", longsleeve: "top", hoodie: "layer", sweater: "layer", trackjacket: "layer", bomber: "jacket", puffer: "jacket", jacket_open: "jacket", jeans: "bottoms", cargo: "bottoms", jogger: "bottoms", leggings: "bottoms", sneakers: "shoes", boots: "shoes" };
-const KIND_OF = { tee: "top", tank: "top", longsleeve: "top", hoodie: "top", sweater: "top", trackjacket: "top", bomber: "top", puffer: "top", jacket_open: "top", jeans: "bottoms", cargo: "bottoms", jogger: "bottoms", leggings: "bottoms", sneakers: "shoes", boots: "shoes" };
+const SLOT_OF = { tee: "top", tank: "top", longsleeve: "top", shirt: "top", shortshirt: "top", polo: "top", hoodie: "layer", ziphoodie: "layer", sweater: "layer", trackjacket: "layer", bomber: "jacket", puffer: "jacket", jacket_open: "jacket", blazer: "jacket", jeans: "bottoms", cargo: "bottoms", jogger: "bottoms", leggings: "bottoms", sneakers: "shoes", dress: "shoes", boots: "shoes" };
+const KIND_OF = { tee: "top", tank: "top", longsleeve: "top", shirt: "top", shortshirt: "top", polo: "top", hoodie: "top", ziphoodie: "top", blazer: "top", sweater: "top", trackjacket: "top", bomber: "top", puffer: "top", jacket_open: "top", jeans: "bottoms", cargo: "bottoms", jogger: "bottoms", leggings: "bottoms", sneakers: "shoes", dress: "shoes", boots: "shoes" };
 const WORK_MAX = 1400; // photos are decoded at most this big
 const TILE = 256; // the seamless fabric tile
 // How wide the front panel is on the body, roughly: for the fabric tile's real size.
@@ -1648,7 +1648,7 @@ export function synthBack(src, w, h, fabric, tile, o = {}) {
       for (let x = cx; x <= x1; x++) if (top[x] < top[xr]) xr = x;
       let deep = 0;
       for (let x = xl; x <= xr; x++) deep = Math.max(deep, top[x] - Math.max(top[xl], top[xr]));
-      const hood = sub === "hoodie";
+      const hood = sub === "hoodie" || sub === "ziphoodie";
       if (!hood && xr - xl > w * 0.12 && deep > h * 0.012) {
         // a back neckline: a shallow curve between the two high points
         const dipB = Math.min(deep * 0.45, (xr - xl) * 0.1);
@@ -1723,8 +1723,8 @@ export function synthBack(src, w, h, fabric, tile, o = {}) {
       line(U(0), V(0.045), U(1), V(0.045), 0.07, 1.1 * px);
       line(U(0), V(0.058), U(1), V(0.058), 0.05, 1 * px);
     }
-    if (sub === "jacket_open") line(U(0.5), V(0.985), U(0.5), V(0.02), 0.09); // a tailored back's centre seam
-    if (sub === "jacket_open" || sub === "trackjacket" || sub === "bomber") { // the yoke under the collar
+    if (sub === "jacket_open" || sub === "blazer") line(U(0.5), V(0.985), U(0.5), V(0.02), 0.09); // a tailored back's centre seam
+    if (sub === "jacket_open" || sub === "blazer" || sub === "trackjacket" || sub === "bomber" || sub === "shirt" || sub === "shortshirt") { // the yoke under the collar
       const steps = 24;
       for (let k = 0; k < steps; k++) {
         const ua = 0.04 + (0.92 * k) / steps, ub = 0.04 + (0.92 * (k + 1)) / steps, yv = (u) => 0.865 + 0.02 * Math.cos((u - 0.5) * Math.PI);
@@ -1936,6 +1936,7 @@ function dominantRGB(samples) {
 function shoeStyleOf(item) {
   const name = (item.name || "").toLowerCase();
   if (item.category === "boots" || /\bboots?\b/.test(name)) return "boot";
+  if (subTypeOf(item) === "dress") return "dress_shoe";
   if (/\bjordan\s*(1|4)\b|\bhigh\b|\bhi-?top\b|\bmid\b/.test(name)) return "high_top_sneaker";
   return "low_sneaker";
 }
@@ -1946,6 +1947,7 @@ function roughnessOf(item, sub) {
   if (c === "coat") return 0.9;
   if (/leather/.test(name)) return 0.45;
   if (sub === "bomber") return /wool|varsity/.test(name) ? 0.85 : 0.45;
+  if (sub === "blazer") return /velvet|corduroy|tweed/.test(name) ? 0.9 : 0.75;
   if (sub === "jacket_open") return /blazer|suit/.test(name) ? 0.75 : /denim/.test(name) ? 0.8 : 0.65;
   if (["jeans", "cargo", "jogger", "leggings"].includes(sub)) {
     if (["joggers", "track-pants", "gym-shorts"].includes(c) || /fleece|sweat|jogger/.test(name)) return 0.9;
@@ -1953,6 +1955,7 @@ function roughnessOf(item, sub) {
     if (c === "trousers" && !/cargo|denim/.test(name)) return 0.72;
     return 0.8;
   }
+  if (sub === "dress") return /suede|nubuck/.test(name) ? 0.85 : 0.35;
   if (sub === "sneakers") return /knit|mesh|suede|canvas/.test(name) ? 0.8 : c === "dress-shoes" ? 0.35 : 0.45;
   if (sub === "boots") return /timberland|nubuck|suede/.test(name) ? 0.9 : 0.5;
   if (c === "polo" || c === "shirt") return 0.8;

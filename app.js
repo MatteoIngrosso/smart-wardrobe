@@ -1852,7 +1852,7 @@ function scoreOutfit(o, cond, occ, t = taste()) {
   // Warmth / layering, shifted by how warm you like to dress (learnt from what you wear)
   const { feels, wet } = cond;
   const coat = coatFor(o, cond, occ);
-  const warmth = layerWarmth(pieces) + (coat?.warmth || 0);
+  const warmth = layerWarmth(heatView(o, pieces, cond, occ)) + (coat?.warmth || 0);
   const want = wantedWarmth(feels) + (occ.id === "gym" ? 0 : t.offset);
   const wOff = occ.id === "gym" ? 0 : Math.abs(warmth - want);
   s -= Math.abs(warmth - want) * 0.7;
@@ -2096,6 +2096,14 @@ function coatFor(pieces, cond, occ) {
   const coats = suggestable().filter((i) => roleOf(i) === "outer" && slotOf(i) !== "gym" && !isBlazer(i) && (i.warmth || 0) >= 4);
   return coats.sort((a, b) => (dressy ? dressOf(b) - dressOf(a) : 0) || (b.warmth || 0) - (a.warmth || 0))[0] || null;
 }
+// Heat and tailoring: on a dressy day (Elegant, or level 4-5 picked by hand) from 22° the blazer is the
+// layer you take off once you're there (Work keeps shirt-only outfits in the heat), so it counts for 40% of its warmth (at least 1): the outfit no
+// longer reads as far too warm, and a lighter blazer still beats a heavier one. One line on the first
+// idea says so, instead of "Too warm" on every card.
+const CARRY_FROM = 22;
+const carriesBlazer = (o, cond, occ) => !!o?.outer && cond.feels >= CARRY_FROM && occ.id !== "gym" && isBlazer(o.outer) && (occ.level ? occ.level >= 4 : occ.id === "event");
+const carried = (p) => ({ ...p, warmth: Math.max(1, Math.round((p.warmth || 2) * 0.4)) });
+const heatView = (o, list, cond, occ) => (carriesBlazer(o, cond, occ) ? list.map((p) => (p === o.outer ? carried(p) : p)) : list);
 // Everything you'd put on for an idea: its clothes, the coat over the blazer and the accessories.
 const allPieces = (o) => [...Object.values(o.pieces), o.coat, ...(o.extras || [])].filter(Boolean);
 
@@ -2130,7 +2138,9 @@ function pickIdeas(pool, n, keep = [], avoid = []) {
   // worse than the best at the right level) waits with the ones off the level, whatever its stars.
   const wBest = Math.min(...cands.filter((c) => !c.blocked && (c.levelOff ?? 0) <= closest).map((c) => c.wOff ?? 0), Infinity);
   const tooFar = (c) => (c.wOff ?? 0) > Math.max(3.5, wBest + 1);
-  const tier = (c) => ((c.levelOff ?? 0) > closest || tooFar(c) ? 2 : c.isBroken && !onlyShoes(c) ? 1 : 0);
+  // Off the level, one step away beats two (a shirt and trousers without the blazer before a T-shirt and
+  // jeans for Elegant on a hot day), even when it repeats a piece of the ideas above.
+  const tier = (c) => ((c.levelOff ?? 0) > closest ? 1 + (c.levelOff - closest) : tooFar(c) ? 2 : c.isBroken && !onlyShoes(c) ? 1 : 0);
   const good = (cands.find((c) => !c.blocked && tier(c) === 0)?.score ?? cands.find((c) => !c.blocked && tier(c) < 2)?.score ?? cands[0]?.score ?? 0) - 3;
   // For variety an outfit is judged without the pull of the stars on its pieces: one that is good on its
   // own and brings other clothes beats a third idea with the same loved shirt.
@@ -2147,7 +2157,7 @@ function pickIdeas(pool, n, keep = [], avoid = []) {
   const only = (id) => { const p = state.items.find((i) => i.id === id); return !p || (kinds[roleOf(p)]?.size || 0) <= 1; };
   const inAll = (c) => { const ideas = [...keep, ...out]; return ideas.length === 2 && clothesOf(c).some((id) => !only(id) && ideas.every((o) => clothesOf(o).includes(id))); };
   const passes = [[differ, good, true, 2], [differ, good, true, 1], [differ, good, false, 1], [differ, good, true], [half, good, true], [differ, good - 3, true], [half, good - 3, true], [differ, good], [half, good], [any, good], [differ, -Infinity], [half, -Infinity], [any, -Infinity]];
-  for (const [allowBlocked, maxTier] of [[false, 0], [true, 0], [false, 1], [true, 1], [true, 2]]) {
+  for (const [allowBlocked, maxTier] of [[false, 0], [true, 0], [false, 1], [true, 1], [true, 2], [true, 3], [true, 4], [true, Infinity]]) {
     for (const [ok, min, newOuter, freshness] of passes) {
       for (const c of cands) {
         if (out.length === n) break;
@@ -2185,7 +2195,7 @@ const ownsDressShoes = () => state.items.some((i) => !i.disliked && !leaving(i) 
 // An idea that still breaks one of the fashion bible's important rules once its headwear and
 // accessories are on (only shown when nothing better is left) says so on its card.
 function withWarn(idea, cond, occ) {
-  const j = Style.ready() ? Style.judge(styleViewsFor([...Object.values(idea.pieces), ...(idea.extras || [])].filter(Boolean), occ), styleCtx(cond, occ, taste())) : null;
+  const j = Style.ready() ? Style.judge(styleViewsFor(heatView(idea.pieces, [...Object.values(idea.pieces), ...(idea.extras || [])].filter(Boolean), cond, occ), occ), styleCtx(cond, occ, taste())) : null;
   // The warmth rule says the temperature the way the screen does (feels like, in your unit).
   const line = (v) => (v.rule.id === "warmth" ? ruleLine(v).replace(/ for -?\d+°C$/, ` for today (feels like ${fmtTemp(cond.feels)})`) : ruleLine(v));
   const shoesOnly = (v) => v.rule.id === "shoe-formality" && /^Sneakers with tailoring/.test(ruleLine(v)) && idea.pieces.shoes && !casualPiece(idea.pieces.shoes) && !ownsDressShoes();
@@ -2218,8 +2228,10 @@ function generateOutfits(n = 3, avoid = []) {
   const picks = pickIdeas(pool, n, keep, avoid);
   state.lastFresh = picks.length; // ideas not in `avoid` (see "New ideas")
   if (picks.length < n) picks.push(...pickIdeas(pool, n - picks.length, [...keep, ...picks])); // small wardrobe: repeats are fine
-  if (!state.anchor) withLoved(pool, picks, keep, avoid);
+  if (!state.anchor) { withLoved(pool, picks, keep, avoid); withShorts(pool, picks, keep, avoid); }
   state.outfits = [...keep, ...picks.map((c) => dressIdea(c, pool, used))];
+  const hot = state.outfits.find((o) => carriesBlazer(o.pieces, pool.cond, pool.occ));
+  if (hot) hot.extrasWhy = [`Hot day (${fmtTemp(pool.cond.feels)}): wear the ${hot.pieces.outer.name} to arrive, take it off when you can`, ...(hot.extrasWhy || [])];
   state.levelGap = state.anchor ? null : levelGap(pool);
   // A piece in all three ideas is the only one of its kind that suits the occasion (see pickIdeas): say so.
   const clothesIn = (o) => Object.entries(o.pieces).filter(([r, p]) => p && r !== "shoes").map(([, p]) => p);
@@ -2255,6 +2267,28 @@ function withLoved(pool, picks, keep, avoid) {
   const swap = picks.findLastIndex((c, i) => (i > 0 || keep.length) && !Object.values(c.pieces).some((p) => p && loved(p)));
   if (swap >= 0) picks[swap] = best;
   else if (picks.length < 3 - keep.length) picks.push(best);
+}
+// Everyday from 23° on a dry day: when you own shorts that suit the day, at least one idea is in shorts,
+// even when loved jeans lead the others (stars outweigh the shorts bonus). The best shorts outfit that
+// breaks no rule, isn't far too warm and isn't far behind takes the place of the last idea, keeping a
+// loved piece that no other idea shows.
+const SHORTS_FROM = 23;
+function withShorts(pool, picks, keep, avoid) {
+  const { occ, cond } = pool;
+  if (occ.id !== "casual" || occ.level || cond.feels < SHORTS_FROM || cond.wet) return;
+  const inShorts = (c) => /shorts/.test(c.pieces.bottom?.category || "");
+  const ideas = [...keep, ...picks];
+  if (!picks.length || ideas.some(inShorts)) return;
+  const top = pool.cands.find((c) => !c.blocked && !c.isBroken)?.score ?? 0;
+  const keys = new Set([...ideas.map((o) => o.key), ...avoid]);
+  const best = pool.cands.find((c) => inShorts(c) && !c.blocked && !c.isBroken && !keys.has(c.key) && (c.wOff ?? 0) <= 3.5 && c.score >= top - 6);
+  if (!best) return;
+  const ids = (c) => Object.values(c.pieces).filter(Boolean).map((p) => p.id);
+  const lovedOnlyIn = (i) => Object.values(picks[i].pieces).some((p) => p && (starsOf(p) || 0) >= 4 && !ids(best).includes(p.id) && !ideas.some((o, k) => o !== picks[i] && ids(o).includes(p.id)));
+  const from = keep.length ? 0 : Math.min(1, picks.length - 1);
+  let at = -1;
+  for (let i = picks.length - 1; i >= from; i--) if (!lovedOnlyIn(i)) { at = i; break; }
+  picks[at >= 0 ? at : picks.length - 1] = best;
 }
 // The outfit you planned for today (in the Calendar, or last night) comes first, while all of it is
 // out of the wash; then one planned for an event today. One you wore or turned down doesn't come back.
@@ -2350,7 +2384,7 @@ const wornCost = (p, d) => (d <= 1 ? 3 : d <= 4 ? 1.2 : 0) * (ROTATION[starsOf(p
 // by stars 1 to 5 (unrated counts as 3): loved pieces are still worn the most, but not every day, and
 // the rest of the wardrobe gets its turn. Shoes have no budget; gym clothes only outside the gym, where
 // their everyday wears count (recentWears leaves out the gym sessions).
-const WEAR_BUDGET = { top: [1, 1, 1.5, 2, 2.5], bottom: [1, 1, 2, 2.5, 3], outer: [1.5, 1.5, 2.5, 3, 4] };
+const WEAR_BUDGET = { top: [1, 1, 1.5, 1.5, 2], bottom: [1, 1, 2, 2, 2.5], outer: [1.5, 1.5, 2, 2, 2.5] };
 const BUDGET_GROUP = { base: "top", mid: "top", bottom: "bottom", outer: "outer" };
 const budgetGroup = (p) => (slotOf(p) === "gym" && !p.everyday ? null : BUDGET_GROUP[roleOf(p)] || null); // ("Everyday too": like an everyday piece)
 const budgetOf = (p, occ) => {
@@ -3049,12 +3083,13 @@ function aiReady() {
 const aiName = () => (state.previewAI || state.settings.aiProvider === "claude" ? "Claude" : "Gemini");
 const NO_AI = "Add a Gemini or Claude API key in Settings to use this.";
 
-async function trackUsage(input = 0, output = 0) {
+async function trackUsage(input = 0, output = 0, cached = 0) {
   const month = today().slice(0, 7);
-  if (state.usage.month !== month) state.usage = { month, requests: 0, input: 0, output: 0 };
+  if (state.usage.month !== month) state.usage = { month, requests: 0, input: 0, output: 0, cached: 0 };
   state.usage.requests++;
   state.usage.input += input;
   state.usage.output += output;
+  state.usage.cached = (state.usage.cached || 0) + cached; // part of `input` Gemini reused from its cache
   await store.put("kv", state.usage, "usage");
 }
 
@@ -3126,7 +3161,7 @@ async function geminiGenerate({ system, text, image, schema, maxTokens, search, 
   const j = await res.json().catch(() => ({}));
   if (!res.ok) throw new Error(j.error?.message ? `Gemini: ${j.error.message}` : `Gemini error ${res.status}`);
   const u = j.usageMetadata || {};
-  await trackUsage(u.promptTokenCount || 0, (u.candidatesTokenCount || 0) + (u.thoughtsTokenCount || 0));
+  await trackUsage(u.promptTokenCount || 0, (u.candidatesTokenCount || 0) + (u.thoughtsTokenCount || 0), u.cachedContentTokenCount || 0);
   const out = (j.candidates?.[0]?.content?.parts || []).map((p) => p.text || "").join("").trim();
   if (!out) throw new Error("Gemini returned no answer. Try again.");
   onSources?.((j.candidates[0].groundingMetadata?.groundingChunks || []).map((c) => c.web).filter((w) => w?.uri));
@@ -3212,9 +3247,22 @@ async function aiGenerate(opts) {
 // The wardrobe for the AI, one short line a piece (#numbers follow state.items, so the app finds them).
 // Left out to save tokens: underwear and socks, pieces you're giving away, and gym clothes unless the
 // question is about training (`gym`) or the piece is "Everyday too". The type, brand or colour isn't repeated when the name says it.
-function wardrobeText({ gym = false } = {}) {
-  return state.items.map((i, n) => {
-    if (slotOf(i) === "under" || leaving(i) || (!gym && slotOf(i) === "gym" && !i.everyday)) return "";
+// `weather` ({min, max} feels, for a question about what to wear today or at a plan's time): pieces no
+// outfit can use then are left out too (coats, puffers, hoodies and heavy knits when even the coolest
+// hour feels 22° or more; shorts and tank tops when the warmest stays under 12°), with one line saying
+// how many, so the AI knows they exist.
+function wardrobeText({ gym = false, weather = null } = {}) {
+  let skipped = 0;
+  const offSeason = (i) => {
+    if (!weather) return false;
+    const r = roleOf(i), w = i.warmth || 2;
+    const off = (weather.min >= 22 && ((r === "outer" && w >= 4) || (r === "mid" && w >= 3) || ["scarf", "gloves", "beanie"].includes(i.category)))
+      || (weather.max < 12 && ["shorts", "tank-top"].includes(i.category));
+    if (off) skipped++;
+    return off;
+  };
+  const lines = state.items.map((i, n) => {
+    if (slotOf(i) === "under" || leaving(i) || (!gym && slotOf(i) === "gym" && !i.everyday) || offSeason(i)) return "";
     const b = brandInfo(i.brand), says = (w) => w && i.name.toLowerCase().includes(String(w).toLowerCase());
     const type = catLabel(i.category);
     return [
@@ -3228,7 +3276,9 @@ function wardrobeText({ gym = false } = {}) {
       i.disliked ? "disliked" : "",
       i.wash ? "IN THE WASH" : "",
     ].filter(Boolean).join("; ");
-  }).filter(Boolean).join("\n");
+  }).filter(Boolean);
+  if (skipped && lines.length) lines.push(`(${skipped} more pieces not listed: ${weather.min >= 22 ? "too warm" : "too light"} for this weather)`);
+  return lines.join("\n");
 }
 const STYLIST_SYSTEM =
   "You are a personal stylist in a smart-wardrobe app. Whenever you mention one of the user's pieces, in any kind of answer, write its #number and name, e.g. '#4 Navy knit', so the app can show its photo. " +
@@ -4015,10 +4065,18 @@ const MIRROR_ANGLES = [[0, "Front"], [90, "Right side"], [180, "Back"], [270, "L
 // Scale and Vertical offset: how one piece sits on the 3D mirror (longer or shorter, higher or lower),
 // kept on the piece as cutoutMeta (avatar-config.js), so every device shows it the same. Not shoes.
 const cutOffText = (v) => (v === 0 ? "As measured" : `${v > 0 ? "+" : "−"}${Math.abs(v)} cm`);
+// How its front fastens (zip, buttons, nothing): read from its name and kind, or set here. The mirror and
+// "How you wore it" use it (Open / Half-zipped / Zipped up, or Open / Buttoned).
+function fastenField(i) {
+  // (jackets, coats, zip hoodies; a hoodie or track top too, which a zip makes a zip hoodie on the mirror)
+  if (!Avatar.OPENS_ON_MIRROR.includes(Avatar.subTypeOf(i)) && !["hoodie", "gym-hoodie", "track-jacket", "overshirt"].includes(i.category)) return "";
+  const now = Avatar.fasteningOf(i);
+  return `<div class="field" style="margin-bottom:14px"><label>Front fastens with</label><div class="chips">${Avatar.FASTENINGS.map(([v, l]) => `<button class="chip" aria-pressed="${now === v}" data-setfasten="${i.id}:${v}">${l}</button>`).join("")}</div>${i.fastening ? "" : `<span class="muted small">Guessed from its name. Tap to correct it.</span>`}</div>`;
+}
 function mirrorFitField(i) {
   const sub = Avatar.subTypeOf(i), lb = mirrorMode() === "lookbook", slot = stageSlotOf(i);
   // the avatar: clothes but not shoes; the Lookbook: anything with a place on it
-  if (lb ? !slot : !sub || sub === "sneakers" || sub === "boots") return "";
+  if (lb ? !slot : !sub || sub === "sneakers" || sub === "boots" || sub === "dress") return "";
   const m = Avatar.cleanCutMeta(i.cutoutMeta), pct = Math.round(m.scale * 100), off = m.offsetY, offx = m.offsetX || 0;
   const column = !lb || Look.SLOT[slot].where === "column";
   const range = (id, label, min, max, step, val, shown) => `<div class="field mb-field"><label for="${id}">${label} <b id="${id}-v">${shown}</b></label><input id="${id}" type="range" min="${min}" max="${max}" step="${step}" value="${val}" data-input="${id}" data-cutfit="${i.id}"></div>`;
@@ -4119,7 +4177,7 @@ const bakedAsset = (item) => {
   return mirror.baker?.withFit ? mirror.baker.withFit(a.asset, item) : a.asset; // (its fit, Scale and offset as they are now)
 };
 // What changes how a worn piece sits without baking it again: put on again when it changes.
-const sitKey = (item) => `${item.category}|${item.fit || ""}|${item.cutoutMeta?.scale ?? 1}|${item.cutoutMeta?.offsetY ?? 0}`;
+const sitKey = (item) => `${item.category}|${item.fit || ""}|${item.fastening || ""}|${item.cutoutMeta?.scale ?? 1}|${item.cutoutMeta?.offsetY ?? 0}`;
 // Bake a piece (the first time only; then it comes from IndexedDB) and get it ready on the stage.
 function bakePiece(item) {
   if (bakedAsset(item)) return Promise.resolve(bakedAsset(item));
@@ -4185,8 +4243,11 @@ function wearNow(o) {
   return out;
 }
 const COAT_LIKE = /coat|puffer|rain|zip|track/;
+const OPENS_ON_MIRROR = Avatar.OPENS_ON_MIRROR;
 // 0 open, 1 buttoned, 2 closed up (avatar-stage.js openAt): a blazer "closed up" is buttoned.
-const closeOf = (item, st) => (st?.close === "buttoned" ? 1 : st?.close === "closed" ? (COAT_LIKE.test(item.category) ? 2 : 1) : 0);
+// (null: nothing said, so the piece's own way: see Avatar.defaultClose)
+// (a zip: "buttoned" is half-zipped, "closed" zipped right up)
+const closeOf = (item, st) => (st?.close === "buttoned" ? 1 : st?.close === "closed" ? (COAT_LIKE.test(item.category) || Avatar.fasteningOf(item) === "zip" ? 2 : 1) : st?.close === "open" ? 0 : null);
 // The top next to the skin tucked in: as the fit check (or the mirror) says, else Tuck base top.
 function tuckNow(o, wear = wearNow(o)) {
   const t = o?.pieces?.base && wear[o.pieces.base.id]?.tuck;
@@ -4198,7 +4259,9 @@ function styledAsset(w, asset, wear, o) {
   if (!asset) return null;
   let a = asset, key = "";
   const close = closeOf(w.item, wear[w.item.id]);
-  if (close) { a = { ...a, wear: { close } }; key += `|c${close}`; }
+  if (close != null) { a = { ...a, wear: { close } }; key += `|c${close}`; }
+  // how its front fastens (a zip's edges hang straight, buttons open into a V)
+  if (OPENS_ON_MIRROR.includes(Avatar.subTypeOf(w.item))) { const f = Avatar.fasteningOf(w.item); a = { ...a, fasten: f }; key += `|f${f}`; }
   const tie = w.role === "base" && tieOf(o);
   if (tie) { const t = tiedAsset(a, w.item, tie); if (t) { a = t; key += `|tie:${tie.id}`; } }
   return { asset: a, key };
@@ -4251,8 +4314,8 @@ async function tieColour(tie) {
 function cycleClose(id) {
   const o = mirrorIdea(), it = o && allPieces(o).find((p) => p.id === id);
   if (!it) return;
-  const ways = COAT_LIKE.test(it.category) ? ["open", "buttoned", "closed"] : ["open", "buttoned"];
-  const cur = wearNow(o)[id]?.close || "open", next = ways[(ways.indexOf(cur) + 1) % ways.length];
+  const ways = Avatar.closeWays(it).length ? Avatar.closeWays(it) : ["open", "buttoned"];
+  const cur = wearNow(o)[id]?.close || Avatar.defaultClose(it), next = ways[(ways.indexOf(cur) + 1) % ways.length];
   const hand = (mirror.wearHand[o.key] ||= {});
   hand[id] = { ...hand[id], close: next };
   dressStage();
@@ -4308,6 +4371,7 @@ async function setMirrorMode(mode) {
   if (mirror.preview) {
     const o = mirror.preview;
     $(".sheet-panel").innerHTML = "";
+    if (mirror.previewOpts?.editor) return openAvatarEditor();
     return previewOnAvatar(o, mirror.previewOpts || {});
   }
   remountMirror();
@@ -4558,6 +4622,30 @@ function endPreview() {
   else if (was && !home) host?.remove();
   if (was) dressStage();
 }
+// Settings > Your avatar > Customize: the body, face and hair panel next to the 3D avatar, in a popup.
+// It reuses the preview stage (the sheet's #stage3d-preview), wearing today's picked idea.
+function openAvatarEditor() {
+  const lb = lookbookOn();
+  if (!lb) {
+    const o = state.outfits[Math.min(mirror.pick, state.outfits.length - 1)] || { pieces: {}, key: "" };
+    mirror.preview = { ...o, key: `preview:${o.key || outfitKey(Object.values(o.pieces || {}).filter(Boolean))}` };
+    mirror.previewOpts = { editor: true };
+  }
+  $(".sheet-panel").innerHTML = `
+    <div class="detail-head"><div><h1 class="sheet-title">Your avatar</h1><p class="sub">Shape him like you. Changes show straight away; Save keeps them on every device.</p></div>
+      <button class="btn icon-btn ghost" data-close aria-label="Close"><svg viewBox="0 0 24 24"><path d="M6 6l12 12M18 6 6 18"/></svg></button></div>
+    <div class="avatar-editor${lb ? " no-stage" : ""}">
+      ${bodyPanelHTML()}
+      ${lb ? `<p class="muted small">The Mirror is on the Lookbook, which shows only the clothes. Switch it to Avatar on Today to see these changes in 3D.</p>`
+      : `<div class="preview-wrap">
+        <div class="stage3d preview-stage" id="stage3d-preview" tabindex="0" role="img" aria-label="You in 3D. Drag sideways to turn him, or use the angle buttons."><div class="stage-note" role="status"></div></div>
+        <div class="angle-pills" role="group" aria-label="Turn him">${MIRROR_ANGLES.map(([deg, label]) => `<button class="chip" data-mangle="${deg}" aria-pressed="false">${label}</button>`).join("")}</div>
+      </div>`}
+    </div>`;
+  $("#sheet").hidden = false;
+  bodyUI();
+  if (!lb) { mountMirror(); paintStageNote(); }
+}
 function openCalPreview(kind, date) {
   const s = planner.sugg, plan = dayPlan(date);
   const o = kind === "idea" ? s?.date === date && s.ideas[s.k] : planIdea(date);
@@ -4608,7 +4696,7 @@ function bodyPanelHTML() {
     </aside>`;
 }
 function remountBody() {
-  const el = $("#mirror .mirror-body");
+  const el = $(".mirror-body");
   if (!el) return;
   el.outerHTML = bodyPanelHTML();
   bodyUI();
@@ -4651,15 +4739,15 @@ function mirrorHTML() {
   const style = (w) => {
     if (lb) return "";
     const st = wear[w.item.id], from = st && !st.hand && st.from ? ` <span title="As in your fit check">(fit check, ${esc(fmtDay(st.from))})</span>` : "";
-    if ((w.role === "coat" || w.role === "outer") && Avatar.subTypeOf(w.item) && ["jacket_open", "bomber"].includes(Avatar.subTypeOf(w.item))) {
-      const c = st?.close === "closed" && !COAT_LIKE.test(w.item.category) ? "buttoned" : st?.close || "open";
-      return ` · <button class="wear-style" data-mclose="${esc(w.item.id)}" aria-label="How the ${esc(w.item.name)} is worn: ${esc(Brain.wearWord("close", c))}. Tap to change.">${esc(Brain.wearWord("close", c))}</button>${from}`;
+    if (["coat", "outer", "mid"].includes(w.role) && OPENS_ON_MIRROR.includes(Avatar.subTypeOf(w.item))) {
+      const ways = Avatar.closeWays(w.item), c0 = st?.close || Avatar.defaultClose(w.item), c = ways.includes(c0) ? c0 : c0 === "closed" ? "buttoned" : "open";
+      const word = Avatar.closeWord(w.item, c);
+      return ` · <button class="wear-style" data-mclose="${esc(w.item.id)}" aria-label="How the ${esc(w.item.name)} is worn: ${esc(word)}. Tap to change.">${esc(word)}</button>${from}`;
     }
     const bits = ["tuck", "sleeves"].map((f) => st?.[f] && Brain.wearWord(f, st[f])).filter(Boolean);
     return bits.length ? ` · ${esc(bits.join(", "))}${from}` : "";
   };
   return `<section class="mirror${lb ? " is-lookbook" : ""}" id="mirror">
-    ${lb ? "" : bodyPanelHTML()}
     <div class="mirror-stage">
       ${lb ? `<div class="stage3d is-lookbook" id="stage3d" tabindex="0" role="group" aria-label="The outfit picked on the right, on the Lookbook: only the clothes. Tap a piece to change it, drag to tilt, pinch to zoom, double tap to reset.">
         <div class="stage-note" role="status"></div>
@@ -4732,6 +4820,7 @@ async function saveBody() {
   mirror.draft = { ...body };
   await store.put("kv", state.avatar, "avatar");
   bodyUI();
+  if (view === "settings") render(); // the line under Your avatar
 }
 
 // Settings > 3D mirror: what's kept on this device, and baking the pieces again.
@@ -4966,6 +5055,7 @@ function openItem(id, showOriginal = false) {
     </div>
     ${fitsFor(i).length ? `<div class="field" style="margin-bottom:14px"><label>Fit</label><div class="chips">${fitsFor(i).map((f) => `<button class="chip" aria-pressed="${i.fit === f}" data-setfit="${i.id}:${f}">${FITS[f].label}</button>`).join("")}</div></div>` : ""}
     ${toneFields(i)}
+    ${fastenField(i)}
     ${mirrorFitField(i)}
     ${EVERYDAY_AS[i.category] ? `<div class="field" style="margin-bottom:14px"><label>Everyday too</label><div class="row"><button class="chip" data-everyday="${i.id}" aria-pressed="${!!i.everyday}">${i.everyday ? "On" : "Off"}</button><span class="muted small">${i.everyday ? "Also in your Everyday outfit ideas, not just at the gym." : "Only at the gym, unless everything else is in the wash. Turn it on to wear it every day too."}</span></div></div>` : ""}
     ${suitField(i)}
@@ -7612,7 +7702,7 @@ function fitOutfitData(outfit) {
 // The pieces of an outfit (or a saved check) that have a way of being worn, top to bottom.
 function wearPieces(slots, coat, byId = itemMap()) {
   return [["coat", coat], ...["outer", "mid", "base", "bottom"].map((r) => [r, slots?.[r]])]
-    .map(([role, id]) => { const p = id && byId.get(id); return p && { id, role, name: p.name, category: p.category, fields: Brain.wearFields(role, p.category) }; })
+    .map(([role, id]) => { const p = id && byId.get(id); return p && { id, role, name: p.name, category: p.category, fastening: Avatar.fasteningOf(p), fields: Brain.wearFields(role, p.category).filter((f) => f !== "close" || Avatar.fasteningOf(p) !== "none" || role === "coat" || role === "outer") }; })
     .filter((p) => p?.fields.length);
 }
 // A JPEG for the AI (Gemini takes JPEG here), 768 px on the long side: buttons and a tucked hem still show.
@@ -7631,10 +7721,13 @@ async function readWear(photo, outfit) {
   return Brain.parseWear(text, req.refs);
 }
 // "How you wore it": per piece, a chip per way (tap the lit one again to clear it).
+// (a coat worn as the coat can always be closed up; a zip: open, half-zipped, zipped up)
+const closeWaysOf = (p) => { const w = Avatar.closeWays(p); return p.role === "coat" && w.length && !w.includes("closed") ? [...w, "closed"] : w.length ? w : ["open", "buttoned"]; };
 function wearFormHTML(pieces, wear, key) {
   if (!pieces.length) return "";
   return `<div class="fc-wear stack" style="gap:6px">${pieces.map((p) => `<div class="fc-wear-row"><span class="small"><b>${esc(p.name)}</b></span><div class="chips">${p.fields.flatMap((f) => Brain.WEAR[f].values
-    .filter(([v]) => f !== "close" || v !== "closed" || p.role === "coat" || /coat|puffer|rain|zip|track/.test(p.category))
+    .filter(([v]) => f !== "close" || closeWaysOf(p).includes(v))
+    .map(([v, l]) => [v, f === "close" ? Avatar.closeWord(p, v) : l])
     .map(([v, l]) => `<button class="chip small" aria-pressed="${wear?.[p.id]?.[f] === v}" data-fcstyle="${esc(key)}|${esc(p.id)}|${f}|${v}">${esc(l)}</button>`)).join("")}</div></div>`).join("")}</div>`;
 }
 function wearStatusHTML(d) {
@@ -9612,7 +9705,7 @@ function renderSettings() {
         ${aiReady() && unrecognised ? `<div class="row"><button class="btn" data-act="recognise-all">Recognise ${unrecognised} piece${unrecognised > 1 ? "s" : ""} without a brand</button></div>` : ""}
         ${aiReady() && unlooked().length ? `<div class="row"><button class="btn" data-act="look-all">Let the AI look at ${unlooked().length} photo${unlooked().length > 1 ? "s" : ""}</button><span class="muted small">Once per piece, about 350 tokens each: how dressy it really looks, fabric, pattern, detail colours and suits. Outfit ideas then use it offline.</span></div>` : ""}
         ${aiReady() && noFit ? `<div class="row"><button class="btn" data-act="fit-all">Find the fit of ${noFit} piece${noFit > 1 ? "s" : ""}</button><span class="muted small">About 300 tokens per piece. You can also tap the fit on any piece.</span></div>` : ""}
-        <p class="muted small" style="margin:0">This month: ${u.requests} AI request${u.requests === 1 ? "" : "s"} · ${(u.input + u.output).toLocaleString()} tokens (${u.input.toLocaleString()} in, ${u.output.toLocaleString()} out)</p>
+        <p class="muted small" style="margin:0">This month: ${u.requests} AI request${u.requests === 1 ? "" : "s"} · ${(u.input + u.output).toLocaleString()} tokens (${u.input.toLocaleString()} in, ${u.output.toLocaleString()} out${u.cached ? `; ${u.cached.toLocaleString()} of the input reused from Gemini's cache` : ""})</p>
       </section>
       ${mirrorCard()}
       ${kiosk?.card() || ""}
@@ -9630,6 +9723,11 @@ function renderSettings() {
         <h2 style="margin:0">Fit check</h2>
         <p class="muted small" style="margin:0">Fit checks read the photo on this device (contrast, colours, where the outfit splits). If you run an AI model of your own on your network, its address here gets the photo and the outfit too, and its answer is added (no paid service; with no answer in 15 seconds the device's reading is used). Leave it empty to keep everything on the device.</p>
         <div class="field"><label for="local-ai">Local AI server URL</label><input id="local-ai" class="input" type="url" inputmode="url" placeholder="https://my-pc.local:8080/fit-check" data-input="localai" value="${esc(s.localAIUrl || "")}"><span id="local-ai-hint" class="muted small">${s.localAIUrl ? "Fit checks are sent there first." : "Not set: fit checks stay on the device."} From the hosted app (https) the server needs https too, or the browser blocks it.</span></div>
+      </section>
+      <section class="card stack">
+        <h2 class="card-title">Your avatar</h2>
+        <p class="muted small flush">${esc(state.avatar ? Avatar.bodyLine(Avatar.cleanBody(state.avatar.body)) : "Not shaped yet: height, weight, build, skin, face and hair.")}</p>
+        <div class="row"><button class="btn" data-act="avatar-edit">Customize avatar</button></div>
       </section>
       <section class="card stack">
         <h2 style="margin:0">Look</h2>
@@ -10180,12 +10278,25 @@ function stylistSystem(chat) {
   const likes = tasteText();
   const cal = calendarText();
   const day = plan ? Chat.planText(plan, wx, { place }) : `${state.event?.day === "tomorrow" ? "Tomorrow" : "Today"}: feels ${Math.round(c.feels)}°C${c.wet ? ", wet" : ""}.`;
-  const context = `The user is ${shopperText()}.${ageNow()}\n${day}\nOccasion: ${occ.label}${occ.id !== state.occasion ? " (from the question)" : ""}.${cal ? `\n${cal}` : ""}\nWardrobe (#number name; type; colours; brand; style; fit; warmth 1-5; wear):\n${wardrobeText({ gym: state.occasion === "gym" || /\b(gym|run|running|train|training|workout|sport)\b/i.test(question) }) || "(empty)"}${likes ? `\nTaste (learnt from what the user wears, likes and skips):\n${likes}` : ""}`;
+  // A question about what to wear now or at the plan's time (not a trip, not shopping or packing):
+  // the wardrobe leaves out what that weather rules out (see wardrobeText).
+  const span = chat.trim ? { min: feels, max: wx ? wx.max : c.feels } : null;
+  const wardrobe = wardrobeText({ gym: state.occasion === "gym" || /\b(gym|run|running|train|training|workout|sport)\b/i.test(question), weather: span }) || "(empty)";
+  const context = `The user is ${shopperText()}.${ageNow()}\n${day}\nOccasion: ${occ.label}${occ.id !== state.occasion ? " (from the question)" : ""}.${cal ? `\n${cal}` : ""}${likes ? `\nTaste (learnt from what the user wears, likes and skips):\n${likes}` : ""}`;
   // The fashion bible: its mandatory rules and the tips that fit this question.
   const weather = [feels < 8 ? "cold winter layers coat" : feels >= 24 ? "hot summer light" : "", wet ? "rain" : "", plan?.where === "in and out" || (wx && wx.max - wx.min >= 3) ? "layering layers" : "", plan?.evening ? "evening" : ""].join(" ");
-  const guide = Style.guideText({ question, occasion: occ.id, extra: `${occ.label} ${occ.likes.join(" ")} ${weather}` });
-  return { system: `${STYLIST_SYSTEM}${guide ? "" : ` ${BASIC_RULES}`}\n\n${guide ? guide + "\n\n" : ""}${context}`, occ, cond: { feels, wet, humid: c.humid } };
+  const rules = Style.guideText({ part: "rules" });
+  const tips = Style.guideText({ part: "tips", question, occasion: occ.id, extra: `${occ.label} ${occ.likes.join(" ")} ${weather}` });
+  // What stays the same from one question to the next comes first (instructions, the rules, the
+  // wardrobe), what this question changes last (its tips, the day, the occasion, the taste lines): every
+  // conversation then starts with the same long text, which Gemini can reuse from its cache.
+  return { system: `${STYLIST_SYSTEM}${rules ? "" : ` ${BASIC_RULES}`}\n\n${rules ? rules + "\n\n" : ""}Wardrobe (#number name; type; colours; brand; style; fit; warmth 1-5; wear):\n${wardrobe}\n\n${tips ? tips + "\n\n" : ""}${context}`, occ, cond: { feels, wet, humid: c.humid } };
 }
+// Questions about what to wear now or at a plan's time, as opposed to a trip, packing, shopping or
+// any other advice about the wardrobe (those get the whole wardrobe).
+const WEAR_NOW = /\b(wear|outfits?|dress|put on|look for|metto|mettere|indosso|indossare|vestir\w*)\b/i;
+const NOT_NOW = /\b(pack\w*|trip|travel\w*|holiday|vacation|week|weekend|days|month|buy|shop\w*|donate|valigia|viaggio|vacanza|settimana|compr\w*)\b/i;
+const askWearNow = (q) => WEAR_NOW.test(q) && !NOT_NOW.test(q) && !/\b\d{1,2}[/.-]\d{1,2}\b/.test(q);
 
 // The conversation's system prompt and the #numbers it uses, built once and kept while the
 // wardrobe and the plan stay the same, so every message of it starts with the same prompt (Gemini
@@ -10239,7 +10350,7 @@ async function ask(question, targetId = "ai-answer") {
   if (!question?.trim()) return;
   if (targetId !== "ai-answer") return askOnce(question, targetId);
   const plan = Chat.readPlan(question);
-  const chat = (state.aiChat = { question: question.trim(), plan, wx: null, place: "", answer: null, history: [], prev: [], edited: [], changed: [], swap: null, busy: plan ? "Checking the weather for your plan…" : "Thinking about your wardrobe…", error: "" });
+  const chat = (state.aiChat = { question: question.trim(), trim: askWearNow(question), plan, wx: null, place: "", answer: null, history: [], prev: [], edited: [], changed: [], swap: null, busy: plan ? "Checking the weather for your plan…" : "Thinking about your wardrobe…", error: "" });
   state.aiAnswer = "";
   paintChat();
   try {
@@ -10804,6 +10915,16 @@ async function onTap(e) {
     openItem(it.id);
     return;
   }
+  if (ds.setfasten) {
+    const [id, f] = ds.setfasten.split(":");
+    const it = state.items.find((i) => i.id === id);
+    if (!it) return;
+    it.fastening = f;
+    await store.put("items", it);
+    openItem(it.id);
+    dressStage();
+    return render();
+  }
   if (ds.setfit) {
     const [id, fit] = ds.setfit.split(":");
     const it = state.items.find((i) => i.id === id);
@@ -11003,6 +11124,7 @@ async function onTap(e) {
 
   switch (ds.act) {
     case "body-save": return saveBody();
+    case "avatar-edit": return openAvatarEditor();
     case "body-photo": return bodyPhotoInput.click();
     case "body-photo-off": delete bodyDraft().facePhotoDataUrl; bodyChanged(); return remountBody();
     case "rebake": return rebakePieces();

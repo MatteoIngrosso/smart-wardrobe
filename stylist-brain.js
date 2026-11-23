@@ -142,8 +142,8 @@ export function wearRequest(pieces) {
   };
   const ROLE = { coat: "coat", outer: "jacket", mid: "layer", base: "top", bottom: "bottoms" };
   const text = `The man in this mirror photo wears this outfit. For each piece say how he wears it here (${NA} when it doesn't apply or can't be seen; seen=false if the piece isn't in the photo).
-close: open, buttoned (a jacket's button done, V above it) or closed (buttoned or zipped up to the chest). tuck: in, out or half (front only). sleeves: down or rolled. break: trousers at the shoes, none, slight or full.
-${list.map((p) => `${p.ref} | ${ROLE[p.role] || p.role} | ${p.name} (${p.category}) | ${p.fields.join(", ")}`).join("\n")}`;
+close: open, buttoned (a jacket's button done, V above it; on a piece that zips: zipped half way) or closed (buttoned or zipped up to the chest). tuck: in, out or half (front only). sleeves: down or rolled. break: trousers at the shoes, none, slight or full.
+${list.map((p) => `${p.ref} | ${ROLE[p.role] || p.role} | ${p.name} (${p.category}${p.fastening === "zip" ? ", zips" : ""}) | ${p.fields.join(", ")}`).join("\n")}`;
   return {
     refs: Object.fromEntries(list.map((p) => [p.ref, p])),
     system: "You look at outfit photos for a wardrobe app and say how each listed piece is worn. Reply with JSON only.",
