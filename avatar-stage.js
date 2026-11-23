@@ -26,7 +26,7 @@
 
 import * as THREE from './vendor/three/three.module.min.js';
 import { RoomEnvironment } from './vendor/three/addons/RoomEnvironment.js';
-import { SLOTS, SLOT_OFFSET_MM, FACE_FRAME, cleanBody, topSize, bottomsSize, REST } from './avatar-config.js';
+import { SLOTS, SLOT_OFFSET_MM, FACE_FRAME, cleanBody, topSize, bottomsSize, REST, SHAPE_RANGE } from './avatar-config.js';
 
 const DATA = new URL('./avatar/', import.meta.url);
 const BACKDROP = '#141413';
@@ -45,7 +45,7 @@ const SHAPE_CACHE = 8;           // bodies kept (height, weight, build), so goin
 // as height^0.15 x weight^0.22, the width as height^0.75 x weight^0.1, and each build is this much
 // wider than "regular"
 const BUILD_WIDTH = { slim: 0.91, regular: 1, athletic: 1.08, broad: 1.15 };
-const bodyKey = (c) => `${c.heightCm}|${c.weightKg}|${c.build}`;
+const bodyKey = (c) => `${c.heightCm}|${c.weightKg}|${c.build}|${Object.values(c.shape || {}).join(',')}`;
 let bodyIds = 0;
 const SLOT_INDEX = { top: 0, layer: 1, jacket: 2, bottoms: 3, shoes: 4 };
 // Which slots cover which (outer → inner), for the "not drawn where fully covered" test.
@@ -298,8 +298,25 @@ function morphWeights(cfg) {
   out['breast-point-decr'] = W.max * 1.2;
   out['measure-bust-circ-decr'] = W.max * 0.5;
   out['buttocks-volume-decr'] = W.max * 0.5;
+  // "More detail" (avatar-config.js BODY_SHAPES): each slider adds its own shapes on top, -1..1
+  const sh = cfg.shape || {};
+  for (const [id, [less, more]] of Object.entries(SHAPE_TARGETS)) {
+    const v = (sh[id] || 0) / SHAPE_RANGE;
+    for (const [name, w] of v < 0 ? less : v > 0 ? more : []) out[name] = (out[name] || 0) + Math.abs(v) * w;
+  }
   return out;
 }
+// per slider: [the shapes at -10, the shapes at +10] as [target, weight at full]
+const SHAPE_TARGETS = {
+  shoulders: [[['measure-shoulder-dist-decr', 1]], [['measure-shoulder-dist-incr', 1], ['torso-vshape-incr', 0.3]]],
+  chest: [[['measure-bust-circ-decr', 0.9]], [['measure-bust-circ-incr', 0.8], ['breast-point-decr', 0.5]]],
+  waist: [[['measure-waist-circ-decr', 0.8]], [['measure-waist-circ-incr', 0.8]]],
+  belly: [[['stomach-pregnant-decr', 1]], [['stomach-pregnant-incr', 0.55]]],
+  hips: [[['measure-hips-circ-decr', 1]], [['measure-hips-circ-incr', 1], ['buttocks-volume-decr', 0.3]]],
+  arms: [[['measure-upperarm-length-decr', 0.7], ['measure-lowerarm-length-decr', 0.7]], [['measure-upperarm-length-incr', 0.7], ['measure-lowerarm-length-incr', 0.7]]],
+  legs: [[['measure-upperleg-height-decr', 0.55], ['measure-lowerleg-height-decr', 0.55]], [['measure-upperleg-height-incr', 0.55], ['measure-lowerleg-height-incr', 0.55]]],
+  neck: [[['measure-neck-circ-decr', 1]], [['measure-neck-circ-incr', 1.2]]],
+};
 
 function rotateAround(P, o, pivot, axis, ang) {
   // Rodrigues rotation of point P[o..o+2] about an axis through pivot

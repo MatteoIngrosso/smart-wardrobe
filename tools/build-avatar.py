@@ -13,8 +13,9 @@
 #             baked as a young man of mixed ethnicity with average proportions and a masculine
 #             finish (MASCULINE below: no breasts, narrower hips, sloped shoulders)
 #   index     the body's triangles (helpers left out)
-#   m:<name>  sparse morph targets: universal muscle x weight grid, height, and a few torso/shoulder
-#             shapes for the build (slim, regular, athletic, broad)
+#   m:<name>  sparse morph targets: universal muscle x weight grid, height, a few torso/shoulder
+#             shapes for the build (slim, regular, athletic, broad), and the "More detail" sliders
+#             (shoulders, chest, waist, belly, hips, arm length, leg length, neck)
 #   ao        per vertex 0-255: ambient occlusion on the rest pose (255 open)
 #   region    per vertex: 1 torso, 2 upper arm, 3 forearm, 4 hand, 5 thigh, 6 shin, 7 foot, 8 head, 9 neck
 #   armL/armR/legL/legR  0-255 weights of the arm and leg chains (arms are lowered at run time)
@@ -84,7 +85,15 @@ for name in ['torso/torso-vshape-incr', 'torso/torso-scale-horiz-incr', 'torso/t
              'measure/measure-shoulder-dist-incr', 'measure/measure-shoulder-dist-decr',
              'measure/measure-neck-circ-incr', 'measure/measure-upperarm-circ-incr',
              'stomach/stomach-pregnant-incr', 'breast/breast-point-decr', 'measure/measure-bust-circ-decr',
-             'buttocks/buttocks-volume-decr']:
+             'buttocks/buttocks-volume-decr',
+             # the "More detail" sliders on the body (shoulders and neck use the ones above too)
+             'measure/measure-bust-circ-incr', 'measure/measure-waist-circ-incr', 'measure/measure-waist-circ-decr',
+             'stomach/stomach-pregnant-decr', 'measure/measure-hips-circ-incr', 'measure/measure-hips-circ-decr',
+             'measure/measure-upperarm-length-incr', 'measure/measure-upperarm-length-decr',
+             'measure/measure-lowerarm-length-incr', 'measure/measure-lowerarm-length-decr',
+             'measure/measure-upperleg-height-incr', 'measure/measure-upperleg-height-decr',
+             'measure/measure-lowerleg-height-incr', 'measure/measure-lowerleg-height-decr',
+             'measure/measure-neck-circ-decr']:
     morphs[name.split('/')[1]] = target(name)
 
 tris = []
