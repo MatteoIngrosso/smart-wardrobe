@@ -125,7 +125,9 @@ test("asleep: clock, weather, today's outfit; nothing of the app painted; the 3D
 test("a tap wakes it at once, presses nothing, and the 3D mirror draws again", async () => {
   const chip = await page.evaluate(() => {
     const t = window.__t; t.state.occasion = "casual";
-    const r = document.querySelector('[data-occ="work"]').getBoundingClientRect();
+    const el = document.querySelector('[data-occ="work"]');
+    el.scrollIntoView({ block: "center" }); // under the mirror since the weather moved to the top of Today
+    const r = el.getBoundingClientRect();
     return { x: r.x + r.width / 2, y: r.y + r.height / 2 };
   });
   await page.evaluate(() => {
@@ -151,6 +153,7 @@ test("a tap wakes it at once, presses nothing, and the 3D mirror draws again", a
   await page.touchscreen.tap(chip.x, chip.y);
   await page.waitForTimeout(200);
   assert.equal(await page.evaluate(() => window.__t.state.occasion), "work", "awake, the same tap presses it");
+  await page.evaluate(() => { document.querySelector("main").scrollTop = 0; }); // back to the page title for the next test
 });
 
 test("5 taps on the page title open the diagnostics", async () => {

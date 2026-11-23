@@ -15,6 +15,7 @@
   --radius: 12px;
   --tap: 56px;
   --rail: 104px;
+  --paper: #e7e3dc; /* garments always sit on light paper, in every theme */
   color-scheme: dark;
 }
 @media (prefers-color-scheme: light) {
@@ -614,13 +615,21 @@ details summary { cursor: pointer; }
 .preview-stage { height: min(62vh, 640px); }
 .angle-pills .chip { min-height: 44px; padding: 0 16px; font-size: 14px; }
 
-.m-looks { display: grid; gap: 8px; }
-.m-look { display: grid; gap: 8px; text-align: left; padding: 10px 12px; border-radius: 14px; border: 1px solid var(--line); background: var(--surface); }
-.m-look[aria-pressed="true"] { border-color: var(--text); background: var(--surface-2); }
-.look-pics { display: flex; gap: 4px; }
-.look-pics img { width: 40px; height: 48px; object-fit: contain; border-radius: 8px; background: var(--surface-2); }
-.look-text { display: grid; line-height: 1.3; }
-.look-text b { font-weight: 500; }
+.m-looks { display: grid; gap: 10px; }
+/* An idea next to the mirror: number + name + state, the pieces on light paper tiles, their names. */
+.m-look { display: grid; gap: 10px; text-align: left; padding: 12px; border-radius: 16px; border: 1px solid var(--line);
+  background: var(--surface); transition: border-color .15s, background .15s, box-shadow .15s; }
+.m-look[aria-pressed="true"] { border-color: var(--text); background: var(--surface-2); box-shadow: inset 0 0 0 1px var(--text); }
+.look-top { display: grid; grid-template-columns: auto minmax(0, 1fr) auto; align-items: center; gap: 8px; line-height: 1.2; }
+.look-top b { font-weight: 500; font-size: 16px; }
+.look-num { width: 24px; height: 24px; border-radius: 50%; display: grid; place-items: center; font-size: 12px; font-weight: 600;
+  border: 1px solid var(--line); color: var(--muted); }
+.m-look[aria-pressed="true"] .look-num { background: var(--text); color: var(--bg); border-color: var(--text); }
+.look-state { font-size: 12px; color: var(--muted); white-space: nowrap; }
+.look-pics { display: grid; grid-template-columns: repeat(auto-fill, minmax(52px, 1fr)); gap: 6px; }
+.look-tile { aspect-ratio: 4 / 5; border-radius: 10px; background: var(--paper); display: grid; place-items: center; overflow: hidden; }
+.look-tile img { width: 88%; height: 88%; object-fit: contain; }
+.look-names { font-size: 12.5px; line-height: 1.35; color: var(--muted); display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
 .wearing-head { margin-top: 6px !important; }
 .wearing { display: grid; gap: 4px; }
 .wear-row { display: grid; grid-template-columns: 44px minmax(0, 1fr) auto; gap: 10px; align-items: center; min-height: 52px; }
@@ -639,7 +648,7 @@ details summary { cursor: pointer; }
   .mirror.is-lookbook { grid-template-columns: minmax(0, 1fr) 260px; }
   .mirror-side { padding: 14px; }
   .swatch { width: 34px; height: 34px; }
-  .look-pics img { width: 34px; height: 42px; }
+  .look-pics { grid-template-columns: repeat(auto-fill, minmax(44px, 1fr)); }
 }
 @media (max-width: 860px) {
   .mirror { grid-template-columns: minmax(0, 1fr); }
@@ -766,4 +775,24 @@ p.chat-you { padding: 0 4px; }
   .avatar-editor { grid-template-columns: minmax(0, 1fr); }
   .avatar-editor .preview-wrap { order: -1; }
   .avatar-editor .preview-stage { height: min(46vh, 420px); }
+}
+
+/* ---------- Today: weather first ---------- */
+.weather-card { justify-content: space-between; margin-bottom: 20px; }
+.weather-feel { min-width: min(260px, 100%); flex: 1; max-width: 420px; }
+.accent-link { color: var(--accent); }
+
+/* ---------- Today's mirror: the avatar full width, the ideas and what he wears in a row under it ---------- */
+.mirror, .mirror.is-lookbook { grid-template-columns: minmax(0, 1fr); }
+.mirror .stage3d { height: min(58vh, 720px); }
+.mirror-looks { grid-template-columns: minmax(0, 1fr); gap: 14px; }
+.m-looks { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+.wearing { grid-template-columns: repeat(auto-fill, minmax(260px, 1fr)); column-gap: 16px; }
+.look-actions { gap: 10px; }
+.look-actions .btn { flex: 1 1 220px; }
+@media (max-width: 1100px) {
+  .mirror, .mirror.is-lookbook { grid-template-columns: minmax(0, 1fr); }
+}
+@media (max-width: 560px) {
+  .m-looks { grid-template-columns: minmax(0, 1fr); }
 }
