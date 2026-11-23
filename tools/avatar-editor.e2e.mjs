@@ -4,6 +4,8 @@
 // - Today's mirror has no body panel any more: the stage and Today's ideas only
 // - Settings has a Your avatar card; Customize avatar opens a popup with the Body / Face & hair panel
 //   next to the 3D avatar (the same stage, moved into the popup)
+// - More detail: the shoulders and leg length sliders reshape the body; old saved bodies are unchanged;
+//   Reset puts them back
 // - a slider changes the avatar in the popup; Save keeps it and the Settings line says the new height
 // - closing the popup gives the stage back to Today
 // Set SHOTS=<dir> for screenshots. Needs Playwright with Chromium.
@@ -93,7 +95,7 @@ test("Settings > Your avatar opens the panel next to the 3D avatar", async () =>
   }));
   assert.ok(r.sheet && r.panel);
   assert.deepEqual(r.tabs, ["Body", "Face & hair"]);
-  assert.equal(r.sliders, 3);
+  assert.equal(r.sliders, 11, "height, weight, build and the 8 of More detail");
   assert.ok(r.stage > 400, `stage ${r.stage}px wide`);
   await page.click('.sheet-panel [data-mbtab="face"]');
   assert.ok(await page.evaluate(() => document.querySelectorAll('.sheet-panel [data-mb="hairStyle"]').length > 5), "Face & hair shows the hairstyles");
@@ -113,8 +115,43 @@ test("a slider changes the avatar; Save keeps it and Settings says so", async ()
   if (SHOTS) await page.screenshot({ path: join(SHOTS, "settings-avatar-popup-1024x1366.png") });
   await page.click("#mb-save");
   await page.waitForFunction(() => window.__t.state.avatar?.body?.heightCm === 191);
-  assert.equal(await page.textContent("#mb-save"), "Saved");
+  await page.waitForFunction(() => document.querySelector("#mb-save")?.textContent === "Saved", null, { timeout: 5000 }); // (once it's stored)
   assert.match(await page.evaluate(() => document.querySelector('main [data-act="avatar-edit"]').closest("section").textContent), /191/);
+});
+
+test("More detail: shoulders and leg length reshape him; Reset puts them back", async () => {
+  // the stage's built body: shoulder joints apart and the hip joint's height (metres-ish, as built)
+  const measure = () => page.evaluate(() => {
+    const J = window.__t.mirror.stage.debug.state.B.J;
+    return { shoulders: J.shoulderL[0] - J.shoulderR[0], hip: J.hipL[1], id: window.__t.mirror.stage.debug.state.bodyId };
+  });
+  const move = (k, v) => page.evaluate(([k, v]) => {
+    const s = document.querySelector(`#mb-shape-${k}`);
+    s.value = String(v);
+    s.dispatchEvent(new Event("input", { bubbles: true }));
+    s.dispatchEvent(new Event("change", { bubbles: true }));
+  }, [k, v]);
+  const rebuilt = (id) => page.waitForFunction((id) => window.__t.mirror.stage.debug.state.bodyId !== id, id, { timeout: 60000 });
+  const before = await measure();
+  assert.equal(await page.textContent("#mb-shape-shoulders-v"), "Average");
+  await move("shoulders", 10);
+  assert.equal(await page.textContent("#mb-shape-shoulders-v"), "Broader +10");
+  await rebuilt(before.id);
+  const broad = await measure();
+  assert.ok(broad.shoulders > before.shoulders * 1.03, `shoulders ${before.shoulders.toFixed(3)} → ${broad.shoulders.toFixed(3)}`);
+  await move("legs", 10);
+  await rebuilt(broad.id);
+  const legs = await measure();
+  assert.ok(legs.hip > broad.hip * 1.02, `hip height ${broad.hip.toFixed(3)} → ${legs.hip.toFixed(3)} (same height, longer legs)`);
+  assert.deepEqual(await page.evaluate(() => window.__t.bodyDraft().shape), { shoulders: 10, chest: 0, waist: 0, belly: 0, hips: 0, arms: 0, legs: 10, neck: 0 });
+  if (SHOTS) await page.screenshot({ path: join(SHOTS, "settings-avatar-more-detail-1024x1366.png") });
+  await page.click('.sheet-panel [data-act="body-shape-reset"]');
+  await rebuilt(legs.id);
+  const back = await measure();
+  assert.ok(Math.abs(back.shoulders - before.shoulders) < 1e-4 && Math.abs(back.hip - before.hip) < 1e-4, "Reset gives the same body back");
+  assert.equal(await page.textContent("#mb-shape-legs-v"), "Average");
+  // a body saved before More detail existed is the same body
+  assert.ok(await page.evaluate(() => window.__t.Avatar.sameBody({ heightCm: 180, weightKg: 75, build: "regular" }, { heightCm: 180, weightKg: 75, build: "regular", shape: { legs: 0 } })));
 });
 
 test("closing the popup gives the stage back to Today; no errors", async () => {

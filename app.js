@@ -4683,7 +4683,9 @@ function bodyPanelHTML() {
       ${tab === "body" ? `${range("height", "Height", 160, 200, b.heightCm, `${b.heightCm} cm`)}
       ${range("weight", "Weight", 50, 120, b.weightKg, `${b.weightKg} kg`)}
       ${range("build", "Build", 0, Avatar.BUILDS.length - 1, build, Avatar.BUILDS[build].label)}
-      ${swatches("skinTone", "Skin tone", Avatar.SKINS, b.skinTone)}`
+      ${swatches("skinTone", "Skin tone", Avatar.SKINS, b.skinTone)}
+      <div class="mb-more"><div class="mb-more-head"><h3>More detail</h3><button class="chip" data-act="body-shape-reset"${Avatar.BODY_SHAPES.some((x) => b.shape?.[x.id]) ? "" : " disabled"}>Reset</button></div>
+      ${Avatar.BODY_SHAPES.map((x) => range(`shape-${x.id}`, x.label, -Avatar.SHAPE_RANGE, Avatar.SHAPE_RANGE, b.shape?.[x.id] || 0, Avatar.shapeWord(x, b.shape?.[x.id] || 0))).join("")}</div>`
       : `<div class="mb-face-tab">${swatches("hairColor", "Hair colour", Avatar.HAIR_COLORS, b.hairColor)}
       ${chips("hairStyle", "Hair", Avatar.HAIR_STYLES, b.hairStyle)}
       ${mirrorMode() === "avatar" ? `<div class="field mb-field"><label>Hair look</label><div class="mb-chips">${HAIR_FINISHES.map(([f, l]) =>
@@ -4794,6 +4796,8 @@ function bodyUI() {
   const saved = !!state.avatar && Avatar.sameBody(state.avatar.body, bodyDraft());
   btn.disabled = saved || mirror.reading;
   btn.textContent = saved ? "Saved" : "Save body";
+  const reset = $('[data-act="body-shape-reset"]');
+  if (reset) reset.disabled = !Avatar.BODY_SHAPES.some((x) => bodyDraft().shape?.[x.id]);
   hint.textContent = mirror.reading ? "Reading your photo…"
     : saved ? `${Avatar.bodyLine(Avatar.cleanBody(state.avatar.body))}. Every device shows this body.`
     : state.avatar ? "The avatar already shows your changes. Save to keep them on every device."
@@ -4808,8 +4812,10 @@ function bodyInput(k, v) {
   if (k === "height") b.heightCm = +v;
   else if (k === "weight") b.weightKg = +v;
   else if (k === "build") b.build = Avatar.BUILDS[+v]?.id || b.build;
+  const sh = k.startsWith("shape-") && Avatar.BODY_SHAPES.find((x) => `shape-${x.id}` === k);
+  if (sh) b.shape = { ...Avatar.cleanShape(b.shape), [sh.id]: +v };
   const out = $(`#mb-${k}-v`);
-  if (out) out.textContent = { height: `${b.heightCm} cm`, weight: `${b.weightKg} kg`, build: Avatar.BUILDS.find((x) => x.id === b.build)?.label }[k];
+  if (out) out.textContent = sh ? Avatar.shapeWord(sh, +v) : { height: `${b.heightCm} cm`, weight: `${b.weightKg} kg`, build: Avatar.BUILDS.find((x) => x.id === b.build)?.label }[k];
   // while the slider moves the 3D man is only scaled (cheap); the exact body and clothes come on release
   mirror.stage?.setBody(b, { live: true });
   bodyUI();
@@ -11127,6 +11133,7 @@ async function onTap(e) {
     case "avatar-edit": return openAvatarEditor();
     case "body-photo": return bodyPhotoInput.click();
     case "body-photo-off": delete bodyDraft().facePhotoDataUrl; bodyChanged(); return remountBody();
+    case "body-shape-reset": bodyDraft().shape = Avatar.cleanShape({}); bodyChanged(); return remountBody();
     case "rebake": return rebakePieces();
     case "seed": return loadSeed();
     case "shuffle": {

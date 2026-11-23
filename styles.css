@@ -582,6 +582,12 @@ details summary { cursor: pointer; }
 .mb-photo-text { display: grid; line-height: 1.25; min-width: 0; }
 .mb-photo-text b { font-weight: 500; font-size: 15px; }
 .mb-photo .chip { min-height: 38px; padding: 0 12px; font-size: 14px; }
+/* "More detail" on the Body tab: shoulders, chest, waist… (avatar-config.js BODY_SHAPES) */
+.mb-more { display: grid; gap: 8px; padding-top: 12px; border-top: 1px solid var(--line); }
+.mb-more-head { display: flex; justify-content: space-between; align-items: center; gap: 8px; min-height: 38px; }
+.mb-more-head h3 { margin: 0; font-size: 15px; font-weight: 600; }
+.mb-more-head .chip { min-height: 38px; padding: 0 12px; font-size: 14px; }
+.mb-more-head .chip:disabled { opacity: .4; }
 
 .mirror-stage { display: grid; gap: 8px; justify-items: center; min-width: 0; }
 /* The 3D mirror (avatar-stage.js draws into .stage3d-host; drag sideways turns him). */
@@ -760,7 +766,7 @@ p.chat-you { padding: 0 4px; }
 .sheet-title { font-size: 26px; }
 .avatar-editor { display: grid; grid-template-columns: minmax(240px, 300px) minmax(0, 1fr); gap: 20px; align-items: start; }
 .avatar-editor.no-stage { grid-template-columns: minmax(0, 360px); }
-.avatar-editor .preview-wrap { margin-bottom: 0; }
+.avatar-editor .preview-wrap { margin-bottom: 0; position: sticky; top: 0; } /* (stays in view while the body's sliders scroll) */
 .avatar-editor .preview-stage { height: min(60vh, 620px); }
 @media (max-width: 700px) {
   .avatar-editor { grid-template-columns: minmax(0, 1fr); }
