@@ -25,7 +25,7 @@
  * @typedef {Object} BakedGarmentAsset
  * @property {string} garmentId     the wardrobe item's id
  * @property {GarmentLayerSlot} slot
- * @property {'tee'|'hoodie'|'sweater'|'bomber'|'jacket_open'|'jeans'|'cargo'|'sneakers'|'boots'} garmentSubType
+ * @property {string} garmentSubType  one of avatar-stage.js SPECS (tee, shirt, polo, hoodie, ziphoodie, sweater, bomber, blazer, jacket_open, jeans, cargo, sneakers, dress, boots, ...)
  * @property {Blob} frontChestUV    the front panel, framed as PANEL_FRAME says (opaque, no cut-out edges)
  * @property {Blob} backPanelUV     the back panel, same framing, as seen from behind
  * @property {string} fabricBaseColor hex: the median fabric colour, for sleeves, collar, hood and sides
@@ -55,15 +55,24 @@ export const ROLE_TO_SLOT = { base: "top", mid: "layer", outer: "jacket", bottom
 export const SLOT_OFFSET_MM = { top: 4, layer: 11, jacket: 20, bottoms: 6, shoes: 8 };
 
 // What 3D shell a wardrobe piece is drawn with, from its category (and name for puffers, bombers,
-// cargos and joggers). Each shell has its own cut on the stage (avatar-stage.js SPECS): a bomber
+// blazers, cargos and joggers). Each shell has its own cut on the stage (avatar-stage.js SPECS): a bomber
 // billows over its rib waistband and cuffs, a puffer is quilted, joggers taper to an elastic cuff,
-// leggings are skin-tight, a tank top has no sleeves.
+// leggings are skin-tight, a tank top has no sleeves, a shirt and a polo have a folded collar, a blazer
+// has lapels, a zip hoodie can be worn open, dress shoes are low and sleek.
+const BLAZER = /\b(blazers?|suit jackets?|sport ?coats?|sports jackets?|tuxedo|dinner jackets?|tailored jackets?)\b/;
+const SHORT_SLEEVE = /\b(short[- ]?sleeved?|s\/s)\b/;
 export function subTypeOf(item) {
   const c = item?.category || "", name = (item?.name || "").toLowerCase();
+  const tags = (Array.isArray(item?.tags) ? item.tags : []).join(" ").toLowerCase();
   if (c === "tank-top") return "tank";
   if (c === "long-sleeve-top") return "longsleeve";
-  if (["tshirt", "polo", "shirt", "gym-top", "sports-bra"].includes(c)) return "tee";
-  if (["hoodie", "zip-hoodie", "gym-hoodie"].includes(c)) return "hoodie";
+  if (c === "shirt") return SHORT_SLEEVE.test(name) || (SHORT_SLEEVE.test(tags) && !/long[- ]?sleeve/.test(tags)) ? "shortshirt" : "shirt";
+  if (c === "polo") return "polo";
+  if (["tshirt", "gym-top", "sports-bra"].includes(c)) return "tee";
+  // a blazer is a blazer whatever it was saved as (his navy blazer is an "overshirt")
+  if (["jacket", "coat", "overshirt", "rain"].includes(c) && BLAZER.test(name)) return "blazer";
+  // a hoodie that zips (its kind, its name, or set on the piece) can be worn open; one set to "nothing" can't
+  if (["zip-hoodie", "hoodie", "gym-hoodie"].includes(c)) return (c === "zip-hoodie" || item.fastening === "zip" || /\bzip/.test(name)) && item.fastening !== "none" && item.fastening !== "buttons" ? "ziphoodie" : "hoodie";
   if (c === "track-jacket") return "trackjacket";
   if (["sweatshirt", "sweater", "overshirt"].includes(c)) return "sweater";
   if (c === "puffer" || (["jacket", "rain", "coat"].includes(c) && /\b(puffer|down|padded|quilted)\b/.test(name))) return "puffer";
@@ -74,9 +83,45 @@ export function subTypeOf(item) {
   if (/cargo/.test(name)) return "cargo";
   if (["jeans", "trousers", "shorts", "gym-shorts", "skirt"].includes(c)) return "jeans";
   if (c === "boots") return "boots";
-  if (["sneakers", "training-shoes", "dress-shoes"].includes(c)) return "sneakers";
+  if (c === "dress-shoes" || (["sneakers"].includes(c) && /\b(loafers?|oxfords?|derby|derbies|brogues?|monk ?straps?|dress shoes?)\b/.test(name))) return "dress";
+  if (["sneakers", "training-shoes"].includes(c)) return "sneakers";
   return null; // not drawn on the mirror (accessories, headwear, underwear)
 }
+// How a piece's front fastens: "zip", "buttons" (snaps and toggles count as buttons) or "none" (a
+// pullover). Set by hand on the piece (item.fastening), else read from its name, else its kind.
+export const FASTENINGS = [["zip", "Zip"], ["buttons", "Buttons"], ["none", "Nothing (pullover)"]];
+const ZIP_WORDS = /\b(zip|zips|zipped|zipper|zip-?up|full[- ]zip|half[- ]zip|quarter[- ]zip|1\/4[- ]zip|track ?(jacket|top)|windbreaker|wind ?jacket|rain ?jacket|shell|softshell|fleece jacket|puffer|down jacket|bomber|harrington|biker|moto|leather jacket|anorak|gilet|parka)\b/;
+const BUTTON_WORDS = /\b(buttons?|buttoned|button[- ]down|single[- ]breasted|double[- ]breasted|blazers?|suit|sport ?coat|cardigan|trucker|denim jacket|jean jacket|pea ?coat|overcoat|trench|wool coat|chore|shacket|overshirt|snaps?|press[- ]studs?|toggles?|duffle)\b/;
+const OPENS = new Set(["jacket", "coat", "rain", "puffer", "overshirt", "track-jacket", "zip-hoodie", "shirt", "polo"]);
+export function fasteningOf(item) {
+  if (FASTENINGS.some(([v]) => v === item?.fastening)) return item.fastening;
+  const c = item?.category || "", n = (item?.name || "").toLowerCase();
+  if (["hoodie", "gym-hoodie"].includes(c)) return /\bzip/.test(n) ? "zip" : "none";
+  if (!OPENS.has(c) && !(c === "sweater" && /cardigan/.test(n))) return "none";
+  if (BUTTON_WORDS.test(n) && !/\bzip/.test(n)) return "buttons";
+  if (ZIP_WORDS.test(n)) return "zip";
+  if (["zip-hoodie", "track-jacket", "puffer", "rain"].includes(c)) return "zip";
+  if (c === "jacket") return "zip"; // (most casual jackets zip; a blazer or denim jacket says so in its name)
+  return "buttons"; // coats, overshirts, shirts, polos, cardigans
+}
+// The words for how its front is worn (stylist-brain.js WEAR.close values), by how it fastens.
+const CLOSE_WORDS = { zip: { open: "Open", buttoned: "Half-zipped", closed: "Zipped up" }, buttons: { open: "Open", buttoned: "Buttoned", closed: "Closed up" } };
+export const closeWord = (item, v) => (CLOSE_WORDS[fasteningOf(item)] || CLOSE_WORDS.buttons)[v] || "";
+// The ways it can be worn: a zip open, half-zipped or zipped up; buttons open or buttoned (a coat also
+// closed up to the collar); a pullover none.
+export function closeWays(item) {
+  const f = fasteningOf(item);
+  if (f === "none") return [];
+  if (f === "zip") return ["open", "buttoned", "closed"];
+  return /coat|puffer|rain/.test(item?.category || "") ? ["open", "buttoned", "closed"] : ["open", "buttoned"];
+}
+
+// How a piece that opens is worn when nothing (a fit check, a tap on the mirror) says otherwise:
+// a blazer buttoned, a zip hoodie zipped up, anything else open. Words as in stylist-brain.js WEAR.
+const CLOSE_DEFAULT = { blazer: "buttoned", ziphoodie: "closed", trackjacket: "closed" };
+export const defaultClose = (item) => CLOSE_DEFAULT[subTypeOf(item)] || "open";
+// The mirror's shells whose front can be worn open, buttoned or done up.
+export const OPENS_ON_MIRROR = ["jacket_open", "blazer", "bomber", "ziphoodie", "trackjacket"];
 export const lengthOf = (item) => (["shorts", "gym-shorts"].includes(item?.category) ? "short"
   : item?.category === "coat" ? "long" : item?.fit === "cropped" ? "cropped" : "full");
 
@@ -146,7 +191,7 @@ export function bottomsSize(asset, { leg = 1, waist = REST.waist, short = false 
 }
 
 /* Framing of the baked panels, so the baker and the stage agree.
-   - Tops (tee, hoodie, sweater, bomber, jacket_open): the torso only, no sleeves and no hood.
+   - Tops (tee, shirt, polo, hoodie, sweater, bomber, blazer, jacket_open): the torso only, no sleeves and no hood.
      x: side seam to side seam; y: the top of the shoulders (where the shoulder seam meets the
      collar) to the bottom of the hem. Seen from the front for frontChestUV (the wearer's right on
      the left, as photographed), from behind for backPanelUV (as photographed). The stage maps it

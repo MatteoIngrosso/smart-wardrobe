@@ -16,3 +16,7 @@ data/
 # Cloudflare local dev state (wrangler)
 .wrangler/
 .dev.vars
+# CLHE experiment: exported wardrobe photos and the CLHE checkout (fashion-model/clhe/README.md)
+clhe-out/
+fashion-model/clhe/CLHE/
+fashion-model/clhe/data/

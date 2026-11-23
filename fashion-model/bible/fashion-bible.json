@@ -1,20 +1,20 @@
 {
  "name": "Fashion bible",
  "version": 1,
- "built_at": "2026-11-15T11:56:48+00:00",
+ "built_at": "2026-11-21T12:59:03+00:00",
  "about": "Menswear rules, tips and example outfits, in the Smart Wardrobe app's vocabulary (garment types, colours, styles, fits and occasions as in app.js). Score an outfit with: sigmoid(model.bias + sum(rule.weight * check(rule))).",
  "model": {
-  "bias": -2.136,
+  "bias": -1.833,
   "trained_on": {
-   "outfits": 242,
+   "outfits": 466,
    "rulebook": 42,
-   "learnt": 200,
-   "sources": 85
+   "learnt": 424,
+   "sources": 86
   },
   "accuracy": {
-   "training": 0.901,
-   "unseen": 0.897,
-   "rulebook_only_unseen": 0.86
+   "training": 0.942,
+   "unseen": 0.933,
+   "rulebook_only_unseen": 0.925
   }
  },
  "rules": [
@@ -26,7 +26,7 @@
    "params": {
     "limit": 1
    },
-   "weight": 1.388,
+   "weight": 1.408,
    "prior": 1.5,
    "topics": [
     "colour"
@@ -41,7 +41,7 @@
    "params": {
     "limit": 3
    },
-   "weight": 1.108,
+   "weight": 1.132,
    "prior": 0.8,
    "topics": [
     "colour"
@@ -54,7 +54,7 @@
    "why": "Contrast between top and bottom gives the outfit shape; all mid-tones look flat.",
    "check": "light_dark_contrast",
    "params": {},
-   "weight": 0.009,
+   "weight": 0.0,
    "prior": 0.6,
    "topics": [
     "colour"
@@ -67,7 +67,7 @@
    "why": "Shades of one colour from head to toe look calm and expensive.",
    "check": "tonal",
    "params": {},
-   "weight": 0.205,
+   "weight": 0.138,
    "prior": 0.6,
    "topics": [
     "colour"
@@ -195,7 +195,7 @@
      ]
     ]
    },
-   "weight": 0.717,
+   "weight": 0.487,
    "prior": 0.8,
    "topics": [
     "colour"
@@ -235,7 +235,7 @@
      ]
     ]
    },
-   "weight": 1.449,
+   "weight": 1.533,
    "prior": 1.2,
    "topics": [
     "colour"
@@ -250,7 +250,7 @@
    "params": {
     "limit": 1.5
    },
-   "weight": 1.639,
+   "weight": 1.675,
    "prior": 1.5,
    "topics": [
     "occasions",
@@ -264,7 +264,7 @@
    "why": "Being clearly under- or overdressed is the most noticed mistake; aim for the level of the room.",
    "check": "occasion_formality",
    "params": {},
-   "weight": 1.408,
+   "weight": 1.498,
    "prior": 2.0,
    "topics": [
     "occasions"
@@ -277,7 +277,7 @@
    "why": "Each occasion has its own vocabulary: tailoring for work, sportswear for the gym.",
    "check": "occasion_styles",
    "params": {},
-   "weight": 0.679,
+   "weight": 0.815,
    "prior": 0.8,
    "topics": [
     "occasions"
@@ -311,7 +311,7 @@
      ]
     ]
    },
-   "weight": 1.968,
+   "weight": 1.921,
    "prior": 1.8,
    "topics": [
     "occasions",
@@ -326,7 +326,7 @@
    "why": "When every piece shares a style the outfit reads as intentional.",
    "check": "consistent_style",
    "params": {},
-   "weight": 0.068,
+   "weight": 0.0,
    "prior": 0.6,
    "topics": [
     "wardrobe"
@@ -339,7 +339,7 @@
    "why": "A roomy top looks best over slimmer trousers and the other way round; roomy on roomy only works as a deliberate streetwear look.",
    "check": "proportions",
    "params": {},
-   "weight": 1.111,
+   "weight": 1.126,
    "prior": 1.2,
    "topics": [
     "proportions",
@@ -355,7 +355,7 @@
    "params": {
     "limit": 1
    },
-   "weight": 1.195,
+   "weight": 1.181,
    "prior": 1.0,
    "topics": [
     "streetwear",
@@ -369,7 +369,7 @@
    "why": "One pattern is easy. Two need clearly different scales (fine stripe with a large check), so most days keep it to one.",
    "check": "pattern_mixing",
    "params": {},
-   "weight": 1.198,
+   "weight": 1.113,
    "prior": 0.7,
    "topics": [
     "patterns"
@@ -382,7 +382,7 @@
    "why": "A denim top with jeans in the same wash reads as a uniform; pick clearly different washes or break it up.",
    "check": "denim_on_denim",
    "params": {},
-   "weight": 1.037,
+   "weight": 1.031,
    "prior": 0.8,
    "topics": [
     "denim"
@@ -395,7 +395,7 @@
    "why": "Shoes are read first: dress shoes with joggers or trainers with a tie break the look.",
    "check": "shoe_formality",
    "params": {},
-   "weight": 1.319,
+   "weight": 1.122,
    "prior": 1.6,
    "topics": [
     "shoes",
@@ -409,7 +409,7 @@
    "why": "With leather shoes, the belt is in the same colour family: black with black, brown or tan with brown or tan.",
    "check": "belt_matches_shoes",
    "params": {},
-   "weight": 1.397,
+   "weight": 1.399,
    "prior": 0.9,
    "topics": [
     "accessories",
@@ -423,7 +423,7 @@
    "why": "A tie only works with a collared shirt and tailored trousers, in a smart outfit or under a blazer or suit jacket; never with a hoodie, a T-shirt or shorts.",
    "check": "tie_rules",
    "params": {},
-   "weight": 1.585,
+   "weight": 1.61,
    "prior": 2.0,
    "topics": [
     "accessories",
@@ -437,7 +437,7 @@
    "why": "A suit is the dressiest thing most men own; a T-shirt or trainers pull it down to casual.",
    "check": "suit_rules",
    "params": {},
-   "weight": 0.577,
+   "weight": 0.605,
    "prior": 1.5,
    "topics": [
     "suits",
@@ -451,7 +451,7 @@
    "why": "A puffer or rain shell over tailoring undoes it; an overcoat finishes a smart outfit.",
    "check": "outerwear_match",
    "params": {},
-   "weight": 0.96,
+   "weight": 0.976,
    "prior": 0.9,
    "topics": [
     "outerwear"
@@ -464,7 +464,7 @@
    "why": "Watch, jewellery and belt buckle look tidier all gold-toned or all silver.",
    "check": "metals",
    "params": {},
-   "weight": 0.404,
+   "weight": 0.402,
    "prior": 0.4,
    "topics": [
     "accessories"
@@ -477,7 +477,7 @@
    "why": "A chain, a cap or a beanie finishes a casual outfit; a cap or bucket hat looks out of place with tailoring.",
    "check": "casual_accents",
    "params": {},
-   "weight": 0.618,
+   "weight": 0.741,
    "prior": 0.6,
    "topics": [
     "accessories",
@@ -492,7 +492,7 @@
    "why": "Too many layers is as uncomfortable as too few: about one warm layer above 24°C, three or four when mild, six or more when cold.",
    "check": "warmth_for_weather",
    "params": {},
-   "weight": 1.201,
+   "weight": 1.192,
    "prior": 1.5,
    "topics": [
     "weather",
@@ -506,7 +506,7 @@
    "why": "Shorts below about 17°C look out of season.",
    "check": "shorts_weather",
    "params": {},
-   "weight": 1.396,
+   "weight": 1.25,
    "prior": 1.4,
    "topics": [
     "weather",
@@ -520,7 +520,7 @@
    "why": "On wet days a jacket that sheds water and shoes that don't mind puddles; suede and white trainers suffer.",
    "check": "rain_ready",
    "params": {},
-   "weight": 1.091,
+   "weight": 1.119,
    "prior": 0.8,
    "topics": [
     "weather",
@@ -535,7 +535,7 @@
    "why": "Linen and seersucker for heat, tweed, flannel and corduroy for cold.",
    "check": "fabric_season",
    "params": {},
-   "weight": 1.35,
+   "weight": 1.417,
    "prior": 0.8,
    "topics": [
     "fabrics",
@@ -549,7 +549,7 @@
    "why": "At the gym, clothes made to move and breathe, and proper training shoes.",
    "check": "gym_kit",
    "params": {},
-   "weight": 1.555,
+   "weight": 1.534,
    "prior": 1.5,
    "topics": [
     "sportswear"
@@ -16104,6 +16104,15 @@
    "learned_at": "2026-10-28T15:52:49+00:00",
    "tips": 6,
    "outfits": 8
+  },
+  {
+   "kind": "dataset",
+   "url": "https://github.com/recsys-benchmark/FashionStylist",
+   "title": "FashionStylist V1 (men), expert-labelled outfits",
+   "author": "FashionStylist authors, CC BY-NC 4.0",
+   "learned_at": "2026-11-21T12:58:57+00:00",
+   "tips": 0,
+   "outfits": 224
   }
  ],
  "examples": [
@@ -17844,7 +17853,1799 @@
    "verdict": "good",
    "why": "A grey sweatshirt with black jeans: classic off-duty.",
    "source": "How to Wear Jordans: Outfits and Styling Advice (The Sole Supplier)"
+  },
+  {
+   "outfit": "hoodie grey relaxed minimal casual +cotton, tshirt black regular minimal casual +cotton, trousers brown straight vintage casual +cotton +ripped, boots beige outdoor casual +leather",
+   "occasion": "casual",
+   "feels": 17,
+   "verdict": "good",
+   "why": "Japanese Cityboy style: light gray hooded sweatshirt paired with distressed wide-leg jeans, tan casual shoes echoing a relaxed vibe, loose fit with an effortless street aesthetic.",
+   "source": "FashionStylist V1 (men), expert-labelled outfits"
+  },
+  {
+   "outfit": "hoodie navy relaxed streetwear casual +cotton +graphic +print, tshirt white regular minimal casual +cotton, trousers cream straight minimal casual +cotton, beanie navy casual",
+   "occasion": "casual",
+   "feels": 14,
+   "verdict": "good",
+   "why": "Korean trendy style: navy half-zip sweatshirt with off-white wide-leg trousers, decorative chains enhance trendy details, high versatility for daily street style.",
+   "source": "FashionStylist V1 (men), expert-labelled outfits"
+  },
+  {
+   "outfit": "tshirt black regular minimal casual +cotton, trousers wide outdoor streetwear +camo +cargo +cotton +print, dress-shoes black vintage streetwear +leather",
+   "occasion": "casual",
+   "feels": 14,
+   "verdict": "good",
+   "why": "Outdoor techwear style: black slim-fit knit top with camouflage multi-pocket cargo pants, rugged silhouette combined with metal accessories, balancing utility and a cool, edgy aura.",
+   "source": "FashionStylist V1 (men), expert-labelled outfits"
+  },
+  {
+   "outfit": "sweater beige relaxed minimal casual, jeans black baggy vintage outdoor +cotton +ripped, bucket-hat beige casual +cotton",
+   "occasion": "casual",
+   "feels": 9,
+   "verdict": "good",
+   "why": "Quiet luxury old money style: oatmeal-colored collared knit layered over a turtleneck, black wide-leg trousers with metal chain accents, sophisticated texture with a relaxed, upscale feel.",
+   "source": "FashionStylist V1 (men), expert-labelled outfits"
+  },
+  {
+   "outfit": "hoodie cream grey relaxed streetwear casual +cotton +graphic +print, shirt blue white oversized vintage casual +check +cotton, jeans denim wide vintage streetwear +denim +ripped, beanie black grey streetwear, sneakers cream black casual +leather +stripes +suede",
+   "occasion": "casual",
+   "feels": 22,
+   "verdict": "good",
+   "why": "Commuter casual style: light gray graphic sweatshirt layered over a plaid shirt, paired with distressed ripped jeans, crossbody bag accents enhance the relaxed feel, suitable for daily commuting.",
+   "source": "FashionStylist V1 (men), expert-labelled outfits"
+  },
+  {
+   "outfit": "puffer olive relaxed minimal +cotton, shirt brown oversized streetwear casual +cotton +print, trousers cream straight smart casual minimal +cargo +cotton, beanie cream casual",
+   "occasion": "casual",
+   "feels": 9,
+   "verdict": "good",
+   "why": "Avant-garde deconstructed style: dark gray cropped puffer jacket layered over a leopard print top, off-white wide-leg trousers echoing niche design, striking silhouette with an avant-garde tone.",
+   "source": "FashionStylist V1 (men), expert-labelled outfits"
+  },
+  {
+   "outfit": "shirt denim oversized vintage casual +denim, jeans denim wide vintage casual +denim +ripped, bag cream smart casual casual +print",
+   "occasion": "casual",
+   "feels": 17,
+   "verdict": "good",
+   "why": "Intellectual style: washed blue denim set, enhanced with decorative details and a canvas bag, artistic and effortless with thoughtful styling.",
+   "source": "FashionStylist V1 (men), expert-labelled outfits"
+  },
+  {
+   "outfit": "sweater black blue oversized vintage casual +cardigan +cotton +stripes, tshirt black regular minimal casual +cotton, trousers black wide smart casual smart +cotton, bucket-hat black streetwear casual +cotton +logo, dress-shoes black vintage streetwear +leather",
+   "occasion": "casual",
+   "feels": 14,
+   "verdict": "good",
+   "why": "Korean trendy style: black and blue color-block knit cardigan with black wide-leg trousers, numeric and badge elements reinforce the style, trendy and eye-catching for daily street wear.",
+   "source": "FashionStylist V1 (men), expert-labelled outfits"
+  },
+  {
+   "outfit": "shirt blue white cropped vintage casual +check +cotton, sweater cream oversized minimal casual, jeans wide vintage casual +denim +ripped, cap navy casual +cotton +graphic +print, boots beige outdoor casual +leather",
+   "occasion": "casual",
+   "feels": 9,
+   "verdict": "good",
+   "why": "Japanese Cityboy style: navy plaid jacket paired with dark wide-leg jeans, baseball cap and tan casual shoes echoing a relaxed vibe, loose fit with an effortless street aesthetic.",
+   "source": "FashionStylist V1 (men), expert-labelled outfits"
+  },
+  {
+   "outfit": "shirt navy white oversized streetwear casual +cotton +graphic +print +stripes, trousers wide smart casual minimal +cotton, boots beige outdoor casual +leather",
+   "occasion": "night",
+   "feels": 17,
+   "verdict": "good",
+   "why": "Korean trendy style: navy striped long-sleeve top with dark brown wide-leg trousers, chain and silk scarf decorations enhance trendy details, highly versatile for daily street wear.",
+   "source": "FashionStylist V1 (men), expert-labelled outfits"
+  },
+  {
+   "outfit": "polo black white oversized streetwear casual +cotton +graphic +print +stripes, trousers wide smart casual minimal +cotton, boots beige outdoor casual +leather",
+   "occasion": "casual",
+   "feels": 14,
+   "verdict": "good",
+   "why": "Korean trendy style: gray and black striped collared top with dark brown wide-leg trousers, letter elements highlight the style, minimalist with a trendy, cool tone.",
+   "source": "FashionStylist V1 (men), expert-labelled outfits"
+  },
+  {
+   "outfit": "shirt grey black relaxed vintage casual +check +cotton, trousers beige baggy outdoor streetwear +cargo +cotton, scarf black white casual +cotton +stripes, dress-shoes black vintage streetwear +leather",
+   "occasion": "casual",
+   "feels": 9,
+   "verdict": "good",
+   "why": "Avant-garde deconstructed style: gray and black plaid shirt jacket with off-white cargo pants, sequin hem embellishments break the norm, prominent design with a niche tone.",
+   "source": "FashionStylist V1 (men), expert-labelled outfits"
+  },
+  {
+   "outfit": "tshirt beige relaxed casual +cotton +print, trousers beige wide smart casual minimal +cotton, cap brown grey vintage casual +cotton +graphic",
+   "occasion": "casual",
+   "feels": 14,
+   "verdict": "good",
+   "why": "Commuter casual style: khaki graphic long-sleeve top paired with light brown wide-leg trousers, layered with a plaid shirt for decoration, prominent relaxed feel, suitable for daily commuting.",
+   "source": "FashionStylist V1 (men), expert-labelled outfits"
+  },
+  {
+   "outfit": "tshirt black grey relaxed streetwear casual, trousers beige wide smart casual minimal +cotton, beret black vintage casual +logo +wool, bag black smart casual casual +graphic +leather +logo, dress-shoes black vintage streetwear +leather",
+   "occasion": "casual",
+   "feels": 9,
+   "verdict": "good",
+   "why": "Intellectual style: black and gray textured knit top with light brown wide-leg trousers, beret and crossbody bag accents, artistic temperament with an effortless flair.",
+   "source": "FashionStylist V1 (men), expert-labelled outfits"
+  },
+  {
+   "outfit": "sweater black relaxed minimal casual, trousers black baggy outdoor streetwear +cargo +cotton +ripped, dress-shoes black vintage streetwear +leather",
+   "occasion": "casual",
+   "feels": 14,
+   "verdict": "good",
+   "why": "Quiet luxury old money style: black quilted knit top layered over a turtleneck, paired with black cargo pants, metal hanging accessories reinforce the rugged texture, balancing utility and style.",
+   "source": "FashionStylist V1 (men), expert-labelled outfits"
+  },
+  {
+   "outfit": "sweater beige relaxed minimal casual, tshirt black regular minimal casual +cotton, trousers black baggy outdoor streetwear +cargo +cotton +ripped, bucket-hat black streetwear casual +cotton +logo, dress-shoes black vintage streetwear +leather",
+   "occasion": "smart",
+   "feels": 17,
+   "verdict": "good",
+   "why": "Quiet luxury old money style: light khaki knit top layered over a black inner piece, paired with off-white cargo pants, minimalist color palette and clean silhouette offer both sophistication and a re",
+   "source": "FashionStylist V1 (men), expert-labelled outfits"
+  },
+  {
+   "outfit": "jacket navy relaxed vintage streetwear +cotton +denim, tshirt black regular minimal casual +cotton, trousers grey wide formal smart casual +cotton, dress-shoes black vintage streetwear +leather",
+   "occasion": "casual",
+   "feels": 14,
+   "verdict": "good",
+   "why": "American vintage style: dark denim jacket with embroidery details, paired with gray wide-leg trousers, metal hanging accessory accents, vintage texture with an effortless flair.",
+   "source": "FashionStylist V1 (men), expert-labelled outfits"
+  },
+  {
+   "outfit": "jacket navy relaxed vintage streetwear +cotton +denim, shirt oversized streetwear casual +cotton, trousers grey wide formal smart casual +cotton, dress-shoes black vintage streetwear +leather",
+   "occasion": "casual",
+   "feels": 14,
+   "verdict": "good",
+   "why": "American vintage style: dark denim jacket layered over a burgundy inner piece, paired with gray wide-leg trousers, embroidery elements reinforce the vintage vibe, rich in layering.",
+   "source": "FashionStylist V1 (men), expert-labelled outfits"
+  },
+  {
+   "outfit": "sweater navy relaxed minimal casual +cardigan, tshirt black regular minimal casual +cotton, trousers beige wide smart casual minimal +cotton, dress-shoes black vintage streetwear +leather",
+   "occasion": "casual",
+   "feels": 17,
+   "verdict": "good",
+   "why": "Quiet luxury old money style: navy knit cardigan with light beige wide-leg trousers, minimalist color palette combined with exquisite button details, high-end texture with a relaxed, upscale feel.",
+   "source": "FashionStylist V1 (men), expert-labelled outfits"
+  },
+  {
+   "outfit": "sweater olive relaxed minimal casual +cardigan +cotton, tshirt black regular minimal casual +cotton, jeans charcoal wide vintage casual +corduroy +ripped, cap grey blue vintage casual +cotton +graphic +logo, scarf grey casual +wool, sneakers beige vintage streetwear +suede",
+   "occasion": "night",
+   "feels": 9,
+   "verdict": "good",
+   "why": "Korean trendy style: olive green knit cardigan with distressed wide-leg trousers, chain and silk scarf decorations add trendy details, distinct style for daily street wear.",
+   "source": "FashionStylist V1 (men), expert-labelled outfits"
+  },
+  {
+   "outfit": "jacket grey relaxed vintage casual +check, tshirt black regular minimal casual +cotton, trousers beige wide smart casual minimal +cotton, cap brown grey vintage casual +cotton +graphic, boots beige outdoor casual +leather",
+   "occasion": "casual",
+   "feels": 14,
+   "verdict": "good",
+   "why": "Quiet luxury old money style: plaid jacket paired with light beige wide-leg trousers, leather collar and matching hat, soft color palette with steady texture, showing a relaxed, upscale feel.",
+   "source": "FashionStylist V1 (men), expert-labelled outfits"
+  },
+  {
+   "outfit": "shirt burgundy oversized vintage casual +check +cotton, trousers beige wide outdoor streetwear +cotton, sneakers beige vintage streetwear +suede",
+   "occasion": "night",
+   "feels": 14,
+   "verdict": "good",
+   "why": "Commuter casual style: burgundy plaid shirt layered over a white inner piece, paired with light beige wide-leg trousers, belt accents enhance the styling, comfortable and effortless for daily wear.",
+   "source": "FashionStylist V1 (men), expert-labelled outfits"
+  },
+  {
+   "outfit": "sweatshirt grey relaxed streetwear casual +cotton +print, tshirt black regular minimal casual +cotton, trousers black wide smart casual smart +cotton, hat black vintage +wool, dress-shoes black vintage streetwear +leather",
+   "occasion": "casual",
+   "feels": 9,
+   "verdict": "good",
+   "why": "Korean trendy style: light gray graphic hooded sweatshirt with black wide-leg trousers, plush hat accessory adds trendy details, distinct style suitable for daily street wear.",
+   "source": "FashionStylist V1 (men), expert-labelled outfits"
+  },
+  {
+   "outfit": "sweater olive relaxed vintage casual +stripes, tshirt black regular minimal casual +cotton, trousers beige wide outdoor streetwear +cargo +cotton, beanie charcoal vintage casual, bag olive smart casual casual +leather, boots beige outdoor casual +leather",
+   "occasion": "casual",
+   "feels": 17,
+   "verdict": "good",
+   "why": "Commuter casual style: olive green textured knit top with light beige wide-leg trousers, crossbody bag accents, overall comfortable and effortless, suitable for daily commuting.",
+   "source": "FashionStylist V1 (men), expert-labelled outfits"
+  },
+  {
+   "outfit": "jacket charcoal grey relaxed streetwear casual +denim +leather, tshirt white regular minimal casual +cotton, trousers beige brown baggy outdoor streetwear +cargo +cotton, dress-shoes black streetwear casual +leather",
+   "occasion": "casual",
+   "feels": 14,
+   "verdict": "good",
+   "why": "Outdoor techwear style: distressed denim jacket paired with multi-pocket cargo pants, metal buttons on the jacket and 3D pockets on the pants reinforce the utility design, overall style is rugged and ",
+   "source": "FashionStylist V1 (men), expert-labelled outfits"
+  },
+  {
+   "outfit": "jacket brown grey relaxed vintage casual +check +wool, tshirt white regular minimal casual +cotton, trousers black wide smart casual minimal +cotton, dress-shoes black streetwear casual +leather",
+   "occasion": "night",
+   "feels": 14,
+   "verdict": "good",
+   "why": "Avant-garde deconstructed style: plaid and denim spliced jacket with black wide-leg trousers, mixed-material design and metal hanging accessories highlight the niche silhouette, distinct deconstructed",
+   "source": "FashionStylist V1 (men), expert-labelled outfits"
+  },
+  {
+   "outfit": "puffer beige relaxed casual +cotton, tshirt white regular minimal casual +cotton, trousers black wide smart casual minimal +cotton, dress-shoes black streetwear casual +leather",
+   "occasion": "casual",
+   "feels": 9,
+   "verdict": "good",
+   "why": "Quiet luxury old money style: light khaki fur-collar jacket with black wide-leg trousers, soft color palette combined with textured fabric, showing a relaxed and steady upscale vibe.",
+   "source": "FashionStylist V1 (men), expert-labelled outfits"
+  },
+  {
+   "outfit": "jacket black relaxed streetwear casual +leather, tshirt white regular minimal casual +cotton, trousers brown wide smart casual minimal +cotton, beanie black casual, dress-shoes black streetwear casual +leather",
+   "occasion": "casual",
+   "feels": 9,
+   "verdict": "good",
+   "why": "Commuter casual style: black quilted jacket with dark brown wide-leg trousers, minimalist silhouette and hanging accessory details balance comfort and style, suitable for daily commuting.",
+   "source": "FashionStylist V1 (men), expert-labelled outfits"
+  },
+  {
+   "outfit": "jacket olive relaxed streetwear casual +cotton, tshirt white regular minimal casual +cotton, trousers beige brown baggy outdoor streetwear +cargo +cotton, dress-shoes black streetwear casual +leather",
+   "occasion": "casual",
+   "feels": 17,
+   "verdict": "good",
+   "why": "Outdoor techwear style: olive green jacket with blue sleeves paired with multi-pocket cargo pants, functional pockets on the jacket and 3D pockets on the pants reinforce utility, rugged style suitable",
+   "source": "FashionStylist V1 (men), expert-labelled outfits"
+  },
+  {
+   "outfit": "coat black smart casual minimal +leather, shirt white slim smart casual minimal +cotton, trousers black wide formal smart casual +cotton, accessory brown yellow smart +silk +stripes, dress-shoes black smart casual +leather +loafers",
+   "occasion": "smart",
+   "feels": 9,
+   "verdict": "good",
+   "why": "Quiet luxury old money style: black crocodile-embossed trench coat with black wide-leg trousers, textured fabric combined with an exquisite belt, unified color palette showing a steady, high-end upsca",
+   "source": "FashionStylist V1 (men), expert-labelled outfits"
+  },
+  {
+   "outfit": "sweatshirt white relaxed casual +cotton, tshirt black slim streetwear casual +cotton, trousers charcoal grey wide vintage outdoor +cargo +denim +ripped, boots black outdoor streetwear +leather",
+   "occasion": "casual",
+   "feels": 9,
+   "verdict": "good",
+   "why": "Korean trendy style: white fur-collar jacket with distressed cargo pants, rhinestone and chain details add a trendy feel, eye-catching look suitable for daily street wear.",
+   "source": "FashionStylist V1 (men), expert-labelled outfits"
+  },
+  {
+   "outfit": "tshirt olive relaxed minimal outdoor +cotton, trousers grey baggy outdoor casual +cotton, cap blue grey outdoor casual +cotton, sneakers green yellow outdoor casual",
+   "occasion": "casual",
+   "feels": 17,
+   "verdict": "good",
+   "why": "Outdoor techwear: dark green long-sleeve top paired with light gray outdoor trousers, minimalist silhouette combined with functional fabric, suitable for light outdoor activities, casual and practical",
+   "source": "FashionStylist V1 (men), expert-labelled outfits"
+  },
+  {
+   "outfit": "tshirt black yellow relaxed outdoor casual +cotton, trousers olive baggy outdoor casual +cotton, cap yellow green outdoor casual +cotton, sneakers blue grey outdoor casual",
+   "occasion": "casual",
+   "feels": 17,
+   "verdict": "good",
+   "why": "Outdoor techwear: dark gray and yellow color-block long-sleeve top paired with turmeric cargo pants, half-zip design and drawstring pockets enhance utility, fabric suitable for light outdoor activitie",
+   "source": "FashionStylist V1 (men), expert-labelled outfits"
+  },
+  {
+   "outfit": "tshirt blue grey relaxed outdoor casual +cotton +graphic, shorts grey relaxed outdoor casual +cotton, cap grey black outdoor casual +cotton, accessory grey outdoor sporty +cotton, sneakers white grey outdoor +leather",
+   "occasion": "casual",
+   "feels": 27,
+   "verdict": "good",
+   "why": "Outdoor techwear: navy and gray color-block short-sleeve top paired with light gray shorts, 'OUTDOORS' lettering and functional fabric suitable for light outdoor activities, casual and practical.",
+   "source": "FashionStylist V1 (men), expert-labelled outfits"
+  },
+  {
+   "outfit": "jacket beige relaxed minimal casual +cotton, shirt white slim smart casual minimal +cotton, jeans navy wide casual +denim, cap beige casual +cotton, dress-shoes black smart casual +leather",
+   "occasion": "casual",
+   "feels": 17,
+   "verdict": "good",
+   "why": "Commuter casual: light khaki jacket layered over a white shirt, paired with dark blue wide-leg jeans, clean and comfortable look, suitable for daily commuting.",
+   "source": "FashionStylist V1 (men), expert-labelled outfits"
+  },
+  {
+   "outfit": "sweater grey relaxed casual, tshirt white regular minimal casual +cotton, trousers brown wide smart casual smart +cotton, cap black casual +cotton +logo, sneakers charcoal vintage casual +leather +stripes",
+   "occasion": "casual",
+   "feels": 14,
+   "verdict": "good",
+   "why": "Commuter casual: light gray half-zip knit top with dark brown wide-leg trousers, soft fabric combined with loose fit, comfortable and casual, suitable for daily wear.",
+   "source": "FashionStylist V1 (men), expert-labelled outfits"
+  },
+  {
+   "outfit": "sweater burgundy relaxed casual, tshirt white regular minimal casual +cotton, jeans navy straight casual +denim, sneakers white brown vintage casual +leather +stripes",
+   "occasion": "casual",
+   "feels": 14,
+   "verdict": "good",
+   "why": "American vintage: burgundy reindeer jacquard sweater paired with light blue wide-leg jeans, vintage jacquard pattern combined with classic denim silhouette, winter casual vintage aesthetic.",
+   "source": "FashionStylist V1 (men), expert-labelled outfits"
+  },
+  {
+   "outfit": "sweater olive relaxed casual, tshirt white regular minimal casual +cotton, jeans charcoal grey straight vintage casual +denim +ripped, dress-shoes beige casual +leather +loafers",
+   "occasion": "casual",
+   "feels": 9,
+   "verdict": "good",
+   "why": "American vintage: dark green reindeer jacquard sweater with distressed wide-leg jeans, dark tones echo the vintage jacquard, sophisticated style with a winter casual vibe.",
+   "source": "FashionStylist V1 (men), expert-labelled outfits"
+  },
+  {
+   "outfit": "jacket beige relaxed casual +cotton +stripes, shirt white slim smart casual minimal +cotton, trousers black wide casual +cotton, beanie charcoal casual, sneakers black streetwear casual +leather",
+   "occasion": "casual",
+   "feels": 9,
+   "verdict": "good",
+   "why": "Quiet luxury: light khaki faux-fur collar jacket layered over a white shirt, paired with black corduroy wide-leg trousers, textured fabric and soft tones create a relaxed sophisticated look.",
+   "source": "FashionStylist V1 (men), expert-labelled outfits"
+  },
+  {
+   "outfit": "shirt light blue relaxed casual +cotton +stripes, trousers black baggy outdoor casual +cargo +cotton, sneakers charcoal vintage casual +leather +stripes",
+   "occasion": "casual",
+   "feels": 17,
+   "verdict": "good",
+   "why": "Commuter casual: gray plaid shirt layered over a white inner top, paired with black cargo wide-leg trousers, clean and comfortable silhouette, suitable for daily commuting.",
+   "source": "FashionStylist V1 (men), expert-labelled outfits"
+  },
+  {
+   "outfit": "jacket olive relaxed outdoor casual +cotton, shirt white relaxed casual +cotton, jeans denim wide vintage casual +denim +ripped, sneakers navy vintage casual +leather +stripes",
+   "occasion": "casual",
+   "feels": 17,
+   "verdict": "good",
+   "why": "American vintage: military green jacket layered over a white shirt, paired with light blue wide-leg jeans, classic jacket silhouette combined with denim pieces, inherent casual vintage aesthetic.",
+   "source": "FashionStylist V1 (men), expert-labelled outfits"
+  },
+  {
+   "outfit": "sweater beige relaxed casual, trousers beige wide vintage casual +cotton, cap beige casual +cotton +logo, sneakers brown grey vintage casual +leather",
+   "occasion": "casual",
+   "feels": 9,
+   "verdict": "good",
+   "why": "American vintage: beige-brown jacquard sweater with distressed dark brown corduroy pants, vintage jacquard pattern echoes the distressed fabric, sophisticated style with a winter casual vibe.",
+   "source": "FashionStylist V1 (men), expert-labelled outfits"
+  },
+  {
+   "outfit": "jacket black relaxed streetwear casual +leather, shirt white relaxed casual +cotton, trousers beige wide outdoor casual +cargo +cotton, dress-shoes black smart casual +leather",
+   "occasion": "night",
+   "feels": 14,
+   "verdict": "good",
+   "why": "Korean trendy: black leather jacket layered over a white shirt, paired with khaki cargo wide-leg trousers, leather fabric combined with cargo elements, edgy and suitable for daily street style.",
+   "source": "FashionStylist V1 (men), expert-labelled outfits"
+  },
+  {
+   "outfit": "jacket black relaxed streetwear casual +leather, shirt grey relaxed minimal casual +cotton, trousers beige wide outdoor casual +cargo +cotton, sneakers navy vintage casual +leather +stripes",
+   "occasion": "casual",
+   "feels": 14,
+   "verdict": "good",
+   "why": "Korean trendy: black leather jacket layered over a blue shirt, paired with dark brown cargo wide-leg trousers, contrast between dark and light tones enhances the look, distinct style suitable for dail",
+   "source": "FashionStylist V1 (men), expert-labelled outfits"
+  },
+  {
+   "outfit": "shirt brown relaxed casual +check +cotton +stripes, trousers charcoal wide outdoor casual +cargo +cotton, accessory black grey outdoor +cotton, sneakers beige vintage streetwear +suede",
+   "occasion": "casual",
+   "feels": 14,
+   "verdict": "good",
+   "why": "Avant-garde deconstructed: plaid shirt with side stripe decoration paired with dark brown corduroy cargo pants, silk scarf and metal charm details break conventional silhouettes, unique design sense, ",
+   "source": "FashionStylist V1 (men), expert-labelled outfits"
+  },
+  {
+   "outfit": "shirt brown relaxed casual +check +cotton +stripes, jeans beige straight casual +cotton, sneakers beige vintage streetwear +suede",
+   "occasion": "casual",
+   "feels": 17,
+   "verdict": "good",
+   "why": "American vintage: plaid shirt layered over a white inner top, paired with distressed light khaki wide-leg trousers, leather charms and belt reinforce the vintage vibe, relaxed look with a street-style",
+   "source": "FashionStylist V1 (men), expert-labelled outfits"
+  },
+  {
+   "outfit": "sweater grey black relaxed casual +print, tshirt black regular minimal casual +cotton, trousers beige wide outdoor casual +cargo +cotton, dress-shoes black vintage streetwear +leather",
+   "occasion": "night",
+   "feels": 17,
+   "verdict": "good",
+   "why": "Korean trendy: gray and black leopard-print sweater with off-white cargo pants, metal charm details, trendy elements combined with loose fit, suitable for daily street style.",
+   "source": "FashionStylist V1 (men), expert-labelled outfits"
+  },
+  {
+   "outfit": "shirt black white relaxed casual +cotton +stripes, trousers black straight smart casual smart +cotton, beret black casual +wool, bag black outdoor casual +leather, dress-shoes black vintage streetwear +leather",
+   "occasion": "casual",
+   "feels": 27,
+   "verdict": "good",
+   "why": "Commuter casual: black and white striped short-sleeve top with dark gray wide-leg trousers, beret and crossbody bag accessories add a casual feel, comfortable silhouette suitable for daily commuting.",
+   "source": "FashionStylist V1 (men), expert-labelled outfits"
+  },
+  {
+   "outfit": "jacket beige cropped casual +cotton +stripes, shirt brown black relaxed casual +check +cotton +stripes, trousers charcoal wide outdoor casual +cargo +cotton, accessory beige casual +wool, bag brown black smart casual casual +leather, accessory black grey outdoor +cotton +stripes, sneakers beige vintage streetwear +suede",
+   "occasion": "casual",
+   "feels": 14,
+   "verdict": "good",
+   "why": "Avant-garde deconstructed: brown-toned hooded top paired with dark brown corduroy cargo pants, plaid inner layer and crossbody bag details break conventional silhouettes, unique design sense, distinct",
+   "source": "FashionStylist V1 (men), expert-labelled outfits"
+  },
+  {
+   "outfit": "jacket black relaxed outdoor +cotton, tshirt white regular minimal casual +cotton, trousers black white wide casual +cotton +stripes, bucket-hat black casual +cotton, sneakers white grey vintage casual +leather",
+   "occasion": "casual",
+   "feels": 14,
+   "verdict": "good",
+   "why": "Outdoor techwear: black jacket with matching striped cargo pants, minimalist silhouette combined with practical pockets, rugged style suitable for light outdoor activities.",
+   "source": "FashionStylist V1 (men), expert-labelled outfits"
+  },
+  {
+   "outfit": "beanie beige casual, jacket grey relaxed casual, sweater olive relaxed casual +cardigan +cotton, tshirt white regular minimal casual +cotton, trousers beige wide smart casual smart +cotton, sneakers brown casual +suede",
+   "occasion": "casual",
+   "feels": 17,
+   "verdict": "good",
+   "why": "Quiet luxury: gray knit baseball jacket with light khaki wide-leg trousers, textured fabric combined with soft tones, creates a relaxed and calm sophisticated vibe.",
+   "source": "FashionStylist V1 (men), expert-labelled outfits"
+  },
+  {
+   "outfit": "jacket black relaxed casual +cotton, shirt brown black relaxed streetwear casual +cotton +print, jeans black grey wide vintage casual +cotton +print +ripped, beanie black casual, bag black smart casual smart +leather, dress-shoes black vintage streetwear +leather",
+   "occasion": "night",
+   "feels": 9,
+   "verdict": "good",
+   "why": "Korean trendy: black baseball jacket layered over a leopard-print shirt, paired with distressed denim wide-leg trousers, leopard print and metal charm details reinforce the edgy look, suitable for dai",
+   "source": "FashionStylist V1 (men), expert-labelled outfits"
+  },
+  {
+   "outfit": "shirt brown black relaxed casual +check +cotton, trousers beige wide smart casual smart +cotton, sneakers brown casual +suede",
+   "occasion": "casual",
+   "feels": 14,
+   "verdict": "good",
+   "why": "American vintage: brown plaid shirt-jacket paired with light khaki wide-leg trousers, metal-button pockets and charm details reinforce the vintage texture, relaxed look with a street-style casual aest",
+   "source": "FashionStylist V1 (men), expert-labelled outfits"
+  },
+  {
+   "outfit": "zip-hoodie charcoal relaxed casual +cotton, shirt grey white relaxed vintage casual +check +cotton, trousers black wide smart casual smart +cotton, cap black casual +cotton",
+   "occasion": "casual",
+   "feels": 9,
+   "verdict": "good",
+   "why": "Commuter casual: dark gray hooded sweatshirt layered over a plaid shirt, paired with black wide-leg trousers, comfortable silhouette combined with minimalist tones, suitable for daily commuting.",
+   "source": "FashionStylist V1 (men), expert-labelled outfits"
+  },
+  {
+   "outfit": "sweatshirt navy relaxed casual +print, tshirt white regular minimal casual +cotton, trousers beige wide smart casual smart +cotton",
+   "occasion": "casual",
+   "feels": 17,
+   "verdict": "good",
+   "why": "Korean trendy: navy and red color-block collar sweatshirt with off-white wide-leg trousers, print decoration and contrast collar reinforce the trendy feel, distinct style suitable for daily street wea",
+   "source": "FashionStylist V1 (men), expert-labelled outfits"
+  },
+  {
+   "outfit": "shirt cream relaxed casual +cotton, trousers cream wide smart casual smart +cotton, sneakers beige vintage streetwear +suede",
+   "occasion": "night",
+   "feels": 17,
+   "verdict": "good",
+   "why": "Commuter casual: off-white shirt-jacket layered over a red plaid inner top, paired with light khaki wide-leg trousers, loose and comfortable silhouette, soft and coordinated color palette, suitable fo",
+   "source": "FashionStylist V1 (men), expert-labelled outfits"
+  },
+  {
+   "outfit": "sweater beige relaxed casual +cardigan +cotton, jacket relaxed vintage casual +denim, tshirt black regular minimal casual +cotton, trousers charcoal wide smart casual casual +cotton +stripes, cap beige casual +cotton +graphic, bag olive casual, sneakers beige casual +leather",
+   "occasion": "casual",
+   "feels": 14,
+   "verdict": "good",
+   "why": "Quiet Luxury Old Money: Brown toggle-button knit cardigan with dark brown wide-leg trousers; textured fabric meets classic toggle design, monochromatic styling for a relaxed, sophisticated aesthetic.",
+   "source": "FashionStylist V1 (men), expert-labelled outfits"
+  },
+  {
+   "outfit": "sweater cream relaxed casual +cardigan +cotton, shirt grey white relaxed vintage casual +check +cotton, trousers charcoal wide outdoor casual +cargo +cotton, bag olive casual, sneakers beige casual +leather",
+   "occasion": "casual",
+   "feels": 17,
+   "verdict": "good",
+   "why": "Commuter Casual: Off-white toggle-button knit cardigan layered over a plaid shirt with dark gray cargo wide-leg trousers; comfortable fit and soft tones for daily commuting.",
+   "source": "FashionStylist V1 (men), expert-labelled outfits"
+  },
+  {
+   "outfit": "sweater grey relaxed casual +cardigan +check, shirt grey white relaxed vintage casual +check +cotton, trousers charcoal wide outdoor casual +cargo +cotton, beanie white casual, bag brown smart casual smart +leather, sneakers white brown vintage casual +leather",
+   "occasion": "casual",
+   "feels": 14,
+   "verdict": "good",
+   "why": "Avant-Garde Deconstructed: Gray knit cardigan with plaid pocket details paired with dark gray cargo wide-leg trousers; mixed materials and metal charms break conventional silhouettes for a niche, desi",
+   "source": "FashionStylist V1 (men), expert-labelled outfits"
+  },
+  {
+   "outfit": "sweater black relaxed casual +cardigan +cotton, tshirt white regular minimal casual +cotton, trousers black wide smart casual smart +cotton, bucket-hat black streetwear casual +cotton +logo, dress-shoes black vintage streetwear +leather",
+   "occasion": "night",
+   "feels": 9,
+   "verdict": "good",
+   "why": "Korean Streetwear: Black knit cardigan with leather pocket details and dark gray wide-leg trousers; leather elements and cross charms enhance the edgy vibe, perfect for daily wear.",
+   "source": "FashionStylist V1 (men), expert-labelled outfits"
+  },
+  {
+   "outfit": "jacket black cropped casual +cotton, tshirt white regular minimal casual +cotton, jeans black wide vintage casual +cotton, dress-shoes black vintage casual +leather",
+   "occasion": "casual",
+   "feels": 5,
+   "verdict": "good",
+   "why": "Quiet Luxury Old Money: Black snowflake-pattern faux fur collar jacket with matching wide-leg trousers; fur collar adds texture, monochromatic tone for a sophisticated, premium look, ideal for winter ",
+   "source": "FashionStylist V1 (men), expert-labelled outfits"
+  },
+  {
+   "outfit": "coat beige smart +cotton, sweater white relaxed casual +turtleneck, trousers black wide casual +cotton, scarf yellow green smart casual +check +wool, dress-shoes black vintage casual +leather",
+   "occasion": "casual",
+   "feels": 5,
+   "verdict": "good",
+   "why": "American Retro: Khaki toggle-button coat layered over a white top, with a plaid scarf and dark blue jeans; classic coat silhouette meets vintage plaid for a winter casual vibe.",
+   "source": "FashionStylist V1 (men), expert-labelled outfits"
+  },
+  {
+   "outfit": "coat brown smart +cotton, shirt brown relaxed vintage casual +check +cotton, sweater black oversized minimal casual +turtleneck, trousers cream wide casual +cotton, bucket-hat cream casual, dress-shoes black formal smart casual +leather",
+   "occasion": "night",
+   "feels": 14,
+   "verdict": "good",
+   "why": "Commuter Casual: Dark brown toggle-button coat layered over a plaid shirt with off-white wide-leg trousers; relaxed fit and soft tones for daily commuting.",
+   "source": "FashionStylist V1 (men), expert-labelled outfits"
+  },
+  {
+   "outfit": "coat black smart +cotton, sweater relaxed minimal casual, tshirt white regular minimal casual +cotton, jeans black straight casual +denim, beanie black casual, scarf smart casual +cotton, dress-shoes black formal smart casual +leather",
+   "occasion": "casual",
+   "feels": 5,
+   "verdict": "good",
+   "why": "Korean Streetwear: Dark gray toggle-button coat with a light green inner layer and color-block scarf; minimalist yet trendy, perfect for daily wear.",
+   "source": "FashionStylist V1 (men), expert-labelled outfits"
+  },
+  {
+   "outfit": "jacket navy relaxed casual +cotton +denim, tshirt black relaxed streetwear +cotton +graphic +print, trousers navy wide outdoor casual +cargo +cotton, dress-shoes black formal smart casual +leather",
+   "occasion": "casual",
+   "feels": 17,
+   "verdict": "good",
+   "why": "Outdoor Techwear: Navy cargo jacket with wide-leg trousers; metal buckle accents and multi-pocket design enhance utility, rugged style for light outdoor activities.",
+   "source": "FashionStylist V1 (men), expert-labelled outfits"
+  },
+  {
+   "outfit": "jacket black relaxed casual +cotton +denim, sweater charcoal relaxed minimal casual, tshirt yellow relaxed minimal casual, trousers charcoal wide outdoor casual +cargo +cotton, dress-shoes black formal smart casual +leather",
+   "occasion": "casual",
+   "feels": 14,
+   "verdict": "good",
+   "why": "Outdoor Techwear: Dark gray cargo jacket with wide-leg trousers; distressed fabric and multi-pocket design combine vintage appeal with utility, ideal for light outdoor wear.",
+   "source": "FashionStylist V1 (men), expert-labelled outfits"
+  },
+  {
+   "outfit": "jacket black relaxed streetwear casual +leather, tshirt white relaxed minimal casual +cotton, trousers black wide smart casual smart +cotton, dress-shoes black smart casual smart +leather",
+   "occasion": "smart",
+   "feels": 14,
+   "verdict": "good",
+   "why": "Quiet Luxury Old Money: Black leather jacket with matching wide-leg trousers; minimalist silhouette and textured fabric in a monochromatic tone for a sophisticated, premium look.",
+   "source": "FashionStylist V1 (men), expert-labelled outfits"
+  },
+  {
+   "outfit": "sweater white relaxed outdoor casual +cotton, jacket grey relaxed outdoor casual +cotton, shorts white straight casual +cotton, accessory white casual +cotton, sneakers white casual +leather",
+   "occasion": "casual",
+   "feels": 27,
+   "verdict": "good",
+   "why": "Commuter Casual: Gray and white color-block hoodie with matching shorts; relaxed fit and soft tones for summer daily commuting.",
+   "source": "FashionStylist V1 (men), expert-labelled outfits"
+  },
+  {
+   "outfit": "jacket black relaxed casual +cotton, tshirt white relaxed minimal casual +cotton, trousers black wide casual +cotton, dress-shoes black smart casual smart +leather",
+   "occasion": "casual",
+   "feels": 14,
+   "verdict": "good",
+   "why": "Korean Streetwear: Black jacket layered over a light gray top with matching wide-leg trousers; blue plaid cuffs and waist details add a trendy, distinct edge for daily wear.",
+   "source": "FashionStylist V1 (men), expert-labelled outfits"
+  },
+  {
+   "outfit": "jacket navy relaxed vintage casual +denim, shirt yellow relaxed minimal casual, jeans navy straight vintage casual +denim, accessory black casual +cotton, dress-shoes black casual +leather",
+   "occasion": "casual",
+   "feels": 14,
+   "verdict": "good",
+   "why": "American Retro: Navy splatter-print denim set including jacket and wide-leg trousers; leather collar and distressed splatter elements for a vintage, effortless vibe.",
+   "source": "FashionStylist V1 (men), expert-labelled outfits"
+  },
+  {
+   "outfit": "jacket beige relaxed vintage casual +cotton, sweater blue relaxed minimal casual, tshirt grey relaxed minimal casual +cotton, trousers beige straight vintage casual +cotton, scarf beige smart casual +wool, dress-shoes black casual +leather",
+   "occasion": "night",
+   "feels": 14,
+   "verdict": "good",
+   "why": "Avant-Garde Deconstructed: Brown splatter-print cargo set including jacket and wide-leg trousers; contrast inner layer and irregular splatter details break conventional silhouettes for a niche, design",
+   "source": "FashionStylist V1 (men), expert-labelled outfits"
+  },
+  {
+   "outfit": "sweater charcoal relaxed casual +cardigan, tshirt grey relaxed minimal casual +cotton, jeans denim straight vintage casual +denim +ripped, scarf brown yellow smart casual +check +cotton, dress-shoes black smart casual smart +leather",
+   "occasion": "casual",
+   "feels": 27,
+   "verdict": "good",
+   "why": "American Retro: Gray knit cardigan layered over a light gray top with light green distressed wide-leg trousers; scarf and distressed details for a vintage, effortless vibe.",
+   "source": "FashionStylist V1 (men), expert-labelled outfits"
+  },
+  {
+   "outfit": "jacket brown relaxed outdoor +cotton, sweater charcoal relaxed casual +cotton, shorts black wide outdoor casual +cotton, bag beige casual +leather, accessory black casual +cotton, dress-shoes black smart casual smart +leather",
+   "occasion": "casual",
+   "feels": 27,
+   "verdict": "good",
+   "why": "Outdoor Techwear: Dark brown cargo set including jacket and shorts; multi-pocket design and crossbody bag enhance utility for light outdoor activities.",
+   "source": "FashionStylist V1 (men), expert-labelled outfits"
+  },
+  {
+   "outfit": "jacket beige relaxed outdoor +cotton, shirt black grey relaxed casual +check +cotton, shorts black wide outdoor casual +cotton, scarf brown smart casual +wool, accessory black casual +cotton, boots black streetwear +leather",
+   "occasion": "casual",
+   "feels": 27,
+   "verdict": "good",
+   "why": "Outdoor Techwear: Light khaki cargo set including jacket and shorts; hooded design and drawstring details for added functionality, soft tones for light outdoor wear.",
+   "source": "FashionStylist V1 (men), expert-labelled outfits"
+  },
+  {
+   "outfit": "coat brown outdoor +cotton, sweater charcoal relaxed casual +cotton, trousers black wide casual +cotton, dress-shoes black smart casual smart +leather",
+   "occasion": "casual",
+   "feels": 5,
+   "verdict": "good",
+   "why": "Commuter Casual: Dark brown long trench coat with matching wide-leg trousers; drawstring waist for comfort and shape, ideal for daily commuting.",
+   "source": "FashionStylist V1 (men), expert-labelled outfits"
+  },
+  {
+   "outfit": "coat smart casual +cotton, sweater charcoal relaxed casual +cotton, trousers wide smart casual casual +cotton, dress-shoes black smart casual smart +leather",
+   "occasion": "casual",
+   "feels": 5,
+   "verdict": "good",
+   "why": "Quiet Luxury Old Money: Brown trench coat set including coat and wide-leg trousers, layered with gray and white tops; textured fabric and metal buckle details for a relaxed, sophisticated look.",
+   "source": "FashionStylist V1 (men), expert-labelled outfits"
+  },
+  {
+   "outfit": "coat black smart casual +cotton, sweater grey relaxed casual, shorts black wide casual +cotton, accessory black casual +cotton, dress-shoes black casual +leather",
+   "occasion": "night",
+   "feels": 5,
+   "verdict": "good",
+   "why": "Korean Streetwear: Black trench coat with matching wide-leg trousers, layered with a color-block knit cardigan; all-black base and layered styling for an edgy, trendy look.",
+   "source": "FashionStylist V1 (men), expert-labelled outfits"
+  },
+  {
+   "outfit": "sweater grey relaxed casual, tshirt grey relaxed minimal casual +cotton, jeans charcoal straight outdoor +cotton, dress-shoes black casual +leather",
+   "occasion": "casual",
+   "feels": 27,
+   "verdict": "good",
+   "why": "Commuter Casual: Gray knit vest layered over a light gray short-sleeve top with dark gray cargo wide-leg trousers; relaxed fit and soft tones for daily commuting.",
+   "source": "FashionStylist V1 (men), expert-labelled outfits"
+  },
+  {
+   "outfit": "jacket black relaxed casual +cotton, tshirt black regular minimal casual, trousers charcoal straight outdoor casual +cargo +cotton, dress-shoes black casual +leather",
+   "occasion": "casual",
+   "feels": 14,
+   "verdict": "good",
+   "why": "Outdoor Techwear: Black leather jacket with dark gray cargo wide-leg trousers; multi-pocket and metal hardware for a rugged, functional outdoor look.",
+   "source": "FashionStylist V1 (men), expert-labelled outfits"
+  },
+  {
+   "outfit": "jacket denim relaxed vintage +denim, sweater navy relaxed smart casual, jeans denim straight vintage +denim +ripped, scarf brown yellow smart casual +check +cotton, dress-shoes black casual +leather",
+   "occasion": "casual",
+   "feels": 17,
+   "verdict": "good",
+   "why": "American Retro: Light green distressed denim set including jacket and wide-leg trousers, layered with a gray-black top; scarf and distressed details for a vintage, effortless vibe.",
+   "source": "FashionStylist V1 (men), expert-labelled outfits"
+  },
+  {
+   "outfit": "jacket denim relaxed vintage +denim, shirt black relaxed casual +cotton, jeans denim straight casual +denim, boots black streetwear +leather",
+   "occasion": "casual",
+   "feels": 17,
+   "verdict": "good",
+   "why": "American Retro: Light blue distressed denim set including jacket and wide-leg trousers, layered with a black plaid top; distressed wash for a vintage, casual atmosphere.",
+   "source": "FashionStylist V1 (men), expert-labelled outfits"
+  },
+  {
+   "outfit": "jacket black relaxed outdoor +cotton, hoodie black relaxed casual +graphic +print, jeans charcoal straight vintage +denim +ripped, bag black casual +leather, sneakers black grey outdoor casual +leather",
+   "occasion": "casual",
+   "feels": 5,
+   "verdict": "good",
+   "why": "Commuter Casual: Black down jacket with distressed denim wide-leg trousers, layered with a hoodie and black bag; voluminous fit for warmth and comfort, ideal for winter commuting.",
+   "source": "FashionStylist V1 (men), expert-labelled outfits"
+  },
+  {
+   "outfit": "sweater grey brown relaxed casual +stripes, shirt denim relaxed minimal casual +denim, jeans denim straight casual +denim +ripped, dress-shoes black vintage casual +leather",
+   "occasion": "casual",
+   "feels": 14,
+   "verdict": "good",
+   "why": "Korean Streetwear: Gray, white, and brown striped sweater layered over a denim shirt with distressed denim wide-leg trousers; metal charms for a trendy edge, perfect for daily wear.",
+   "source": "FashionStylist V1 (men), expert-labelled outfits"
+  },
+  {
+   "outfit": "jacket beige relaxed smart casual +cotton, zip-hoodie black relaxed casual +cotton, trousers black straight outdoor casual +cargo +cotton, sneakers beige casual +leather",
+   "occasion": "casual",
+   "feels": 5,
+   "verdict": "good",
+   "why": "Outdoor Techwear: Brown corduroy down jacket with black cargo wide-leg trousers; belt detail, thick fabric, and multi-pocket design for winter light outdoor activities.",
+   "source": "FashionStylist V1 (men), expert-labelled outfits"
+  },
+  {
+   "outfit": "jacket black relaxed casual +cotton, sweater grey relaxed casual +cardigan, tshirt white regular minimal casual, trousers black wide smart casual casual +cotton, cap black casual +cotton +graphic +print, bag black casual +leather, dress-shoes black casual +leather",
+   "occasion": "casual",
+   "feels": 5,
+   "verdict": "good",
+   "why": "Korean Streetwear: Black plush-texture jacket with matching wide-leg trousers, layered with gray and white tops and a black bag; all-black base and layered styling for an edgy, trendy look.",
+   "source": "FashionStylist V1 (men), expert-labelled outfits"
+  },
+  {
+   "outfit": "jacket black relaxed smart casual +cotton, shirt denim relaxed minimal casual +denim, jeans denim straight casual +denim +graphic +print, scarf black grey smart casual +cotton +graphic +print, dress-shoes black smart casual smart +leather",
+   "occasion": "casual",
+   "feels": 5,
+   "verdict": "good",
+   "why": "American Retro: Black quilted jacket layered over a light blue denim shirt with distressed denim wide-leg trousers; glove accessory for a vintage, relaxed, and effortless vibe.",
+   "source": "FashionStylist V1 (men), expert-labelled outfits"
+  },
+  {
+   "outfit": "jacket white relaxed smart casual +cotton, sweater black oversized minimal casual +turtleneck, shorts black wide casual +cotton, scarf black smart casual +cotton, accessory black casual +cotton, dress-shoes black vintage casual +leather",
+   "occasion": "casual",
+   "feels": 5,
+   "verdict": "good",
+   "why": "Commuter Casual: Off-white quilted jacket with black wide-leg trousers; scarf accessory for warmth, soft tones and relaxed fit for winter daily commuting.",
+   "source": "FashionStylist V1 (men), expert-labelled outfits"
+  },
+  {
+   "outfit": "coat black smart +cotton, shirt grey black relaxed casual +cotton +stripes, trousers charcoal wide casual +cotton +stripes, dress-shoes black vintage casual +leather",
+   "occasion": "casual",
+   "feels": 5,
+   "verdict": "good",
+   "why": "Quiet Luxury Old Money: Black wool coat layered over a grey hooded shirt, paired with grey wide-leg trousers, accented with a plaid silk scarf for refined detail, featuring textured fabrics for a rela",
+   "source": "FashionStylist V1 (men), expert-labelled outfits"
+  },
+  {
+   "outfit": "overshirt brown grey relaxed smart casual +check +cotton, shirt beige relaxed minimal casual +cotton, trousers black straight casual +cotton, dress-shoes black vintage casual +leather",
+   "occasion": "casual",
+   "feels": 5,
+   "verdict": "good",
+   "why": "Korean Trendy: Brown-grey plaid faux fur coat paired with black wide-leg trousers, layered over a black top with a brown scarf, featuring faux fur texture and color-blocking for a cool, street-ready l",
+   "source": "FashionStylist V1 (men), expert-labelled outfits"
+  },
+  {
+   "outfit": "overshirt brown grey relaxed smart casual +check +cotton, shirt denim relaxed minimal casual +denim, trousers black straight casual +cotton, scarf black grey smart casual +cotton +graphic +print, bag black casual +leather, dress-shoes black smart casual +leather +loafers",
+   "occasion": "night",
+   "feels": 5,
+   "verdict": "good",
+   "why": "American Retro: Brown-grey plaid faux fur coat layered over a denim shirt, paired with black wide-leg trousers, accented with a silk scarf and black bag for a casual, vintage-inspired style.",
+   "source": "FashionStylist V1 (men), expert-labelled outfits"
+  },
+  {
+   "outfit": "sweater beige relaxed casual +cardigan +denim, shirt beige relaxed casual +cotton, trousers black straight smart casual smart +cotton, cap beige casual +cotton +graphic +print, dress-shoes black smart casual +leather +loafers",
+   "occasion": "casual",
+   "feels": 14,
+   "verdict": "good",
+   "why": "Commuter Casual: Brown-toned faux fur jacket paired with black wide-leg trousers, layered over a black top with a belt, featuring a relaxed fit and soft tones suitable for daily commuting.",
+   "source": "FashionStylist V1 (men), expert-labelled outfits"
+  },
+  {
+   "outfit": "sweater beige relaxed smart casual +cotton, shirt denim relaxed minimal casual +denim, trousers beige wide casual +cotton, boots black streetwear +leather",
+   "occasion": "casual",
+   "feels": 14,
+   "verdict": "good",
+   "why": "American Retro: Brown-toned corduroy vest layered over a light blue denim shirt, paired with matching wide-leg trousers, accented with a black scarf for a relaxed, vintage-inspired aesthetic.",
+   "source": "FashionStylist V1 (men), expert-labelled outfits"
+  },
+  {
+   "outfit": "sweater black relaxed smart casual +leather, shirt grey black relaxed casual +cotton +stripes, jeans charcoal straight vintage +denim +ripped, boots black streetwear +leather",
+   "occasion": "casual",
+   "feels": 14,
+   "verdict": "good",
+   "why": "Korean Trendy: Black faux fur patchwork jacket paired with distressed wide-leg jeans, layered over a plaid shirt, accented with metal charms for a trendy, street-ready look.",
+   "source": "FashionStylist V1 (men), expert-labelled outfits"
+  },
+  {
+   "outfit": "coat grey smart casual +cotton, zip-hoodie grey relaxed casual +cotton, jeans denim straight casual +denim, boots black streetwear +leather",
+   "occasion": "casual",
+   "feels": 5,
+   "verdict": "good",
+   "why": "Quiet Luxury Old Money: Grey wool coat layered over a hooded top, paired with light blue wide-leg jeans, combining textured fabrics and a classic silhouette for a relaxed, sophisticated aesthetic.",
+   "source": "FashionStylist V1 (men), expert-labelled outfits"
+  },
+  {
+   "outfit": "coat grey smart casual +cotton, sweater grey relaxed smart casual +turtleneck, trousers charcoal straight smart casual smart +cotton, bag black casual +leather, scarf black grey smart casual +cotton +graphic +print, dress-shoes black casual +leather",
+   "occasion": "night",
+   "feels": 5,
+   "verdict": "good",
+   "why": "Commuter Casual: Grey wool coat layered over a light grey top, paired with matching wide-leg trousers, accented with a silk scarf and black bag for a polished, daily commute look.",
+   "source": "FashionStylist V1 (men), expert-labelled outfits"
+  },
+  {
+   "outfit": "puffer black relaxed casual outdoor, sweater grey relaxed smart casual, shorts black wide casual +cotton, bag black casual +leather, accessory black casual +cotton +graphic +print, sneakers black brown outdoor +leather",
+   "occasion": "casual",
+   "feels": 5,
+   "verdict": "good",
+   "why": "Commuter Casual: Black glossy down jacket paired with matching wide-leg culottes, layered over a light grey top, combining warmth and style for winter daily commuting.",
+   "source": "FashionStylist V1 (men), expert-labelled outfits"
+  },
+  {
+   "outfit": "coat beige smart casual +cotton, shirt beige relaxed casual +cotton, trousers beige straight casual +cotton, bag black casual +leather, dress-shoes black formal smart casual +leather",
+   "occasion": "casual",
+   "feels": 5,
+   "verdict": "good",
+   "why": "Quiet Luxury Old Money: Brown-toned faux fur coat paired with matching wide-leg trousers, accented with a black bag, featuring textured fabrics for a relaxed and sophisticated aesthetic.",
+   "source": "FashionStylist V1 (men), expert-labelled outfits"
+  },
+  {
+   "outfit": "coat beige smart casual +cotton, zip-hoodie black relaxed casual +cotton, shirt grey black relaxed casual +check +cotton, trousers black straight smart casual smart +cotton, tie black smart casual +silk, bag black casual +leather, dress-shoes black smart casual +leather +loafers",
+   "occasion": "night",
+   "feels": 5,
+   "verdict": "good",
+   "why": "Korean Trendy: Brown-toned faux fur coat layered over a hooded plaid top, paired with black wide-leg trousers, accented with a black bag for a cool, street-ready look.",
+   "source": "FashionStylist V1 (men), expert-labelled outfits"
+  },
+  {
+   "outfit": "coat black smart casual +cotton, sweater black oversized minimal casual +turtleneck, jeans charcoal straight vintage +denim +ripped, beanie black grey casual streetwear, bag black casual +leather, dress-shoes black casual +leather",
+   "occasion": "casual",
+   "feels": 5,
+   "verdict": "good",
+   "why": "American Retro: Black faux fur coat paired with distressed wide-leg jeans, accented with a beanie and black bag for a casual, vintage-inspired style.",
+   "source": "FashionStylist V1 (men), expert-labelled outfits"
+  },
+  {
+   "outfit": "jacket beige relaxed smart casual +cotton, sweater burgundy relaxed minimal +turtleneck, trousers beige straight outdoor casual +cargo +cotton, boots beige outdoor +leather",
+   "occasion": "casual",
+   "feels": 14,
+   "verdict": "good",
+   "why": "Outdoor Tech: Light khaki jacket with shearling collar paired with dark brown cargo wide-leg trousers, featuring multi-pocket design and shearling collar for warmth and texture, suitable for winter ou",
+   "source": "FashionStylist V1 (men), expert-labelled outfits"
+  },
+  {
+   "outfit": "sweater black relaxed smart casual +leather, coat black smart +cotton, jeans denim straight casual +denim, bag black casual +leather, dress-shoes black smart casual smart +leather",
+   "occasion": "casual",
+   "feels": 5,
+   "verdict": "good",
+   "why": "Commuter Casual: Black patchwork long jacket paired with light blue wide-leg jeans, accented with a large black bag for utility, featuring a relaxed fit and all-black base for daily commuting.",
+   "source": "FashionStylist V1 (men), expert-labelled outfits"
+  },
+  {
+   "outfit": "puffer beige relaxed casual outdoor, shirt beige relaxed casual +cotton, sweater burgundy relaxed minimal +turtleneck, trousers beige straight casual +cotton, sneakers beige casual +leather",
+   "occasion": "casual",
+   "feels": 5,
+   "verdict": "good",
+   "why": "Quiet Luxury Old Money: Grey-toned glossy down jacket layered over a brown top, paired with matching wide-leg trousers, featuring textured fabrics and a monochromatic palette for a relaxed, sophistica",
+   "source": "FashionStylist V1 (men), expert-labelled outfits"
+  },
+  {
+   "outfit": "puffer black relaxed casual outdoor, tshirt white regular minimal casual +cotton, sweater black oversized minimal casual +turtleneck, trousers black wide smart casual casual +cotton, sneakers black grey outdoor casual +leather",
+   "occasion": "casual",
+   "feels": 5,
+   "verdict": "good",
+   "why": "Korean Trendy: Black glossy down jacket layered over a white top, paired with matching wide-leg trousers, featuring an all-black layered look for a cool, street-ready style.",
+   "source": "FashionStylist V1 (men), expert-labelled outfits"
+  },
+  {
+   "outfit": "shirt beige relaxed casual +cotton, trousers beige straight casual +cotton, cap black casual +cotton +graphic +print, bag black casual +leather, dress-shoes black formal smart casual +leather",
+   "occasion": "casual",
+   "feels": 14,
+   "verdict": "good",
+   "why": "American Retro: Brown-toned corduroy set including a shirt and wide-leg trousers, accented with a belt, silk scarf, and black bag for a vintage, casual aesthetic.",
+   "source": "FashionStylist V1 (men), expert-labelled outfits"
+  },
+  {
+   "outfit": "sweater beige relaxed casual, shirt light blue relaxed minimal casual +cotton, jeans denim straight casual +denim +ripped, scarf pink casual +cotton, sneakers beige casual +leather",
+   "occasion": "casual",
+   "feels": 14,
+   "verdict": "good",
+   "why": "Commuter Casual: Light brown cable-knit sweater layered over a blue shirt, paired with dark green wide-leg jeans, accented with a silk scarf for a soft, daily commute look.",
+   "source": "FashionStylist V1 (men), expert-labelled outfits"
+  },
+  {
+   "outfit": "sweater charcoal relaxed casual, trousers beige straight casual +cotton, cap beige casual +cotton +graphic +print, scarf brown grey casual +stripes +wool, bag beige casual +leather, sneakers beige casual +leather",
+   "occasion": "casual",
+   "feels": 5,
+   "verdict": "good",
+   "why": "Quiet Luxury Old Money: Dark grey cable-knit sweater paired with khaki wide-leg trousers, accented with a brown hat and leather crossbody bag, featuring textured fabrics and a monochromatic palette fo",
+   "source": "FashionStylist V1 (men), expert-labelled outfits"
+  },
+  {
+   "outfit": "jacket brown grey relaxed smart casual +cotton, sweater burgundy relaxed minimal +turtleneck, trousers black straight smart casual smart +cotton, dress-shoes black formal smart casual +leather",
+   "occasion": "night",
+   "feels": 14,
+   "verdict": "good",
+   "why": "Korean Trendy: Brown-toned tweed jacket layered over a brown turtleneck, paired with black wide-leg trousers, accented with metal charms for a trendy, street-ready look.",
+   "source": "FashionStylist V1 (men), expert-labelled outfits"
+  },
+  {
+   "outfit": "cap black casual +cotton +graphic +print, puffer black relaxed casual outdoor, sweater grey relaxed casual +cardigan, tshirt black regular minimal casual, trousers black straight casual +cotton, boots beige outdoor +leather",
+   "occasion": "casual",
+   "feels": 5,
+   "verdict": "good",
+   "why": "Outdoor Tech: Black glossy down jacket paired with matching wide-leg trousers, accented with gloves and a baseball cap for utility, featuring a glossy finish and relaxed fit for winter outdoor activit",
+   "source": "FashionStylist V1 (men), expert-labelled outfits"
+  },
+  {
+   "outfit": "puffer grey relaxed casual outdoor +cotton, shirt white relaxed minimal casual +cotton, sweater grey oversized minimal casual +turtleneck, trousers grey wide casual +cotton, sneakers black grey outdoor casual +leather",
+   "occasion": "casual",
+   "feels": 5,
+   "verdict": "good",
+   "why": "Commuter Casual: Grey-toned glossy down jacket layered over a white top, paired with matching wide-leg trousers, featuring a monochromatic palette for warmth and comfort in daily commuting.",
+   "source": "FashionStylist V1 (men), expert-labelled outfits"
+  },
+  {
+   "outfit": "puffer grey relaxed casual outdoor +cotton, shirt brown grey oversized vintage casual +check +cotton, trousers beige wide casual +cotton, accessory grey black casual +cotton +stripes, dress-shoes black formal smart casual +leather",
+   "occasion": "night",
+   "feels": 5,
+   "verdict": "good",
+   "why": "Korean Trendy: Grey-toned wool jacket layered over a plaid top, paired with brown wide-leg trousers, accented with a scarf for a trendy, street-ready look.",
+   "source": "FashionStylist V1 (men), expert-labelled outfits"
+  },
+  {
+   "outfit": "sweater beige relaxed smart casual +cotton, shirt brown grey oversized vintage casual +check +cotton, shorts black wide casual +cotton, bag beige smart casual +leather, boots beige outdoor +leather",
+   "occasion": "casual",
+   "feels": 14,
+   "verdict": "good",
+   "why": "Quiet Luxury Old Money: Brown-toned faux fur vest layered over a plaid shirt, paired with black wide-leg culottes, accented with a leather crossbody bag, featuring textured fabrics for a sophisticated",
+   "source": "FashionStylist V1 (men), expert-labelled outfits"
+  },
+  {
+   "outfit": "coat beige smart casual +cotton, sweater burgundy relaxed minimal +turtleneck, trousers beige wide casual +cotton, dress-shoes black formal smart casual +leather",
+   "occasion": "casual",
+   "feels": 5,
+   "verdict": "good",
+   "why": "Quiet Luxury Old Money: Brown-toned wool set including a jacket and wide-leg trousers, accented with a matching scarf for a cohesive, sophisticated aesthetic.",
+   "source": "FashionStylist V1 (men), expert-labelled outfits"
+  },
+  {
+   "outfit": "puffer black relaxed casual outdoor, shirt brown grey oversized vintage casual +check +cotton, jeans denim straight casual +denim, bag black casual +leather, boots beige outdoor +leather",
+   "occasion": "casual",
+   "feels": 5,
+   "verdict": "good",
+   "why": "Outdoor Tech: Black down jacket paired with light blue wide-leg jeans, layered over a plaid shirt with a crossbody bag for utility, featuring a voluminous fit for winter outdoor activities.",
+   "source": "FashionStylist V1 (men), expert-labelled outfits"
+  },
+  {
+   "outfit": "sweater black relaxed smart casual +turtleneck, shirt brown grey oversized vintage casual +check +cotton, jeans denim straight casual +denim +ripped, scarf black grey smart casual +cotton +graphic +print, boots beige outdoor +leather",
+   "occasion": "casual",
+   "feels": 14,
+   "verdict": "good",
+   "why": "Korean Trendy: Black knit sweater layered over a plaid shirt, paired with distressed wide-leg jeans, accented with a silk scarf for a trendy, street-ready look.",
+   "source": "FashionStylist V1 (men), expert-labelled outfits"
+  },
+  {
+   "outfit": "overshirt black relaxed minimal casual +cotton, shirt brown grey oversized vintage casual +check +cotton, shorts black wide casual +cotton, bag black casual, accessory black casual +cotton, dress-shoes black vintage casual +leather",
+   "occasion": "casual",
+   "feels": 14,
+   "verdict": "good",
+   "why": "Commuter Casual: Black shirt-style jacket paired with black wide-leg culottes, layered over a plaid shirt with a black bag for added depth, featuring a relaxed fit for daily commuting.",
+   "source": "FashionStylist V1 (men), expert-labelled outfits"
+  },
+  {
+   "outfit": "hoodie beige relaxed casual +cotton, shirt brown grey oversized vintage casual +check +cotton, trousers beige straight casual +cotton, sneakers beige casual +leather",
+   "occasion": "casual",
+   "feels": 5,
+   "verdict": "good",
+   "why": "Commuter Casual: Light brown corduroy set including a hooded jacket and wide-leg trousers, layered over a plaid shirt with gloves for warmth, featuring soft tones for daily commuting.",
+   "source": "FashionStylist V1 (men), expert-labelled outfits"
+  },
+  {
+   "outfit": "hoodie black relaxed casual +cotton, shirt brown grey oversized vintage casual +check +cotton, trousers black straight casual +cotton, dress-shoes black formal smart casual +leather",
+   "occasion": "casual",
+   "feels": 5,
+   "verdict": "good",
+   "why": "Korean Trendy: Black faux fur hooded jacket paired with matching wide-leg trousers, layered over a plaid shirt, featuring an all-black layered look for a cool, street-ready style.",
+   "source": "FashionStylist V1 (men), expert-labelled outfits"
+  },
+  {
+   "outfit": "sweater blue relaxed casual, shirt brown grey oversized vintage casual +check +cotton, trousers black straight smart casual smart +cotton, bag beige casual +leather, dress-shoes black formal smart casual +leather",
+   "occasion": "night",
+   "feels": 14,
+   "verdict": "good",
+   "why": "Korean Trendy: Bright blue faux fur sweater layered over a plaid shirt, paired with dark brown wide-leg trousers, accented with a leather crossbody bag, featuring color-blocking for a street-ready loo",
+   "source": "FashionStylist V1 (men), expert-labelled outfits"
+  },
+  {
+   "outfit": "sweater charcoal relaxed casual, trousers grey wide casual +cotton, bag black smart casual +leather, dress-shoes black formal smart casual +leather",
+   "occasion": "casual",
+   "feels": 5,
+   "verdict": "good",
+   "why": "Quiet Luxury Old Money: Brown-toned faux fur sweater paired with matching wide-leg trousers, accented with metal charms and a leather crossbody bag, featuring textured fabrics for a sophisticated aest",
+   "source": "FashionStylist V1 (men), expert-labelled outfits"
+  },
+  {
+   "outfit": "jacket black relaxed streetwear +leather, sweater white grey relaxed casual, trousers black wide outdoor +cargo +cotton, boots black grey streetwear +leather",
+   "occasion": "casual",
+   "feels": 14,
+   "verdict": "good",
+   "why": "Avant-garde deconstructed style: black glossy leather jacket paired with matching cargo wide-leg trousers, metal buckles, ribbons, and irregular cuts enhance the deconstructed design, suitable for tre",
+   "source": "FashionStylist V1 (men), expert-labelled outfits"
+  },
+  {
+   "outfit": "coat black smart +leather, hoodie brown grey relaxed casual +cotton, trousers black wide outdoor +cargo +cotton, sneakers black streetwear +leather",
+   "occasion": "casual",
+   "feels": 5,
+   "verdict": "good",
+   "why": "Avant-garde deconstructed style: black leather trench coat paired with matching wide-leg trousers, long silhouette combined with a belted waist structure, creating a cool and avant-garde atmosphere.",
+   "source": "FashionStylist V1 (men), expert-labelled outfits"
+  },
+  {
+   "outfit": "jacket black relaxed streetwear +leather, sweater grey black slim casual, trousers black wide outdoor +cargo +cotton, dress-shoes black streetwear +leather",
+   "occasion": "night",
+   "feels": 14,
+   "verdict": "good",
+   "why": "Avant-garde deconstructed style: black paneled leather jacket paired with matching cargo wide-leg trousers, paneled materials combined with metal hardware details, suitable for trendy street style.",
+   "source": "FashionStylist V1 (men), expert-labelled outfits"
+  },
+  {
+   "outfit": "jacket black red relaxed streetwear +cotton, sweater black slim casual +graphic +print +turtleneck, trousers black red wide streetwear casual +cotton, boots black casual +leather",
+   "occasion": "casual",
+   "feels": 5,
+   "verdict": "good",
+   "why": "Avant-garde deconstructed style: black and red color-blocked leather jacket paired with matching printed wide-leg trousers, contrasting panels combined with distressed cut-out details, distinctive sty",
+   "source": "FashionStylist V1 (men), expert-labelled outfits"
+  },
+  {
+   "outfit": "overshirt black grey cropped vintage casual +denim, tshirt white relaxed streetwear casual +graphic +print, trousers black wide streetwear +denim, sneakers white streetwear +leather",
+   "occasion": "night",
+   "feels": 14,
+   "verdict": "good",
+   "why": "Avant-garde deconstructed style: black denim set with a white inner layer, side-button details and print decorations on the trousers enhance the deconstructed design, suitable for trendy street style.",
+   "source": "FashionStylist V1 (men), expert-labelled outfits"
+  },
+  {
+   "outfit": "jacket beige relaxed casual +cotton, tshirt brown green slim vintage casual, trousers black wide outdoor +cargo +leather, hat black brown smart +wool, boots beige outdoor +leather",
+   "occasion": "casual",
+   "feels": 5,
+   "verdict": "good",
+   "why": "Outdoor functional style: khaki distressed jacket paired with black cargo wide-leg trousers, faux fur-trimmed hood and multi-pocket trousers enhance utility, suitable for light winter outdoor scenes.",
+   "source": "FashionStylist V1 (men), expert-labelled outfits"
+  },
+  {
+   "outfit": "sweater grey black cropped casual +cardigan, shirt white relaxed smart casual minimal +cotton, trousers grey black wide streetwear +wool, accessory grey black streetwear +silk, boots white black streetwear +leather",
+   "occasion": "night",
+   "feels": 14,
+   "verdict": "good",
+   "why": "Avant-garde deconstructed style: black and grey textured suit paired with a white shirt and tie, frayed hem on trousers and corsage decoration highlight deconstructed details, unique style for trendy ",
+   "source": "FashionStylist V1 (men), expert-labelled outfits"
+  },
+  {
+   "outfit": "trousers olive wide casual +cotton, dress-shoes black smart casual +leather +loafers, jacket black relaxed casual +cotton, sweater grey relaxed casual",
+   "occasion": "night",
+   "feels": 17,
+   "verdict": "good",
+   "why": "Commuter casual style: pink knit jacket layered over a grey sweater and white shirt, paired with dark blue wide-leg jeans, soft tones and loose fit balance comfort and texture, suitable for daily comm",
+   "source": "FashionStylist V1 (men), expert-labelled outfits"
+  },
+  {
+   "outfit": "sweater grey white relaxed casual +cardigan +cotton, tshirt black slim casual +cotton, trousers black straight smart casual smart +cotton, dress-shoes black smart casual +leather",
+   "occasion": "casual",
+   "feels": 14,
+   "verdict": "good",
+   "why": "Commuter casual style: grey and white knit jacket paired with black wide-leg trousers, white belt detail enhances the look, minimalist style suitable for daily commuting.",
+   "source": "FashionStylist V1 (men), expert-labelled outfits"
+  },
+  {
+   "outfit": "sweater grey white relaxed casual +cardigan +cotton, shirt charcoal relaxed smart casual +cotton, trousers black wide smart casual casual +cotton, dress-shoes black smart casual +leather +loafers",
+   "occasion": "casual",
+   "feels": 14,
+   "verdict": "good",
+   "why": "Commuter casual style: grey-toned knit jacket layered over a dark grey shirt, paired with matching wide-leg trousers, muted color palette and textured fabric create a relaxed vibe, suitable for daily ",
+   "source": "FashionStylist V1 (men), expert-labelled outfits"
+  },
+  {
+   "outfit": "sweater cream red relaxed casual +cardigan, jacket white relaxed smart casual casual +blazer +cotton, trousers black straight smart casual smart +cotton, dress-shoes black smart casual +leather +loafers",
+   "occasion": "night",
+   "feels": 17,
+   "verdict": "good",
+   "why": "Commuter casual style: off-white knit jacket layered over a white shirt, paired with dark grey wide-leg trousers, black bag accessory enhances utility, soft style suitable for daily commuting.",
+   "source": "FashionStylist V1 (men), expert-labelled outfits"
+  },
+  {
+   "outfit": "sweater white relaxed casual +cardigan, tshirt white relaxed casual, trousers white wide outdoor +cargo +cotton, sneakers white grey streetwear +leather",
+   "occasion": "casual",
+   "feels": 17,
+   "verdict": "good",
+   "why": "Commuter casual style: off-white knit cardigan layered over a matching inner top, paired with off-white cargo wide-leg trousers, unified color palette and loose fit balance comfort and texture, suitab",
+   "source": "FashionStylist V1 (men), expert-labelled outfits"
+  },
+  {
+   "outfit": "sweater red relaxed casual +cardigan, trousers navy straight casual +cotton, dress-shoes black smart casual +leather +loafers",
+   "occasion": "night",
+   "feels": 14,
+   "verdict": "good",
+   "why": "Avant-garde deconstructed style: red knit cardigan layered over a black turtleneck, paired with navy wide-leg trousers, pearl embellishments and cable-knit texture enhance the deconstructed design, pe",
+   "source": "FashionStylist V1 (men), expert-labelled outfits"
+  },
+  {
+   "outfit": "sweater grey relaxed smart casual +cardigan, jacket black grey relaxed casual +denim +stripes, trousers black grey wide casual +cotton +stripes, shirt grey relaxed smart casual +cotton, dress-shoes black smart casual +leather +loafers",
+   "occasion": "casual",
+   "feels": 14,
+   "verdict": "good",
+   "why": "Avant-garde deconstructed style: grey-toned knit cardigan layered over a striped suit and shirt, paired with matching wide-leg trousers, pearl embellishments and multi-layering highlight deconstructed",
+   "source": "FashionStylist V1 (men), expert-labelled outfits"
+  },
+  {
+   "outfit": "sweater white relaxed casual +cardigan, shirt black relaxed smart casual +cotton, trousers black straight smart casual smart +cotton, dress-shoes black smart casual +leather +loafers",
+   "occasion": "casual",
+   "feels": 17,
+   "verdict": "good",
+   "why": "Commuter casual style: off-white loose-fit knit sweater layered over a black shirt, paired with black wide-leg trousers, minimalist style and soft tones suitable for daily commuting.",
+   "source": "FashionStylist V1 (men), expert-labelled outfits"
+  },
+  {
+   "outfit": "sweater green relaxed casual +cardigan, shirt white relaxed smart casual +cotton, trousers white wide outdoor casual +cargo +cotton, dress-shoes white smart casual +leather +loafers",
+   "occasion": "casual",
+   "feels": 14,
+   "verdict": "good",
+   "why": "Commuter casual style: green loose-fit knit sweater layered over a white shirt, paired with off-white cargo wide-leg trousers, soft tones and comfortable fit suitable for daily commuting.",
+   "source": "FashionStylist V1 (men), expert-labelled outfits"
+  },
+  {
+   "outfit": "sweater black relaxed casual +cardigan +cotton, shirt white relaxed smart casual +cotton, trousers white wide outdoor casual +cargo +cotton, dress-shoes white smart casual +leather +loafers",
+   "occasion": "night",
+   "feels": 14,
+   "verdict": "good",
+   "why": "Commuter casual style: black loose-fit knit sweater layered over a white shirt, paired with off-white cargo wide-leg trousers, minimalist style and textured fabric meet daily comfort needs.",
+   "source": "FashionStylist V1 (men), expert-labelled outfits"
+  },
+  {
+   "outfit": "jacket pink relaxed casual, shirt light blue relaxed smart casual +cotton, trousers black straight casual +cotton +stripes, dress-shoes black smart casual +leather +loafers",
+   "occasion": "casual",
+   "feels": 17,
+   "verdict": "good",
+   "why": "Avant-garde deconstructed style: pink knit cardigan layered over a light blue shirt, paired with dark blue contrast-stitch wide-leg trousers, cable-knit texture and contrast stitching enhance deconstr",
+   "source": "FashionStylist V1 (men), expert-labelled outfits"
+  },
+  {
+   "outfit": "jacket black relaxed casual +cotton, shirt white relaxed casual +cotton +graphic +print, trousers black wide casual +cotton, dress-shoes black smart casual +leather +loafers",
+   "occasion": "casual",
+   "feels": 5,
+   "verdict": "good",
+   "why": "Commuter casual style: black heathered knit cardigan layered over a white shirt, paired with black wide-leg trousers, muted color palette and loose fit suitable for daily commuting.",
+   "source": "FashionStylist V1 (men), expert-labelled outfits"
+  },
+  {
+   "outfit": "overshirt black relaxed vintage casual +denim, tshirt grey relaxed casual +cotton, trousers black wide casual +cotton, sneakers black streetwear +leather",
+   "occasion": "casual",
+   "feels": 14,
+   "verdict": "good",
+   "why": "American vintage style: dark grey denim set paired with a light grey inner layer, distressed denim fabric and metal buttons exude a vintage texture, suitable for daily casual scenes.",
+   "source": "FashionStylist V1 (men), expert-labelled outfits"
+  },
+  {
+   "outfit": "coat black smart casual +cotton, sweater grey relaxed casual, trousers black straight smart casual smart +cotton, dress-shoes black smart casual +leather",
+   "occasion": "smart",
+   "feels": 5,
+   "verdict": "good",
+   "why": "Quiet luxury style: black wool coat layered over a grey sweater, paired with matching wide-leg trousers, unified color palette and textured fabric create a relaxed and sophisticated vibe, suitable for",
+   "source": "FashionStylist V1 (men), expert-labelled outfits"
+  },
+  {
+   "outfit": "coat brown smart casual +cotton, sweater black relaxed smart casual +turtleneck, trousers black wide casual +cotton, dress-shoes black smart casual +leather +loafers",
+   "occasion": "casual",
+   "feels": 5,
+   "verdict": "good",
+   "why": "Avant-garde deconstructed style: dark green wool coat layered over a black sweater, paired with matching wide-leg trousers, high-neck wrap design enhances deconstructed details, suitable for trendy st",
+   "source": "FashionStylist V1 (men), expert-labelled outfits"
+  },
+  {
+   "outfit": "jacket brown relaxed casual +cotton, sweater black slim smart casual +turtleneck, trousers black wide casual +cotton, beanie black casual streetwear +wool, dress-shoes black streetwear +leather +loafers",
+   "occasion": "casual",
+   "feels": 5,
+   "verdict": "good",
+   "why": "Avant-garde deconstructed style: dark brown jacket paired with black and grey wide-leg trousers, shoulder strap decoration enhances the deconstructed design, suitable for trendy street style.",
+   "source": "FashionStylist V1 (men), expert-labelled outfits"
+  },
+  {
+   "outfit": "sweater grey relaxed casual +cardigan, shirt light blue relaxed smart casual +cotton, trousers black wide casual +cotton, dress-shoes black smart casual +leather",
+   "occasion": "casual",
+   "feels": 14,
+   "verdict": "good",
+   "why": "Commuter casual style: grey-toned knit cardigan layered over a light blue shirt, paired with black and grey wide-leg trousers, red belt accent enhances the look, suitable for daily commuting.",
+   "source": "FashionStylist V1 (men), expert-labelled outfits"
+  },
+  {
+   "outfit": "coat beige smart casual +cotton, sweater brown relaxed casual, jeans denim wide vintage +denim +ripped, boots brown casual +leather",
+   "occasion": "casual",
+   "feels": 14,
+   "verdict": "good",
+   "why": "American vintage style: khaki trench coat layered over a brown sweater, paired with distressed wide-leg jeans, vintage fabric and cut-out details exude an American casual texture, suitable for daily c",
+   "source": "FashionStylist V1 (men), expert-labelled outfits"
+  },
+  {
+   "outfit": "jacket olive relaxed smart casual casual +blazer +cotton, hoodie grey relaxed casual, trousers olive wide casual +cotton, dress-shoes black smart casual +leather +loafers",
+   "occasion": "casual",
+   "feels": 5,
+   "verdict": "good",
+   "why": "Avant-garde deconstructed style: grey-toned suit set layered over a hooded knit inner top, the combination of hoodie and suit enhances the deconstructed look, suitable for trendy street style.",
+   "source": "FashionStylist V1 (men), expert-labelled outfits"
+  },
+  {
+   "outfit": "jacket black relaxed outdoor +cotton, sweater grey relaxed casual +cardigan, jeans wide vintage +denim, dress-shoes black smart casual casual +leather +loafers",
+   "occasion": "casual",
+   "feels": 5,
+   "verdict": "good",
+   "why": "Commuter casual style: black cargo jacket layered over a grey knit and red-trimmed inner top, paired with dark black wide-leg jeans, layered styling enhances the look, suitable for daily commuting.",
+   "source": "FashionStylist V1 (men), expert-labelled outfits"
+  },
+  {
+   "outfit": "shirt blue white relaxed casual +check +cotton, jeans denim wide vintage +denim +ripped, boots brown casual +leather",
+   "occasion": "casual",
+   "feels": 17,
+   "verdict": "good",
+   "why": "American vintage style: blue and white plaid shirt layered over a light grey inner layer, paired with distressed wide-leg jeans, vintage plaid and cut-out details exude an American casual texture, sui",
+   "source": "FashionStylist V1 (men), expert-labelled outfits"
+  },
+  {
+   "outfit": "shirt black white relaxed casual +check +cotton, trousers black wide casual +cotton, scarf green smart casual +check +cotton, dress-shoes black smart casual +leather +loafers",
+   "occasion": "casual",
+   "feels": 14,
+   "verdict": "good",
+   "why": "Commuter casual style: black and white plaid shirt layered over a light grey inner layer, paired with black wide-leg trousers, scarf accessory enhances the look, suitable for daily commuting.",
+   "source": "FashionStylist V1 (men), expert-labelled outfits"
+  },
+  {
+   "outfit": "sweater brown relaxed casual +cardigan, trousers brown wide casual +cotton, dress-shoes black smart casual +leather +loafers",
+   "occasion": "casual",
+   "feels": 14,
+   "verdict": "good",
+   "why": "Quiet luxury style: brown-toned plush cardigan layered over a matching inner top, paired with grey-toned wide-leg trousers, leather belt accent creates a relaxed and sophisticated vibe, suitable for d",
+   "source": "FashionStylist V1 (men), expert-labelled outfits"
+  },
+  {
+   "outfit": "sweater olive relaxed casual +cotton, trousers olive wide casual +cotton, dress-shoes black streetwear +leather +loafers",
+   "occasion": "casual",
+   "feels": 14,
+   "verdict": "good",
+   "why": "Smart Casual: Grey suit layered over a light blue top, featuring a relaxed fit and monochromatic palette for comfort and texture, suitable for daily commuting.",
+   "source": "FashionStylist V1 (men), expert-labelled outfits"
+  },
+  {
+   "outfit": "sweater beige relaxed casual, jeans black wide vintage +denim, dress-shoes black smart casual casual +leather",
+   "occasion": "casual",
+   "feels": 14,
+   "verdict": "good",
+   "why": "Smart Casual: Light brown half-zip top layered over a tonal base, paired with dark black wide-leg jeans, featuring a soft color palette suitable for daily commuting.",
+   "source": "FashionStylist V1 (men), expert-labelled outfits"
+  },
+  {
+   "outfit": "tshirt grey relaxed casual +cotton, trousers black wide casual +cotton, cap black casual +cotton, dress-shoes black smart casual casual +leather",
+   "occasion": "casual",
+   "feels": 5,
+   "verdict": "good",
+   "why": "Avant-Garde Deconstructed: Dark grey short-sleeve top layered over a striped base, paired with black wide-leg trousers, featuring a drawstring collar to emphasize deconstructed details, suitable for t",
+   "source": "FashionStylist V1 (men), expert-labelled outfits"
+  },
+  {
+   "outfit": "jacket brown relaxed smart casual casual +blazer +cotton, tshirt grey relaxed casual +cotton, trousers brown straight smart casual smart +cotton, accessory olive +wool, sneakers brown outdoor +leather",
+   "occasion": "smart",
+   "feels": 14,
+   "verdict": "good",
+   "why": "Quiet Luxury: Brown suit set layered over a printed top, featuring premium fabric for a relaxed, sophisticated aesthetic, suitable for daily commuting.",
+   "source": "FashionStylist V1 (men), expert-labelled outfits"
+  },
+  {
+   "outfit": "jacket burgundy cropped streetwear +cotton, sweater black relaxed casual, trousers black wide streetwear casual +cotton, dress-shoes black smart casual +leather +loafers",
+   "occasion": "casual",
+   "feels": 5,
+   "verdict": "good",
+   "why": "Avant-Garde Deconstructed: Burgundy jacket paired with dark black wide-leg jeans, featuring belt accents to emphasize deconstructed design, suitable for trendy street style.",
+   "source": "FashionStylist V1 (men), expert-labelled outfits"
+  },
+  {
+   "outfit": "coat grey smart casual +cotton, sweater black relaxed casual, trousers black wide streetwear casual +cotton, boots black smart casual +leather",
+   "occasion": "casual",
+   "feels": 5,
+   "verdict": "good",
+   "why": "Smart Casual: Light grey long coat layered over a black base, featuring a relaxed fit and soft color palette, suitable for daily commuting.",
+   "source": "FashionStylist V1 (men), expert-labelled outfits"
+  },
+  {
+   "outfit": "coat black smart casual +cotton, sweater black relaxed casual, trousers black wide streetwear casual +cotton, boots black smart casual +leather",
+   "occasion": "night",
+   "feels": 5,
+   "verdict": "good",
+   "why": "Smart Casual: Black long coat layered over a black base, featuring a monochromatic palette and comfortable fit, suitable for daily commuting.",
+   "source": "FashionStylist V1 (men), expert-labelled outfits"
+  },
+  {
+   "outfit": "sweater grey relaxed casual, trousers black wide streetwear casual +cotton, dress-shoes black smart casual +leather +loafers",
+   "occasion": "casual",
+   "feels": 14,
+   "verdict": "good",
+   "why": "Smart Casual: Grey plush cardigan layered over a black base, paired with black wide-leg trousers, featuring soft textures and a relaxed fit, suitable for daily commuting.",
+   "source": "FashionStylist V1 (men), expert-labelled outfits"
+  },
+  {
+   "outfit": "zip-hoodie black relaxed casual +cotton, jeans charcoal wide outdoor +cotton, dress-shoes black smart casual +leather +loafers",
+   "occasion": "casual",
+   "feels": 5,
+   "verdict": "good",
+   "why": "Avant-Garde Deconstructed: Black hooded coat paired with dark green wide-leg jeans, featuring side metal buckle details to emphasize deconstructed design, suitable for trendy street style.",
+   "source": "FashionStylist V1 (men), expert-labelled outfits"
+  },
+  {
+   "outfit": "coat black smart casual +cotton, sweater black relaxed casual, trousers cream wide casual +cotton, dress-shoes black smart casual +leather",
+   "occasion": "smart",
+   "feels": 5,
+   "verdict": "good",
+   "why": "Quiet Luxury: Dark grey wool coat layered over a black base, paired with light beige wide-leg trousers, featuring premium fabric for a relaxed, sophisticated aesthetic, suitable for daily commuting.",
+   "source": "FashionStylist V1 (men), expert-labelled outfits"
+  },
+  {
+   "outfit": "jacket relaxed casual, sweater black relaxed casual, trousers black wide casual +cotton, dress-shoes black smart casual +leather",
+   "occasion": "night",
+   "feels": 17,
+   "verdict": "good",
+   "why": "Avant-Garde Deconstructed: Teal diamond-pattern knit jacket layered over a black base, paired with black wide-leg trousers, featuring red line accents to emphasize deconstructed details, suitable for ",
+   "source": "FashionStylist V1 (men), expert-labelled outfits"
+  },
+  {
+   "outfit": "jacket brown green cropped streetwear +blazer +cotton, shirt blue relaxed casual +cotton, trousers brown wide casual +cotton, dress-shoes black smart casual +leather",
+   "occasion": "casual",
+   "feels": 14,
+   "verdict": "good",
+   "why": "Quiet Luxury: Brown suit set layered over a light blue shirt, featuring leather collar accents for added texture, suitable for daily commuting.",
+   "source": "FashionStylist V1 (men), expert-labelled outfits"
+  },
+  {
+   "outfit": "jacket brown relaxed casual, hoodie olive relaxed casual +cotton, trousers burgundy straight streetwear casual +cotton, dress-shoes black smart casual +leather",
+   "occasion": "casual",
+   "feels": 5,
+   "verdict": "good",
+   "why": "Avant-Garde Deconstructed: Burgundy suit set layered over a hooded top, featuring side paneling to emphasize deconstructed design, suitable for trendy street style.",
+   "source": "FashionStylist V1 (men), expert-labelled outfits"
+  },
+  {
+   "outfit": "jacket black grey cropped vintage +cotton +denim, tshirt red slim casual, trousers black wide vintage casual +cotton, dress-shoes black smart casual +leather +loafers",
+   "occasion": "casual",
+   "feels": 14,
+   "verdict": "good",
+   "why": "Avant-Garde Deconstructed: Black paneled jacket layered over a red-trimmed base, paired with black wide-leg trousers, featuring material contrast to emphasize deconstructed details, suitable for trend",
+   "source": "FashionStylist V1 (men), expert-labelled outfits"
+  },
+  {
+   "outfit": "jacket brown cropped vintage +leather, sweater black relaxed casual, trousers cream wide casual +cotton, dress-shoes black smart casual +leather",
+   "occasion": "casual",
+   "feels": 14,
+   "verdict": "good",
+   "why": "Smart Casual: Brown hooded jacket layered over a black base, paired with light beige wide-leg trousers, featuring a soft color palette and relaxed fit, suitable for daily commuting.",
+   "source": "FashionStylist V1 (men), expert-labelled outfits"
+  },
+  {
+   "outfit": "jacket grey cropped smart casual +blazer +cotton, shirt black relaxed smart casual +cotton, trousers brown wide casual +cotton, dress-shoes black smart casual +leather",
+   "occasion": "smart",
+   "feels": 14,
+   "verdict": "good",
+   "why": "Quiet Luxury: Grey blazer layered over a black shirt, paired with dark brown wide-leg trousers, featuring contrast collar accents for added texture, suitable for daily commuting.",
+   "source": "FashionStylist V1 (men), expert-labelled outfits"
+  },
+  {
+   "outfit": "sweatshirt brown relaxed casual, tshirt white relaxed casual +cotton, jeans black wide outdoor +cotton, dress-shoes black smart casual +leather +loafers",
+   "occasion": "casual",
+   "feels": 17,
+   "verdict": "good",
+   "why": "Avant-Garde Deconstructed: Light brown half-placket top layered over a white base, paired with black wide-leg jeans, featuring metal buckle accents to emphasize deconstructed design, suitable for tren",
+   "source": "FashionStylist V1 (men), expert-labelled outfits"
+  },
+  {
+   "outfit": "jacket brown white cropped casual +cotton, sweater brown relaxed smart casual +turtleneck, trousers brown wide outdoor casual +cargo +cotton, dress-shoes black smart casual +leather",
+   "occasion": "casual",
+   "feels": 14,
+   "verdict": "good",
+   "why": "Avant-Garde Deconstructed: Brown paneled jacket layered over a tonal base, paired with dark brown wide-leg trousers, featuring metal buckle accents to emphasize deconstructed details, suitable for tre",
+   "source": "FashionStylist V1 (men), expert-labelled outfits"
+  },
+  {
+   "outfit": "jacket brown white cropped casual +cotton, tshirt white relaxed casual +cotton, jeans charcoal straight outdoor +denim, dress-shoes black smart casual +leather +loafers",
+   "occasion": "casual",
+   "feels": 17,
+   "verdict": "good",
+   "why": "Smart Casual: Brown jacket layered over a white base, paired with black wide-leg jeans, featuring a soft color palette and relaxed fit, suitable for daily commuting.",
+   "source": "FashionStylist V1 (men), expert-labelled outfits"
+  },
+  {
+   "outfit": "coat charcoal smart casual +cotton, hoodie black relaxed casual, trousers navy wide casual +cotton, dress-shoes black smart casual +leather +loafers",
+   "occasion": "casual",
+   "feels": 5,
+   "verdict": "good",
+   "why": "Avant-Garde Deconstructed: Dark grey long coat layered over a black base, paired with navy wide-leg trousers, featuring contrast paneling to emphasize the deconstructed look, suitable for trendy stree",
+   "source": "FashionStylist V1 (men), expert-labelled outfits"
+  },
+  {
+   "outfit": "jacket black cropped outdoor +leather, hoodie black relaxed casual +cotton, jeans charcoal straight outdoor +denim, dress-shoes black smart casual +leather +loafers",
+   "occasion": "casual",
+   "feels": 5,
+   "verdict": "good",
+   "why": "Avant-Garde Deconstructed: Black coat layered over a hooded top, paired with black wide-leg trousers, featuring metal hardware and diagonal zipper design to emphasize deconstructed details, suitable f",
+   "source": "FashionStylist V1 (men), expert-labelled outfits"
+  },
+  {
+   "outfit": "jacket charcoal relaxed casual +cotton, sweater black relaxed casual, trousers grey wide casual +cotton, dress-shoes black smart casual +leather",
+   "occasion": "casual",
+   "feels": 5,
+   "verdict": "good",
+   "why": "Avant-Garde Deconstructed: Black paneled jacket layered over a black base, paired with light grey wide-leg trousers, featuring side zipper accents to emphasize deconstructed details, suitable for tren",
+   "source": "FashionStylist V1 (men), expert-labelled outfits"
+  },
+  {
+   "outfit": "jacket olive relaxed casual +cotton, sweatshirt black relaxed casual, trousers black wide casual +cotton, dress-shoes black smart casual +leather",
+   "occasion": "casual",
+   "feels": 14,
+   "verdict": "good",
+   "why": "Smart Casual: Grey jacket layered over a black base, paired with black wide-leg trousers, featuring a minimalist silhouette and monochromatic palette, suitable for daily commuting.",
+   "source": "FashionStylist V1 (men), expert-labelled outfits"
+  },
+  {
+   "outfit": "jacket beige relaxed casual +cotton, hoodie black relaxed casual +cotton, jeans charcoal straight outdoor +denim, dress-shoes black smart casual +leather +loafers",
+   "occasion": "casual",
+   "feels": 14,
+   "verdict": "good",
+   "why": "Avant-Garde Deconstructed: Brown jacket layered over a hooded top, paired with black wide-leg jeans, featuring paneling design to emphasize the deconstructed look, suitable for trendy street style.",
+   "source": "FashionStylist V1 (men), expert-labelled outfits"
+  },
+  {
+   "outfit": "jacket black cropped smart casual +blazer +cotton, hoodie olive relaxed casual +cotton, jeans charcoal straight outdoor +denim, dress-shoes black smart casual +leather +loafers",
+   "occasion": "casual",
+   "feels": 14,
+   "verdict": "good",
+   "why": "Avant-Garde Deconstructed: Black blazer layered over a hooded top, paired with black wide-leg trousers, featuring leather accents to emphasize deconstructed details, suitable for trendy street style.",
+   "source": "FashionStylist V1 (men), expert-labelled outfits"
+  },
+  {
+   "outfit": "coat charcoal smart casual +cotton, sweatshirt black relaxed casual, trousers brown wide casual +cotton, dress-shoes black smart casual +leather",
+   "occasion": "casual",
+   "feels": 5,
+   "verdict": "good",
+   "why": "Smart Casual: Dark grey long trench coat layered over a black base, paired with dark brown wide-leg trousers, featuring a minimalist silhouette and composed color palette, suitable for daily commuting",
+   "source": "FashionStylist V1 (men), expert-labelled outfits"
+  },
+  {
+   "outfit": "jacket black cropped smart casual +blazer +cotton, shirt burgundy relaxed outdoor +cotton, trousers olive wide outdoor casual +cargo +cotton, dress-shoes black smart casual +leather +loafers",
+   "occasion": "casual",
+   "feels": 5,
+   "verdict": "good",
+   "why": "Avant-Garde Deconstructed: Dark brown blazer layered over a burgundy shirt, paired with black wide-leg trousers, featuring layered design and side slits to emphasize the deconstructed look, suitable f",
+   "source": "FashionStylist V1 (men), expert-labelled outfits"
+  },
+  {
+   "outfit": "jacket brown black cropped casual +cotton, sweater grey relaxed casual, trousers black wide casual +cotton, dress-shoes black smart casual +leather +loafers",
+   "occasion": "night",
+   "feels": 5,
+   "verdict": "good",
+   "why": "Avant-Garde Deconstructed: Dark brown paneled jacket layered over a grey base, paired with black wide-leg trousers, featuring material contrast and metal hardware to emphasize deconstructed details, s",
+   "source": "FashionStylist V1 (men), expert-labelled outfits"
+  },
+  {
+   "outfit": "jacket grey cropped smart casual +blazer +cotton, sweater brown relaxed smart casual +turtleneck, trousers olive wide outdoor casual +cargo +cotton, dress-shoes black smart casual +leather +loafers",
+   "occasion": "casual",
+   "feels": 5,
+   "verdict": "good",
+   "why": "Quiet Luxury: Light brown blazer layered over a tonal base, paired with black wide-leg trousers, featuring premium fabric and contrast collar for a relaxed, sophisticated aesthetic, suitable for daily",
+   "source": "FashionStylist V1 (men), expert-labelled outfits"
+  },
+  {
+   "outfit": "jacket grey cropped casual +check +cotton, sweater black relaxed casual, trousers brown wide outdoor casual +cargo +cotton, sneakers black casual +leather",
+   "occasion": "casual",
+   "feels": 17,
+   "verdict": "good",
+   "why": "Commuter Casual: Plaid patchwork jacket layered over a black top, paired with dark brown wide-leg trousers; soft plaid and minimalist silhouette suitable for daily commuting.",
+   "source": "FashionStylist V1 (men), expert-labelled outfits"
+  },
+  {
+   "outfit": "jacket denim cropped vintage +denim, tshirt white relaxed casual +cotton, jeans denim straight vintage +denim +ripped, sneakers black casual +leather",
+   "occasion": "casual",
+   "feels": 17,
+   "verdict": "good",
+   "why": "Avant-Garde Deconstruction: Distressed denim set layered over a white top, irregular patchwork and metal hardware enhance the deconstructed design, suitable for trendy street style.",
+   "source": "FashionStylist V1 (men), expert-labelled outfits"
+  },
+  {
+   "outfit": "jacket black red cropped streetwear +cotton, tshirt black slim streetwear +graphic +print, trousers black red wide streetwear casual +cotton, dress-shoes black smart casual +leather +loafers",
+   "occasion": "casual",
+   "feels": 5,
+   "verdict": "good",
+   "why": "Avant-Garde Deconstruction: Black faux-fur collar jacket layered over a graphic top, paired with black wide-leg trousers, color-blocking and metal hardware enhance the deconstructed look, suitable for",
+   "source": "FashionStylist V1 (men), expert-labelled outfits"
+  },
+  {
+   "outfit": "jacket grey black relaxed casual +cotton, tshirt black slim streetwear +graphic +print, jeans black wide outdoor +cotton, boots black outdoor +leather",
+   "occasion": "casual",
+   "feels": 5,
+   "verdict": "good",
+   "why": "Avant-Garde Deconstruction: Grey faux-fur collar jacket layered over a graphic top, paired with distressed wide-leg denim jeans, distressed details enhance the deconstructed look, suitable for trendy ",
+   "source": "FashionStylist V1 (men), expert-labelled outfits"
+  },
+  {
+   "outfit": "jacket navy cropped smart casual +cotton, tshirt black slim streetwear +graphic +print, trousers brown baggy outdoor casual +cargo +cotton, sneakers brown casual +leather",
+   "occasion": "casual",
+   "feels": 5,
+   "verdict": "good",
+   "why": "Avant-Garde Deconstruction: Navy jacket layered over a graphic top, paired with brown wide-leg cargo trousers, glove accessories enhance the deconstructed details, suitable for trendy street style.",
+   "source": "FashionStylist V1 (men), expert-labelled outfits"
+  },
+  {
+   "outfit": "shirt brown cropped streetwear +leather, jacket burgundy cropped vintage +leather, jeans charcoal baggy vintage +cotton +ripped, sneakers brown casual +leather",
+   "occasion": "casual",
+   "feels": 14,
+   "verdict": "good",
+   "why": "Avant-Garde Deconstruction: Brown jacket layered over a burgundy shirt, paired with distressed wide-leg denim jeans, leather waist bag accessory enhances the deconstructed look, suitable for trendy st",
+   "source": "FashionStylist V1 (men), expert-labelled outfits"
+  },
+  {
+   "outfit": "jacket black cropped smart casual, sweater black relaxed smart casual +turtleneck, trousers baggy outdoor casual +camo +cotton +print, sneakers cream casual +leather",
+   "occasion": "casual",
+   "feels": 5,
+   "verdict": "good",
+   "why": "Avant-Garde Deconstruction: Black jacket layered over a graphic top, paired with cow-print wide-leg trousers, faux-fur shoe accessories enhance the deconstructed details, suitable for trendy street st",
+   "source": "FashionStylist V1 (men), expert-labelled outfits"
+  },
+  {
+   "outfit": "jacket black grey cropped smart casual +cotton, tshirt black slim streetwear +graphic +print, trousers grey black baggy streetwear casual +cotton +graphic +print, sneakers black outdoor +leather",
+   "occasion": "casual",
+   "feels": 5,
+   "verdict": "good",
+   "why": "Avant-Garde Deconstruction: Black jacket with faux-fur collar, paired with grey wide-leg trousers, headscarf accessory enhances the deconstructed look, suitable for trendy street style.",
+   "source": "FashionStylist V1 (men), expert-labelled outfits"
+  },
+  {
+   "outfit": "sweatshirt charcoal relaxed casual +cotton +fleece, jeans navy wide vintage outdoor +denim +fleece, sneakers black grey outdoor casual +leather, cap cream vintage casual +cotton +logo",
+   "occasion": "casual",
+   "feels": 5,
+   "verdict": "good",
+   "why": "Japanese Cityboy: Black puffer jacket layered over a turtleneck, paired with grey wide-leg casual trousers, relaxed and comfortable, suitable for daily urban leisure.",
+   "source": "FashionStylist V1 (men), expert-labelled outfits"
+  },
+  {
+   "outfit": "bag brown smart casual +leather, sweater grey white relaxed vintage casual +stripes, joggers black relaxed outdoor casual +cotton, watch black grey outdoor sporty",
+   "occasion": "casual",
+   "feels": 5,
+   "verdict": "good",
+   "why": "Japanese Cityboy: Light grey puffer jacket paired with black wide-leg casual trousers, minimalist and effortless, fits the Cityboy relaxed aesthetic.",
+   "source": "FashionStylist V1 (men), expert-labelled outfits"
+  },
+  {
+   "outfit": "jacket grey relaxed vintage casual, sweater black relaxed minimal casual, joggers black relaxed casual +cotton, bag black minimal casual +leather, sneakers white grey vintage casual +leather +suede",
+   "occasion": "casual",
+   "feels": 5,
+   "verdict": "good",
+   "why": "Commuter Casual: Light khaki zip-up jacket layered over a black turtleneck, paired with black wide-leg trousers, sharp and appropriate, suitable for daily commuting.",
+   "source": "FashionStylist V1 (men), expert-labelled outfits"
+  },
+  {
+   "outfit": "puffer cream black relaxed outdoor casual, sweater black relaxed minimal casual +turtleneck, joggers charcoal wide minimal casual +cotton, bag charcoal casual",
+   "occasion": "casual",
+   "feels": 5,
+   "verdict": "good",
+   "why": "Outdoor Functional: Off-white faux-fur collar puffer jacket paired with grey wide-leg casual trousers, warm and practical, suitable for outdoor leisure.",
+   "source": "FashionStylist V1 (men), expert-labelled outfits"
+  },
+  {
+   "outfit": "jacket brown relaxed vintage +suede, sweater brown relaxed vintage casual +turtleneck, jeans navy wide vintage casual +denim +ripped, bag brown casual +suede",
+   "occasion": "night",
+   "feels": 14,
+   "verdict": "good",
+   "why": "American Vintage: Brown suede collared jacket paired with dark blue wide-leg denim jeans, vintage texture, fits the American vintage style.",
+   "source": "FashionStylist V1 (men), expert-labelled outfits"
+  },
+  {
+   "outfit": "jacket charcoal relaxed smart casual casual +blazer +cotton, sweater black relaxed minimal casual +turtleneck, trousers charcoal wide smart casual casual +cotton, boots black vintage casual +leather",
+   "occasion": "casual",
+   "feels": 5,
+   "verdict": "good",
+   "why": "Quiet Luxury: Dark brown oversized blazer layered over a black turtleneck, paired with matching wide-leg trousers, understated and refined, suitable for light business occasions.",
+   "source": "FashionStylist V1 (men), expert-labelled outfits"
+  },
+  {
+   "outfit": "jacket grey relaxed casual +wool, sweater grey relaxed vintage casual, trousers black wide casual +cotton, bag charcoal casual",
+   "occasion": "casual",
+   "feels": 14,
+   "verdict": "good",
+   "why": "Japanese Cityboy: Light grey faux-fur collared jacket paired with black wide-leg casual trousers, relaxed and comfortable, fits the Cityboy daily style.",
+   "source": "FashionStylist V1 (men), expert-labelled outfits"
+  },
+  {
+   "outfit": "jacket brown relaxed vintage outdoor +cotton, tshirt white relaxed minimal casual +cotton, trousers cream wide smart casual casual +cotton, bag brown minimal casual +leather, sneakers white grey vintage casual +leather +suede",
+   "occasion": "casual",
+   "feels": 17,
+   "verdict": "good",
+   "why": "Japanese Cityboy: Brown corduroy jacket layered over a white T-shirt, paired with white wide-leg trousers, relaxed and minimalist, suitable for daily urban leisure.",
+   "source": "FashionStylist V1 (men), expert-labelled outfits"
+  },
+  {
+   "outfit": "sweatshirt grey blue relaxed streetwear casual +cotton, tshirt white relaxed minimal casual +cotton, trousers black wide smart casual casual +cotton, bag black streetwear casual +leather, bag brown casual",
+   "occasion": "casual",
+   "feels": 14,
+   "verdict": "good",
+   "why": "Korean Light Streetwear: Grey cardigan layered over a blue shirt, paired with black wide-leg trousers, fresh layering, fits the Korean light streetwear daily style.",
+   "source": "FashionStylist V1 (men), expert-labelled outfits"
+  },
+  {
+   "outfit": "jacket brown relaxed casual +corduroy +fleece, shirt brown grey relaxed vintage casual +cotton +stripes, trousers brown wide outdoor casual +cotton, dress-shoes black smart casual +leather +loafers",
+   "occasion": "casual",
+   "feels": 5,
+   "verdict": "good",
+   "why": "Outdoor Functional: Brown fleece-lined jacket paired with matching cargo trousers, practical and warm, suitable for outdoor leisure.",
+   "source": "FashionStylist V1 (men), expert-labelled outfits"
+  },
+  {
+   "outfit": "sweater charcoal brown relaxed vintage casual +cardigan, shirt black grey relaxed streetwear casual +check +cotton, trousers black wide minimal casual +cotton, bag cream blue casual +graphic +print, dress-shoes brown vintage casual +loafers +suede",
+   "occasion": "casual",
+   "feels": 14,
+   "verdict": "good",
+   "why": "Intellectual: Argyle knit cardigan layered over a plaid shirt, paired with black denim jeans, artistic and vintage, suitable for daily leisure.",
+   "source": "FashionStylist V1 (men), expert-labelled outfits"
+  },
+  {
+   "outfit": "jacket navy relaxed casual +denim +fleece, tshirt white slim minimal casual +cotton, jeans denim wide vintage casual +denim +ripped, sneakers brown black streetwear casual",
+   "occasion": "casual",
+   "feels": 5,
+   "verdict": "good",
+   "why": "Quiet Luxury: Navy faux-fur collar jacket paired with gradient wide-leg denim jeans, refined texture, suitable for light leisure occasions.",
+   "source": "FashionStylist V1 (men), expert-labelled outfits"
+  },
+  {
+   "outfit": "jacket black relaxed casual +wool, tshirt white slim minimal casual +cotton, jeans black wide vintage casual +denim +ripped, boots brown yellow outdoor casual +leather",
+   "occasion": "casual",
+   "feels": 5,
+   "verdict": "good",
+   "why": "Korean Light Streetwear: Black faux-fur collar hooded jacket paired with black wide-leg denim jeans, cool and minimalist, fits the Korean light streetwear style.",
+   "source": "FashionStylist V1 (men), expert-labelled outfits"
+  },
+  {
+   "outfit": "jacket black relaxed casual +suede, sweater white relaxed minimal casual, trousers charcoal wide smart casual casual +wool, bag black minimal casual +leather, dress-shoes black smart casual +leather",
+   "occasion": "casual",
+   "feels": 5,
+   "verdict": "good",
+   "why": "Commuter Casual: Black fleece-lined jacket layered over a white knit top, paired with grey wide-leg trousers, appropriate and comfortable, suitable for daily commuting.",
+   "source": "FashionStylist V1 (men), expert-labelled outfits"
+  },
+  {
+   "outfit": "sweater black relaxed minimal casual, jeans denim wide vintage casual +denim +ripped, bag black casual +leather",
+   "occasion": "casual",
+   "feels": 14,
+   "verdict": "good",
+   "why": "Avant-Garde Deconstruction: Black slim-fit zip-up knit top paired with gradient wide-leg denim jeans, sharp lines, fits the avant-garde fashion style.",
+   "source": "FashionStylist V1 (men), expert-labelled outfits"
+  },
+  {
+   "outfit": "jacket grey relaxed smart casual +blazer +cotton, tshirt white slim minimal casual +cotton, trousers grey wide smart casual casual +cotton, sneakers white black vintage casual +leather +stripes +suede",
+   "occasion": "casual",
+   "feels": 5,
+   "verdict": "good",
+   "why": "Quiet Luxury: Grey double-breasted suit set, oversized fit, minimalist and refined, suitable for light business or daily refined leisure.",
+   "source": "FashionStylist V1 (men), expert-labelled outfits"
+  },
+  {
+   "outfit": "jacket brown relaxed vintage casual +suede, shirt white relaxed smart casual minimal +cotton, trousers black wide smart casual casual +cotton, dress-shoes black smart casual streetwear +leather",
+   "occasion": "night",
+   "feels": 14,
+   "verdict": "good",
+   "why": "Avant-Garde Deconstruction: Brown jacket layered over a white shirt and black tie, paired with black wide-leg trousers, eclectic and personalized, fits the avant-garde fashion positioning.",
+   "source": "FashionStylist V1 (men), expert-labelled outfits"
+  },
+  {
+   "outfit": "sweater grey cream relaxed vintage casual, trousers brown wide smart casual casual +cotton, dress-shoes brown smart casual smart +leather",
+   "occasion": "casual",
+   "feels": 14,
+   "verdict": "good",
+   "why": "Intellectual: Light grey V-neck knit top paired with brownish-grey wide-leg trousers, artistic and soft, suitable for daily leisure or light commuting.",
+   "source": "FashionStylist V1 (men), expert-labelled outfits"
+  },
+  {
+   "outfit": "shirt light blue brown relaxed smart casual streetwear +cotton +stripes, jeans black wide vintage casual +denim +ripped, dress-shoes black smart casual smart +leather",
+   "occasion": "night",
+   "feels": 17,
+   "verdict": "good",
+   "why": "Korean Light Streetwear: Blue striped shirt with matching tie, paired with black wide-leg trousers, relaxed yet refined, fits the Korean daily streetwear vibe.",
+   "source": "FashionStylist V1 (men), expert-labelled outfits"
+  },
+  {
+   "outfit": "sweater black relaxed streetwear casual, jeans denim wide vintage casual +denim +ripped, bag black minimal casual +leather, dress-shoes black smart casual smart +leather",
+   "occasion": "casual",
+   "feels": 14,
+   "verdict": "good",
+   "why": "Japanese Cityboy: Black stand-collar knit top paired with light blue wide-leg denim jeans, relaxed and comfortable, suitable for daily urban leisure.",
+   "source": "FashionStylist V1 (men), expert-labelled outfits"
+  },
+  {
+   "outfit": "sweater burgundy relaxed vintage casual +cardigan, tshirt white slim minimal casual +cotton, trousers black wide smart casual casual +wool, dress-shoes black smart casual +leather",
+   "occasion": "night",
+   "feels": 14,
+   "verdict": "good",
+   "why": "American Vintage: Red metal-button knit jacket paired with black wide-leg trousers, distinct vintage texture, fits the American vintage style.",
+   "source": "FashionStylist V1 (men), expert-labelled outfits"
+  },
+  {
+   "outfit": "jacket brown relaxed vintage casual +corduroy, tshirt brown relaxed minimal casual +cotton, trousers black wide smart casual smart +cotton, dress-shoes black smart casual smart +leather",
+   "occasion": "casual",
+   "feels": 5,
+   "verdict": "good",
+   "why": "Commuter Casual: Brownish-grey corduroy jacket layered over a turtleneck, paired with black wide-leg trousers, warm and appropriate, suitable for daily commuting.",
+   "source": "FashionStylist V1 (men), expert-labelled outfits"
+  },
+  {
+   "outfit": "jacket brown relaxed minimal casual, tshirt white relaxed minimal casual +cotton, joggers brown wide minimal casual +cotton, sneakers cream vintage casual +leather +suede",
+   "occasion": "casual",
+   "feels": 17,
+   "verdict": "good",
+   "why": "Japanese Cityboy: Light brown matching set, oversized fit, relaxed and effortless, suitable for daily urban leisure.",
+   "source": "FashionStylist V1 (men), expert-labelled outfits"
+  },
+  {
+   "outfit": "jacket navy relaxed vintage casual +corduroy, tshirt cream slim minimal casual +cotton, trousers black wide smart casual smart +cotton, dress-shoes black smart casual streetwear +leather",
+   "occasion": "casual",
+   "feels": 17,
+   "verdict": "good",
+   "why": "American vintage style: navy jacket layered over off-white knit sweater, paired with black wide-leg trousers, vintage and sharp, suitable for daily casual occasions.",
+   "source": "FashionStylist V1 (men), expert-labelled outfits"
+  },
+  {
+   "outfit": "puffer brown relaxed outdoor casual, sweater cream relaxed minimal casual, joggers grey wide minimal casual +cotton, sneakers brown vintage casual +suede",
+   "occasion": "casual",
+   "feels": 5,
+   "verdict": "good",
+   "why": "Outdoor functional style: brown faux-fur collar down jacket layered over off-white sweater, paired with light brown wide-leg trousers, warm and practical, suitable for outdoor leisure.",
+   "source": "FashionStylist V1 (men), expert-labelled outfits"
+  },
+  {
+   "outfit": "puffer grey relaxed casual, tshirt white relaxed minimal casual +cotton, joggers charcoal relaxed casual +cotton, sneakers white minimal casual +leather",
+   "occasion": "casual",
+   "feels": 5,
+   "verdict": "good",
+   "why": "Japanese Cityboy style: light gray puffer jacket layered over plaid shirt, paired with tonal wide-leg trousers, relaxed and comfortable, suitable for urban daily wear.",
+   "source": "FashionStylist V1 (men), expert-labelled outfits"
+  },
+  {
+   "outfit": "sweater grey relaxed minimal casual +cardigan, tshirt white relaxed minimal casual +cotton, trousers cream wide minimal casual +cotton, bag grey casual +suede",
+   "occasion": "casual",
+   "feels": 14,
+   "verdict": "good",
+   "why": "Intellectual style: light gray knit cardigan layered over white T-shirt, paired with white wide-leg trousers, artistic and minimalist, suitable for daily casual or smart casual.",
+   "source": "FashionStylist V1 (men), expert-labelled outfits"
+  },
+  {
+   "outfit": "jacket black relaxed casual +denim +fleece, tshirt white relaxed minimal casual +cotton, trousers grey wide minimal casual +cotton, bag grey casual +suede",
+   "occasion": "casual",
+   "feels": 14,
+   "verdict": "good",
+   "why": "Korean trendy style: black fleece-lined denim jacket layered over white T-shirt, paired with white wide-leg trousers, minimalist and cool, suitable for Korean trendy daily style.",
+   "source": "FashionStylist V1 (men), expert-labelled outfits"
+  },
+  {
+   "outfit": "jacket grey relaxed casual +wool, sweater grey relaxed minimal casual +turtleneck, trousers cream wide minimal casual +cotton, bag charcoal +fleece",
+   "occasion": "casual",
+   "feels": 5,
+   "verdict": "good",
+   "why": "Quiet luxury style: light gray plush jacket layered over tonal turtleneck, paired with white wide-leg trousers, refined texture, suitable for smart business occasions.",
+   "source": "FashionStylist V1 (men), expert-labelled outfits"
+  },
+  {
+   "outfit": "sweater charcoal relaxed vintage casual +cardigan +stripes, tshirt white relaxed minimal casual +cotton, trousers black wide minimal casual +cotton, bag black casual +leather",
+   "occasion": "casual",
+   "feels": 5,
+   "verdict": "good",
+   "why": "Japanese Cityboy style: black and gray striped knit cardigan layered over white T-shirt, paired with black wide-leg trousers, relaxed and casual, suitable for urban daily wear.",
+   "source": "FashionStylist V1 (men), expert-labelled outfits"
+  },
+  {
+   "outfit": "hoodie black white relaxed streetwear casual +cotton +print +stripes, tshirt white black relaxed minimal casual +cotton +logo, joggers black white wide casual +cotton +print +stripes, sneakers white minimal casual +leather",
+   "occasion": "night",
+   "feels": 14,
+   "verdict": "good",
+   "why": "Korean trendy style: black line-accented hooded set, minimalist and sharp, suitable for Korean trendy daily style.",
+   "source": "FashionStylist V1 (men), expert-labelled outfits"
+  },
+  {
+   "outfit": "jacket cream relaxed smart casual +cotton, tshirt white blue relaxed minimal casual +cotton, trousers brown wide smart casual casual +cotton, backpack brown minimal casual +leather, dress-shoes brown vintage casual +loafers +suede",
+   "occasion": "smart",
+   "feels": 17,
+   "verdict": "good",
+   "why": "Quiet luxury style: off-white oversized jacket layered over white T-shirt, paired with brown wide-leg trousers, minimalist and refined, suitable for daily sophisticated casual.",
+   "source": "FashionStylist V1 (men), expert-labelled outfits"
+  },
+  {
+   "outfit": "jacket brown relaxed vintage casual +wool, shirt white relaxed smart casual +cotton, jeans black wide vintage casual +denim, dress-shoes black smart casual streetwear +leather",
+   "occasion": "casual",
+   "feels": 14,
+   "verdict": "good",
+   "why": "Avant-garde deconstructed style: gray metallic-buckle jacket layered over white shirt and black tie, paired with black wide-leg trousers, eclectic and personalized, suitable for avant-garde fashion.",
+   "source": "FashionStylist V1 (men), expert-labelled outfits"
+  },
+  {
+   "outfit": "jacket burgundy relaxed streetwear casual +check +cotton, sweater white blue relaxed minimal casual, trousers brown wide vintage casual +cotton, bag brown black minimal casual +leather, dress-shoes brown vintage casual +loafers +suede",
+   "occasion": "casual",
+   "feels": 14,
+   "verdict": "good",
+   "why": "American vintage style: burgundy jacket layered over plaid shirt, paired with brown wide-leg trousers, distinct vintage texture, suitable for daily casual occasions.",
+   "source": "FashionStylist V1 (men), expert-labelled outfits"
+  },
+  {
+   "outfit": "sweater brown relaxed vintage casual +cardigan +check, trousers grey wide smart casual casual +cotton, bag beige brown vintage casual +leather +suede, dress-shoes brown vintage casual +loafers +suede",
+   "occasion": "casual",
+   "feels": 14,
+   "verdict": "good",
+   "why": "Intellectual style: gray knit cardigan layered over plaid shirt, paired with light brown wide-leg trousers, artistic and soft, suitable for smart casual or daily leisure.",
+   "source": "FashionStylist V1 (men), expert-labelled outfits"
+  },
+  {
+   "outfit": "jacket grey relaxed casual +wool, sweater white relaxed minimal casual +turtleneck, joggers charcoal wide smart casual +wool, bag black smart casual +leather, dress-shoes brown vintage casual +loafers +suede",
+   "occasion": "casual",
+   "feels": 5,
+   "verdict": "good",
+   "why": "Japanese Cityboy style: light gray plush jacket layered over white sweater, paired with black wide-leg trousers, relaxed and comfortable, suitable for urban daily wear.",
+   "source": "FashionStylist V1 (men), expert-labelled outfits"
+  },
+  {
+   "outfit": "sweater grey white relaxed vintage casual, jeans denim wide vintage casual +denim +ripped, bag beige brown vintage casual +leather +suede, dress-shoes brown vintage casual +loafers +suede",
+   "occasion": "casual",
+   "feels": 14,
+   "verdict": "good",
+   "why": "Korean trendy style: light gray V-neck knit sweater layered over white shirt, paired with light blue wide-leg jeans, minimalist and trendy, suitable for Korean daily style.",
+   "source": "FashionStylist V1 (men), expert-labelled outfits"
+  },
+  {
+   "outfit": "sweatshirt grey relaxed minimal casual +cotton, tshirt white relaxed minimal casual +cotton, joggers grey wide minimal casual +cotton, bag black minimal casual +leather +nylon, sneakers cream brown vintage casual +leather",
+   "occasion": "casual",
+   "feels": 14,
+   "verdict": "good",
+   "why": "Japanese Cityboy style: light gray tonal set, loose fit, relaxed and casual, suitable for urban daily leisure.",
+   "source": "FashionStylist V1 (men), expert-labelled outfits"
   }
  ],
- "prompt": "Menswear rules, most important first:\n- Don't mix gym kit with tailoring.\n- Keep pieces at one level of dressiness.\n- A tie needs a collar and a dressy outfit.\n- Sports clothes for training.\n- Colours that fight.\n- Dress for the occasion.\n- Belt matches the shoes.\n- Shorts only when it's warm.\n- Neutrals first, one accent colour.\n- Fabrics for the season.\n- Shoes at the level of the outfit.\n- Dress for the temperature.\n- Go easy on patterns.\n- One statement piece.\n- Balance volume.\n- Three colours at most.\n- Ready for rain.\n- Denim on denim needs contrast.\n- The coat matches the outfit.\n- Classic colour pairings.\n- Styles that suit the occasion.\n- Chains and caps are casual.\n- Suits want shirts and leather shoes.\nTips:\n- Buy fewer, better pieces in natural fabrics; they last longer and look better as they age.\n- Budget for a tailor: shortening sleeves and trousers and taking in a waist costs little and makes clothes look made for you.\n- Keep accessories few and purposeful: a watch, a belt, maybe one bracelet or ring.\n- Fit matters more than brand or price: a cheap piece that fits beats an expensive one that doesn't.\n- Trousers should have little or no break: the hem just touches the shoe. Slim trousers look best with no break at all.\n- Match the width of the tie to the width of the lapels.\n- A capsule wardrobe: a few pieces in neutral colours that all combine gives more outfits than many loud pieces.\n- Core menswear basics: white and navy tees, an oxford shirt, a grey or navy knit, dark jeans, chinos, a navy blazer, an overcoat, white sneakers, brown leather shoes or boots.\n- Rest leather shoes a day between wears and keep cedar shoe trees in them.\n- A jacket collar should rest against the back of your neck without a gap.\n- A jacket must fit in the shoulders: the seam ends where your shoulder ends, with no dent or overhang.\n- The tip of the tie touches the top of the belt buckle.\n- A pocket square should pick up a colour from the tie or shirt, not be the same fabric as the tie.\n- A white or light blue oxford shirt works with suits, chinos and jeans alike.\n- Slim or straight jeans that sit on the hips without sagging work for nearly everyone.\n- When wearing one colour head to toe, vary the textures (knit, cotton, wool) so it doesn't look flat.\n- Earth tones (olive, brown, beige, cream, rust) all mix easily with each other and with navy."
+ "prompt": "Menswear rules, most important first:\n- Don't mix gym kit with tailoring.\n- Keep pieces at one level of dressiness.\n- A tie needs a collar and a dressy outfit.\n- Sports clothes for training.\n- Colours that fight.\n- Dress for the occasion.\n- Fabrics for the season.\n- Neutrals first, one accent colour.\n- Belt matches the shoes.\n- Shorts only when it's warm.\n- Dress for the temperature.\n- One statement piece.\n- Three colours at most.\n- Balance volume.\n- Shoes at the level of the outfit.\n- Ready for rain.\n- Go easy on patterns.\n- Denim on denim needs contrast.\n- The coat matches the outfit.\n- Styles that suit the occasion.\n- Chains and caps are casual.\n- Suits want shirts and leather shoes.\nTips:\n- Buy fewer, better pieces in natural fabrics; they last longer and look better as they age.\n- Budget for a tailor: shortening sleeves and trousers and taking in a waist costs little and makes clothes look made for you.\n- Keep accessories few and purposeful: a watch, a belt, maybe one bracelet or ring.\n- Fit matters more than brand or price: a cheap piece that fits beats an expensive one that doesn't.\n- Trousers should have little or no break: the hem just touches the shoe. Slim trousers look best with no break at all.\n- Match the width of the tie to the width of the lapels.\n- A capsule wardrobe: a few pieces in neutral colours that all combine gives more outfits than many loud pieces.\n- Core menswear basics: white and navy tees, an oxford shirt, a grey or navy knit, dark jeans, chinos, a navy blazer, an overcoat, white sneakers, brown leather shoes or boots.\n- Rest leather shoes a day between wears and keep cedar shoe trees in them.\n- A jacket collar should rest against the back of your neck without a gap.\n- A jacket must fit in the shoulders: the seam ends where your shoulder ends, with no dent or overhang.\n- The tip of the tie touches the top of the belt buckle.\n- A pocket square should pick up a colour from the tie or shirt, not be the same fabric as the tie.\n- A white or light blue oxford shirt works with suits, chinos and jeans alike.\n- Slim or straight jeans that sit on the hips without sagging work for nearly everyone.\n- When wearing one colour head to toe, vary the textures (knit, cotton, wool) so it doesn't look flat.\n- Earth tones (olive, brown, beige, cream, rust) all mix easily with each other and with navy.\n- Black tie means a black or midnight-navy dinner suit, white dress shirt, black bow tie and black patent or polished shoes."
 }
