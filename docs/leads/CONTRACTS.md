@@ -67,4 +67,39 @@ _To be added by the Stylist lead._
 
 ## Discover (owner: Discover lead)
 
-_To be added by the Discover lead._
+Status: proposed 2026-11-23 (shapes as they are on main today). Names may move into a Discover screen file after the
+app.js split; the shapes and calls below stay the same.
+
+### A buy idea (what any screen passes to Discover)
+- `mkIdea({ cat, color, noun, brand, fit, title, why, styles })` → `{ title, cat, color, noun, query, why, styles, ... }`.
+  `cat` is a `CAT` id, `color` a colour name from `COLORS`, `query` the shop search words (menswear is added later by
+  `forWho()`, so don't put "men" in it). `asPiece(b)` turns it into a virtual item for outfit scoring.
+- A buy idea's identity is `wantId(b)` = hash of `cat|noun|color`: same piece, same want, from any screen.
+
+### Wants (Must-Buy), collection `wants`, synced by the Worker like items
+`{ id, sig, kind: garment|accessory|fragrance, title, cat, noun, color, fit, styles, query, why,
+   source: { type: foryou|try|look|trip|today|touch|event|wishlist|scent }, status: wanted|rejected|snoozed|bought,
+   reason?: style|colour|similar|price|later, until?, eventId?, needBy?, scent?, boughtItemId?, createdAt, decidedAt }`
+- Only Discover writes wants, through `answerWant(b, status)`. Other screens show a Yes/No with `verdictHTML(b)`
+  (taps `data-yes` / `data-no`) and Discover saves it. Pass `source` and, for an event, `eventId` + `needBy`.
+- Planned (Discover plan step 3-4, additive): `product?: { url, shop, price, image, at }`.
+- Stylist reads wants (the stylist prompt lists Must-Buy and recent No's with reasons); it doesn't write them. Add sets `boughtItemId` when a bought want is saved as a piece.
+
+### Buy tiles and rows (Discover owns the content, UI the look)
+- `buyTile(b)`, `buyRow(b, { label, shops, extra })`, `artTile(b)`: a drawing of the piece, with a real product photo
+  on top when SerpApi is on. Today, the stylist and events use them; keep calling these, not your own markup.
+- Tiles that carry `data-prod` load their photo when on screen (`watchTiles()` after render). Each such tile can cost
+  one search, see the budget below.
+
+### Searches (SerpApi free plan: 250 a month for the whole app)
+- Worker `GET /api/products?q&gl&hl` (Google Shopping), `/api/photos` (Google Images), `/api/lens` (Google Lens),
+  `/api/link`, `/api/page`. Results of products/photos are kept 14 days in D1, shared by every device.
+- Only Discover code calls these. Another lead that needs a product search asks in the Discover thread, so the
+  monthly budget stays in one place (Discover plan step 2 adds a counter and keeps ~60 a month for Add).
+- Gemini search fallback (`realPhotos()`) is free-tier only, one call per tap, never on render.
+
+### Uses from other leads
+- Outfit Multiplier (`multiplier(b)`) and the For you audit score with the Stylist's fashion bible and `generateOutfits`
+  pieces; a change to those rules can change Discover's counts. Stylist lead: please message Discover when the
+  scoring a want depends on changes shape.
+- The Discover screen (`shop`) and its tab content follow the UI section above.

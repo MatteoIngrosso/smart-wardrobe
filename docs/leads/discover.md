@@ -35,3 +35,4 @@ Later, only if Matteo wants them: Must-Buy on the wall screen (with the UI/UX le
 ## Status
 
 - 2026-11-20: audit done, plan sent to Matteo. Waiting for his go before any PR.
+- 2026-11-23: Discover section added to CONTRACTS.md on this branch (goes to main with the first Discover PR). UI/UX app.js split not started yet; step 1 still waits for it.
