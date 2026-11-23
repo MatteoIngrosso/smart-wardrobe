@@ -555,7 +555,7 @@ details summary { cursor: pointer; }
 
 /* ---------- Mirror: the try-on avatar at the top of Today ---------- */
 /* The stage stays dark in both themes: the pictures are drawn on the studio colour #141413. */
-.mirror { --studio: #141413; display: grid; grid-template-columns: minmax(220px, 260px) minmax(0, 1fr) minmax(250px, 310px); gap: 20px; align-items: start; margin-bottom: 20px; }
+.mirror { --studio: #141413; display: grid; grid-template-columns: minmax(0, 1fr) minmax(250px, 310px); gap: 20px; align-items: start; margin-bottom: 20px; }
 .mirror-side { background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius); padding: 18px; display: grid; grid-template-columns: minmax(0, 1fr); gap: 12px; align-content: start; min-width: 0; }
 .mirror-side h2 { margin: 0; font-size: 19px; }
 .mb-field { gap: 2px; }
@@ -635,7 +635,7 @@ details summary { cursor: pointer; }
 
 /* iPad portrait and smaller: narrower side panels; phones: the stage first, then the ideas, then the body. */
 @media (max-width: 1100px) {
-  .mirror { grid-template-columns: 210px minmax(0, 1fr) 250px; gap: 14px; }
+  .mirror { grid-template-columns: minmax(0, 1fr) 250px; gap: 14px; }
   .mirror.is-lookbook { grid-template-columns: minmax(0, 1fr) 260px; }
   .mirror-side { padding: 14px; }
   .swatch { width: 34px; height: 34px; }
@@ -753,3 +753,17 @@ details summary { cursor: pointer; }
 .chat-you { max-width: 92%; margin: 0; }
 p.chat-you { padding: 0 4px; }
 .chat-bar { padding-top: 14px; border-top: 1px solid var(--line); }
+
+/* ---------- Settings > Your avatar: the body panel next to the 3D avatar, in the sheet ---------- */
+.card-title { margin: 0; }
+.flush { margin: 0; }
+.sheet-title { font-size: 26px; }
+.avatar-editor { display: grid; grid-template-columns: minmax(240px, 300px) minmax(0, 1fr); gap: 20px; align-items: start; }
+.avatar-editor.no-stage { grid-template-columns: minmax(0, 360px); }
+.avatar-editor .preview-wrap { margin-bottom: 0; }
+.avatar-editor .preview-stage { height: min(60vh, 620px); }
+@media (max-width: 700px) {
+  .avatar-editor { grid-template-columns: minmax(0, 1fr); }
+  .avatar-editor .preview-wrap { order: -1; }
+  .avatar-editor .preview-stage { height: min(46vh, 420px); }
+}

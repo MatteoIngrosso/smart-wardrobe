@@ -253,11 +253,11 @@ test("portrait iPad: the stage fits, nothing asks for the 3D files, no errors; A
     await page.locator("#mirror").screenshot({ path: join(SHOTS, "back-portrait-1024x1366.png") });
   }
   assert.deepEqual(requests.filter((u) => /\/avatar\/|\/vendor\/three\/|garment-baker|mannequin-shells|face-photo/.test(u)), [], "no request for the 3D files while the Lookbook is on");
-  // back to the Avatar: the 3D mirror starts, the Lookbook is let go, the body panel is back
+  // back to the Avatar: the 3D mirror starts, the Lookbook is let go (the body panel lives in Settings > Your avatar now)
   await page.click('#mirror [data-mmode="avatar"]');
   await page.waitForFunction(() => window.__t.mirror.stage || window.__t.mirror.failed, null, { timeout: 90000 });
   const back = await page.evaluate(() => ({ lb: !!window.__t.mirror.lb, body: !!document.querySelector("#mirror .mirror-body"), mode: window.__t.state.settings.mirrorMode, angles: document.querySelectorAll("#mirror [data-mangle]").length }));
-  assert.deepEqual(back, { lb: false, body: true, mode: "avatar", angles: 4 });
+  assert.deepEqual(back, { lb: false, body: false, mode: "avatar", angles: 4 });
   await ctx.close();
   assert.deepEqual(errors, []);
 });
