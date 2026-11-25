@@ -11487,6 +11487,28 @@ previewSample.then((f) => {
   state.previewAI = true;
   if (view !== "add" && !document.activeElement?.matches("input, textarea")) render();
 });
+// Dev overlay (dev-overlay.js): only when the app runs on this computer. .assetsignore keeps the file
+// off Cloudflare, so the live app never loads it. These helpers let it name the screen and go back to it.
+if (["localhost", "127.0.0.1", "[::1]"].includes(location.hostname)) {
+  window.__wardrobeDev = {
+    get view() { return view; },
+    // the sub-tab inside a tab: Wardrobe > Report / Fragrances, Discover's tabs
+    sub: () => view === "wardrobe" ? (state.wardView === "report" ? "report" : state.wardSide === "scents" ? "fragrances" : "")
+      : view === "shop" ? state.disc.tab : "",
+    goTo(key) {
+      const [v, sub] = key.split("/");
+      if (!["today", "plan", "wardrobe", "add", "shop", "settings"].includes(v)) return;
+      if ($("#sheet") && !$("#sheet").hidden) closeSheet();
+      go(v);
+      if (v === "wardrobe" && sub === "report") state.wardView = "report";
+      if (v === "wardrobe") state.wardSide = sub === "fragrances" ? "scents" : "clothes";
+      if (v === "shop" && sub) state.disc.tab = sub;
+      render();
+    },
+    renderStages() { try { mirror.stage?.debug?.render?.(); } catch {} }, // a fresh 3D frame to copy into a screenshot
+  };
+  import("./dev-overlay.js").catch((e) => console.warn("Dev overlay:", e));
+}
 go("today");
 try { startWallScreen(); } catch (e) { console.error("Wall screen:", e); } // never in the way of the app
 syncLoop();
