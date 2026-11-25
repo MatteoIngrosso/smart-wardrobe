@@ -37,3 +37,4 @@ Later, only if Matteo wants them: Must-Buy on the wall screen (with the UI/UX le
 - 2026-11-20: audit done, plan sent to Matteo. Waiting for his go before any PR.
 - 2026-11-23: Discover section added to CONTRACTS.md on this branch (goes to main with the first Discover PR). UI/UX app.js split not started yet; step 1 still waits for it.
 - 2026-11-23: Stylist lead agreed on the wants/search contract (Stylist section, PR #97). Bible weights changed in #90/#91 (shape same, +N counts may shift). After the UI split the engine moves to stylist-engine.js with goesWith(piece, { occasion }); switch multiplier() to it when they message.
+- 2026-11-25: UI/UX PR #100 dev overlay reads Discover sub-views from state.disc.tab via window.__wardrobeDev in app.js: if a Discover tab is added or renamed, update sub()/goTo() there too (CONTRACTS.md "Dev overlay").
