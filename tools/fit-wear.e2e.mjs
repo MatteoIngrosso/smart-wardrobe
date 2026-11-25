@@ -239,8 +239,8 @@ test("Today: a coat goes over the blazer from the idea card (+ Coat), and comes 
   if (SHOTS) await page.screenshot({ path: join(SHOTS, "coat-picker-1366x1024.png") });
   await page.click(`[data-coatto="${i}:w-coat"]`);
   await page.waitForFunction((i) => window.__t.state.outfits[i].coat?.id === "w-coat", i);
-  assert.ok(await page.$(`.swap-btn[data-coatpick="${i}"]`), "the coat has its own swap button");
-  await page.click(`.swap-btn[data-coatpick="${i}"]`);
+  assert.ok(await page.$(`.wear-swap[data-coatpick="${i}"]`), "the coat has its own swap button");
+  await page.click(`.wear-swap[data-coatpick="${i}"]`);
   await page.click(`[data-coatto="${i}:"]`);
   await page.waitForFunction((i) => !window.__t.state.outfits[i].coat, i);
 });

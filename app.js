@@ -1559,10 +1559,10 @@ async function loadWeather(force = false) {
   const { lat, lon } = state.settings;
   if (lat == null) return (state.weather = null);
   const cached = await store.get("kv", "weather");
-  const fresh = cached && !cached.typical && cached.lat === lat && cached.hourly; // older copies had no hourly forecast
+  const fresh = cached && !cached.typical && cached.lat === lat && cached.hourly && cached.days; // older copies had no hourly or 6-day forecast
   if (!force && fresh && Date.now() - cached.at < 30 * 60e3) return (state.weather = cached);
   try {
-    const j = await getJSON(`https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lon}&current=temperature_2m,apparent_temperature,relative_humidity_2m,weather_code,wind_speed_10m,precipitation&hourly=apparent_temperature,precipitation_probability,weather_code,relative_humidity_2m&daily=temperature_2m_max,temperature_2m_min,precipitation_probability_max,sunset&forecast_days=2&timezone=auto`);
+    const j = await getJSON(`https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lon}&current=temperature_2m,apparent_temperature,relative_humidity_2m,weather_code,wind_speed_10m,precipitation&hourly=temperature_2m,apparent_temperature,precipitation_probability,weather_code,relative_humidity_2m&daily=temperature_2m_max,temperature_2m_min,precipitation_probability_max,sunset,weather_code&forecast_days=6&timezone=auto`);
     const w = {
       at: Date.now(), lat,
       temp: j.current.temperature_2m, feels: j.current.apparent_temperature, code: j.current.weather_code,
@@ -1570,7 +1570,9 @@ async function loadWeather(force = false) {
       rainChance: j.daily.precipitation_probability_max[0] ?? 0,
       sunset: j.daily.sunset || null, // today and tomorrow, local time: "dark from" in the stylist's plan
       // Hour by hour for today and tomorrow, for events later in the day (local times, "2026-10-15T19:00").
-      hourly: { time: j.hourly.time, feels: j.hourly.apparent_temperature, rain: j.hourly.precipitation_probability, code: j.hourly.weather_code, humid: j.hourly.relative_humidity_2m },
+      hourly: { time: j.hourly.time, temp: j.hourly.temperature_2m, feels: j.hourly.apparent_temperature, rain: j.hourly.precipitation_probability, code: j.hourly.weather_code, humid: j.hourly.relative_humidity_2m },
+      // The next days for Today's forecast: { date, code, max, min, rain }
+      days: (j.daily.time || []).map((date, k) => ({ date, code: j.daily.weather_code?.[k] ?? 3, max: j.daily.temperature_2m_max[k], min: j.daily.temperature_2m_min[k], rain: j.daily.precipitation_probability_max[k] ?? 0 })),
     };
     await store.put("kv", w, "weather");
     return (state.weather = w);
@@ -3701,45 +3703,91 @@ function renderToday() {
   }
   if (!state.outfits.length) { autoPickEvent(); generateOutfits(); }
 
-  const weatherHtml = w?.typical
-    ? `<div class="weather"><div class="temp">${fmtTemp(state.manualTemp ?? w.temp)}</div>
-        <div class="wx"><b>${state.manualTemp != null ? "Manual temperature" : `Usual ${esc(MONTH())} weather`}</b>
-        <span class="muted small">${esc(state.settings.city)} · usually ${fmtTemp(w.min)}–${fmtTemp(w.max)} · live weather shows once the app is online</span></div></div>`
-    : w
-    ? `<div class="weather"><div class="temp">${fmtTemp(state.manualTemp ?? w.temp)}</div>
-        <div class="wx"><b>${state.manualTemp != null ? "Manual temperature" : esc(WMO(w.code))}</b>
-        <span class="muted small">${esc(state.settings.city)} · feels ${fmtTemp(w.feels)} · ${fmtTemp(w.min)}–${fmtTemp(w.max)} · rain ${w.rainChance}%</span></div></div>`
-    : `<div class="weather"><div class="temp">${fmtTemp(cond.feels)}</div><div class="wx"><b>No weather yet</b><span class="muted small">${state.settings.lat == null ? "Set your city in Settings for live weather." : "Weather can't load here right now. Set how it feels with the slider below."}</span></div></div>`;
-
+  const mirrorBlock = safeMirrorHTML();
   main.innerHTML = `
     <div class="head">
       <div><h1>${greet}</h1><p class="sub">${esc(dateStr)}</p></div>
       <button class="btn" data-act="shuffle"><svg viewBox="0 0 24 24"><path d="M16 3h5v5M4 20 21 3M21 16v5h-5M15 15l6 6M4 4l5 5"/></svg>New ideas</button>
     </div>
-    <div class="card row weather-card">
-      ${weatherHtml}
-      <div class="field weather-feel">
-        <label for="temp-slider">Feels like ${fmtTemp(cond.feels)}${state.manualTemp != null ? ' · <a href="#" data-act="autotemp" class="accent-link">use weather</a>' : ""}</label>
-        <input id="temp-slider" type="range" min="-10" max="35" step="1" value="${Math.round(cond.feels)}" data-input="temp">
-      </div>
-    </div>
-    ${safeMirrorHTML()}
+    ${weatherCard(w, cond)}
+    ${mirrorBlock}
     <div class="stack">
       ${dayCard()}
       ${planCheckCard()}
       ${rateCard()}
-      <div class="chips scroller">${OCCASIONS.map((o) => `<button class="chip" aria-pressed="${state.occasion === o.id}" data-occ="${o.id}">${o.label}</button>`).join("")}</div>
-      ${levelChips()}
-      ${anchorBar()}
+      ${mirrorBlock ? "" : ideaControls()}
       ${levelGapLine()}
       ${boughtLine()}
       ${state.onlyNote && !state.anchor ? `<p class="muted small" style="margin:0">${esc(state.onlyNote)}</p>` : ""}
-      <div class="outfits">${state.outfits.map((o, i) => outfitCard(o, i)).join("") || `<p class="muted">Add a few more tops to get outfit ideas.</p>`}</div>
+      ${mirrorBlock ? "" : `<div class="outfits">${state.outfits.map((o, i) => outfitCard(o, i)).join("") || `<p class="muted">Add a few more tops to get outfit ideas.</p>`}</div>`}
       ${laundryLine()}
+      ${rediscoverHTML()}
       <p class="muted small" style="margin:0">${esc(tasteLine())}</p>
       ${aiCard()}
     </div>`;
   mountMirror();
+}
+// What the ideas are for: the occasion, how dressy, and a piece to start from.
+const ideaControls = () => `<div class="chips scroller occ-chips">${OCCASIONS.map((o) => `<button class="chip" aria-pressed="${state.occasion === o.id}" data-occ="${o.id}">${o.label}</button>`).join("")}</div>
+  ${levelChips()}
+  ${anchorBar()}`;
+
+// Today's weather: now, the next hours and the next days, and the "feels like" slider the ideas dress for.
+function weatherCard(w, cond) {
+  const manual = state.manualTemp != null;
+  const slider = `<div class="field weather-feel">
+      <label for="temp-slider">Dress for ${fmtTemp(cond.feels)}${manual ? ' · <a href="#" data-act="autotemp" class="accent-link">use weather</a>' : ""}</label>
+      <input id="temp-slider" type="range" min="-10" max="35" step="1" value="${Math.round(cond.feels)}" data-input="temp" aria-label="How it feels: the ideas dress for this temperature">
+    </div>`;
+  if (!w || w.typical) {
+    const now = w
+      ? `<div class="wx-now"><div class="temp">${fmtTemp(state.manualTemp ?? w.temp)}</div><div class="wx"><b>${manual ? "Manual temperature" : `Usual ${esc(MONTH())} weather`}</b><span class="muted small">${esc(state.settings.city)} · usually ${fmtTemp(w.min)}–${fmtTemp(w.max)} · the forecast shows once the app is online</span></div></div>`
+      : `<div class="wx-now"><div class="temp">${fmtTemp(cond.feels)}</div><div class="wx"><b>No weather yet</b><span class="muted small">${state.settings.lat == null ? "Set your city in Settings for live weather." : "Weather can't load here right now. Set how it feels with the slider."}</span></div></div>`;
+    return `<section class="card weather-card is-simple">${now}${slider}</section>`;
+  }
+  // The next hours: now, then every three hours (about twelve hours ahead)
+  const h = w.hourly || {}, nowMs = Date.now();
+  const first = (h.time || []).findIndex((t) => new Date(t).getTime() + 3600e3 > nowMs);
+  const hours = first < 0 ? [] : [0, 3, 6, 9, 12].map((d) => first + d).filter((k) => k < h.time.length).map((k, n) => {
+    const t = new Date(h.time[k]), rain = h.rain?.[k] ?? 0;
+    return `<div class="wx-slot"><span class="wx-when">${n === 0 ? "Now" : esc(t.toLocaleTimeString(undefined, { hour: "numeric" }))}</span>${wxIcon(h.code?.[k])}<b>${fmtTemp(h.temp?.[k] ?? h.feels[k])}</b><span class="wx-rain">${rain >= 20 ? `${rain}%` : ""}</span></div>`;
+  });
+  const days = (w.days || []).slice(1, 6).map((d, n) => {
+    const name = n === 0 ? "Tomorrow" : new Date(`${d.date}T12:00`).toLocaleDateString(undefined, { weekday: "short" });
+    return `<div class="wx-slot"><span class="wx-when">${esc(name)}</span>${wxIcon(d.code)}<b>${fmtTemp(d.max)}</b><span class="wx-low">${fmtTemp(d.min)}</span><span class="wx-rain">${d.rain >= 30 ? `${d.rain}%` : ""}</span></div>`;
+  });
+  return `<section class="card weather-card">
+    <div class="wx-now"><span class="wx-big">${wxIcon(w.code)}</span><div class="temp">${fmtTemp(state.manualTemp ?? w.temp)}</div>
+      <div class="wx"><b>${manual ? "Manual temperature" : esc(WMO(w.code))}</b>
+      <span class="muted small">${esc(state.settings.city)} · feels ${fmtTemp(w.feels)} · ${fmtTemp(w.min)}–${fmtTemp(w.max)}${w.rainChance ? ` · rain ${w.rainChance}%` : ""}</span></div></div>
+    ${hours.length ? `<div class="wx-strip wx-hours" role="group" aria-label="The next hours">${hours.join("")}</div>` : ""}
+    ${days.length ? `<div class="wx-strip wx-days" role="group" aria-label="The next days">${days.join("")}</div>` : ""}
+    ${slider}
+  </section>`;
+}
+// Pieces you haven't worn in a month or more (or never, a month after adding them), loved ones first.
+// "Build around it" starts today's ideas from one.
+function rediscoverHTML() {
+  if (state.occasion === "gym") return "";
+  const days = (i) => daysSince(i.lastWorn || i.createdAt);
+  const list = state.items
+    .filter((i) => CORE.includes(roleOf(i)) && slotOf(i) !== "gym" && !leaving(i) && !i.wash && !i.disliked && i.id !== state.anchor && days(i) >= 30)
+    .map((i) => ({ i, s: Math.min(days(i), 365) + (starsOf(i) || 3) * 25 }))
+    .sort((a, b) => b.s - a.s).slice(0, 6).map((x) => x.i);
+  if (!list.length) return "";
+  const when = (i) => {
+    if (!i.lastWorn) return "Never worn";
+    const d = days(i);
+    return d >= 60 ? `Not worn for ${Math.round(d / 30)} months` : `Not worn for ${d} days`;
+  };
+  return `<section class="card rediscover" aria-label="Rediscover">
+    <div class="redisc-head"><h2>Rediscover</h2><span class="muted small">Pieces you haven't worn in a month or more. Build today's ideas around one.</span></div>
+    <div class="redisc-grid">${list.map((i) => `<div class="redisc-tile">
+      <button class="redisc-pic" data-item="${i.id}" aria-label="Open the ${esc(i.name)}">${pieceImg(i, "")}</button>
+      <b>${esc(i.name)}</b><span class="muted small">${when(i)}</span>
+      <button class="chip" data-anchor="${i.id}" data-redisc="1">Build around it</button>
+    </div>`).join("")}</div>
+  </section>`;
 }
 const ICON_CAL = `<svg viewBox="0 0 24 24"><rect x="3" y="5" width="18" height="16" rx="2"/><path d="M3 10h18M8 3v4M16 3v4"/></svg>`;
 // What's on today (and tomorrow, in the evening). Tap an event to dress for it; tap its
@@ -4763,25 +4811,60 @@ function mirrorHTML() {
       </div>
       <div class="angle-pills" role="group" aria-label="Turn him">${MIRROR_ANGLES.map(([deg, label]) => `<button class="chip" data-mangle="${deg}" aria-pressed="false">${label}</button>`).join("")}</div>`}
     </div>
-    <aside class="mirror-side mirror-looks" aria-label="Today's ideas">
-      <h2>Today's ideas</h2>
+    <section class="mirror-side mirror-looks ideas-panel" aria-label="Today's ideas">
+      <div class="ideas-head"><h2>Today's ideas</h2>${ideaControls()}</div>
       <div class="m-looks">${ideas.map((x, i) => {
         const shown = wornList(x).filter((w) => MIRROR_ROLES.includes(w.role));
         return `<button class="m-look" data-mlook="${i}" aria-pressed="${i === pick}">
         <span class="look-top"><span class="look-num">${i + 1}</span><b>${x.planned ? "Your plan" : ["Best match", "Option 2", "Option 3"][i]}</b><span class="look-state" data-lookstate="${i}">${lb ? lookCount(x) : ""}</span></span>
-        <span class="look-pics">${shown.map((w) => `<span class="look-tile">${pieceImg(w.item, "")}</span>`).join("")}</span>
+        <span class="look-pics n${Math.min(shown.length, 6)}">${shown.map((w) => `<span class="look-tile">${pieceImg(w.item, "")}</span>`).join("")}</span>
         <span class="look-names">${esc(shown.map((w) => w.item.name).join(" · "))}</span>
       </button>`;
       }).join("") || `<p class="muted small">Add a few more tops to get outfit ideas.</p>`}</div>
-      ${o ? `<h2 class="wearing-head">Wearing</h2>
-      <div class="wearing">${wornList(o).map((w) => {
-        const on = !off.includes(w.role);
-        return `<div class="wear-row${on ? "" : " is-off"}">${pieceImg(w.item, "")}<span class="wear-name"><b>${esc(w.item.name)}</b><span class="muted small">${ROLE_WORD[w.role]}${style(w)}</span></span><button class="chip" data-mpiece="${w.role}" aria-pressed="${!on}">${on ? "Take off" : "Put on"}</button></div>`;
-      }).join("")}</div>
-      <div class="row look-actions">${state.event?.day === "tomorrow" ? `<button class="btn primary" data-plan="${pick}">Plan it for tomorrow</button>` : `<button class="btn primary" data-wear="${pick}" data-mirror="1">Wear this today</button>`}
-        <button class="btn" data-fitlog="today" title="A photo of this outfit on you: say how it fit, and the ideas learn from it">${ICON_CAMERA}Log fit check</button></div>` : ""}
-    </aside>
+      ${o && pick >= 0 ? lookDetail(o, pick, { off, style }) : ""}
+    </section>
   </section>`;
+}
+// Under the three ideas: what the picked one puts on (left, one piece a row: swap it, take it off,
+// add a coat or an accessory), and what to do with it (right: wear it, log a fit check, rate it, why).
+function lookDetail(o, i, { off, style }) {
+  const list = wornList(o), listed = new Set(list.map((w) => w.item.id));
+  const more = (o.extras || []).filter((x) => !listed.has(x.id)); // accessories with no place on the stage
+  const swapBtn = (attr, pressed, name) => `<button class="wear-swap" ${attr} aria-pressed="${pressed}" aria-label="Swap the ${esc(name)}" title="Swap">${ICON_SWAP}</button>`;
+  const swapOf = (w) => w.role === "coat" ? swapBtn(`data-coatpick="${i}"`, !!o.cpick, w.item.name)
+    : CORE.includes(w.role) ? swapBtn(`data-swap="${i}:${w.role}"`, o.swapping === w.role, w.item.name)
+    : swapBtn(`data-xswap="${i}:${w.item.id}"`, o.xpick?.from === w.item.id, w.item.name);
+  const rows = list.map((w) => {
+    const on = !off.includes(w.role);
+    return `<div class="wear-row${on ? "" : " is-off"}">${pieceImg(w.item, "")}<span class="wear-name"><b>${esc(w.item.name)}</b><span class="muted small">${ROLE_WORD[w.role]}${style(w)}</span></span>${swapOf(w)}<button class="chip" data-mpiece="${w.role}" aria-pressed="${!on}">${on ? "Take off" : "Put on"}</button></div>`;
+  }).concat(more.map((x) => `<div class="wear-row">${pieceImg(x, "")}<span class="wear-name"><b>${esc(x.name)}</b><span class="muted small">${esc(catLabel(x.category))}</span></span>${swapOf({ role: "acc", item: x })}<span></span></div>`));
+  const adds = [
+    !o.coat && o.pieces.outer && coatOptions(o).length ? `<button class="chip add-coat" data-coatpick="${i}" aria-pressed="${!!o.cpick}">${kindIcon("coat")}Add a coat</button>` : "",
+    ownedAccGroups().length ? `<button class="chip add-x" data-xadd="${i}" aria-pressed="${o.xpick?.mode === "add"}">${kindIcon("watch")}Add an accessory</button>` : "",
+  ].join("");
+  const why = [...(o.reasons || []), ...(o.extrasWhy || [])];
+  return `<div class="look-detail">
+    <div class="look-wear">
+      <h3 class="wearing-head">Wearing</h3>
+      <div class="wearing">${rows.join("")}</div>
+      ${adds ? `<div class="chips wear-adds">${adds}</div>` : ""}
+    </div>
+    <div class="look-side">
+      <div class="look-actions">${state.event?.day === "tomorrow" ? `<button class="btn primary" data-plan="${i}">Plan it for tomorrow</button>` : `<button class="btn primary" data-wear="${i}" data-mirror="1">Wear this today</button>`}
+        <button class="btn" data-fitlog="today" title="A photo of this outfit on you: say how it fit, and the ideas learn from it">${ICON_CAMERA}Log fit check</button></div>
+      ${o.asking
+        ? `<div class="stack" style="gap:8px"><span class="muted small">What's off? The next ideas take it into account.</span><div class="chips">${SKIP_REASONS.map(([k, l]) => `<button class="chip" data-skipwhy="${i}:${k}">${l}</button>`).join("")}<button class="chip" data-skip="${i}" data-cancel="1">Cancel</button></div></div>`
+        : `<div class="row look-more"><button class="btn rate" data-rate="${i}" aria-pressed="${!!o.stars}" aria-expanded="${!!o.rating}" aria-label="${o.stars ? `Rated ${o.stars} stars, change` : "Rate this outfit"}">${o.stars ? `★ ${o.stars}` : "☆ Rate"}</button><button class="btn ghost" data-skip="${i}">Not for me</button>${levelBadge(o)}</div>
+        ${o.rating ? starPicker(`o|${i}`, o.stars) : ""}`}
+      ${why.length ? `<p class="why">${why.map(esc).join(" · ")}</p>` : ""}
+      ${o.warn?.length ? `<p class="why warn">Heads up: ${o.warn.map(esc).join(" · ")}</p>` : ""}
+      ${o.noDressShoes ? `<p class="why">Best with dress shoes: you don't have any yet.</p>` : ""}
+      ${o.planned ? "" : standInLine(o)}
+      ${i === 0 && !o.planned ? finishingTouch(o) : ""}
+      ${todayScent(o)}
+    </div>
+  </div>
+  ${o.swapping ? swapPicker(o, i) : ""}${o.cpick ? coatPicker(o, i) : ""}${o.xpick ? accPicker(o, i) : ""}`;
 }
 function safeMirrorHTML() {
   try { return mirrorHTML(); } catch (e) { console.error("Mirror:", e); return ""; }
@@ -4917,25 +5000,38 @@ function wardTop(types = typeRow()) {
   const usedStyles = Object.keys(STYLES).filter((s) => state.items.some((i) => (i.styles || []).includes(s)));
   const f = state.filters;
   const washing = inWash().length;
+  const SORTS = [["recent", "Newest"], ["most", "Most worn"], ["least", "Least worn"], ["name", "A–Z"]];
+  const showLabel = f.slot === "all" ? "All pieces" : f.slot === "fav" ? "★ Favourites" : f.slot === "wash" ? "In the wash" : f.slot === "disliked" ? "Disliked" : SLOTS[f.slot] || "All pieces";
+  // A dropdown: its button says what's picked; the chips open under it (closed again by any pick)
+  const drop = (key, label, on, body) => `<details class="fdrop fdrop-${key}"><summary class="chip${on ? " is-set" : ""}">${label}<svg class="caret" viewBox="0 0 24 24" aria-hidden="true"><path d="m6 9 6 6 6-6"/></svg></summary><div class="fpanel chips">${body}</div></details>`;
+  const set = f.slot !== "all" || f.style !== "all" || f.color !== "all";
   return `
     <div class="head">
       <div><h1>Wardrobe</h1><p class="sub">${state.items.length} pieces${washing ? ` · ${washing} in the wash` : ""}</p></div>
-      <div class="chips"><button class="chip report-btn" data-act="report">${ICON_CHART}Report</button><button class="chip report-btn" data-fitgallery="1">${ICON_CAMERA}Fit checks${state.fitChecks.length ? ` <span class="muted">${state.fitChecks.length}</span>` : ""}</button>${[["recent", "Newest"], ["most", "Most worn"], ["least", "Least worn"], ["name", "A–Z"]].map(([k, l]) => `<button class="chip" aria-pressed="${f.sort === k}" data-sort="${k}">${l}</button>`).join("")}</div>
+      <div class="chips"><button class="chip report-btn" data-act="report">${ICON_CHART}Report</button><button class="chip report-btn" data-fitgallery="1">${ICON_CAMERA}Fit checks${state.fitChecks.length ? ` <span class="muted">${state.fitChecks.length}</span>` : ""}</button></div>
     </div>
     ${sideSwitch()}
     <div class="toolbar">
-      <div class="search"><svg viewBox="0 0 24 24"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg><input id="search-input" class="input" placeholder="Search name, brand, style, tag…" value="${esc(f.q)}" data-input="q"></div>
-      <div class="chips scroller">
-        <button class="chip" aria-pressed="${f.slot === "all"}" data-slot="all">All</button>
-        <button class="chip" aria-pressed="${f.slot === "fav"}" data-slot="fav">★ Favourites</button>
-        ${washing || f.slot === "wash" ? `<button class="chip" aria-pressed="${f.slot === "wash"}" data-slot="wash">In the wash <span class="muted">${washing}</span></button>` : ""}
-        ${washing && f.slot !== "wash" ? `<button class="chip wash-all" data-act="wash-done">${ICON_BASKET}Laundry done: all back</button>` : ""}
-        ${state.items.some((i) => i.disliked) || f.slot === "disliked" ? `<button class="chip" aria-pressed="${f.slot === "disliked"}" data-slot="disliked">Disliked <span class="muted">${state.items.filter((i) => i.disliked).length}</span></button>` : ""}
-        ${Object.entries(SLOTS).filter(([k]) => k !== "head" || f.slot === "head").map(([k, l]) => `<button class="chip" aria-pressed="${f.slot === k}" data-slot="${k}">${l}</button>`).join("")}
+      <div class="ftools">
+        <div class="search"><svg viewBox="0 0 24 24"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg><input id="search-input" class="input" placeholder="Search name, brand, style, tag…" value="${esc(f.q)}" data-input="q"></div>
+        <div class="fdrops">
+          ${drop("show", esc(showLabel), f.slot !== "all", `
+            <button class="chip" aria-pressed="${f.slot === "all"}" data-slot="all">All pieces</button>
+            <button class="chip" aria-pressed="${f.slot === "fav"}" data-slot="fav">★ Favourites</button>
+            ${washing || f.slot === "wash" ? `<button class="chip" aria-pressed="${f.slot === "wash"}" data-slot="wash">In the wash <span class="muted">${washing}</span></button>` : ""}
+            ${state.items.some((i) => i.disliked) || f.slot === "disliked" ? `<button class="chip" aria-pressed="${f.slot === "disliked"}" data-slot="disliked">Disliked <span class="muted">${state.items.filter((i) => i.disliked).length}</span></button>` : ""}
+            ${Object.entries(SLOTS).filter(([k]) => k !== "head" || f.slot === "head").map(([k, l]) => `<button class="chip" aria-pressed="${f.slot === k}" data-slot="${k}">${l}</button>`).join("")}`)}
+          ${usedStyles.length > 1 ? drop("style", f.style === "all" ? "Any style" : esc(styleLabel(f.style)), f.style !== "all",
+            `<button class="chip" aria-pressed="${f.style === "all"}" data-style="all">Any style</button>${usedStyles.map((st) => `<button class="chip" aria-pressed="${f.style === st}" data-style="${esc(st)}">${styleLabel(st)}</button>`).join("")}`) : ""}
+          ${usedColors.length > 1 ? drop("color", f.color === "all" ? "Any colour" : `<span class="dot" style="background:${COLORS[f.color]?.hex}"></span>${esc(cap(f.color))}`, f.color !== "all",
+            `<button class="chip" aria-pressed="${f.color === "all"}" data-color="all">Any colour</button>${usedColors.map((c) => `<button class="chip" aria-pressed="${f.color === c}" data-color="${esc(c)}"><span class="dot" style="background:${COLORS[c]?.hex}"></span>${esc(cap(c))}</button>`).join("")}`) : ""}
+          ${drop("sort", `Sort: ${SORTS.find(([k]) => k === f.sort)?.[1] || "Newest"}`, false,
+            SORTS.map(([k, l]) => `<button class="chip" aria-pressed="${f.sort === k}" data-sort="${k}">${l}</button>`).join(""))}
+          ${set ? `<button class="chip ghost-chip" data-act="filters-clear">Clear</button>` : ""}
+          ${washing && f.slot !== "wash" ? `<button class="chip wash-all" data-act="wash-done">${ICON_BASKET}Laundry done</button>` : ""}
+        </div>
       </div>
       ${types}
-      ${usedStyles.length > 1 ? `<div class="chips scroller"><button class="chip" aria-pressed="${f.style === "all"}" data-style="all">Any style</button>${usedStyles.map((s) => `<button class="chip" aria-pressed="${f.style === s}" data-style="${esc(s)}">${styleLabel(s)}</button>`).join("")}</div>` : ""}
-      ${usedColors.length > 1 ? `<div class="chips scroller"><button class="chip" aria-pressed="${f.color === "all"}" data-color="all">Any colour</button>${usedColors.map((c) => `<button class="chip" aria-pressed="${f.color === c}" data-color="${esc(c)}"><span class="dot" style="background:${COLORS[c]?.hex}"></span>${esc(cap(c))}</button>`).join("")}</div>` : ""}
     </div>
     ${f.slot === "wash" ? `<div class="row laundry-row"><span class="muted small">${washing ? "These pieces are left out of outfit ideas until they're back." : "Nothing in the wash. Everything is back in your wardrobe."}</span>${washing ? `<button class="btn" data-act="wash-done">Laundry done: all ${washing} back</button>` : ""}</div>` : ""}`;
 }
@@ -4964,7 +5060,7 @@ function refilter() {
     const row = top.querySelector('[data-row="types"]');
     if (pressFree(types) !== wardTypesKey) {
       row?.remove();
-      if (types) top.querySelector(".toolbar > .scroller").insertAdjacentHTML("afterend", types);
+      if (types) top.querySelector(".toolbar > .ftools").insertAdjacentHTML("afterend", types);
       wardTypesKey = pressFree(types);
     } else if (row) setPressed(row.querySelectorAll("[aria-pressed]"), types);
   }
@@ -10531,6 +10627,11 @@ async function askOnce(question, targetId) {
 // Every tap in the app goes through onTap. What goes wrong in one is shown (a toast) and logged,
 // never swallowed as a silent, unhandled rejection that leaves a button looking dead.
 document.addEventListener("click", (e) => { onTap(e).catch((err) => failed(err, "that tap")); });
+// Wardrobe filter dropdowns: one open at a time, and a tap anywhere else closes it.
+document.addEventListener("click", (e) => {
+  const mine = e.target.closest?.("details.fdrop");
+  document.querySelectorAll("details.fdrop[open]").forEach((d) => { if (d !== mine) d.open = false; });
+}, true);
 async function onTap(e) {
   const t = e.target.closest("button, a, [data-close], img[data-photo]");
   if (!t) return;
@@ -10784,7 +10885,11 @@ async function onTap(e) {
     t.setAttribute("aria-pressed", "true");
     return toast("Liked. Outfit ideas will lean this way.");
   }
-  if (ds.anchor) return setAnchor(ds.anchor);
+  if (ds.anchor) {
+    await setAnchor(ds.anchor);
+    if (ds.redisc) $("#mirror .ideas-panel")?.scrollIntoView({ behavior: "smooth", block: "start" });
+    return;
+  }
   if (ds.swap) {
     const [i, role] = ds.swap.split(":");
     const o = state.outfits[+i];
@@ -11205,6 +11310,7 @@ async function onTap(e) {
     case "fit-all": return fitAll();
     case "look-all": return lookAll();
     case "anchor-pick": return openAnchorPicker();
+    case "filters-clear": Object.assign(state.filters, { slot: "all", cat: "all", style: "all", color: "all" }); return refilter();
     case "see-wash": Object.assign(state.filters, { slot: "wash", cat: "all", q: "", style: "all", color: "all" }); return go("wardrobe");
     case "wash-later": state.settings.washAskedOn = today(); await saveSettings(); return render();
     case "wash-done": {
