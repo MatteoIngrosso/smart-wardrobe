@@ -31,6 +31,12 @@ Until then, other leads should avoid large edits to `app.js` so the split lands 
   too (Pass, Almost, Like, 56 px), for the kiosk and for people who don't swipe.
 - Card: garments on paper tiles, one outfit per card, sized to fit 1024x1366 and 800x1280 without scrolling.
 
+### Dev overlay (localhost only)
+- `dev-overlay.js` (UI lead) loads only on localhost and is listed in `.assetsignore`. It names screens with
+  `window.__wardrobeDev` (in app.js, localhost only): `view`, `sub()` (Wardrobe report/fragrances, Discover's tab),
+  `goTo("view/sub")`, `renderStages()`. A new tab or sub-tab: keep `sub()` and `goTo()` in step.
+- Popups are named from the sheet: give a new sheet a distinctive class or a first heading so its view key is stable.
+
 ### Slots
 - Screens that show another lead's work expose mount points. The owning lead fills the slot;
   the UI lead decides its size and position.

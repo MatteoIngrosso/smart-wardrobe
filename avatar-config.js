@@ -14,6 +14,8 @@
  * @property {string} beard      an id of BEARDS
  * @property {string} eyeColor   hex
  * @property {string} glasses    "none" | "glasses"
+ * @property {Object<string, number>} shape  "More detail": one whole number -10..10 per BODY_SHAPES id
+ *   (shoulders, chest, waist, belly, hips, arms, legs, neck), 0 = as height, weight and build make him
  * @property {string} [facePhotoDataUrl] a square JPEG of your face, framed as FACE_FRAME says
  */
 
@@ -275,6 +277,21 @@ export const EYES = [
   { hex: "#8c959c", label: "Grey" },
 ];
 export const GLASSES = [{ id: "none", label: "None" }, { id: "glasses", label: "Glasses" }];
+// "More detail" on the Body tab: each one a slider from -10 to 10 (0 in the middle: as height, weight
+// and build make him), with the words for its two ends. avatar-stage.js turns them into body shapes.
+export const BODY_SHAPES = [
+  { id: "shoulders", label: "Shoulders", less: "Narrower", more: "Broader" },
+  { id: "chest", label: "Chest", less: "Flatter", more: "Fuller" },
+  { id: "waist", label: "Waist", less: "Slimmer", more: "Wider" },
+  { id: "belly", label: "Belly", less: "Flatter", more: "Rounder" },
+  { id: "hips", label: "Hips", less: "Narrower", more: "Wider" },
+  { id: "arms", label: "Arm length", less: "Shorter", more: "Longer" },
+  { id: "legs", label: "Leg length", less: "Shorter", more: "Longer" },
+  { id: "neck", label: "Neck", less: "Thinner", more: "Thicker" },
+];
+export const SHAPE_RANGE = 10;
+export const shapeWord = (s, v) => (!v ? "Average" : `${v < 0 ? s.less : s.more} ${v > 0 ? "+" : "−"}${Math.abs(v)}`);
+export const cleanShape = (o) => Object.fromEntries(BODY_SHAPES.map((s) => [s.id, num(o?.[s.id], -SHAPE_RANGE, SHAPE_RANGE, 0) || 0]));
 
 export const DEFAULT_BODY = /** @type {AvatarBodyConfig} */ ({
   heightCm: 178, weightKg: 74, build: "regular", skinTone: SKINS[1].hex, hairStyle: "short",
@@ -300,6 +317,7 @@ export function cleanBody(b = {}) {
     beard: oneOf(BEARDS, b.beard, DEFAULT_BODY.beard),
     eyeColor: hex(b.eyeColor, DEFAULT_BODY.eyeColor),
     glasses: oneOf(GLASSES, b.glasses, DEFAULT_BODY.glasses),
+    shape: cleanShape(b.shape),
     ...(typeof b.facePhotoDataUrl === "string" && b.facePhotoDataUrl.startsWith("data:image/") ? { facePhotoDataUrl: b.facePhotoDataUrl } : {}),
   };
 }

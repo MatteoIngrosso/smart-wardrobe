@@ -364,6 +364,10 @@ async function loadAll() {
   for (const t of (await raw.all("thumbs")) || []) thumbs.set(t.id, t);
   await blobPhotos();
   Object.assign(state.settings, (await store.get("kv", "settings")) || {});
+  // The Avatar | Lookbook switch and Tuck base top are gone from Today (2026-11-23): the mirror is the 3D avatar,
+  // and a top goes in only when a fit check says so.
+  state.settings.mirrorMode = "avatar";
+  state.settings.mirrorTuck = false;
   mirrorAIUrl();
   for (const [k, empty] of Object.entries(SHARED_KV)) state[k] = (await store.get("kv", k)) ?? empty();
   state.cal = { ...state.cal, ...((await raw.get("kv", "calEvents")) || {}), loading: false };
@@ -3712,15 +3716,15 @@ function renderToday() {
       <div><h1>${greet}</h1><p class="sub">${esc(dateStr)}</p></div>
       <button class="btn" data-act="shuffle"><svg viewBox="0 0 24 24"><path d="M16 3h5v5M4 20 21 3M21 16v5h-5M15 15l6 6M4 4l5 5"/></svg>New ideas</button>
     </div>
+    <div class="card row weather-card">
+      ${weatherHtml}
+      <div class="field weather-feel">
+        <label for="temp-slider">Feels like ${fmtTemp(cond.feels)}${state.manualTemp != null ? ' · <a href="#" data-act="autotemp" class="accent-link">use weather</a>' : ""}</label>
+        <input id="temp-slider" type="range" min="-10" max="35" step="1" value="${Math.round(cond.feels)}" data-input="temp">
+      </div>
+    </div>
     ${safeMirrorHTML()}
     <div class="stack">
-      <div class="card row" style="justify-content:space-between">
-        ${weatherHtml}
-        <div class="field" style="min-width:min(260px,100%);flex:1;max-width:420px">
-          <label for="temp-slider">Feels like ${fmtTemp(cond.feels)}${state.manualTemp != null ? ' · <a href="#" data-act="autotemp" style="color:var(--accent)">use weather</a>' : ""}</label>
-          <input id="temp-slider" type="range" min="-10" max="35" step="1" value="${Math.round(cond.feels)}" data-input="temp">
-        </div>
-      </div>
       ${dayCard()}
       ${planCheckCard()}
       ${rateCard()}
@@ -4603,7 +4607,6 @@ function previewOnAvatar(o, opts = {}) {
       <div class="angle-pills" role="group" aria-label="Side">${sidePills()}</div>`
       : `<div class="stage3d preview-stage" id="stage3d-preview" tabindex="0" role="img" aria-label="You in 3D, wearing this outfit. Drag sideways to turn him, or use the angle buttons."><div class="stage-note" role="status"></div></div>
       <div class="angle-pills" role="group" aria-label="Turn him">${MIRROR_ANGLES.map(([deg, label]) => `<button class="chip" data-mangle="${deg}" aria-pressed="false">${label}</button>`).join("")}</div>`}
-      <div class="angle-pills" role="group" aria-label="Look">${modePills()}</div>
     </div>
     <div class="pieces mini">${allPieces(o).map(pieceTile).join("")}</div>
     ${actions ? `<div class="row" style="margin-top:14px">${actions}</div>` : ""}`;
@@ -4683,7 +4686,9 @@ function bodyPanelHTML() {
       ${tab === "body" ? `${range("height", "Height", 160, 200, b.heightCm, `${b.heightCm} cm`)}
       ${range("weight", "Weight", 50, 120, b.weightKg, `${b.weightKg} kg`)}
       ${range("build", "Build", 0, Avatar.BUILDS.length - 1, build, Avatar.BUILDS[build].label)}
-      ${swatches("skinTone", "Skin tone", Avatar.SKINS, b.skinTone)}`
+      ${swatches("skinTone", "Skin tone", Avatar.SKINS, b.skinTone)}
+      <div class="mb-more"><div class="mb-more-head"><h3>More detail</h3><button class="chip" data-act="body-shape-reset"${Avatar.BODY_SHAPES.some((x) => b.shape?.[x.id]) ? "" : " disabled"}>Reset</button></div>
+      ${Avatar.BODY_SHAPES.map((x) => range(`shape-${x.id}`, x.label, -Avatar.SHAPE_RANGE, Avatar.SHAPE_RANGE, b.shape?.[x.id] || 0, Avatar.shapeWord(x, b.shape?.[x.id] || 0))).join("")}</div>`
       : `<div class="mb-face-tab">${swatches("hairColor", "Hair colour", Avatar.HAIR_COLORS, b.hairColor)}
       ${chips("hairStyle", "Hair", Avatar.HAIR_STYLES, b.hairStyle)}
       ${mirrorMode() === "avatar" ? `<div class="field mb-field"><label>Hair look</label><div class="mb-chips">${HAIR_FINISHES.map(([f, l]) =>
@@ -4733,7 +4738,6 @@ const sidePills = () => MIRROR_SIDES.map(([s, label]) => `<button class="chip" d
 function mirrorHTML() {
   const ideas = state.outfits.slice(0, 3), o = mirrorIdea(), pick = ideas.indexOf(o);
   const off = mirrorOff(o), lb = lookbookOn();
-  const tuck = `<button class="chip" data-mtuck="1" aria-pressed="${tuckNow(o)}" title="The top under everything goes into the waistband">Tuck base top</button>`;
   const wear = lb ? {} : wearNow(o);
   // how a piece is worn, under its name: "Coat · Open" (tap to change), "Top · Tucked in (fit check, 14 Nov)"
   const style = (w) => {
@@ -4758,21 +4762,24 @@ function mirrorHTML() {
         <div class="stage-note" role="status"></div>
       </div>
       <div class="angle-pills" role="group" aria-label="Turn him">${MIRROR_ANGLES.map(([deg, label]) => `<button class="chip" data-mangle="${deg}" aria-pressed="false">${label}</button>`).join("")}</div>`}
-      <div class="angle-pills" role="group" aria-label="Look">${modePills()}${tuck}</div>
-      ${o ? `<div class="row fc-log"><button class="btn" data-fitlog="today">${ICON_CAMERA}Log fit check</button><span class="muted small">A photo of this outfit on you: say how it fit, and the ideas learn from it.</span></div>` : ""}
     </div>
     <aside class="mirror-side mirror-looks" aria-label="Today's ideas">
       <h2>Today's ideas</h2>
-      <div class="m-looks">${ideas.map((x, i) => `<button class="m-look" data-mlook="${i}" aria-pressed="${i === pick}">
-        <span class="look-pics">${wornList(x).filter((w) => MIRROR_ROLES.includes(w.role)).map((w) => pieceImg(w.item, "")).join("")}</span>
-        <span class="look-text"><b>${x.planned ? "Your plan" : ["Best match", "Option 2", "Option 3"][i]}</b><span class="muted small" data-lookstate="${i}">${lb ? lookCount(x) : ""}</span></span>
-      </button>`).join("") || `<p class="muted small">Add a few more tops to get outfit ideas.</p>`}</div>
+      <div class="m-looks">${ideas.map((x, i) => {
+        const shown = wornList(x).filter((w) => MIRROR_ROLES.includes(w.role));
+        return `<button class="m-look" data-mlook="${i}" aria-pressed="${i === pick}">
+        <span class="look-top"><span class="look-num">${i + 1}</span><b>${x.planned ? "Your plan" : ["Best match", "Option 2", "Option 3"][i]}</b><span class="look-state" data-lookstate="${i}">${lb ? lookCount(x) : ""}</span></span>
+        <span class="look-pics">${shown.map((w) => `<span class="look-tile">${pieceImg(w.item, "")}</span>`).join("")}</span>
+        <span class="look-names">${esc(shown.map((w) => w.item.name).join(" · "))}</span>
+      </button>`;
+      }).join("") || `<p class="muted small">Add a few more tops to get outfit ideas.</p>`}</div>
       ${o ? `<h2 class="wearing-head">Wearing</h2>
       <div class="wearing">${wornList(o).map((w) => {
         const on = !off.includes(w.role);
         return `<div class="wear-row${on ? "" : " is-off"}">${pieceImg(w.item, "")}<span class="wear-name"><b>${esc(w.item.name)}</b><span class="muted small">${ROLE_WORD[w.role]}${style(w)}</span></span><button class="chip" data-mpiece="${w.role}" aria-pressed="${!on}">${on ? "Take off" : "Put on"}</button></div>`;
       }).join("")}</div>
-      ${state.event?.day === "tomorrow" ? `<button class="btn primary" data-plan="${pick}">Plan it for tomorrow</button>` : `<button class="btn primary" data-wear="${pick}" data-mirror="1">Wear this today</button>`}` : ""}
+      <div class="row look-actions">${state.event?.day === "tomorrow" ? `<button class="btn primary" data-plan="${pick}">Plan it for tomorrow</button>` : `<button class="btn primary" data-wear="${pick}" data-mirror="1">Wear this today</button>`}
+        <button class="btn" data-fitlog="today" title="A photo of this outfit on you: say how it fit, and the ideas learn from it">${ICON_CAMERA}Log fit check</button></div>` : ""}
     </aside>
   </section>`;
 }
@@ -4794,6 +4801,8 @@ function bodyUI() {
   const saved = !!state.avatar && Avatar.sameBody(state.avatar.body, bodyDraft());
   btn.disabled = saved || mirror.reading;
   btn.textContent = saved ? "Saved" : "Save body";
+  const reset = $('[data-act="body-shape-reset"]');
+  if (reset) reset.disabled = !Avatar.BODY_SHAPES.some((x) => bodyDraft().shape?.[x.id]);
   hint.textContent = mirror.reading ? "Reading your photo…"
     : saved ? `${Avatar.bodyLine(Avatar.cleanBody(state.avatar.body))}. Every device shows this body.`
     : state.avatar ? "The avatar already shows your changes. Save to keep them on every device."
@@ -4808,8 +4817,10 @@ function bodyInput(k, v) {
   if (k === "height") b.heightCm = +v;
   else if (k === "weight") b.weightKg = +v;
   else if (k === "build") b.build = Avatar.BUILDS[+v]?.id || b.build;
+  const sh = k.startsWith("shape-") && Avatar.BODY_SHAPES.find((x) => `shape-${x.id}` === k);
+  if (sh) b.shape = { ...Avatar.cleanShape(b.shape), [sh.id]: +v };
   const out = $(`#mb-${k}-v`);
-  if (out) out.textContent = { height: `${b.heightCm} cm`, weight: `${b.weightKg} kg`, build: Avatar.BUILDS.find((x) => x.id === b.build)?.label }[k];
+  if (out) out.textContent = sh ? Avatar.shapeWord(sh, +v) : { height: `${b.heightCm} cm`, weight: `${b.weightKg} kg`, build: Avatar.BUILDS.find((x) => x.id === b.build)?.label }[k];
   // while the slider moves the 3D man is only scaled (cheap); the exact body and clothes come on release
   mirror.stage?.setBody(b, { live: true });
   bodyUI();
@@ -4909,7 +4920,7 @@ function wardTop(types = typeRow()) {
   return `
     <div class="head">
       <div><h1>Wardrobe</h1><p class="sub">${state.items.length} pieces${washing ? ` · ${washing} in the wash` : ""}</p></div>
-      <div class="chips"><button class="chip report-btn" data-act="report">${ICON_CHART}Report</button>${[["recent", "Newest"], ["most", "Most worn"], ["least", "Least worn"], ["name", "A–Z"]].map(([k, l]) => `<button class="chip" aria-pressed="${f.sort === k}" data-sort="${k}">${l}</button>`).join("")}</div>
+      <div class="chips"><button class="chip report-btn" data-act="report">${ICON_CHART}Report</button><button class="chip report-btn" data-fitgallery="1">${ICON_CAMERA}Fit checks${state.fitChecks.length ? ` <span class="muted">${state.fitChecks.length}</span>` : ""}</button>${[["recent", "Newest"], ["most", "Most worn"], ["least", "Least worn"], ["name", "A–Z"]].map(([k, l]) => `<button class="chip" aria-pressed="${f.sort === k}" data-sort="${k}">${l}</button>`).join("")}</div>
     </div>
     ${sideSwitch()}
     <div class="toolbar">
@@ -7575,7 +7586,7 @@ function renderPlan() {
    and a few metrics read from the photo on the device. Every device gets it (a shared kv record per
    check, the photo like a piece's) and it travels in the backup. Its stars also count as an outfit
    rating, and stylist-brain.js turns its tags into what the ideas learn (see taste()).
-   Calendar > Fit checks shows them all, with a 5-star filter and "Wear again". */
+   Wardrobe > Fit checks shows them all, with a 5-star filter and "Wear again". */
 const FIT_MAX = 1280, FIT_THUMB = 420;
 // Two ways in: the camera, or a photo already in the gallery (a mirror selfie taken earlier).
 const fitCam = Object.assign(document.createElement("input"), { type: "file", accept: "image/*", hidden: true });
@@ -7857,7 +7868,7 @@ async function deleteFitCheck(id) {
   openFitGallery();
 }
 
-// Calendar > Fit checks: every worn photo, newest first, with a 5-star filter.
+// Wardrobe > Fit checks: every worn photo, newest first, with a 5-star filter.
 function fitGalleryHTML() {
   const list = state.fitChecks.filter((x) => fitUI.filter !== "5" || x.stars === 5).sort((a, b) => String(b.at).localeCompare(String(a.at)));
   return `<div class="detail-head">
@@ -7960,8 +7971,8 @@ async function wearFitAgain(id) {
   closeSheet();
   planner.sel = date;
   planner.month = date.slice(0, 7);
-  toast(`Planned for ${fmtDay(date)}`);
-  if (view === "plan") render(); else go("plan");
+  toast(`Planned for ${fmtDay(date)}: Today shows it that day`);
+  if (view === "today" || view === "plan") render();
 }
 
 /* ---- The closet audit (For you) ----
@@ -11127,6 +11138,7 @@ async function onTap(e) {
     case "avatar-edit": return openAvatarEditor();
     case "body-photo": return bodyPhotoInput.click();
     case "body-photo-off": delete bodyDraft().facePhotoDataUrl; bodyChanged(); return remountBody();
+    case "body-shape-reset": bodyDraft().shape = Avatar.cleanShape({}); bodyChanged(); return remountBody();
     case "rebake": return rebakePieces();
     case "seed": return loadSeed();
     case "shuffle": {
@@ -11475,6 +11487,28 @@ previewSample.then((f) => {
   state.previewAI = true;
   if (view !== "add" && !document.activeElement?.matches("input, textarea")) render();
 });
+// Dev overlay (dev-overlay.js): only when the app runs on this computer. .assetsignore keeps the file
+// off Cloudflare, so the live app never loads it. These helpers let it name the screen and go back to it.
+if (["localhost", "127.0.0.1", "[::1]"].includes(location.hostname)) {
+  window.__wardrobeDev = {
+    get view() { return view; },
+    // the sub-tab inside a tab: Wardrobe > Report / Fragrances, Discover's tabs
+    sub: () => view === "wardrobe" ? (state.wardView === "report" ? "report" : state.wardSide === "scents" ? "fragrances" : "")
+      : view === "shop" ? state.disc.tab : "",
+    goTo(key) {
+      const [v, sub] = key.split("/");
+      if (!["today", "plan", "wardrobe", "add", "shop", "settings"].includes(v)) return;
+      if ($("#sheet") && !$("#sheet").hidden) closeSheet();
+      go(v);
+      if (v === "wardrobe" && sub === "report") state.wardView = "report";
+      if (v === "wardrobe") state.wardSide = sub === "fragrances" ? "scents" : "clothes";
+      if (v === "shop" && sub) state.disc.tab = sub;
+      render();
+    },
+    renderStages() { try { mirror.stage?.debug?.render?.(); } catch {} }, // a fresh 3D frame to copy into a screenshot
+  };
+  import("./dev-overlay.js").catch((e) => console.warn("Dev overlay:", e));
+}
 go("today");
 try { startWallScreen(); } catch (e) { console.error("Wall screen:", e); } // never in the way of the app
 syncLoop();
