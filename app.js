@@ -2274,27 +2274,35 @@ function withLoved(pool, picks, keep, avoid) {
   if (swap >= 0) picks[swap] = best;
   else if (picks.length < 3 - keep.length) picks.push(best);
 }
-// Everyday from 23° on a dry day: when you own shorts that suit the day, at least one idea is in shorts,
-// even when loved jeans lead the others (stars outweigh the shorts bonus). The best shorts outfit that
-// breaks no rule, isn't far too warm and isn't far behind takes the place of the last idea, keeping a
-// loved piece that no other idea shows.
-const SHORTS_FROM = 23;
+// Everyday from 23° on a dry day: when you own shorts that suit the day, at least one idea is in shorts
+// (two of the three from 27°), even when loved jeans lead the others (stars outweigh the shorts bonus).
+// The best shorts outfits that break no rule, aren't far too warm and aren't far behind take the place of
+// the last ideas, keeping a loved piece that no other idea shows; a second one brings other clothes.
+const SHORTS_FROM = 23, SHORTS_TWO_FROM = 27;
 function withShorts(pool, picks, keep, avoid) {
   const { occ, cond } = pool;
-  if (occ.id !== "casual" || occ.level || cond.feels < SHORTS_FROM || cond.wet) return;
+  if (occ.id !== "casual" || occ.level || cond.feels < SHORTS_FROM || cond.wet || !picks.length) return;
   const inShorts = (c) => /shorts/.test(c.pieces.bottom?.category || "");
-  const ideas = [...keep, ...picks];
-  if (!picks.length || ideas.some(inShorts)) return;
+  const need = Math.min(cond.feels >= SHORTS_TWO_FROM ? 2 : 1, picks.length + keep.length - 1 || 1);
   const top = pool.cands.find((c) => !c.blocked && !c.isBroken)?.score ?? 0;
-  const keys = new Set([...ideas.map((o) => o.key), ...avoid]);
-  const best = pool.cands.find((c) => inShorts(c) && !c.blocked && !c.isBroken && !keys.has(c.key) && (c.wOff ?? 0) <= 3.5 && c.score >= top - 6);
-  if (!best) return;
   const ids = (c) => Object.values(c.pieces).filter(Boolean).map((p) => p.id);
-  const lovedOnlyIn = (i) => Object.values(picks[i].pieces).some((p) => p && (starsOf(p) || 0) >= 4 && !ids(best).includes(p.id) && !ideas.some((o, k) => o !== picks[i] && ids(o).includes(p.id)));
   const from = keep.length ? 0 : Math.min(1, picks.length - 1);
-  let at = -1;
-  for (let i = picks.length - 1; i >= from; i--) if (!lovedOnlyIn(i)) { at = i; break; }
-  picks[at >= 0 ? at : picks.length - 1] = best;
+  for (let round = 0; round < need; round++) {
+    const ideas = [...keep, ...picks];
+    if (ideas.filter(inShorts).length >= need) return;
+    const keys = new Set([...ideas.map((o) => o.key), ...avoid]);
+    const shown = new Set(ideas.filter(inShorts).flatMap((o) => ids(o).filter((id) => id !== o.pieces.shoes?.id)));
+    const ok = (c) => inShorts(c) && !c.blocked && !c.isBroken && !keys.has(c.key) && (c.wOff ?? 0) <= 3.5 && c.score >= top - 6;
+    const best = pool.cands.find((c) => ok(c) && !ids(c).some((id) => shown.has(id))) || pool.cands.find(ok);
+    if (!best) return;
+    const lovedOnlyIn = (i) => Object.values(picks[i].pieces).some((p) => p && (starsOf(p) || 0) >= 4 && !ids(best).includes(p.id) && !ideas.some((o) => o !== picks[i] && ids(o).includes(p.id)));
+    const free = (i) => !inShorts(picks[i]);
+    let at = -1;
+    for (let i = picks.length - 1; i >= from; i--) if (free(i) && !lovedOnlyIn(i)) { at = i; break; }
+    if (at < 0) for (let i = picks.length - 1; i >= from; i--) if (free(i)) { at = i; break; }
+    if (at < 0) return;
+    picks[at] = best;
+  }
 }
 // The outfit you planned for today (in the Calendar, or last night) comes first, while all of it is
 // out of the wash; then one planned for an event today. One you wore or turned down doesn't come back.
