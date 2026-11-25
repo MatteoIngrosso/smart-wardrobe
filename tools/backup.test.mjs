@@ -287,7 +287,7 @@ test("On the avatar: a Calendar idea on the 3D stage in a sheet, then back to To
     t.go("today");
     await new Promise((res) => setTimeout(res, 100));
     res.home = !!mirror.host && document.getElementById("stage3d")?.contains(mirror.host);
-    res.tryon = document.querySelectorAll("[data-tryon]").length;
+    res.tryon = document.querySelectorAll("[data-mlook]").length;
     return res;
   });
   console.log(`  3D stage here: ${r.failed ? `couldn't start (${r.failed})` : "running"}`);

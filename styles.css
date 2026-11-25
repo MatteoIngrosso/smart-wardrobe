@@ -783,22 +783,126 @@ p.chat-you { padding: 0 4px; }
   .avatar-editor .preview-stage { height: min(46vh, 420px); }
 }
 
-/* ---------- Today: weather first ---------- */
-.weather-card { justify-content: space-between; margin-bottom: 20px; }
-.weather-feel { min-width: min(260px, 100%); flex: 1; max-width: 420px; }
+/* ---------- Today: the weather, now, the next hours and the next days ---------- */
+.weather-card { display: grid; grid-template-columns: auto minmax(0, 1fr) minmax(0, 1.15fr); gap: 18px 28px; align-items: center; margin-bottom: 20px; }
+.weather-card.is-simple { grid-template-columns: minmax(0, 1fr) minmax(240px, 420px); }
+.wx-now { display: flex; align-items: center; gap: 14px; min-width: 0; }
+.wx-now .temp { font-size: 60px; font-weight: 200; line-height: 1; letter-spacing: -.03em; }
+.wx-now .wx { display: grid; gap: 3px; min-width: 0; }
+.wx-now .wx b { font-weight: 500; font-size: 18px; }
+.wx-big svg { width: 46px; height: 46px; stroke-width: 1.3; }
+.wx-strip { display: grid; grid-auto-flow: column; grid-auto-columns: minmax(0, 1fr); gap: 4px; padding-left: 24px; border-left: 1px solid var(--line); }
+.wx-slot { display: grid; justify-items: center; gap: 4px; padding: 6px 2px; border-radius: 12px; font-variant-numeric: tabular-nums; }
+.wx-slot .wx-ic { width: 26px; height: 26px; stroke-width: 1.5; }
+.wx-slot b { font-weight: 500; font-size: 16px; line-height: 1; }
+.wx-when { font-size: 12.5px; color: var(--muted); white-space: nowrap; }
+.wx-low { font-size: 13px; color: var(--muted); line-height: 1; }
+.wx-rain { font-size: 11.5px; color: var(--muted); min-height: 14px; line-height: 14px; }
+.wx-slot:first-child .wx-when { color: var(--text); font-weight: 600; }
+.weather-feel { grid-column: 1 / -1; display: grid; grid-template-columns: auto minmax(0, 1fr); align-items: center; gap: 16px;
+  padding-top: 14px; border-top: 1px solid var(--line); }
+.weather-card.is-simple .weather-feel { grid-column: auto; border-top: 0; padding-top: 0; grid-template-columns: minmax(0, 1fr); gap: 6px; }
+.weather-feel label { margin: 0; white-space: nowrap; }
 .accent-link { color: var(--accent); }
+@media (max-width: 1300px) {
+  .weather-card { grid-template-columns: auto minmax(0, 1fr); }
+  .wx-days { grid-column: 1 / -1; padding-left: 0; border-left: 0; padding-top: 12px; border-top: 1px solid var(--line); }
+}
+@media (max-width: 700px) {
+  .weather-card, .weather-card.is-simple { grid-template-columns: minmax(0, 1fr); }
+  .wx-hours { padding-left: 0; border-left: 0; }
+  .weather-feel { grid-template-columns: minmax(0, 1fr); gap: 6px; }
+}
 
-/* ---------- Today's mirror: the avatar full width, the ideas and what he wears in a row under it ---------- */
+/* ---------- Today's mirror: the avatar full width, then the ideas panel under it ---------- */
 .mirror, .mirror.is-lookbook { grid-template-columns: minmax(0, 1fr); }
 .mirror .stage3d { height: min(58vh, 720px); }
-.mirror-looks { grid-template-columns: minmax(0, 1fr); gap: 14px; }
-.m-looks { grid-template-columns: repeat(3, minmax(0, 1fr)); }
-.wearing { grid-template-columns: repeat(auto-fill, minmax(260px, 1fr)); column-gap: 16px; }
-.look-actions { gap: 10px; }
-.look-actions .btn { flex: 1 1 220px; }
+.ideas-panel { grid-template-columns: minmax(0, 1fr); gap: 18px; padding: 22px; }
+.ideas-head { display: grid; gap: 12px; }
+.ideas-head h2 { font-size: 21px; }
+.ideas-head .chips { margin: 0; }
+.ideas-head .anchor-bar { margin: 0; }
+/* The three ideas: boxes a little wider than tall, well apart; the pieces fill them on paper tiles */
+.m-looks { grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 24px; }
+.m-look { aspect-ratio: 6 / 5; grid-template-rows: auto minmax(0, 1fr) auto; gap: 12px; padding: 16px; border-radius: 20px; min-width: 0; }
+.m-look:not([aria-pressed="true"]):hover { border-color: var(--muted); }
+.look-pics { grid-template-columns: repeat(3, minmax(0, 1fr)); grid-template-rows: repeat(2, minmax(0, 1fr)); gap: 8px; min-height: 0; }
+.look-pics.n1, .look-pics.n2 { grid-template-rows: minmax(0, 1fr); grid-template-columns: repeat(2, minmax(0, 1fr)); }
+.look-pics.n3 { grid-template-rows: minmax(0, 1fr); }
+.look-pics.n4 { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+.look-tile { aspect-ratio: auto; min-height: 0; border-radius: 12px; }
+.look-tile img { width: 86%; height: 86%; }
+.look-names { -webkit-line-clamp: 1; }
+/* The picked idea: what it puts on (left, one piece a row) and what to do with it (right, stacked) */
+.look-detail { display: grid; grid-template-columns: minmax(0, 1.35fr) minmax(0, 1fr); gap: 24px; align-items: start;
+  padding-top: 18px; border-top: 1px solid var(--line); }
+.look-wear, .look-side { display: grid; gap: 12px; align-content: start; min-width: 0; }
+.wearing-head { margin: 0 !important; font-size: 17px; font-weight: 500; }
+.wearing { grid-template-columns: minmax(0, 1fr); gap: 0; }
+.wearing .wear-row { grid-template-columns: 48px minmax(0, 1fr) auto auto; padding: 8px 0; border-bottom: 1px solid var(--line); min-height: 64px; }
+.wearing .wear-row:last-child { border-bottom: 0; }
+.wearing .wear-row img { width: 48px; height: 56px; background: var(--paper); }
+.wear-swap { width: 44px; height: 44px; border-radius: 50%; display: grid; place-items: center; padding: 0; cursor: pointer;
+  border: 1px solid var(--line); background: var(--surface-2); color: var(--text); }
+.wear-swap svg { width: 20px; height: 20px; fill: none; stroke: currentColor; stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round; }
+.wear-swap[aria-pressed="true"] { background: var(--text); color: var(--bg); border-color: var(--text); }
+.wear-adds .chip svg.kind { width: 20px; height: 20px; }
+.look-actions { display: grid; grid-template-columns: minmax(0, 1fr); gap: 10px; }
+.look-actions .btn { width: 100%; min-height: 60px; font-size: 17px; }
+.look-more { gap: 10px; align-items: center; }
+.look-more .btn { min-height: 48px; }
+.look-more .level { margin-left: auto; }
+.look-side .touch { margin-top: 0; }
+.ideas-panel > .swap-pick { padding-top: 16px; border-top: 1px solid var(--line); }
 @media (max-width: 1100px) {
-  .mirror, .mirror.is-lookbook { grid-template-columns: minmax(0, 1fr); }
+  .m-looks { gap: 16px; }
+  .m-look { padding: 12px; gap: 10px; }
+  .look-detail { grid-template-columns: minmax(0, 1.2fr) minmax(0, 1fr); gap: 18px; }
 }
+@media (max-width: 860px) {
+  .m-looks { gap: 12px; }
+  .m-look { aspect-ratio: 1 / 1; padding: 10px; border-radius: 16px; }
+  .look-top b { font-size: 14px; }
+  .look-state { display: none; }
+  .look-detail { grid-template-columns: minmax(0, 1.25fr) minmax(0, 1fr); gap: 16px; }
+  .wearing .wear-row { grid-template-columns: 44px minmax(0, 1fr) auto auto; gap: 8px; }
+  .wearing .wear-row .chip { padding: 0 10px; }
+}
+@media (max-width: 700px) { .look-detail { grid-template-columns: minmax(0, 1fr); } }
 @media (max-width: 560px) {
   .m-looks { grid-template-columns: minmax(0, 1fr); }
+  .m-look { aspect-ratio: 6 / 5; }
+}
+
+/* ---------- Today: Rediscover, pieces you haven't worn in a while ---------- */
+.rediscover { display: grid; gap: 14px; }
+.redisc-head { display: flex; align-items: baseline; gap: 12px; flex-wrap: wrap; }
+.redisc-head h2 { margin: 0; }
+.redisc-grid { display: grid; grid-auto-flow: column; grid-auto-columns: 160px; gap: 16px; overflow-x: auto; scrollbar-width: none; padding-bottom: 2px; }
+.redisc-tile { display: grid; gap: 4px; align-content: start; min-width: 0; }
+.redisc-tile b { font-weight: 500; font-size: 14.5px; line-height: 1.3; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.redisc-pic { aspect-ratio: 4 / 5; border-radius: 14px; background: var(--paper); border: 0; padding: 0; display: grid; place-items: center; overflow: hidden; cursor: pointer; margin-bottom: 4px; }
+.redisc-pic img { width: 86%; height: 86%; object-fit: contain; }
+.redisc-tile .chip { justify-self: start; margin-top: 6px; min-height: 44px; font-size: 14px; }
+@media (max-width: 860px) { .redisc-grid { grid-auto-columns: 140px; gap: 12px; } }
+
+/* ---------- Wardrobe: search and the filters as dropdowns ---------- */
+.ftools { display: flex; flex-wrap: wrap; align-items: center; gap: 10px 12px; }
+.ftools .search { flex: 1 1 320px; min-width: 0; }
+.fdrops { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
+.fdrop { position: relative; }
+.fdrop > summary { list-style: none; cursor: pointer; gap: 8px; }
+.fdrop > summary::-webkit-details-marker { display: none; }
+.fdrop > summary.is-set { border-color: var(--text); }
+.fdrop .caret { width: 18px; height: 18px; fill: none; stroke: currentColor; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; transition: transform .15s; }
+.fdrop[open] .caret { transform: rotate(180deg); }
+.fdrop[open] > summary { background: var(--surface-2); }
+.fpanel { position: absolute; z-index: 30; top: calc(100% + 8px); left: 0; width: max-content; max-width: min(560px, 86vw);
+  flex-wrap: wrap; gap: 8px; padding: 14px; border-radius: 18px; background: var(--surface); border: 1px solid var(--line);
+  box-shadow: 0 18px 40px rgba(0, 0, 0, .35); }
+.fdrop-sort .fpanel, .fdrop-color .fpanel { left: auto; right: 0; }
+.ghost-chip { background: none; border-color: transparent; color: var(--muted); text-decoration: underline; text-underline-offset: 3px; }
+@media (max-width: 860px) {
+  .ftools .search { flex-basis: 100%; }
+  .fdrop-sort .fpanel, .fdrop-color .fpanel { left: 0; right: auto; }
 }

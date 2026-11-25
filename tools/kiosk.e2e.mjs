@@ -219,13 +219,19 @@ test("everything you tap in sheets, the cut-out editor and the diagnostics is at
 });
 
 test("rows that scroll sideways show no scrollbar, and a mouse can drag them without pressing a chip", async () => {
-  await page.evaluate(() => { window.__t.go("wardrobe"); });
-  const r = await page.evaluate(() => {
-    const row = [...document.querySelectorAll(".scroller")].find((el) => el.scrollWidth > el.clientWidth + 20);
+  // Today's occasion chips, in a box narrower than they are (on this screen every chip row fits since the
+  // Wardrobe's filters became dropdowns, 2026-11-25)
+  const r = await page.evaluate(async () => {
+    window.__t.go("today");
+    await new Promise((res) => setTimeout(res, 300));
+    const row = document.querySelector(".occ-chips.scroller");
     if (!row) return null;
+    row.style.maxWidth = "320px";
+    if (row.scrollWidth <= row.clientWidth + 20) return null;
+    row.scrollIntoView({ block: "center" });
     row.id = "drag-row"; row.scrollLeft = 0;
     const b = row.getBoundingClientRect();
-    return { x: b.x + b.width * 0.7, y: b.y + b.height / 2, bar: getComputedStyle(row).scrollbarWidth, slot: window.__t.state.filters.slot };
+    return { x: b.x + b.width * 0.7, y: b.y + b.height / 2, bar: getComputedStyle(row).scrollbarWidth, pressed: [...row.querySelectorAll('[aria-pressed="true"]')].map((e) => e.textContent).join() };
   });
   assert.ok(r, "a chip row wider than the screen");
   assert.equal(r.bar, "none");
@@ -234,9 +240,9 @@ test("rows that scroll sideways show no scrollbar, and a mouse can drag them wit
   for (let k = 1; k <= 10; k++) await page.mouse.move(r.x - k * 30, r.y);
   await page.mouse.up();
   await page.waitForTimeout(500);
-  const after = await page.evaluate(() => ({ left: document.querySelector("#drag-row").scrollLeft, slot: window.__t.state.filters.slot }));
+  const after = await page.evaluate(() => { const row = document.querySelector("#drag-row"); return { left: row.scrollLeft, pressed: [...row.querySelectorAll('[aria-pressed="true"]')].map((e) => e.textContent).join() }; });
   assert.ok(after.left >= 250, `scrolled ${after.left} px`);
-  assert.equal(after.slot, r.slot, "no chip pressed by the drag");
+  assert.equal(after.pressed, r.pressed, "no chip pressed by the drag");
 });
 
 test("Settings > Wall screen keeps the minutes; a reload while asleep comes back asleep", async () => {
