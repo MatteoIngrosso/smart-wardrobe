@@ -23,3 +23,5 @@ README.md
 package.json
 package-lock.json
 fashion-model
+# The localhost-only bug-marking overlay (loaded by app.js on localhost only)
+dev-overlay.js

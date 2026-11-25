@@ -18,6 +18,18 @@ python3 server.py
 On the tablet, use the browser's "Add to Home screen" option. The app then opens fullscreen like a kiosk.
 The camera button and "Use this device's location" need **https** or **localhost**. To use the in-app camera on the phone or tablet, run `python3 server.py --cert cert.pem --key key.pem` with a certificate for the computer's address. Without one, **Take photos** opens the phone's own camera app instead, which works over plain http.
 
+### Marking UI bugs on this computer (dev overlay, localhost only)
+
+Open the app at `http://localhost:8000` (or `127.0.0.1`) and a small dark toolbar floats on the right. It's `dev-overlay.js`: app.js loads it only on localhost, `.assetsignore` keeps it off Cloudflare, and it lives in its own Shadow DOM, so the live app and its styles never see it.
+
+- **Use / Draw** (Alt+D; Alt+Shift+D if the browser keeps Alt+D for its address bar; Esc goes back to Use). In Use mode the app works as normal and your marks stay visible; the eye hides them.
+- **Pen** (circle anything), **Rectangle**, **Arrow**, **Comment pin** (type a note on it), 5 colours, S M L, Undo / Redo (Ctrl+Z, Ctrl+Shift+Z), Clear.
+- **Pick an element**: hover to see it (`button.btn (120×44px)`), click to lock it: its unique CSS selector, a 300-character HTML snippet and its key styles go with the issue.
+- **Save**: a title and a note, then the issue is kept with a WebP screenshot of the screen with your marks drawn on it (the 3D avatar included), the screen size and scroll, and the last 10 console errors. The screenshot library loads from esm.sh the first time; offline you get the marks on a plain background.
+- Marks belong to the screen they were made on (Today, Wardrobe/report, Discover's tabs, Settings, or a popup like `modal:avatar-editor`) and follow its scrolling: they disappear on other screens and come back when you return. Each saved issue has a numbered red pin; tap it to read it, mark it fixed or delete it.
+- **Issues** (the list button): Open / Fixed / All, this screen or all screens, thumbnails (tap to enlarge), **Jump to view**, a **Fixed** box (fixed issues leave the screen), **Copy for Claude** per issue, **Copy Markdown report** (every open issue grouped by screen, ready to paste to Claude) and **Download screenshots** (the report as .md and .json, plus `issue-N.webp` files to drop next to it). The red number is the console errors badge: tap it for the log and **Copy errors**.
+- Issues live in the browser's IndexedDB `SmartWardrobeDevDB` (clearing the wardrobe doesn't touch them); the toolbar's place, colour and size in localStorage. Drag the toolbar by its dots to any edge.
+
 ### Sharing one wardrobe between devices
 - Every device keeps a full copy in IndexedDB, so it keeps working when the computer is off. Changes made in the meantime are sent when the server is back.
 - Pieces, fragrances, the wear log, Must-Buy and events are shared. Settings and the weather city stay on each device. API keys stay on each device too, unless they're saved on the Cloudflare server (see below), in which case no device holds them.
@@ -294,6 +306,7 @@ Settings shows how many requests and tokens were used this month.
 - `sample/`: resized copies of your photos (`*.jpg`), their cut-outs (`cut/*.webp`) and `seed.js`, which holds the catalogue data for them
 - `manifest.webmanifest`, `icon.svg`, `apple-touch-icon.png`: let you install the app on the home screen (the PNG is the icon iPhone and iPad use)
 - `sw.js`, `sw-register.js`: the offline cache of the app's files, one per deploy (see "Offline cache" under "Putting it online")
+- `dev-overlay.js`: localhost only, never deployed: the toolbar for circling UI bugs and exporting them for Claude (see "Marking UI bugs on this computer")
 - `kiosk.js`, `kiosk.css`: the wall screen's layer on every device: the ambient screen, mouse-dragged rows, 48 px tap targets, the diagnostics (see "The wall screen")
 - `device/`: the wall screen, a Raspberry Pi (or an x86_64 mini-PC) with a touch screen that opens the app full screen (parts, build steps and setup scripts in `device/README.md`; never served)
 - `tools/build_preview.py`: builds a one-page copy in `dist/` for the Claude preview
@@ -306,6 +319,7 @@ Settings shows how many requests and tokens were used this month.
 - `tools/stylist.test.mjs`: checks that `stylist.js` judges outfits exactly like the Python model (`node --test tools/stylist.test.mjs`)
 - `tools/label.test.mjs`: checks `label.js` (`node --test tools/label.test.mjs`)
 - `tools/photos.test.mjs`: checks in headless Chromium how photos are kept and shown: the database upgrade, colours and the type hint on the samples, thumbnails, the wardrobe grid's speed, freeing photo URLs and the touch-screen rules (`node --test tools/photos.test.mjs`)
+- `tools/dev-overlay.e2e.mjs`: the localhost bug-marking overlay: loads only on localhost, a circle saved as an issue with its screenshot and context, marks per screen and following the scroll, the element picker, the Claude report, Jump to view, Fixed (`node --test tools/dev-overlay.e2e.mjs`; `MODERN_SCREENSHOT=<path to modern-screenshot dist/index.mjs>` tests the real screenshot offline)
 - `tools/avatar-editor.e2e.mjs`: Settings > Your avatar: no body panel on Today, the popup with the panel next to the 3D avatar, a slider changes him, Save keeps it, the stage goes back to Today (`node --test tools/avatar-editor.e2e.mjs`, headless Chromium; `SHOTS=<dir>` for screenshots)
 - `tools/backup.test.mjs`: checks the backup (export, replace, add, nothing twice, no keys in the file), the laundry basket on tiles, wears logged from the Calendar and **On the avatar** (`node --test tools/backup.test.mjs`, headless Chromium)
 - `tools/calendar.test.mjs`: checks the Calendar's logic in `calendar.js` (`node --test tools/calendar.test.mjs`)
